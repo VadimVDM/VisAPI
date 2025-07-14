@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm nx build frontend",
+  "outputDirectory": "apps/frontend/.next",
+  "framework": "nextjs",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD apps/frontend/"
+}
