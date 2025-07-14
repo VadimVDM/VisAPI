@@ -1,116 +1,105 @@
 # VisAPI - Workflow Automation Platform
 
-Internal workflow automation engine for Visanet that serves as the central nervous system for operational tasks.
+Enterprise workflow automation system automating visa processing, notifications, and document generation for Visanet.
 
-## Quick Start
+## 🚀 Production
 
-1. **Prerequisites**
-   - Node.js 18+
-   - pnpm
-   - Docker & Docker Compose
+- **Frontend**: https://app.visanet.app (Next.js on Vercel)
+- **Backend API**: https://api.visanet.app (NestJS on Render)
+- **API Health**: https://api.visanet.app/api/v1/healthz
 
-2. **Setup**
-   ```bash
-   pnpm setup
-   ```
+## 🛠️ Local Development
 
-3. **Start Development**
-   ```bash
-   pnpm dev
-   ```
+### Prerequisites
+- Node.js 18+ 
+- pnpm 10+
+- Docker & Docker Compose
 
-   This will start:
-   - Frontend: http://localhost:3000
-   - Backend: http://localhost:3001
-   - Database: PostgreSQL on port 5432
-   - Redis: Redis on port 6379
-   - Adminer: http://localhost:8080 (DB management)
-   - Redis Commander: http://localhost:8081 (Redis management)
+### Quick Start
+```bash
+# Clone and setup
+git clone https://github.com/VadimVDM/VisAPI.git
+cd VisAPI
+pnpm setup
 
-## Architecture
+# Start development
+pnpm dev
+```
+
+**Local URLs:**
+- Frontend: http://localhost:3001
+- Backend: http://localhost:3000/api
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
+
+## 📁 Project Structure
 
 ```
 VisAPI/
 ├── apps/
-│   ├── frontend/          # Next.js 14 admin dashboard
-│   └── backend/           # NestJS API gateway
-├── packages/
-│   ├── shared/            # Shared utilities and types
-│   └── config/            # Shared configuration
-└── infrastructure/        # Docker & deployment configs
+│   ├── frontend/      # Next.js 14 (Vercel)
+│   └── backend/       # NestJS API (Render)
+├── packages/          # Shared code
+├── docs/              # Documentation
+└── tasks/             # Sprint planning
 ```
 
-## Development Scripts
+## 🔧 Development Commands
 
-- `pnpm dev` - Start all services in development mode
-- `pnpm dev:frontend` - Start only frontend
-- `pnpm dev:backend` - Start only backend
-- `pnpm build` - Build all applications
-- `pnpm test` - Run all tests
-- `pnpm lint` - Lint all code
-- `pnpm format` - Format all code
+```bash
+pnpm dev              # Start all services
+pnpm build            # Build all apps
+pnpm test             # Run tests
+pnpm lint             # Lint code
+pnpm docker:up        # Start local DB/Redis
+pnpm docker:down      # Stop services
+```
 
-## Docker Services
+## 🏗️ Tech Stack
 
-- `pnpm docker:up` - Start PostgreSQL & Redis
-- `pnpm docker:down` - Stop all services
-- `pnpm docker:logs` - View logs
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: NestJS, TypeScript, BullMQ
+- **Database**: Supabase (PostgreSQL)
+- **Cache/Queue**: Upstash Redis
+- **Infrastructure**: Vercel, Render, Docker
 
-## Database Access
+## 🔐 Environment Setup
 
-- **Adminer**: http://localhost:8080
-  - Server: `postgres`
-  - Username: `postgres`
-  - Password: `postgres`
-  - Database: `visapi_dev`
+Copy `.env.example` to `.env.local` and update values:
 
-## Tech Stack
-
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: NestJS, TypeScript, PostgreSQL, Redis
-- **Development**: NX Monorepo, Docker, ESLint, Prettier
-- **Testing**: Jest, Playwright
-- **Deployment**: Vercel (Frontend), Render (Backend), Supabase (Database)
-
-## Project Structure
-
-This is an NX monorepo with the following structure:
-
-- `apps/frontend` - Next.js admin dashboard
-- `apps/backend` - NestJS API gateway
-- `packages/shared` - Shared utilities and types
-- `packages/config` - Shared configuration
-
-## Environment Variables
-
-Create `.env.local` files in each app directory:
-
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
+```bash
+# Frontend (required)
+NEXT_PUBLIC_API_URL=http://localhost:3000  # https://api.visanet.app in prod
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+
+# Backend (required)
+DATABASE_URL=your_supabase_connection_string
+REDIS_URL=your_upstash_redis_url
+JWT_SECRET=your_generated_secret
+CORS_ORIGIN=http://localhost:3001,https://app.visanet.app
 ```
 
-### Backend (.env.local)
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/visapi_dev
-REDIS_URL=redis://localhost:6379
-```
+## 🚢 Deployment
 
-## Contributing
+### Frontend (Vercel)
+- Domain: app.visanet.app
+- Auto-deploys from `main` branch
+- Environment variables set in Vercel dashboard
 
-1. Create a feature branch
-2. Make your changes
-3. Run tests: `pnpm test`
-4. Run linting: `pnpm lint`
-5. Create a pull request
+### Backend (Render)
+- Domain: api.visanet.app
+- Auto-deploys from `main` branch
+- Health check: `/api/v1/healthz`
 
-## Sprint 0 Status
+## 📊 Current Status
 
-- ✅ NX monorepo structure established
-- ✅ Next.js 14 frontend with App Router
-- ✅ NestJS backend with TypeScript
-- ✅ Docker development environment
-- ✅ ESLint and Prettier configuration
-- ✅ Development scripts and documentation
+**Sprint 0: Foundation** ✅ Complete
+- Production deployments live
+- Health monitoring active
+- Custom domains configured
+
+**Next: Sprint 1**
+- Supabase authentication
+- API key management
+- Job queue system

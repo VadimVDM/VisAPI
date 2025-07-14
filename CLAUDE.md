@@ -1,15 +1,22 @@
 # CLAUDE.md - VisAPI Project Guide
 
-This file contains all the essential information for Claude Code to work effectively with the VisAPI project. Keep this file updated as the project evolves.
+Essential information for working with the VisAPI project. Updated: July 2025
 
 ## Project Overview
 
-**VisAPI** is an internal workflow automation engine for Visanet that serves as the central nervous system for operational tasks. The system automates critical, repetitive, and time-sensitive processes.
+**VisAPI** - Enterprise workflow automation system for Visanet, automating visa processing, notifications, and document generation.
 
-### Key Goals
-- Reduce manual workload by 30%
-- Improve customer update speed from hours to under 5 minutes
-- Automate visa status updates, application processing, and notifications
+### Production Environment
+- **Frontend**: https://app.visanet.app (Vercel)
+- **Backend**: https://api.visanet.app (Render)
+- **Database**: Supabase (pangdzwamawwgmvxnwkk)
+- **Queue**: Upstash Redis
+
+### Key Achievements
+- ✅ Production deployments live
+- ✅ Custom domains configured
+- ✅ Health monitoring active
+- ✅ CORS and security configured
 
 ## Project Structure
 
@@ -52,31 +59,23 @@ VisAPI/
 
 ### Technology Stack
 
-**Frontend (apps/frontend/)**
-- **Framework:** Next.js 14 with App Router
-- **Language:** TypeScript (strict mode)
-- **Styling:** Tailwind CSS + Shadcn/ui components
-- **Auth:** Supabase Email Magic-Link with domain allowlist (@visanet.com)
-- **Data Fetching:** React Query
-- **Deployment:** Vercel
-- **Development:** Hot reloading on localhost:3001
+**Frontend** (app.visanet.app)
+- Next.js 14 with App Router
+- TypeScript, Tailwind CSS
+- Supabase Auth (Magic Link)
+- Deployed on Vercel
 
-**Backend (apps/backend/)**
-- **Framework:** NestJS with TypeScript
-- **Database:** Supabase PostgreSQL with Row-Level Security
-- **Queue:** BullMQ with Upstash Redis (3 priority levels: critical, default, bulk)
-- **Auth:** API key authentication with 90-day rotation
-- **Logging:** Pino structured logging with PII redaction
-- **API Docs:** Swagger/OpenAPI
-- **Deployment:** Render (Gateway + Background Workers)
-- **Development:** Hot reloading on localhost:3000/api
+**Backend** (api.visanet.app)
+- NestJS with TypeScript
+- BullMQ + Upstash Redis
+- Supabase PostgreSQL
+- Deployed on Render
 
 **Infrastructure**
-- **Monorepo:** NX workspace with pnpm
-- **Development:** Docker Compose (PostgreSQL, Redis, Adminer, Redis Commander)
-- **CI/CD:** GitHub Actions (pending implementation)
-- **Monitoring:** Prometheus + Grafana Cloud (planned)
-- **Security:** Helmet, rate limiting (200 req/min burst, 2 req/sec sustained)
+- NX Monorepo + pnpm
+- Docker for local dev
+- GitHub auto-deploy
+- Domain: visanet.app
 
 ## Development Workflow
 
@@ -108,42 +107,35 @@ pnpm clean                 # Reset NX cache
 ```
 
 ### Local Services
-- **Frontend:** http://localhost:3000
+- **Frontend:** http://localhost:3001
 - **Backend:** http://localhost:3000/api
-- **PostgreSQL:** localhost:5432 (postgres/postgres/visapi_dev)
+- **PostgreSQL:** localhost:5432
 - **Redis:** localhost:6379
-- **Adminer (DB UI):** http://localhost:8080
-- **Redis Commander:** http://localhost:8081
 
-### MCP Tools Usage
-
-Use these tools:
-
-- **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
-- **redis**: Versatile Vector Database
-- **resend**: Emails
-- **playwright**: Web testing and accessibility testing
-- **fetch** & **puppeteer**: Simple web browsing tasks
-- **browserbase**: Headless browser automation and interaction (only live, it can't access localhost)
-- **filesystem, sequential-thinking, memory**: Core development tools
+### Production Services
+- **Frontend:** https://app.visanet.app
+- **Backend:** https://api.visanet.app
+- **Health Check:** https://api.visanet.app/api/v1/healthz
 
 ## Environment Variables
 
-### Required Environment Variables (.env.local)
+### Production Configuration
 
-**Frontend**
+**Frontend (Vercel)**
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_API_URL=https://api.visanet.app
+NEXT_PUBLIC_SUPABASE_URL=https://pangdzwamawwgmvxnwkk.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[your_anon_key]
+NEXT_PUBLIC_ENV=production
 ```
 
-**Backend**
+**Backend (Render)**
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/visapi_dev
-REDIS_URL=redis://localhost:6379
-NODE_ENV=development
-PORT=3000
+NODE_ENV=production
+DATABASE_URL=[supabase_connection_string]
+REDIS_URL=[upstash_redis_url]
+JWT_SECRET=[generated_secret]
+CORS_ORIGIN=https://app.visanet.app
 ```
 
 ## Coding Standards
@@ -387,29 +379,26 @@ logger.info({
 
 ## Deployment
 
-### Environments
-- **Development:** Local Docker Compose
-- **Staging:** Render + Vercel (preview deployments)
-- **Production:** Render + Vercel + Upstash + Supabase
+### Production Setup
 
-### CI/CD Pipeline (GitHub Actions)
-```yaml
-# .github/workflows/ci.yml
-on: [push, pull_request]
-jobs:
-  lint-test-build:
-    - Lint (ESLint + Prettier)
-    - Test (Jest + Playwright)
-    - Build (NX build)
-    - Security (Trivy + Snyk)
-```
+**Frontend (Vercel)**
+- URL: https://app.visanet.app
+- Auto-deploy from `main` branch
+- Environment variables in dashboard
 
-### Infrastructure as Code
+**Backend (Render)**
+- URL: https://api.visanet.app
+- Auto-deploy from `main` branch
+- Build: `pnpm install && pnpm nx build backend`
+- Start: `node dist/apps/backend/main.js`
+
+### Deployment Commands
 ```bash
-# Terraform for cloud resources
-cd infrastructure/
-terraform plan
-terraform apply
+# Deploy via git push
+git push origin main
+
+# Check deployment status
+curl https://api.visanet.app/api/v1/healthz
 ```
 
 ## Troubleshooting
