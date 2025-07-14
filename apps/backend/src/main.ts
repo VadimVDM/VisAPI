@@ -11,10 +11,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
+  
+  // Enable CORS for your frontend
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    credentials: true,
+  });
+  
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  // Bind to 0.0.0.0 to accept external connections
+  await app.listen(port, '0.0.0.0');
   Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`
+    `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`
   );
 }
 
