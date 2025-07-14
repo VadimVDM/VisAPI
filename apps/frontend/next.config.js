@@ -14,10 +14,7 @@ const nextConfig = {
   },
   output: 'standalone',
   reactStrictMode: true,
-  swcMinify: true,
-  experimental: {
-    outputFileTracingRoot: require('path').join(__dirname, '../../'),
-  },
+  outputFileTracingRoot: require('path').join(__dirname, '../../'),
 };
 
 const plugins = [
