@@ -13,9 +13,9 @@ export default () => ({
     url: process.env.REDIS_URL,
   },
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    anonKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
   auth: {
     jwtSecret: process.env.JWT_SECRET,
