@@ -13,10 +13,6 @@ export class RedisService {
     });
   }
 
-  get client(): Redis {
-    return this.redis;
-  }
-
   getClient(): Redis {
     return this.redis;
   }

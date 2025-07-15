@@ -19,9 +19,7 @@ describe('AuthService', () => {
     from: jest.fn().mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn(),
-          }),
+          single: jest.fn(),
         }),
         order: jest.fn().mockReturnValue({
           data: [],
@@ -31,6 +29,12 @@ describe('AuthService', () => {
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           single: jest.fn(),
+        }),
+      }),
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          data: null,
+          error: null,
         }),
       }),
       delete: jest.fn().mockReturnValue({
@@ -95,14 +99,15 @@ describe('AuthService', () => {
         expires_at: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
         created_by: 'user-123',
         created_at: new Date().toISOString(),
-        active: true,
+        last_used_at: null,
+        updated_at: new Date().toISOString(),
       };
 
       // Mock bcrypt.compare to return true for valid secret
       mockedBcrypt.compare.mockResolvedValue(true as never);
       
       // Configure the final single() method to return the api key
-      const singleMock = mockSupabaseClient.from().select().eq().eq().single;
+      const singleMock = mockSupabaseClient.from().select().eq().single;
       singleMock.mockResolvedValue({
         data: mockApiKey,
         error: null,
@@ -117,7 +122,7 @@ describe('AuthService', () => {
 
     it('should return null when key is not found', async () => {
       // Configure the final single() method to return no data
-      const singleMock = mockSupabaseClient.from().select().eq().eq().single;
+      const singleMock = mockSupabaseClient.from().select().eq().single;
       singleMock.mockResolvedValue({
         data: null,
         error: { message: 'No rows found' },
@@ -142,7 +147,7 @@ describe('AuthService', () => {
       };
 
       // Configure the final single() method to return expired key
-      const singleMock = mockSupabaseClient.from().select().eq().eq().single;
+      const singleMock = mockSupabaseClient.from().select().eq().single;
       singleMock.mockResolvedValue({
         data: mockApiKey,
         error: null,
@@ -155,7 +160,7 @@ describe('AuthService', () => {
 
     it('should handle database errors gracefully', async () => {
       // Configure the final single() method to return database error
-      const singleMock = mockSupabaseClient.from().select().eq().eq().single;
+      const singleMock = mockSupabaseClient.from().select().eq().single;
       singleMock.mockResolvedValue({
         data: null,
         error: { message: 'Database error' },
@@ -176,14 +181,15 @@ describe('AuthService', () => {
         expires_at: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
         created_by: 'user-123',
         created_at: new Date().toISOString(),
-        active: true,
+        last_used_at: null,
+        updated_at: new Date().toISOString(),
       };
 
       // Mock bcrypt.compare to return false for invalid secret
       mockedBcrypt.compare.mockResolvedValue(false as never);
       
       // Configure the final single() method to return the api key (but bcrypt will fail)
-      const singleMock = mockSupabaseClient.from().select().eq().eq().single;
+      const singleMock = mockSupabaseClient.from().select().eq().single;
       singleMock.mockResolvedValue({
         data: mockApiKey,
         error: null,

@@ -41,7 +41,6 @@ export class AuthService {
         scopes,
         expires_at: expiresAt.toISOString(),
         created_by: createdBy,
-        active: true,
       })
       .select()
       .single();
@@ -67,7 +66,6 @@ export class AuthService {
       .from('api_keys')
       .select('*')
       .eq('prefix', prefix)
-      .eq('active', true)
       .single();
 
     if (error || !data) {
@@ -84,6 +82,12 @@ export class AuthService {
     if (!isValid) {
       return null;
     }
+
+    // Update last_used_at timestamp
+    await this.supabase.serviceClient
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('id', data.id);
 
     return data;
   }

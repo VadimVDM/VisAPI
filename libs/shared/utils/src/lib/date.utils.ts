@@ -26,7 +26,9 @@ export function formatDate(
   }
 }
 
-export function timeAgo(date: string | Date): string {
+export function timeAgo(date: string | Date | null | undefined): string {
+  if (!date) return 'Never';
+  
   const now = new Date();
   const past = new Date(date);
   const diffMs = now.getTime() - past.getTime();

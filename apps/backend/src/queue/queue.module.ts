@@ -22,7 +22,11 @@ import { AuthModule } from '../auth/auth.module';
     BullModule.registerQueue(
       { name: QUEUE_NAMES.CRITICAL },
       { name: QUEUE_NAMES.DEFAULT },
-      { name: QUEUE_NAMES.BULK }
+      { name: QUEUE_NAMES.BULK },
+      { name: QUEUE_NAMES.SLACK },
+      { name: QUEUE_NAMES.WHATSAPP },
+      { name: QUEUE_NAMES.PDF },
+      { name: QUEUE_NAMES.DLQ }
     ),
   ],
   controllers: [QueueController],

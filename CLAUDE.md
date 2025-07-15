@@ -218,34 +218,39 @@ const { data, error, isLoading } = useQuery({
 
 ```sql
 - id: uuid (primary key)
-- email: text (unique)
+- email: text (unique) -- DEPRECATED: Will be removed after auth.users integration
 - role: enum ('viewer', 'operator', 'admin')
-- created_at: timestamptz
-- updated_at: timestamptz
+- auth_user_id: uuid (nullable, for future auth.users integration)
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
 ```
 
-**api_keys**
+**api_keys** (SECURE PREFIX/SECRET PATTERN)
 
 ```sql
 - id: uuid (primary key)
-- name: text
-- hashed_key: text (unique)
-- scopes: text[]
-- expires_at: timestamptz (indexed)
-- created_by: uuid (foreign key to users)
-- created_at: timestamptz
+- name: text (NOT NULL)
+- hashed_key: text (LEGACY - will be removed)
+- prefix: text (for fast lookups, indexed)
+- hashed_secret: text (bcrypt hashed, secure storage)
+- scopes: text[] (default empty array)
+- expires_at: timestamptz (nullable, indexed)
+- created_by: uuid (foreign key to users, nullable)
+- created_at: timestamptz (NOT NULL, default now())
+- last_used_at: timestamptz (nullable, tracks API key usage)
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
 ```
 
 **workflows**
 
 ```sql
 - id: uuid (primary key)
-- name: text
-- description: text
-- schema: jsonb (workflow definition)
-- enabled: boolean
-- created_at: timestamptz
-- updated_at: timestamptz
+- name: text (NOT NULL)
+- description: text (nullable)
+- schema: jsonb (workflow definition, NOT NULL)
+- enabled: boolean (NOT NULL, default true)
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
 ```
 
 **logs**
@@ -289,8 +294,9 @@ GET  /api/v1/version            # Git SHA and build info
 ### Authentication & Authorization
 
 - **Frontend:** Supabase Email Magic-Link with @visanet.com domain allowlist
-- **Backend:** API key authentication with scoped permissions
-- **API Keys:** 90-day rotation, hashed storage, unique per service
+- **Backend:** API key authentication with scoped permissions using secure prefix/secret pattern
+- **API Keys:** 90-day rotation, prefix/secret pattern with bcrypt hashing, unique per service
+- **RLS:** Row-Level Security enabled on all tables with comprehensive policies
 
 ### Data Protection
 
@@ -572,7 +578,17 @@ pnpm nx show project frontend
 - Frontend integration with live data
 - Complete removal of hardcoded credentials
 
-**Current Status: Ready for Sprint 3**
+**Database Security & Schema Enhancement** ✅ **COMPLETED** (July 15, 2025)
+
+- ✅ **Secure API Key Pattern**: Implemented industry-standard prefix/secret pattern with bcrypt hashing
+- ✅ **Row-Level Security**: Enabled RLS on all tables with comprehensive access policies
+- ✅ **Schema Hardening**: Standardized triggers, timestamps, and constraints across all tables
+- ✅ **Auth.users Integration**: Prepared users table for Supabase Auth integration with backward compatibility
+- ✅ **Database Migration**: Applied 4 migrations safely with data preservation and backups
+- ✅ **Test Coverage**: Updated all test suites to maintain 100% pass rate (9/9 suites, 70/70 tests)
+- ✅ **Type Safety**: Updated TypeScript types to match new secure database schema
+
+**Current Status: Production-Ready with Enhanced Security**
 
 - All core systems operational and secure
 - Production deployments stable

@@ -7,6 +7,7 @@ export type Database = {
           id: string;
           email: string;
           role: 'viewer' | 'operator' | 'admin';
+          auth_user_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -14,6 +15,7 @@ export type Database = {
           id?: string;
           email: string;
           role?: 'viewer' | 'operator' | 'admin';
+          auth_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -21,6 +23,7 @@ export type Database = {
           id?: string;
           email?: string;
           role?: 'viewer' | 'operator' | 'admin';
+          auth_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -29,35 +32,41 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          prefix: string;
-          hashed_secret: string;
+          hashed_key: string; // Legacy field, will be deprecated
+          prefix: string | null;
+          hashed_secret: string | null;
           scopes: string[];
           expires_at: string | null;
           created_by: string | null;
           created_at: string;
-          active: boolean;
+          last_used_at: string | null;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          prefix: string;
-          hashed_secret: string;
+          hashed_key?: string; // Legacy field, will be deprecated
+          prefix?: string | null;
+          hashed_secret?: string | null;
           scopes?: string[];
           expires_at?: string | null;
           created_by?: string | null;
           created_at?: string;
-          active?: boolean;
+          last_used_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
-          prefix?: string;
-          hashed_secret?: string;
+          hashed_key?: string; // Legacy field, will be deprecated
+          prefix?: string | null;
+          hashed_secret?: string | null;
           scopes?: string[];
           expires_at?: string | null;
           created_by?: string | null;
           created_at?: string;
-          active?: boolean;
+          last_used_at?: string | null;
+          updated_at?: string;
         };
       };
       workflows: {
@@ -66,7 +75,7 @@ export type Database = {
           name: string;
           description: string | null;
           schema: any;
-          enabled: boolean;
+          enabled: boolean; // Non-nullable with default true
           created_at: string;
           updated_at: string;
         };
@@ -75,7 +84,7 @@ export type Database = {
           name: string;
           description?: string | null;
           schema: any;
-          enabled?: boolean;
+          enabled?: boolean; // Defaults to true
           created_at?: string;
           updated_at?: string;
         };

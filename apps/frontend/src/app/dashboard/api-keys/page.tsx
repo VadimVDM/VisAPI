@@ -13,6 +13,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { authenticatedFetch } from '@visapi/frontend-data';
+import { timeAgo } from '@visapi/shared-utils';
 
 interface ApiKey {
   id: string;
@@ -161,20 +162,6 @@ export default function ApiKeysPage() {
     return key.slice(0, 12) + '•'.repeat(20) + key.slice(-8);
   };
 
-  const getRelativeTime = (dateString: string): string => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24)
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    return date.toLocaleDateString();
-  };
 
   return (
     <div className="space-y-6">
@@ -286,7 +273,7 @@ export default function ApiKeysPage() {
                     <div>
                       <span className="text-gray-500">Last used:</span>
                       <div className="text-gray-900">
-                        {getRelativeTime(apiKey.last_used || '')}
+                        {timeAgo(apiKey.last_used)}
                       </div>
                     </div>
                     <div>
