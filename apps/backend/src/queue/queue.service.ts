@@ -133,4 +133,56 @@ export class QueueService {
     const queue = this.getQueue(queueName);
     return queue.clean(grace, limit, status);
   }
+
+  async addRepeatableJob(
+    queueName: string,
+    jobName: string,
+    data: any,
+    repeatOptions: {
+      pattern: string; // Cron expression
+      tz?: string; // Timezone
+    }
+  ): Promise<Job> {
+    const queue = this.getQueue(queueName);
+
+    // Create a unique job ID based on workflow ID to prevent duplicates
+    const jobId = data.workflowId ? `cron-${data.workflowId}` : undefined;
+
+    return queue.add(jobName, data, {
+      jobId,
+      repeat: {
+        pattern: repeatOptions.pattern,
+        tz: repeatOptions.tz || 'UTC',
+      },
+      attempts: this.config.queueMaxRetries,
+      backoff: {
+        type: 'exponential',
+        delay: this.config.queueRetryDelay,
+      },
+      removeOnComplete: true,
+      removeOnFail: false,
+      priority: this.getDefaultPriority(queueName),
+    });
+  }
+
+  async removeRepeatableJob(
+    queueName: string,
+    workflowId: string
+  ): Promise<void> {
+    const queue = this.getQueue(queueName);
+    const repeatableJobs = await queue.getRepeatableJobs();
+    
+    const jobToRemove = repeatableJobs.find(
+      (job) => job.id === `cron-${workflowId}`
+    );
+
+    if (jobToRemove) {
+      await queue.removeRepeatableByKey(jobToRemove.key);
+    }
+  }
+
+  async getRepeatableJobs(queueName: string): Promise<any[]> {
+    const queue = this.getQueue(queueName);
+    return queue.getRepeatableJobs();
+  }
 }

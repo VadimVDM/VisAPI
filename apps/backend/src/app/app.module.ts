@@ -9,6 +9,7 @@ import { HealthModule } from '../health/health.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { AdminModule } from '../admin/admin.module';
+import { CronModule } from '../cron/cron.module';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -42,6 +43,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ApiKeysModule,
     WebhooksModule,
     AdminModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [AppService],

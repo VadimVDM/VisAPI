@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common';
 import { Worker } from 'bullmq';
 import { ConfigService } from '@visapi/core-config';
-import { QUEUE_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
 import { SlackProcessor } from './processors/slack.processor';
 import { WhatsAppProcessor } from './processors/whatsapp.processor';
 import { PdfProcessor } from './processors/pdf.processor';
 import { DlqProcessor } from './processors/dlq.processor';
+import { WorkflowProcessor } from './processors/workflow.processor';
 
 @Injectable()
 export class WorkerService implements OnModuleInit, OnModuleDestroy {
@@ -22,7 +23,8 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly slackProcessor: SlackProcessor,
     private readonly whatsAppProcessor: WhatsAppProcessor,
     private readonly pdfProcessor: PdfProcessor,
-    private readonly dlqProcessor: DlqProcessor
+    private readonly dlqProcessor: DlqProcessor,
+    private readonly workflowProcessor: WorkflowProcessor
   ) {}
 
   async onModuleInit() {
@@ -112,12 +114,17 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     const jobType = job.name;
 
     switch (jobType) {
+      case JOB_NAMES.SEND_SLACK_MESSAGE:
       case 'slack.send':
         return this.slackProcessor.process(job);
+      case JOB_NAMES.SEND_WHATSAPP_MESSAGE:
       case 'whatsapp.send':
         return this.whatsAppProcessor.process(job);
+      case JOB_NAMES.GENERATE_PDF:
       case 'pdf.generate':
         return this.pdfProcessor.process(job);
+      case JOB_NAMES.PROCESS_WORKFLOW:
+        return this.workflowProcessor.process(job.data);
       default:
         throw new Error(`Unknown job type: ${jobType}`);
     }

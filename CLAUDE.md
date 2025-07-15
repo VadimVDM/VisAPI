@@ -385,9 +385,34 @@ pnpm test:backend --coverage
 
 ### Test Status (Updated July 15, 2025)
 
-- ✅ **All Tests Passing**: 9/9 test suites, 68/68 tests
+- ✅ **All Tests Passing**: 10/10 test suites, 82/82 tests (including new cron tests)
 - ✅ **Sprint 7.5 Fixes**: Updated ApiKeyRecord schema in test mocks, fixed bcrypt mock typing, corrected DTO expectations
 - ✅ **Test Stability**: No more infinite loops or system lag during test runs
+- ✅ **Resource-Friendly Testing**: New optimized test commands prevent system lag
+
+### Resource-Friendly Test Commands
+
+Tests have been optimized to use minimal system resources. See `docs/testing-guide.md` for full details.
+
+```bash
+# Recommended: Serial mode (fastest, least resources)
+pnpm test:backend:serial      # 4.5s, runs tests one at a time
+
+# Alternative modes
+pnpm test:backend:light       # Limited to 2 workers with memory caps
+pnpm test:backend:watch       # Watch mode with 1 worker
+pnpm test:backend:file <name> # Test specific files only
+
+# Examples
+pnpm test:backend:file cron   # Test only cron-related files
+pnpm test:backend:file "api-keys|queue"  # Test multiple patterns
+```
+
+**Why use serial mode?** 
+- Runs in ~4.5 seconds (faster than parallel due to less overhead)
+- Uses minimal RAM and CPU
+- Prevents system lag during development
+- More reliable test results (no race conditions)
 
 ### Frontend Testing
 
