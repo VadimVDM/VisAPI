@@ -27,7 +27,7 @@ export class IdempotencyService {
   /**
    * Check if an idempotency key has already been processed and return cached result
    */
-  async checkIdempotency(key: string): Promise<any> {
+  private async checkIdempotency(key: string): Promise<any> {
     try {
       const cachedResult = await this.redis.get(`idempotent:${key}`);
       return cachedResult ? JSON.parse(cachedResult) : null;
@@ -40,7 +40,7 @@ export class IdempotencyService {
   /**
    * Store the result of an idempotent operation
    */
-  async storeResult(
+  private async storeResult(
     key: string,
     result: any,
     ttl: number = 3600
@@ -122,7 +122,7 @@ export class IdempotencyService {
   /**
    * Mark an operation as in progress to prevent concurrent execution
    */
-  async markInProgress(key: string, ttl: number = 300): Promise<boolean> {
+  private async markInProgress(key: string, ttl: number = 300): Promise<boolean> {
     try {
       const success = await this.redis.set(
         `idempotent:${key}:lock`,

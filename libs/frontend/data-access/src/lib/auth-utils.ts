@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { useState, useEffect, useCallback } from 'react';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -53,4 +54,53 @@ export async function authenticatedFetch(
       ...options.headers,
     },
   });
+}
+
+/**
+ * Custom hook for fetching API data with loading states and error handling
+ */
+export function useApiData<T>(url: string) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const fullUrl = url.startsWith('http') ? url : `${apiUrl}${url}`;
+      
+      const response = await authenticatedFetch(fullUrl);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || result); // Handle both {data: []} and direct array responses
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [url]);
+
+  const refetch = useCallback(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return {
+    data,
+    loading,
+    error,
+    refetch,
+  };
 }

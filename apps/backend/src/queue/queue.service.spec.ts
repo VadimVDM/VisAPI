@@ -128,26 +128,7 @@ describe('QueueService', () => {
     });
   });
 
-  describe('checkHealth', () => {
-    it('should return true when queue is healthy', async () => {
-      const mockJob = { id: 'health-job', remove: jest.fn() } as any;
-      defaultQueue.add.mockResolvedValue(mockJob);
-
-      const result = await service.checkHealth();
-
-      expect(result).toBe(true);
-      expect(defaultQueue.add).toHaveBeenCalledWith('health-check', { test: true });
-      expect(mockJob.remove).toHaveBeenCalled();
-    });
-
-    it('should return false when queue is unhealthy', async () => {
-      defaultQueue.add.mockRejectedValue(new Error('Redis connection failed'));
-
-      const result = await service.checkHealth();
-
-      expect(result).toBe(false);
-    });
-  });
+  // checkHealth method was removed as it's replaced by dedicated health indicators
 
   describe('getQueueMetrics', () => {
     it('should return metrics for all queues', async () => {

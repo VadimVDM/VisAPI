@@ -13,6 +13,10 @@ import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { Scopes } from '../auth/decorators/scopes.decorator';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import {
+  ApiKeyResponseDto,
+  ApiKeyWithSecretResponseDto,
+} from './dto/api-key-response.dto';
+import {
   ApiTags,
   ApiOperation,
   ApiResponse,
@@ -20,7 +24,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('API Keys')
-@Controller('api/v1/apikeys')
+@Controller('api/v1/api-keys')
 @UseGuards(ApiKeyGuard)
 @ApiSecurity('api-key')
 export class ApiKeysController {
@@ -29,30 +33,35 @@ export class ApiKeysController {
   @Get()
   @Scopes('keys:read')
   @ApiOperation({ summary: 'List all API keys' })
-  @ApiResponse({ status: 200, description: 'Returns array of API keys' })
-  async listApiKeys(@Request() req: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Returns array of API keys',
+    type: [ApiKeyResponseDto],
+  })
+  async listApiKeys(@Request() req: any): Promise<ApiKeyResponseDto[]> {
     const keys = await this.authService.listApiKeys();
-    // Remove sensitive data
-    return keys.map(({ hashed_secret, ...key }) => key);
+    return keys.map(ApiKeyResponseDto.fromRecord);
   }
 
   @Post()
   @Scopes('keys:create')
   @ApiOperation({ summary: 'Create a new API key' })
-  @ApiResponse({ status: 201, description: 'Returns the created API key' })
-  async createApiKey(@Body() dto: CreateApiKeyDto, @Request() req: any) {
+  @ApiResponse({
+    status: 201,
+    description: 'Returns the created API key with secret',
+    type: ApiKeyWithSecretResponseDto,
+  })
+  async createApiKey(
+    @Body() dto: CreateApiKeyDto,
+    @Request() req: any
+  ): Promise<ApiKeyWithSecretResponseDto> {
     const { key, apiKey } = await this.authService.createApiKey(
       dto.name,
       dto.scopes,
       req.apiKey.created_by || 'system'
     );
 
-    // Return the key only once
-    return {
-      ...apiKey,
-      key, // This is the only time the raw key is shown
-      message: 'Save this key securely. It will not be shown again.',
-    };
+    return ApiKeyWithSecretResponseDto.fromRecordWithKey(apiKey, key);
   }
 
   @Delete(':id')

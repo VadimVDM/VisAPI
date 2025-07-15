@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiKeysController } from './api-keys.controller';
 import { AuthService } from '../auth/auth.service';
-import { ApiKey } from '@visapi/shared-types';
+import { ApiKeyRecord } from '@visapi/shared-types';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 
 describe('ApiKeysController', () => {
@@ -53,14 +53,16 @@ describe('ApiKeysController', () => {
         apiKey: {
           id: 'api-key-123',
           name: 'Test API Key',
+          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'hashed-secret',
           scopes: ['webhooks:trigger', 'workflows:read'],
           expires_at: '2025-04-14T00:00:00Z',
-          created_at: '2025-01-14T00:00:00Z',
           created_by: 'user-123',
-          active: true,
-        },
+          created_at: '2025-01-14T00:00:00Z',
+          last_used_at: null,
+          updated_at: '2025-01-14T00:00:00Z',
+        } as ApiKeyRecord,
       };
 
       authService.createApiKey.mockResolvedValue(mockResult);
@@ -71,7 +73,15 @@ describe('ApiKeysController', () => {
       );
 
       expect(result).toEqual({
-        ...mockResult.apiKey,
+        id: 'api-key-123',
+        name: 'Test API Key',
+        prefix: 'vapi_',
+        scopes: ['webhooks:trigger', 'workflows:read'],
+        expires_at: '2025-04-14T00:00:00Z',
+        created_by: 'user-123',
+        created_at: '2025-01-14T00:00:00Z',
+        last_used_at: null,
+        updated_at: '2025-01-14T00:00:00Z',
         key: mockResult.key,
         message: 'Save this key securely. It will not be shown again.',
       });
@@ -102,24 +112,28 @@ describe('ApiKeysController', () => {
         {
           id: 'key-1',
           name: 'Production Key',
+          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'should-be-removed',
           scopes: ['webhooks:trigger'],
           expires_at: '2025-04-14T00:00:00Z',
           created_at: '2025-01-14T00:00:00Z',
           created_by: 'user-123',
-          active: true,
+          last_used_at: null,
+          updated_at: '2025-01-14T00:00:00Z',
         },
         {
           id: 'key-2',
           name: 'Development Key',
+          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'should-also-be-removed',
           scopes: ['workflows:read'],
           expires_at: '2025-07-14T00:00:00Z',
           created_at: '2025-01-10T00:00:00Z',
           created_by: 'user-456',
-          active: true,
+          last_used_at: '2025-01-12T10:30:00Z',
+          updated_at: '2025-01-10T00:00:00Z',
         },
       ];
 
@@ -136,7 +150,8 @@ describe('ApiKeysController', () => {
           expires_at: '2025-04-14T00:00:00Z',
           created_at: '2025-01-14T00:00:00Z',
           created_by: 'user-123',
-          active: true,
+          last_used_at: null,
+          updated_at: '2025-01-14T00:00:00Z',
         },
         {
           id: 'key-2',
@@ -146,7 +161,8 @@ describe('ApiKeysController', () => {
           expires_at: '2025-07-14T00:00:00Z',
           created_at: '2025-01-10T00:00:00Z',
           created_by: 'user-456',
-          active: true,
+          last_used_at: '2025-01-12T10:30:00Z',
+          updated_at: '2025-01-10T00:00:00Z',
         },
       ]);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@visapi/frontend-data-access';
 import { Mail, Loader2 } from 'lucide-react';
 
 export const LoginForm = () => {

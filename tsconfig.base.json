@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@visapi/backend-core-cgb": ["libs/backend/core-cgb/src/index.ts"],
       "@visapi/core-config": ["libs/backend/core-config/src/index.ts"],
       "@visapi/core-supabase": ["libs/backend/core-supabase/src/index.ts"],
       "@visapi/frontend-data": ["libs/frontend/data-access/src/index.ts"],

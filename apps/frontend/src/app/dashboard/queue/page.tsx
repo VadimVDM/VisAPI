@@ -1,6 +1,23 @@
 'use client';
 
+import { useApiData } from '@visapi/frontend-data';
+
+interface QueueMetrics {
+  name: string;
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+}
+
 export default function QueuePage() {
+  const { data: queueMetrics, loading, error } = useApiData<QueueMetrics[]>('/api/v1/queue/metrics');
+
+  // Aggregate metrics across all queues
+  const totalActive = queueMetrics?.reduce((sum, queue) => sum + queue.active, 0) || 0;
+  const totalCompleted = queueMetrics?.reduce((sum, queue) => sum + queue.completed, 0) || 0;
+  const totalFailed = queueMetrics?.reduce((sum, queue) => sum + queue.failed, 0) || 0;
   return (
     <div className="space-y-6">
       <div>
@@ -38,7 +55,9 @@ export default function QueuePage() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Jobs
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">12</dd>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {loading ? '...' : totalActive.toLocaleString()}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -58,7 +77,9 @@ export default function QueuePage() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Completed
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">1,234</dd>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {loading ? '...' : totalCompleted.toLocaleString()}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -78,7 +99,9 @@ export default function QueuePage() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Failed
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">23</dd>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {loading ? '...' : totalFailed.toLocaleString()}
+                  </dd>
                 </dl>
               </div>
             </div>

@@ -12,20 +12,15 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import { authenticatedFetch } from '@visapi/frontend-data';
+import { authenticatedFetch, useApiData } from '@visapi/frontend-data';
 import { timeAgo } from '@visapi/shared-utils';
+import type { ApiKeyRecord } from '@visapi/shared-types';
 
-interface ApiKey {
-  id: string;
-  name: string;
-  prefix?: string;
+// Frontend-specific type that includes the raw key for newly created keys
+type ApiKeyWithSecret = Omit<ApiKeyRecord, 'hashed_key' | 'hashed_secret' | 'last_used_at'> & {
   key?: string; // Only present when creating new key
-  scopes: string[];
-  last_used?: string;
-  expires_at: string;
-  created_at: string;
-  created_by?: string;
-}
+  last_used?: string; // Simplified for display
+};
 
 const availableScopes = [
   'admin:read',
@@ -42,12 +37,10 @@ const availableScopes = [
 ];
 
 export default function ApiKeysPage() {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: apiKeys, loading, error, refetch } = useApiData<ApiKeyWithSecret[]>('/api/v1/api-keys');
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createdKey, setCreatedKey] = useState<ApiKey | null>(null);
+  const [createdKey, setCreatedKey] = useState<ApiKeyWithSecret | null>(null);
   const [creating, setCreating] = useState(false);
   const [newKeyData, setNewKeyData] = useState({
     name: '',
@@ -55,31 +48,9 @@ export default function ApiKeysPage() {
     expiresIn: '90', // days
   });
 
-  useEffect(() => {
-    fetchApiKeys();
-  }, []);
+  // Data fetching handled by useApiData hook
 
-  async function fetchApiKeys() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await authenticatedFetch(`${apiUrl}/api/v1/api-keys`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch API keys: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setApiKeys(data.data || []);
-    } catch (err) {
-      console.error('Error fetching API keys:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load API keys');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // fetchApiKeys function replaced by useApiData hook
 
   async function createApiKey() {
     try {
@@ -102,7 +73,7 @@ export default function ApiKeysPage() {
 
       const data = await response.json();
       setCreatedKey(data);
-      fetchApiKeys(); // Refresh the list
+      refetch(); // Refresh the list
     } catch (err) {
       console.error('Error creating API key:', err);
       setError(err instanceof Error ? err.message : 'Failed to create API key');
@@ -133,7 +104,7 @@ export default function ApiKeysPage() {
         throw new Error(`Failed to delete API key: ${response.statusText}`);
       }
 
-      fetchApiKeys(); // Refresh the list
+      refetch(); // Refresh the list
     } catch (err) {
       console.error('Error deleting API key:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete API key');
@@ -195,14 +166,14 @@ export default function ApiKeysPage() {
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 mb-4">{error}</p>
             <button
-              onClick={fetchApiKeys}
+              onClick={refetch}
               className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               Try Again
             </button>
           </div>
         </div>
-      ) : apiKeys.length === 0 ? (
+      ) : !apiKeys || apiKeys.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-12 text-center">
           <Key className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 mb-4">No API keys found</p>
@@ -218,7 +189,7 @@ export default function ApiKeysPage() {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="px-4 py-5 sm:p-6">
             <div className="space-y-4">
-              {apiKeys.map((apiKey) => (
+              {apiKeys?.map((apiKey) => (
                 <div
                   key={apiKey.id}
                   className="border border-gray-200 rounded-lg p-4"

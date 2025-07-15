@@ -3,23 +3,25 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthService } from '../auth.service';
-import { ApiKey } from '@visapi/shared-types';
+import { ApiKeyRecord } from '@visapi/shared-types';
 
 describe('ApiKeyGuard', () => {
   let guard: ApiKeyGuard;
   let authService: jest.Mocked<AuthService>;
   let reflector: jest.Mocked<Reflector>;
 
-  const mockApiKey: ApiKey = {
+  const mockApiKey: ApiKeyRecord = {
     id: 'api-key-123',
     name: 'Test API Key',
+    hashed_key: '', // Legacy field
     prefix: 'vapi_',
     hashed_secret: 'hashed-secret',
     scopes: ['webhooks:trigger', 'workflows:read'],
     expires_at: new Date(Date.now() + 86400000).toISOString(),
     created_by: 'user-123',
     created_at: new Date().toISOString(),
-    active: true,
+    last_used_at: null,
+    updated_at: new Date().toISOString(),
   };
 
   const createMockExecutionContext = (headers: any = {}): ExecutionContext => {

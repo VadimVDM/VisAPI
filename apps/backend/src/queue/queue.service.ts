@@ -96,16 +96,6 @@ export class QueueService {
     return metrics;
   }
 
-  async checkHealth(): Promise<boolean> {
-    try {
-      // Try to add and remove a test job
-      const job = await this.defaultQueue.add('health-check', { test: true });
-      await job.remove();
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
   private getDefaultPriority(queueName: string): number {
     switch (queueName) {

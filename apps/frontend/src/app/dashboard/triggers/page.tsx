@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Play, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { authenticatedFetch } from '@visapi/frontend-data';
+import { authenticatedFetch, useApiData } from '@visapi/frontend-data';
+import type { WorkflowRecord } from '@visapi/shared-types';
 
 interface TriggerResponse {
   success: boolean;
@@ -10,30 +11,15 @@ interface TriggerResponse {
   message?: string;
 }
 
-const workflows = [
-  {
-    id: 'visa-approval-notification',
-    name: 'Visa Approval Notification',
-    description: 'Send approval notification via Slack and WhatsApp',
-  },
-  {
-    id: 'document-generation',
-    name: 'Document Generation',
-    description: 'Generate PDF documents for visa applications',
-  },
-  {
-    id: 'status-update-broadcast',
-    name: 'Status Update Broadcast',
-    description: 'Broadcast application status updates to all channels',
-  },
-];
+// Workflows now fetched from API instead of hardcoded
 
 export default function TriggersPage() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const { data: workflows, loading: workflowsLoading, error: workflowsError } = useApiData<WorkflowRecord[]>('/api/v1/workflows');
+  const [triggering, setTriggering] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, TriggerResponse>>({});
 
   const triggerWorkflow = async (workflowId: string) => {
-    setLoading(workflowId);
+    setTriggering(workflowId);
     try {
       const response = await authenticatedFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/triggers/${workflowId}`,
@@ -59,7 +45,7 @@ export default function TriggersPage() {
         },
       }));
     } finally {
-      setLoading(null);
+      setTriggering(null);
     }
   };
 
@@ -76,10 +62,25 @@ export default function TriggersPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <div className="space-y-6">
-            {workflows.map((workflow) => {
-              const result = results[workflow.id];
-              const isLoading = loading === workflow.id;
+          {workflowsLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
+              <p className="mt-2 text-sm text-gray-500">Loading workflows...</p>
+            </div>
+          ) : workflowsError ? (
+            <div className="text-center py-8">
+              <XCircle className="h-6 w-6 mx-auto text-red-400" />
+              <p className="mt-2 text-sm text-red-600">{workflowsError}</p>
+            </div>
+          ) : !workflows || workflows.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No workflows found</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {workflows.map((workflow) => {
+                const result = results[workflow.id];
+                const isTriggering = triggering === workflow.id;
 
               return (
                 <div
@@ -92,7 +93,7 @@ export default function TriggersPage() {
                         {workflow.name}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {workflow.description}
+                        {workflow.description || 'No description available'}
                       </p>
 
                       {result && (
@@ -117,21 +118,22 @@ export default function TriggersPage() {
 
                     <button
                       onClick={() => triggerWorkflow(workflow.id)}
-                      disabled={isLoading}
+                      disabled={isTriggering}
                       className="flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isLoading ? (
+                      {isTriggering ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
                         <Play className="h-4 w-4 mr-2" />
                       )}
-                      {isLoading ? 'Triggering...' : 'Trigger'}
+                      {isTriggering ? 'Triggering...' : 'Trigger'}
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,13 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { SupabaseService } from '@visapi/core-supabase';
-import { ApiKey } from '@visapi/shared-types';
+import { ApiKeyRecord } from '@visapi/shared-types';
 import { ConfigService } from '@visapi/core-config';
 import { PinoLogger } from 'nestjs-pino';
 import * as bcrypt from 'bcrypt';
 
-jest.mock('bcrypt');
-const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+// Mock bcrypt module properly
+jest.mock('bcrypt', () => ({
+  compare: jest.fn(),
+  hash: jest.fn(),
+}));
+
+// Get the mocked functions after the module is mocked
+const mockedBcrypt = jest.mocked(bcrypt);
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,7 +21,8 @@ describe('AuthService', () => {
   let configService: jest.Mocked<ConfigService>;
   let logger: jest.Mocked<PinoLogger>;
 
-  const mockSupabaseClient = {
+  // Mock factory for Supabase client to reduce boilerplate
+  const createMockSupabaseClient = () => ({
     from: jest.fn().mockReturnValue({
       select: jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
@@ -44,7 +51,9 @@ describe('AuthService', () => {
         }),
       }),
     }),
-  };
+  });
+
+  const mockSupabaseClient = createMockSupabaseClient();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -90,9 +99,10 @@ describe('AuthService', () => {
 
   describe('validateApiKey', () => {
     it('should return api key data when valid key is provided', async () => {
-      const mockApiKey = {
+      const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
+        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
@@ -104,7 +114,7 @@ describe('AuthService', () => {
       };
 
       // Mock bcrypt.compare to return true for valid secret
-      mockedBcrypt.compare.mockResolvedValue(true as never);
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
       
       // Configure the final single() method to return the api key
       const singleMock = mockSupabaseClient.from().select().eq().single;
@@ -134,16 +144,18 @@ describe('AuthService', () => {
     });
 
     it('should return null when key is expired', async () => {
-      const mockApiKey = {
+      const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
+        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
         expires_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
         created_by: 'user-123',
         created_at: new Date().toISOString(),
-        active: true,
+        last_used_at: null,
+        updated_at: new Date().toISOString(),
       };
 
       // Configure the final single() method to return expired key
@@ -172,9 +184,10 @@ describe('AuthService', () => {
     });
 
     it('should return null when secret does not match', async () => {
-      const mockApiKey = {
+      const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
+        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
@@ -186,7 +199,7 @@ describe('AuthService', () => {
       };
 
       // Mock bcrypt.compare to return false for invalid secret
-      mockedBcrypt.compare.mockResolvedValue(false as never);
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
       
       // Configure the final single() method to return the api key (but bcrypt will fail)
       const singleMock = mockSupabaseClient.from().select().eq().single;
@@ -202,19 +215,27 @@ describe('AuthService', () => {
     });
   });
 
+  // Helper function to create mock ApiKeyRecord
+  const createMockApiKey = (overrides: Partial<ApiKeyRecord> = {}): ApiKeyRecord => ({
+    id: '123',
+    name: 'test-key',
+    hashed_key: '', // Legacy field
+    prefix: 'vapi_',
+    hashed_secret: 'hashed-value',
+    scopes: ['webhooks:trigger'],
+    expires_at: new Date(Date.now() + 86400000).toISOString(),
+    created_by: 'user-123',
+    created_at: new Date().toISOString(),
+    last_used_at: null,
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  });
+
   describe('checkScopes', () => {
     it('should return true when api key has required scope', async () => {
-      const apiKey = {
-        id: '123',
-        name: 'test-key',
-        prefix: 'vapi_',
-        hashed_secret: 'hashed-value',
+      const apiKey = createMockApiKey({
         scopes: ['webhooks:trigger', 'workflows:read'],
-        expires_at: new Date(Date.now() + 86400000).toISOString(),
-        created_by: 'user-123',
-        created_at: new Date().toISOString(),
-        active: true,
-      };
+      });
 
       const result = await service.checkScopes(apiKey, ['webhooks:trigger']);
 
@@ -222,17 +243,9 @@ describe('AuthService', () => {
     });
 
     it('should return false when api key does not have required scope', async () => {
-      const apiKey = {
-        id: '123',
-        name: 'test-key',
-        prefix: 'vapi_',
-        hashed_secret: 'hashed-value',
+      const apiKey = createMockApiKey({
         scopes: ['webhooks:trigger'],
-        expires_at: new Date(Date.now() + 86400000).toISOString(),
-        created_by: 'user-123',
-        created_at: new Date().toISOString(),
-        active: true,
-      };
+      });
 
       const result = await service.checkScopes(apiKey, ['admin:write']);
 
@@ -240,17 +253,9 @@ describe('AuthService', () => {
     });
 
     it('should return true when no scopes are required', async () => {
-      const apiKey = {
-        id: '123',
-        name: 'test-key',
-        prefix: 'vapi_',
-        hashed_secret: 'hashed-value',
+      const apiKey = createMockApiKey({
         scopes: [],
-        expires_at: new Date(Date.now() + 86400000).toISOString(),
-        created_by: 'user-123',
-        created_at: new Date().toISOString(),
-        active: true,
-      };
+      });
 
       const result = await service.checkScopes(apiKey, []);
 

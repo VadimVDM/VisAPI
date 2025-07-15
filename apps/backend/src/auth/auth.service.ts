@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
-import { ApiKey } from '@visapi/shared-types';
+import { ApiKeyRecord } from '@visapi/shared-types';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 
@@ -16,7 +16,7 @@ export class AuthService {
     name: string,
     scopes: string[],
     createdBy: string
-  ): Promise<{ key: string; apiKey: ApiKey }> {
+  ): Promise<{ key: string; apiKey: ApiKeyRecord }> {
     // Generate prefix and secret
     const prefix = this.config.apiKeyPrefix || 'vapi_';
     const secret = randomBytes(32).toString('hex');
@@ -55,7 +55,7 @@ export class AuthService {
     };
   }
 
-  async validateApiKey(apiKey: string): Promise<ApiKey | null> {
+  async validateApiKey(apiKey: string): Promise<ApiKeyRecord | null> {
     const { prefix, secret } = this.splitApiKey(apiKey);
     if (!prefix || !secret) {
       return null;
@@ -92,7 +92,7 @@ export class AuthService {
     return data;
   }
 
-  async listApiKeys(userId?: string): Promise<ApiKey[]> {
+  async listApiKeys(userId?: string): Promise<ApiKeyRecord[]> {
     let query = this.supabase.serviceClient
       .from('api_keys')
       .select('*')
@@ -136,7 +136,7 @@ export class AuthService {
   }
 
   async checkScopes(
-    apiKey: ApiKey,
+    apiKey: ApiKeyRecord,
     requiredScopes: string[]
   ): Promise<boolean> {
     if (!requiredScopes.length) {

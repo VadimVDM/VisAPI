@@ -35,4 +35,11 @@ export default () => ({
     level: process.env.LOG_LEVEL || 'debug',
     format: process.env.LOG_FORMAT || 'json',
   },
+  cgb: {
+    apiUrl: process.env.CGB_API_URL || 'https://app.chatgptbuilder.io/api',
+    apiKey: process.env.CGB_API_KEY || '',
+    timeout: parseInt(process.env.CGB_TIMEOUT, 10) || 30000,
+    retryAttempts: parseInt(process.env.CGB_RETRY_ATTEMPTS, 10) || 3,
+    cacheTimeout: parseInt(process.env.CGB_CACHE_TIMEOUT, 10) || 3600,
+  },
 });
