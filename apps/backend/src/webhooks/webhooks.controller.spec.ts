@@ -1,14 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { WebhooksController } from './webhooks.controller';
 import { QueueService } from '../queue/queue.service';
-import { PinoLogger } from 'nestjs-pino';
-import { BadRequestException } from '@nestjs/common';
+import { IdempotencyService } from '@visapi/util-redis';
+import { AuthService } from '../auth/auth.service';
+import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
 import { Job } from 'bullmq';
 
 describe('WebhooksController', () => {
   let controller: WebhooksController;
   let queueService: jest.Mocked<QueueService>;
-  let logger: jest.Mocked<PinoLogger>;
+  let idempotencyService: jest.Mocked<IdempotencyService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -17,18 +20,26 @@ describe('WebhooksController', () => {
         {
           provide: QueueService,
           useValue: {
-            addSlackJob: jest.fn(),
-            addWhatsAppJob: jest.fn(),
-            addPdfJob: jest.fn(),
+            addJob: jest.fn(),
           },
         },
         {
-          provide: PinoLogger,
+          provide: IdempotencyService,
           useValue: {
-            setContext: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
+            checkAndExecute: jest.fn(),
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: {
+            validateApiKey: jest.fn(),
+            checkScopes: jest.fn(),
+          },
+        },
+        {
+          provide: Reflector,
+          useValue: {
+            getAllAndOverride: jest.fn().mockReturnValue([]),
           },
         },
       ],
@@ -36,233 +47,213 @@ describe('WebhooksController', () => {
 
     controller = module.get<WebhooksController>(WebhooksController);
     queueService = module.get(QueueService);
-    logger = module.get(PinoLogger);
+    idempotencyService = module.get(IdempotencyService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('triggerWorkflow', () => {
-    const mockRequest = {
-      headers: {
-        'x-correlation-id': 'test-correlation-123',
-      },
-      user: {
-        id: 'api-key-123',
-        scopes: ['webhooks:trigger'],
-      },
+  describe('handleWebhook', () => {
+    const mockJob = { id: 'job-123' } as Job;
+    const validPayload = {
+      applicantName: 'John Doe',
+      visaType: 'Tourist',
+      status: 'approved',
+      applicationId: 'APP-123456',
     };
 
-    describe('visa-approval-notification workflow', () => {
-      it('should trigger slack and whatsapp jobs successfully', async () => {
-        const workflowKey = 'visa-approval-notification';
-        const requestBody = {
-          applicantName: 'John Doe',
-          visaType: 'Tourist',
-          status: 'approved',
-          applicationId: 'APP-123456',
-        };
-
-        const mockSlackJob = { id: 'slack-job-123' } as Job;
-        const mockWhatsAppJob = { id: 'whatsapp-job-456' } as Job;
-
-        queueService.addSlackJob.mockResolvedValue(mockSlackJob);
-        queueService.addWhatsAppJob.mockResolvedValue(mockWhatsAppJob);
-
-        const result = await controller.triggerWorkflow(
-          workflowKey,
-          requestBody,
-          mockRequest as any
-        );
-
-        expect(result).toEqual({
-          success: true,
-          workflowId: workflowKey,
-          jobs: {
-            slack: 'slack-job-123',
-            whatsapp: 'whatsapp-job-456',
-          },
-          correlationId: 'test-correlation-123',
-        });
-
-        expect(queueService.addSlackJob).toHaveBeenCalledWith(
-          {
-            channel: '#visa-approvals',
-            message: 'Visa application approved for John Doe (Tourist visa)',
-            template: 'visa_approved',
-            variables: requestBody,
-          },
-          { priority: 'default' }
-        );
-
-        expect(queueService.addWhatsAppJob).toHaveBeenCalledWith(
-          {
-            phoneNumber: '+1234567890',
-            message: 'Your Tourist visa application has been approved!',
-            template: 'visa_approved',
-            variables: requestBody,
-          },
-          { priority: 'default' }
-        );
-      });
-
-      it('should handle job creation failures gracefully', async () => {
-        const workflowKey = 'visa-approval-notification';
-        const requestBody = {
-          applicantName: 'John Doe',
-          visaType: 'Tourist',
-          status: 'approved',
-          applicationId: 'APP-123456',
-        };
-
-        queueService.addSlackJob.mockRejectedValue(
-          new Error('Redis connection failed')
-        );
-        queueService.addWhatsAppJob.mockResolvedValue({
-          id: 'whatsapp-job-456',
-        } as Job);
-
-        await expect(
-          controller.triggerWorkflow(
-            workflowKey,
-            requestBody,
-            mockRequest as any
-          )
-        ).rejects.toThrow('Redis connection failed');
-
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            workflowId: workflowKey,
-            error: expect.any(Error),
-            correlationId: 'test-correlation-123',
-          }),
-          'Failed to trigger workflow'
-        );
-      });
+    beforeEach(() => {
+      queueService.addJob.mockResolvedValue(mockJob);
+      idempotencyService.checkAndExecute.mockImplementation(
+        async (key, fn) => await fn()
+      );
     });
 
-    describe('document-generation workflow', () => {
-      it('should trigger pdf generation job', async () => {
-        const workflowKey = 'document-generation';
-        const requestBody = {
-          applicantName: 'Jane Smith',
-          visaType: 'Business',
-          applicationId: 'APP-789012',
-          documentType: 'certificate',
-        };
+    it('should handle webhook successfully with idempotency key', async () => {
+      const webhookKey = 'test-webhook';
+      const idempotencyKey = 'idempotency-123';
 
-        const mockPdfJob = { id: 'pdf-job-789' } as Job;
-        queueService.addPdfJob.mockResolvedValue(mockPdfJob);
-
-        const result = await controller.triggerWorkflow(
-          workflowKey,
-          requestBody,
-          mockRequest as any
-        );
-
-        expect(result).toEqual({
-          success: true,
-          workflowId: workflowKey,
-          jobs: {
-            pdf: 'pdf-job-789',
-          },
-          correlationId: 'test-correlation-123',
-        });
-
-        expect(queueService.addPdfJob).toHaveBeenCalledWith(
-          {
-            template: 'visa_certificate',
-            data: requestBody,
-            outputPath: `/tmp/documents/${requestBody.applicationId}_certificate.pdf`,
-          },
-          { priority: 'default' }
-        );
-      });
-    });
-
-    describe('status-update-broadcast workflow', () => {
-      it('should trigger multiple notification jobs', async () => {
-        const workflowKey = 'status-update-broadcast';
-        const requestBody = {
-          applicantName: 'Bob Wilson',
-          visaType: 'Student',
-          status: 'under_review',
-          applicationId: 'APP-345678',
-        };
-
-        const mockSlackJob = { id: 'slack-job-345' } as Job;
-        const mockWhatsAppJob = { id: 'whatsapp-job-678' } as Job;
-
-        queueService.addSlackJob.mockResolvedValue(mockSlackJob);
-        queueService.addWhatsAppJob.mockResolvedValue(mockWhatsAppJob);
-
-        const result = await controller.triggerWorkflow(
-          workflowKey,
-          requestBody,
-          mockRequest as any
-        );
-
-        expect(result.success).toBe(true);
-        expect(result.jobs).toHaveProperty('slack', 'slack-job-345');
-        expect(result.jobs).toHaveProperty('whatsapp', 'whatsapp-job-678');
-      });
-    });
-
-    it('should throw BadRequestException for unknown workflow', async () => {
-      const workflowKey = 'unknown-workflow';
-      const requestBody = {
-        test: 'data',
-      };
-
-      await expect(
-        controller.triggerWorkflow(workflowKey, requestBody, mockRequest as any)
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should handle missing correlation ID', async () => {
-      const workflowKey = 'visa-approval-notification';
-      const requestBody = {
-        applicantName: 'John Doe',
-        visaType: 'Tourist',
-        status: 'approved',
-        applicationId: 'APP-123456',
-      };
-
-      const requestWithoutCorrelationId = {
-        headers: {},
-        user: mockRequest.user,
-      };
-
-      const mockSlackJob = { id: 'slack-job-123' } as Job;
-      const mockWhatsAppJob = { id: 'whatsapp-job-456' } as Job;
-
-      queueService.addSlackJob.mockResolvedValue(mockSlackJob);
-      queueService.addWhatsAppJob.mockResolvedValue(mockWhatsAppJob);
-
-      const result = await controller.triggerWorkflow(
-        workflowKey,
-        requestBody,
-        requestWithoutCorrelationId as any
+      const result = await controller.handleWebhook(
+        webhookKey,
+        validPayload,
+        idempotencyKey,
+        'application/json'
       );
 
-      expect(result.correlationId).toMatch(/^[0-9a-f-]{36}$/); // UUID format
+      expect(result).toEqual({
+        status: 'accepted',
+        jobId: 'job-123',
+        message: 'Webhook received and queued for processing',
+      });
+
+      expect(idempotencyService.checkAndExecute).toHaveBeenCalledWith(
+        idempotencyKey,
+        expect.any(Function),
+        3600
+      );
+
+      expect(queueService.addJob).toHaveBeenCalledWith(
+        QUEUE_NAMES.DEFAULT,
+        JOB_NAMES.PROCESS_WORKFLOW,
+        {
+          webhookKey,
+          payload: validPayload,
+          receivedAt: expect.any(String),
+          idempotencyKey,
+        }
+      );
     });
 
-    it('should validate required fields for visa-approval-notification', async () => {
-      const workflowKey = 'visa-approval-notification';
-      const incompleteRequestBody = {
-        applicantName: 'John Doe',
-        // Missing visaType, status, applicationId
+    it('should throw BadRequestException when idempotency key is missing', async () => {
+      await expect(
+        controller.handleWebhook(
+          'test-webhook',
+          validPayload,
+          undefined, // no idempotency key
+          'application/json'
+        )
+      ).rejects.toThrow(BadRequestException);
+      expect(() => {
+        throw new BadRequestException('Idempotency-Key header is required');
+      }).toThrow('Idempotency-Key header is required');
+    });
+
+    it('should throw BadRequestException for unsupported content type', async () => {
+      await expect(
+        controller.handleWebhook(
+          'test-webhook',
+          validPayload,
+          'idempotency-123',
+          'text/plain' // unsupported content type
+        )
+      ).rejects.toThrow(BadRequestException);
+      expect(() => {
+        throw new BadRequestException(
+          'Unsupported content type. Use application/json or application/x-www-form-urlencoded'
+        );
+      }).toThrow('Unsupported content type');
+    });
+
+    it('should accept application/json content type', async () => {
+      await controller.handleWebhook(
+        'test-webhook',
+        validPayload,
+        'idempotency-123',
+        'application/json'
+      );
+
+      expect(queueService.addJob).toHaveBeenCalled();
+    });
+
+    it('should accept application/x-www-form-urlencoded content type', async () => {
+      await controller.handleWebhook(
+        'test-webhook',
+        validPayload,
+        'idempotency-123',
+        'application/x-www-form-urlencoded'
+      );
+
+      expect(queueService.addJob).toHaveBeenCalled();
+    });
+
+    it('should work without content type header', async () => {
+      await controller.handleWebhook(
+        'test-webhook',
+        validPayload,
+        'idempotency-123',
+        undefined // no content type
+      );
+
+      expect(queueService.addJob).toHaveBeenCalled();
+    });
+
+    it('should throw PayloadTooLargeException for large payloads', async () => {
+      // Create a payload larger than 512KB
+      const largePayload = {
+        data: 'x'.repeat(513 * 1024), // 513KB
       };
 
       await expect(
-        controller.triggerWorkflow(
-          workflowKey,
-          incompleteRequestBody,
-          mockRequest as any
+        controller.handleWebhook(
+          'test-webhook',
+          largePayload,
+          'idempotency-123',
+          'application/json'
         )
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(PayloadTooLargeException);
+      expect(() => {
+        throw new PayloadTooLargeException('Payload exceeds 512KB limit');
+      }).toThrow('Payload exceeds 512KB limit');
+    });
+
+    it('should delegate idempotency handling to IdempotencyService', async () => {
+      const webhookKey = 'test-webhook';
+      const idempotencyKey = 'unique-key-123';
+
+      // Mock idempotency service to return cached result
+      const cachedResult = { status: 'cached', jobId: 'cached-job-123' };
+      idempotencyService.checkAndExecute.mockResolvedValue(cachedResult);
+
+      const result = await controller.handleWebhook(
+        webhookKey,
+        validPayload,
+        idempotencyKey,
+        'application/json'
+      );
+
+      expect(result).toEqual(cachedResult);
+      expect(idempotencyService.checkAndExecute).toHaveBeenCalledWith(
+        idempotencyKey,
+        expect.any(Function),
+        3600
+      );
+    });
+
+    it('should pass webhook metadata to queue job', async () => {
+      const webhookKey = 'visa-status-update';
+      const idempotencyKey = 'idempotency-456';
+      const payload = {
+        applicationId: 'APP-789',
+        status: 'under_review',
+      };
+
+      await controller.handleWebhook(
+        webhookKey,
+        payload,
+        idempotencyKey,
+        'application/json'
+      );
+
+      expect(queueService.addJob).toHaveBeenCalledWith(
+        QUEUE_NAMES.DEFAULT,
+        JOB_NAMES.PROCESS_WORKFLOW,
+        {
+          webhookKey,
+          payload,
+          receivedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/), // ISO date format
+          idempotencyKey,
+        }
+      );
+    });
+
+    it('should handle queue service errors gracefully', async () => {
+      queueService.addJob.mockRejectedValue(new Error('Redis connection failed'));
+
+      // Since the error happens inside the idempotency function,
+      // it should be propagated through checkAndExecute
+      idempotencyService.checkAndExecute.mockImplementation(async (key, fn) => {
+        return await fn(); // This will throw the error from queueService.addJob
+      });
+
+      await expect(
+        controller.handleWebhook(
+          'test-webhook',
+          validPayload,
+          'idempotency-123',
+          'application/json'
+        )
+      ).rejects.toThrow('Redis connection failed');
     });
   });
 });

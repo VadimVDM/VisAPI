@@ -3,7 +3,6 @@ import { HealthController } from './health.controller';
 import {
   TerminusModule,
   HealthCheckService,
-  TerminusOptions,
 } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { SupabaseHealthIndicator } from './indicators/supabase.health';
@@ -14,6 +13,10 @@ describe('HealthController', () => {
   let redisHealth: jest.Mocked<RedisHealthIndicator>;
   let supabaseHealth: jest.Mocked<SupabaseHealthIndicator>;
 
+  const mockHealthCheckService = {
+    check: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [TerminusModule],
@@ -21,9 +24,7 @@ describe('HealthController', () => {
       providers: [
         {
           provide: HealthCheckService,
-          useValue: {
-            check: jest.fn(),
-          },
+          useValue: mockHealthCheckService,
         },
         {
           provide: RedisHealthIndicator,
@@ -41,16 +42,20 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    healthCheckService = module.get(HealthCheckService);
+    healthCheckService = module.get(HealthCheckService) as jest.Mocked<HealthCheckService>;
     redisHealth = module.get(RedisHealthIndicator);
     supabaseHealth = module.get(SupabaseHealthIndicator);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('healthCheck', () => {
+  describe('check', () => {
     it('should return healthy status when all services are up', async () => {
       const mockHealthResult = {
         status: 'ok' as const,
@@ -58,7 +63,7 @@ describe('HealthController', () => {
           redis: {
             status: 'up' as const,
           },
-          supabase: {
+          database: {
             status: 'up' as const,
           },
         },
@@ -67,18 +72,18 @@ describe('HealthController', () => {
           redis: {
             status: 'up' as const,
           },
-          supabase: {
+          database: {
             status: 'up' as const,
           },
         },
       };
 
-      healthCheckService.check.mockResolvedValue(mockHealthResult);
+      mockHealthCheckService.check.mockResolvedValue(mockHealthResult);
 
-      const result = await controller.healthCheck();
+      const result = await controller.check();
 
       expect(result).toEqual(mockHealthResult);
-      expect(healthCheckService.check).toHaveBeenCalledWith([
+      expect(mockHealthCheckService.check).toHaveBeenCalledWith([
         expect.any(Function),
         expect.any(Function),
       ]);
@@ -93,7 +98,7 @@ describe('HealthController', () => {
             status: 'down' as const,
             message: 'Connection refused',
           },
-          supabase: {
+          database: {
             status: 'down' as const,
             message: 'Timeout',
           },
@@ -103,81 +108,31 @@ describe('HealthController', () => {
             status: 'down' as const,
             message: 'Connection refused',
           },
-          supabase: {
+          database: {
             status: 'down' as const,
             message: 'Timeout',
           },
         },
       };
 
-      healthCheckService.check.mockRejectedValue({
+      mockHealthCheckService.check.mockRejectedValue({
         response: mockHealthResult,
       });
 
-      await expect(controller.healthCheck()).rejects.toMatchObject({
+      await expect(controller.check()).rejects.toMatchObject({
         response: mockHealthResult,
       });
     });
   });
 
-  describe('livenessCheck', () => {
-    it('should return ok status for liveness probe', async () => {
-      const result = await controller.livenessCheck();
+  describe('liveness', () => {
+    it('should return ok status for liveness probe', () => {
+      const result = controller.liveness();
 
       expect(result).toEqual({
         status: 'ok',
         timestamp: expect.any(String),
-        uptime: expect.any(Number),
       });
-    });
-  });
-
-  describe('versionInfo', () => {
-    it('should return version information', async () => {
-      // Mock environment variables
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        npm_package_version: '1.0.0',
-        GIT_SHA: 'abc123def456',
-        NODE_ENV: 'test',
-      };
-
-      const result = await controller.versionInfo();
-
-      expect(result).toEqual({
-        version: '1.0.0',
-        gitSha: 'abc123def456',
-        environment: 'test',
-        nodeVersion: process.version,
-        timestamp: expect.any(String),
-      });
-
-      // Restore environment
-      process.env = originalEnv;
-    });
-
-    it('should handle missing environment variables', async () => {
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        npm_package_version: undefined,
-        GIT_SHA: undefined,
-        NODE_ENV: undefined,
-      };
-
-      const result = await controller.versionInfo();
-
-      expect(result).toEqual({
-        version: 'unknown',
-        gitSha: 'unknown',
-        environment: 'unknown',
-        nodeVersion: process.version,
-        timestamp: expect.any(String),
-      });
-
-      // Restore environment
-      process.env = originalEnv;
     });
   });
 });

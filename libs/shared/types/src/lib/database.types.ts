@@ -29,29 +29,35 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          hashed_key: string;
+          prefix: string;
+          hashed_secret: string;
           scopes: string[];
           expires_at: string | null;
           created_by: string | null;
           created_at: string;
+          active: boolean;
         };
         Insert: {
           id?: string;
           name: string;
-          hashed_key: string;
+          prefix: string;
+          hashed_secret: string;
           scopes?: string[];
           expires_at?: string | null;
           created_by?: string | null;
           created_at?: string;
+          active?: boolean;
         };
         Update: {
           id?: string;
           name?: string;
-          hashed_key?: string;
+          prefix?: string;
+          hashed_secret?: string;
           scopes?: string[];
           expires_at?: string | null;
           created_by?: string | null;
           created_at?: string;
+          active?: boolean;
         };
       };
       workflows: {

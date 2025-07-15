@@ -1,69 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiKeysController } from './api-keys.controller';
-import { SupabaseService } from '../supabase/supabase.service';
-import { PinoLogger } from 'nestjs-pino';
+import { AuthService } from '../auth/auth.service';
+import { ApiKey } from '@visapi/shared-types';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
-import { BadRequestException, ConflictException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-
-jest.mock('bcrypt');
-const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 describe('ApiKeysController', () => {
   let controller: ApiKeysController;
-  let supabaseService: jest.Mocked<SupabaseService>;
-  let logger: jest.Mocked<PinoLogger>;
-
-  const mockSupabaseClient = {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          maybeSingle: jest.fn(),
-        })),
-      })),
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-      update: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn(),
-          })),
-        })),
-      })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(),
-      })),
-    })),
-  };
+  let authService: jest.Mocked<AuthService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ApiKeysController],
       providers: [
         {
-          provide: SupabaseService,
+          provide: AuthService,
           useValue: {
-            serviceClient: mockSupabaseClient,
-          },
-        },
-        {
-          provide: PinoLogger,
-          useValue: {
-            setContext: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
+            createApiKey: jest.fn(),
+            listApiKeys: jest.fn(),
+            revokeApiKey: jest.fn(),
           },
         },
       ],
     }).compile();
 
     controller = module.get<ApiKeysController>(ApiKeysController);
-    supabaseService = module.get(SupabaseService);
-    logger = module.get(PinoLogger);
+    authService = module.get(AuthService);
   });
 
   afterEach(() => {
@@ -76,43 +37,33 @@ describe('ApiKeysController', () => {
 
   describe('createApiKey', () => {
     const mockRequest = {
-      user: {
-        id: 'user-123',
-        scopes: ['admin:write'],
+      apiKey: {
+        created_by: 'user-123',
       },
     };
 
     const createApiKeyDto: CreateApiKeyDto = {
       name: 'Test API Key',
       scopes: ['webhooks:trigger', 'workflows:read'],
-      expiresInDays: 90,
     };
 
     it('should create a new API key successfully', async () => {
-      // Mock name uniqueness check
-      mockSupabaseClient.from().select().eq().maybeSingle.mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      // Mock bcrypt hash
-      mockedBcrypt.hash.mockResolvedValue('hashed-key' as never);
-
-      // Mock database insert
-      const mockApiKey = {
-        id: 'api-key-123',
-        name: 'Test API Key',
-        hashed_key: 'hashed-key',
-        scopes: ['webhooks:trigger', 'workflows:read'],
-        expires_at: expect.any(String),
-        created_by: 'user-123',
-        created_at: expect.any(String),
+      const mockResult = {
+        key: 'vapi_1234567890abcdef',
+        apiKey: {
+          id: 'api-key-123',
+          name: 'Test API Key',
+          prefix: 'vapi_',
+          hashed_secret: 'hashed-secret',
+          scopes: ['webhooks:trigger', 'workflows:read'],
+          expires_at: '2025-04-14T00:00:00Z',
+          created_at: '2025-01-14T00:00:00Z',
+          created_by: 'user-123',
+          active: true,
+        },
       };
 
-      mockSupabaseClient.from().insert().select().single.mockResolvedValue({
-        data: mockApiKey,
-        error: null,
-      });
+      authService.createApiKey.mockResolvedValue(mockResult);
 
       const result = await controller.createApiKey(
         createApiKeyDto,
@@ -120,200 +71,122 @@ describe('ApiKeysController', () => {
       );
 
       expect(result).toEqual({
-        id: 'api-key-123',
-        name: 'Test API Key',
-        key: expect.stringMatching(/^vapi_[a-zA-Z0-9]{56}$/),
-        scopes: ['webhooks:trigger', 'workflows:read'],
-        expiresAt: expect.any(String),
-        createdAt: expect.any(String),
+        ...mockResult.apiKey,
+        key: mockResult.key,
+        message: 'Save this key securely. It will not be shown again.',
       });
 
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith(expect.any(String), 12);
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.objectContaining({
-          apiKeyId: 'api-key-123',
-          apiKeyName: 'Test API Key',
-          createdBy: 'user-123',
-        }),
-        'API key created successfully'
+      expect(authService.createApiKey).toHaveBeenCalledWith(
+        'Test API Key',
+        ['webhooks:trigger', 'workflows:read'],
+        'user-123'
       );
     });
 
-    it('should throw ConflictException when API key name already exists', async () => {
-      mockSupabaseClient
-        .from()
-        .select()
-        .eq()
-        .maybeSingle.mockResolvedValue({
-          data: { id: 'existing-key', name: 'Test API Key' },
-          error: null,
-        });
-
-      await expect(
-        controller.createApiKey(createApiKeyDto, mockRequest as any)
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('should throw BadRequestException for invalid scopes', async () => {
-      const invalidDto = {
-        ...createApiKeyDto,
-        scopes: ['invalid:scope'],
-      };
-
-      mockSupabaseClient.from().select().eq().maybeSingle.mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      await expect(
-        controller.createApiKey(invalidDto, mockRequest as any)
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should handle database errors gracefully', async () => {
-      mockSupabaseClient.from().select().eq().maybeSingle.mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      mockedBcrypt.hash.mockResolvedValue('hashed-key' as never);
-
-      mockSupabaseClient
-        .from()
-        .insert()
-        .select()
-        .single.mockResolvedValue({
-          data: null,
-          error: { message: 'Database error', code: '23505' },
-        });
+    it('should handle auth service errors', async () => {
+      authService.createApiKey.mockRejectedValue(
+        new Error('Failed to create API key')
+      );
 
       await expect(
         controller.createApiKey(createApiKeyDto, mockRequest as any)
       ).rejects.toThrow('Failed to create API key');
-
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: { message: 'Database error', code: '23505' },
-        }),
-        'Failed to create API key'
-      );
     });
   });
 
   describe('listApiKeys', () => {
+    const mockRequest = {};
+
     it('should return list of API keys without sensitive data', async () => {
       const mockApiKeys = [
         {
           id: 'key-1',
           name: 'Production Key',
+          prefix: 'vapi_',
+          hashed_secret: 'should-be-removed',
           scopes: ['webhooks:trigger'],
           expires_at: '2025-04-14T00:00:00Z',
           created_at: '2025-01-14T00:00:00Z',
           created_by: 'user-123',
-          last_used_at: '2025-01-13T12:00:00Z',
-          // hashed_key should not be included
+          active: true,
         },
         {
           id: 'key-2',
           name: 'Development Key',
+          prefix: 'vapi_',
+          hashed_secret: 'should-also-be-removed',
           scopes: ['workflows:read'],
           expires_at: '2025-07-14T00:00:00Z',
           created_at: '2025-01-10T00:00:00Z',
           created_by: 'user-456',
-          last_used_at: null,
+          active: true,
         },
       ];
 
-      mockSupabaseClient.from().select.mockReturnValue({
-        order: jest.fn(() => ({
-          data: mockApiKeys,
-          error: null,
-        })),
-      });
+      authService.listApiKeys.mockResolvedValue(mockApiKeys);
 
-      const result = await controller.listApiKeys();
+      const result = await controller.listApiKeys(mockRequest as any);
 
-      expect(result).toEqual(mockApiKeys);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_keys');
-      expect(mockSupabaseClient.from().select).toHaveBeenCalledWith(
-        'id, name, scopes, expires_at, created_at, created_by, last_used_at'
-      );
+      expect(result).toEqual([
+        {
+          id: 'key-1',
+          name: 'Production Key',
+          prefix: 'vapi_',
+          scopes: ['webhooks:trigger'],
+          expires_at: '2025-04-14T00:00:00Z',
+          created_at: '2025-01-14T00:00:00Z',
+          created_by: 'user-123',
+          active: true,
+        },
+        {
+          id: 'key-2',
+          name: 'Development Key',
+          prefix: 'vapi_',
+          scopes: ['workflows:read'],
+          expires_at: '2025-07-14T00:00:00Z',
+          created_at: '2025-01-10T00:00:00Z',
+          created_by: 'user-456',
+          active: true,
+        },
+      ]);
+
+      expect(authService.listApiKeys).toHaveBeenCalled();
     });
 
-    it('should handle database errors when listing keys', async () => {
-      mockSupabaseClient.from().select.mockReturnValue({
-        order: jest.fn(() => ({
-          data: null,
-          error: { message: 'Connection failed' },
-        })),
-      });
-
-      await expect(controller.listApiKeys()).rejects.toThrow(
-        'Failed to list API keys'
+    it('should handle auth service errors when listing keys', async () => {
+      authService.listApiKeys.mockRejectedValue(
+        new Error('Failed to list API keys')
       );
 
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: { message: 'Connection failed' },
-        }),
+      await expect(controller.listApiKeys(mockRequest as any)).rejects.toThrow(
         'Failed to list API keys'
       );
     });
   });
 
   describe('revokeApiKey', () => {
-    const mockRequest = {
-      user: {
-        id: 'user-123',
-        scopes: ['admin:write'],
-      },
-    };
-
     it('should revoke an API key successfully', async () => {
       const keyId = 'key-to-revoke';
 
-      mockSupabaseClient.from().delete().eq.mockResolvedValue({
-        data: null,
-        error: null,
-      });
+      authService.revokeApiKey.mockResolvedValue();
 
-      const result = await controller.revokeApiKey(keyId, mockRequest as any);
+      const result = await controller.revokeApiKey(keyId);
 
       expect(result).toEqual({
-        success: true,
         message: 'API key revoked successfully',
       });
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_keys');
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.objectContaining({
-          apiKeyId: keyId,
-          revokedBy: 'user-123',
-        }),
-        'API key revoked'
-      );
+      expect(authService.revokeApiKey).toHaveBeenCalledWith(keyId);
     });
 
-    it('should handle database errors when revoking key', async () => {
+    it('should handle auth service errors when revoking key', async () => {
       const keyId = 'key-to-revoke';
 
-      mockSupabaseClient
-        .from()
-        .delete()
-        .eq.mockResolvedValue({
-          data: null,
-          error: { message: 'Key not found' },
-        });
+      authService.revokeApiKey.mockRejectedValue(
+        new Error('Failed to revoke API key')
+      );
 
-      await expect(
-        controller.revokeApiKey(keyId, mockRequest as any)
-      ).rejects.toThrow('Failed to revoke API key');
-
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          apiKeyId: keyId,
-          error: { message: 'Key not found' },
-        }),
+      await expect(controller.revokeApiKey(keyId)).rejects.toThrow(
         'Failed to revoke API key'
       );
     });

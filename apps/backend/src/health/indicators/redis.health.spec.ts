@@ -1,43 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HealthCheckError } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './redis.health';
-import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
-
-jest.mock('ioredis');
-const MockedRedis = Redis as jest.MockedClass<typeof Redis>;
+import { RedisService } from '@visapi/util-redis';
 
 describe('RedisHealthIndicator', () => {
   let indicator: RedisHealthIndicator;
-  let configService: jest.Mocked<ConfigService>;
-  let mockRedisInstance: jest.Mocked<Redis>;
+  let redisService: jest.Mocked<RedisService>;
 
   beforeEach(async () => {
-    mockRedisInstance = {
-      ping: jest.fn(),
-      disconnect: jest.fn(),
-      status: 'ready',
-    } as any;
+    jest.clearAllMocks();
 
-    MockedRedis.mockImplementation(() => mockRedisInstance);
+    const mockRedisService = {
+      checkConnection: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RedisHealthIndicator,
         {
-          provide: ConfigService,
-          useValue: {
-            redisUrl: 'redis://localhost:6379',
-          },
+          provide: RedisService,
+          useValue: mockRedisService,
         },
       ],
     }).compile();
 
     indicator = module.get<RedisHealthIndicator>(RedisHealthIndicator);
-    configService = module.get(ConfigService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
+    redisService = module.get(RedisService) as jest.Mocked<RedisService>;
   });
 
   it('should be defined', () => {
@@ -45,79 +33,110 @@ describe('RedisHealthIndicator', () => {
   });
 
   describe('isHealthy', () => {
-    it('should return healthy status when Redis is responsive', async () => {
-      mockRedisInstance.ping.mockResolvedValue('PONG');
+    const healthKey = 'redis';
 
-      const result = await indicator.isHealthy('redis');
+    it('should return healthy status when Redis connection is successful', async () => {
+      redisService.checkConnection.mockResolvedValue(true);
+
+      const result = await indicator.isHealthy(healthKey);
 
       expect(result).toEqual({
         redis: {
           status: 'up',
-          message: 'Redis is responsive',
+          message: 'Redis is accessible and responsive',
         },
       });
-      expect(mockRedisInstance.ping).toHaveBeenCalled();
-      expect(mockRedisInstance.disconnect).toHaveBeenCalled();
+      expect(redisService.checkConnection).toHaveBeenCalledTimes(1);
     });
 
-    it('should return unhealthy status when Redis ping fails', async () => {
-      const pingError = new Error('Connection refused');
-      mockRedisInstance.ping.mockRejectedValue(pingError);
+    it('should throw HealthCheckError when Redis connection fails', async () => {
+      redisService.checkConnection.mockResolvedValue(false);
 
-      const result = await indicator.isHealthy('redis');
-
-      expect(result).toEqual({
-        redis: {
-          status: 'down',
-          message: 'Redis connection failed: Connection refused',
-        },
-      });
-      expect(mockRedisInstance.disconnect).toHaveBeenCalled();
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
+      );
+      expect(redisService.checkConnection).toHaveBeenCalledTimes(1);
     });
 
-    it('should return unhealthy status when Redis ping returns unexpected response', async () => {
-      mockRedisInstance.ping.mockResolvedValue('UNEXPECTED');
+    it('should throw HealthCheckError when Redis service throws an error', async () => {
+      const error = new Error('Connection timeout');
+      redisService.checkConnection.mockRejectedValue(error);
 
-      const result = await indicator.isHealthy('redis');
-
-      expect(result).toEqual({
-        redis: {
-          status: 'down',
-          message: 'Redis ping returned unexpected response: UNEXPECTED',
-        },
-      });
-    });
-
-    it('should handle Redis connection creation errors', async () => {
-      MockedRedis.mockImplementation(() => {
-        throw new Error('Invalid Redis URL');
-      });
-
-      const result = await indicator.isHealthy('redis');
-
-      expect(result).toEqual({
-        redis: {
-          status: 'down',
-          message: 'Failed to create Redis connection: Invalid Redis URL',
-        },
-      });
-    });
-
-    it('should handle disconnect errors gracefully', async () => {
-      mockRedisInstance.ping.mockResolvedValue('PONG');
-      mockRedisInstance.disconnect.mockRejectedValue(
-        new Error('Disconnect failed')
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
       );
 
-      const result = await indicator.isHealthy('redis');
+      try {
+        await indicator.isHealthy(healthKey);
+      } catch (err) {
+        expect(err).toBeInstanceOf(HealthCheckError);
+        expect(err.message).toBe('Redis connection failed');
+        expect(err.causes).toEqual({
+          redis: {
+            status: 'down',
+            message: 'Unable to connect to Redis',
+            error: 'Connection timeout',
+          },
+        });
+      }
+    });
 
-      // Should still return healthy status even if disconnect fails
-      expect(result).toEqual({
-        redis: {
-          status: 'up',
-          message: 'Redis is responsive',
-        },
+    it('should include the provided key in the health status', async () => {
+      const customKey = 'redis_cluster';
+      redisService.checkConnection.mockResolvedValue(true);
+
+      const result = await indicator.isHealthy(customKey);
+
+      expect(result).toHaveProperty(customKey);
+      expect(result[customKey]).toEqual({
+        status: 'up',
+        message: 'Redis is accessible and responsive',
       });
+    });
+
+    it('should handle Redis service timeout gracefully', async () => {
+      redisService.checkConnection.mockResolvedValue(false);
+
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
+      );
+
+      try {
+        await indicator.isHealthy(healthKey);
+      } catch (err) {
+        expect(err).toBeInstanceOf(HealthCheckError);
+        expect(err.message).toBe('Redis connection failed');
+        expect(err.causes).toEqual({
+          redis: {
+            status: 'down',
+            message: 'Unable to connect to Redis',
+            error: 'Redis connection failed',
+          },
+        });
+      }
+    });
+
+    it('should handle Redis service connection error', async () => {
+      const error = new Error('Redis connection failed');
+      redisService.checkConnection.mockRejectedValue(error);
+
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
+      );
+
+      try {
+        await indicator.isHealthy(healthKey);
+      } catch (err) {
+        expect(err).toBeInstanceOf(HealthCheckError);
+        expect(err.message).toBe('Redis connection failed');
+        expect(err.causes).toEqual({
+          redis: {
+            status: 'down',
+            message: 'Unable to connect to Redis',
+            error: 'Redis connection failed',
+          },
+        });
+      }
     });
   });
 });

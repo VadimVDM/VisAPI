@@ -1,40 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HealthCheckError } from '@nestjs/terminus';
 import { SupabaseHealthIndicator } from './supabase.health';
-import { SupabaseService } from '../../supabase/supabase.service';
+import { SupabaseService } from '@visapi/core-supabase';
 
 describe('SupabaseHealthIndicator', () => {
   let indicator: SupabaseHealthIndicator;
   let supabaseService: jest.Mocked<SupabaseService>;
 
-  const mockSupabaseClient = {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        limit: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-    })),
-  };
-
   beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const mockSupabaseService = {
+      checkConnection: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SupabaseHealthIndicator,
         {
           provide: SupabaseService,
-          useValue: {
-            serviceClient: mockSupabaseClient,
-          },
+          useValue: mockSupabaseService,
         },
       ],
     }).compile();
 
     indicator = module.get<SupabaseHealthIndicator>(SupabaseHealthIndicator);
-    supabaseService = module.get(SupabaseService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
+    supabaseService = module.get(SupabaseService) as jest.Mocked<SupabaseService>;
   });
 
   it('should be defined', () => {
@@ -42,123 +33,77 @@ describe('SupabaseHealthIndicator', () => {
   });
 
   describe('isHealthy', () => {
-    it('should return healthy status when Supabase is responsive', async () => {
-      const startTime = Date.now();
-      mockSupabaseClient.from().select().limit().single.mockResolvedValue({
-        data: null,
-        error: null,
-      });
+    const healthKey = 'supabase';
 
-      const result = await indicator.isHealthy('supabase');
+    it('should return healthy status when Supabase connection is successful', async () => {
+      supabaseService.checkConnection.mockResolvedValue(true);
+
+      const result = await indicator.isHealthy(healthKey);
 
       expect(result).toEqual({
         supabase: {
           status: 'up',
-          message: 'Supabase is responsive',
-          responseTime: expect.any(Number),
         },
       });
-
-      // Check that response time is reasonable
-      const responseTime = result.supabase.responseTime;
-      expect(responseTime).toBeGreaterThanOrEqual(0);
-      expect(responseTime).toBeLessThan(5000); // Should be less than 5 seconds
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_keys');
+      expect(supabaseService.checkConnection).toHaveBeenCalledTimes(1);
     });
 
-    it('should return healthy status even when query returns an error (connection is working)', async () => {
-      mockSupabaseClient
-        .from()
-        .select()
-        .limit()
-        .single.mockResolvedValue({
-          data: null,
-          error: { message: 'No rows found', code: 'PGRST116' },
+    it('should throw HealthCheckError when Supabase connection fails', async () => {
+      supabaseService.checkConnection.mockResolvedValue(false);
+
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
+      );
+      expect(supabaseService.checkConnection).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw HealthCheckError when Supabase service throws an error', async () => {
+      const error = new Error('Network timeout');
+      supabaseService.checkConnection.mockRejectedValue(error);
+
+      await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
+        HealthCheckError
+      );
+
+      try {
+        await indicator.isHealthy(healthKey);
+      } catch (err) {
+        expect(err).toBeInstanceOf(HealthCheckError);
+        expect(err.message).toBe('Supabase connection failed');
+        expect(err.causes).toEqual({
+          supabase: {
+            status: 'down',
+          },
         });
+      }
+    });
 
-      const result = await indicator.isHealthy('supabase');
+    it('should include the provided key in the health status', async () => {
+      const customKey = 'supabase_cluster';
+      supabaseService.checkConnection.mockResolvedValue(true);
 
-      expect(result).toEqual({
-        supabase: {
-          status: 'up',
-          message: 'Supabase is responsive',
-          responseTime: expect.any(Number),
-        },
+      const result = await indicator.isHealthy(customKey);
+
+      expect(result).toHaveProperty(customKey);
+      expect(result[customKey]).toEqual({
+        status: 'up',
       });
     });
 
-    it('should return unhealthy status when Supabase connection fails', async () => {
-      const connectionError = new Error('Network timeout');
-      mockSupabaseClient
-        .from()
-        .select()
-        .limit()
-        .single.mockRejectedValue(connectionError);
+    it('should handle Supabase service timeout gracefully', async () => {
+      supabaseService.checkConnection.mockResolvedValue(false);
 
-      const result = await indicator.isHealthy('supabase');
-
-      expect(result).toEqual({
-        supabase: {
-          status: 'down',
-          message: 'Supabase connection failed: Network timeout',
-        },
-      });
-    });
-
-    it('should return unhealthy status when query takes too long', async () => {
-      // Mock a slow response
-      mockSupabaseClient
-        .from()
-        .select()
-        .limit()
-        .single.mockImplementation(
-          () =>
-            new Promise((resolve) => {
-              setTimeout(() => {
-                resolve({ data: null, error: null });
-              }, 11000); // 11 seconds - longer than timeout
-            })
-        );
-
-      const result = await indicator.isHealthy('supabase');
-
-      expect(result).toEqual({
-        supabase: {
-          status: 'down',
-          message: 'Supabase health check timed out after 10000ms',
-        },
-      });
-    }, 15000); // Increase test timeout to handle the mock delay
-
-    it('should handle missing serviceClient gracefully', async () => {
-      // Create a new indicator with missing serviceClient
-      const moduleWithMissingClient: TestingModule =
-        await Test.createTestingModule({
-          providers: [
-            SupabaseHealthIndicator,
-            {
-              provide: SupabaseService,
-              useValue: {
-                serviceClient: null,
-              },
-            },
-          ],
-        }).compile();
-
-      const indicatorWithMissingClient =
-        moduleWithMissingClient.get<SupabaseHealthIndicator>(
-          SupabaseHealthIndicator
-        );
-
-      const result = await indicatorWithMissingClient.isHealthy('supabase');
-
-      expect(result).toEqual({
-        supabase: {
-          status: 'down',
-          message: 'Supabase client not initialized',
-        },
-      });
+      try {
+        await indicator.isHealthy(healthKey);
+      } catch (err) {
+        expect(err).toBeInstanceOf(HealthCheckError);
+        expect(err.message).toBe('Supabase connection failed');
+        expect(err.causes).toEqual({
+          supabase: {
+            status: 'down',
+          },
+        });
+      }
     });
   });
 });

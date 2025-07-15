@@ -3,22 +3,35 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthService } from '../auth.service';
+import { ApiKey } from '@visapi/shared-types';
 
 describe('ApiKeyGuard', () => {
   let guard: ApiKeyGuard;
   let authService: jest.Mocked<AuthService>;
   let reflector: jest.Mocked<Reflector>;
 
-  const mockExecutionContext = {
-    switchToHttp: jest.fn(() => ({
-      getRequest: jest.fn(() => ({
-        headers: {},
-        user: null,
+  const mockApiKey: ApiKey = {
+    id: 'api-key-123',
+    name: 'Test API Key',
+    prefix: 'vapi_',
+    hashed_secret: 'hashed-secret',
+    scopes: ['webhooks:trigger', 'workflows:read'],
+    expires_at: new Date(Date.now() + 86400000).toISOString(),
+    created_by: 'user-123',
+    created_at: new Date().toISOString(),
+    active: true,
+  };
+
+  const createMockExecutionContext = (headers: any = {}): ExecutionContext => {
+    const mockRequest = { headers, apiKey: null };
+    return {
+      switchToHttp: jest.fn(() => ({
+        getRequest: jest.fn(() => mockRequest),
       })),
-    })),
-    getHandler: jest.fn(),
-    getClass: jest.fn(),
-  } as unknown as ExecutionContext;
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+    } as unknown as ExecutionContext;
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,13 +41,13 @@ describe('ApiKeyGuard', () => {
           provide: AuthService,
           useValue: {
             validateApiKey: jest.fn(),
-            hasScope: jest.fn(),
+            checkScopes: jest.fn(),
           },
         },
         {
           provide: Reflector,
           useValue: {
-            get: jest.fn(),
+            getAllAndOverride: jest.fn(),
           },
         },
       ],
@@ -49,99 +62,146 @@ describe('ApiKeyGuard', () => {
     expect(guard).toBeDefined();
   });
 
-  it('should return true when valid API key is provided', async () => {
-    const mockRequest = {
-      headers: {
-        'x-api-key': 'valid-api-key',
-      },
-    };
+  describe('canActivate', () => {
+    it('should allow access with valid API key and no required scopes', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
 
-    const mockUser = {
-      id: '123',
-      scopes: ['webhooks:trigger'],
-    };
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      reflector.getAllAndOverride.mockReturnValue([]);
 
-    mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
-    authService.validateApiKey.mockResolvedValue(mockUser);
-    reflector.get.mockReturnValue(null); // No specific scopes required
+      const result = await guard.canActivate(context);
 
-    const result = await guard.canActivate(mockExecutionContext);
+      expect(result).toBe(true);
+      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_validkey123');
+      expect(context.switchToHttp().getRequest().apiKey).toEqual(mockApiKey);
+    });
 
-    expect(result).toBe(true);
-    expect(mockRequest['user']).toBe(mockUser);
-    expect(authService.validateApiKey).toHaveBeenCalledWith('valid-api-key');
-  });
+    it('should throw UnauthorizedException when API key is missing', async () => {
+      const context = createMockExecutionContext({}); // No API key header
 
-  it('should throw UnauthorizedException when no API key is provided', async () => {
-    const mockRequest = {
-      headers: {},
-    };
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(() => {
+        throw new UnauthorizedException('API key is required');
+      }).toThrow('API key is required');
+    });
 
-    mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
+    it('should throw UnauthorizedException when API key is invalid', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'invalid-key',
+      });
 
-    await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-      UnauthorizedException
-    );
-  });
+      authService.validateApiKey.mockResolvedValue(null);
 
-  it('should throw UnauthorizedException when invalid API key is provided', async () => {
-    const mockRequest = {
-      headers: {
-        'x-api-key': 'invalid-api-key',
-      },
-    };
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(() => {
+        throw new UnauthorizedException('Invalid or expired API key');
+      }).toThrow('Invalid or expired API key');
+    });
 
-    mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
-    authService.validateApiKey.mockResolvedValue(null);
+    it('should check required scopes when specified', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
 
-    await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-      UnauthorizedException
-    );
-  });
+      const requiredScopes = ['admin:write'];
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      authService.checkScopes.mockResolvedValue(true);
+      reflector.getAllAndOverride.mockReturnValue(requiredScopes);
 
-  it('should check scopes when required', async () => {
-    const mockRequest = {
-      headers: {
-        'x-api-key': 'valid-api-key',
-      },
-    };
+      const result = await guard.canActivate(context);
 
-    const mockUser = {
-      id: '123',
-      scopes: ['webhooks:trigger'],
-    };
+      expect(result).toBe(true);
+      expect(authService.checkScopes).toHaveBeenCalledWith(
+        mockApiKey,
+        requiredScopes
+      );
+    });
 
-    mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
-    authService.validateApiKey.mockResolvedValue(mockUser);
-    reflector.get.mockReturnValue(['admin:write']); // Required scope
-    authService.hasScope.mockReturnValue(false);
+    it('should throw UnauthorizedException when scopes are insufficient', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
 
-    await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-      UnauthorizedException
-    );
+      const requiredScopes = ['admin:write'];
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      authService.checkScopes.mockResolvedValue(false);
+      reflector.getAllAndOverride.mockReturnValue(requiredScopes);
 
-    expect(authService.hasScope).toHaveBeenCalledWith(mockUser, 'admin:write');
-  });
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
 
-  it('should allow access when user has required scope', async () => {
-    const mockRequest = {
-      headers: {
-        'x-api-key': 'valid-api-key',
-      },
-    };
+      expect(authService.checkScopes).toHaveBeenCalledWith(
+        mockApiKey,
+        requiredScopes
+      );
+    });
 
-    const mockUser = {
-      id: '123',
-      scopes: ['admin:write'],
-    };
+    it('should extract API key from Authorization header with Bearer token', async () => {
+      const context = createMockExecutionContext({
+        authorization: 'Bearer vapi_bearerkey123',
+      });
 
-    mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
-    authService.validateApiKey.mockResolvedValue(mockUser);
-    reflector.get.mockReturnValue(['admin:write']);
-    authService.hasScope.mockReturnValue(true);
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      reflector.getAllAndOverride.mockReturnValue([]);
 
-    const result = await guard.canActivate(mockExecutionContext);
+      const result = await guard.canActivate(context);
 
-    expect(result).toBe(true);
+      expect(result).toBe(true);
+      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_bearerkey123');
+    });
+
+    it('should extract API key from X-API-Key header', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_xapikeyheader123',
+      });
+
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      reflector.getAllAndOverride.mockReturnValue([]);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_xapikeyheader123');
+    });
+
+    it('should handle multiple required scopes', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
+
+      const requiredScopes = ['webhooks:trigger', 'workflows:read'];
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      authService.checkScopes.mockResolvedValue(true);
+      reflector.getAllAndOverride.mockReturnValue(requiredScopes);
+
+      const result = await guard.canActivate(context);
+
+      expect(result).toBe(true);
+      expect(authService.checkScopes).toHaveBeenCalledWith(
+        mockApiKey,
+        requiredScopes
+      );
+    });
+
+    it('should attach validated API key to request object', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
+
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      reflector.getAllAndOverride.mockReturnValue([]);
+
+      await guard.canActivate(context);
+
+      const request = context.switchToHttp().getRequest();
+      expect(request.apiKey).toEqual(mockApiKey);
+    });
   });
 });

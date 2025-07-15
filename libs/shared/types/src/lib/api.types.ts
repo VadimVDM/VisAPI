@@ -3,11 +3,13 @@
 export interface ApiKey {
   id: string;
   name: string;
-  hashed_key: string;
+  prefix: string;
+  hashed_secret: string;
   scopes: string[];
   expires_at: string | null;
   created_by: string;
   created_at: string;
+  active: boolean;
 }
 
 export interface CreateApiKeyRequest {

@@ -1,20 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
+import { ApiKey } from '@visapi/shared-types';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-
-export interface ApiKey {
-  id: string;
-  name: string;
-  prefix: string;
-  hashed_secret: string;
-  scopes: string[];
-  expires_at: string | null;
-  created_by: string;
-  created_at: string;
-  active: boolean;
-}
 
 @Injectable()
 export class AuthService {
