@@ -1,0 +1,27 @@
+27ea654461c779a7fe4677205762e470
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RedisModule = void 0;
+const tslib_1 = require("tslib");
+const common_1 = require("@nestjs/common");
+const redis_service_1 = require("./redis.service");
+const idempotency_service_1 = require("./idempotency.service");
+let RedisModule = class RedisModule {
+};
+exports.RedisModule = RedisModule;
+exports.RedisModule = RedisModule = tslib_1.__decorate([
+    (0, common_1.Global)(),
+    (0, common_1.Module)({
+        providers: [
+            redis_service_1.RedisService,
+            idempotency_service_1.IdempotencyService,
+            {
+                provide: 'REDIS_CLIENT',
+                useFactory: (redisService) => redisService.getClient(),
+                inject: [redis_service_1.RedisService],
+            },
+        ],
+        exports: [redis_service_1.RedisService, idempotency_service_1.IdempotencyService],
+    })
+], RedisModule);
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9saWJzL2JhY2tlbmQvdXRpbC1yZWRpcy9zcmMvbGliL3JlZGlzLm1vZHVsZS50cyIsIm1hcHBpbmdzIjoiOzs7O0FBQUEsMkNBQWdEO0FBQ2hELG1EQUErQztBQUMvQywrREFBMkQ7QUFlcEQsSUFBTSxXQUFXLEdBQWpCLE1BQU0sV0FBVztDQUFHLENBQUE7QUFBZCxrQ0FBVztzQkFBWCxXQUFXO0lBYnZCLElBQUEsZUFBTSxHQUFFO0lBQ1IsSUFBQSxlQUFNLEVBQUM7UUFDTixTQUFTLEVBQUU7WUFDVCw0QkFBWTtZQUNaLHdDQUFrQjtZQUNsQjtnQkFDRSxPQUFPLEVBQUUsY0FBYztnQkFDdkIsVUFBVSxFQUFFLENBQUMsWUFBMEIsRUFBRSxFQUFFLENBQUMsWUFBWSxDQUFDLFNBQVMsRUFBRTtnQkFDcEUsTUFBTSxFQUFFLENBQUMsNEJBQVksQ0FBQzthQUN2QjtTQUNGO1FBQ0QsT0FBTyxFQUFFLENBQUMsNEJBQVksRUFBRSx3Q0FBa0IsQ0FBQztLQUM1QyxDQUFDO0dBQ1csV0FBVyxDQUFHIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi9Vc2Vycy92YWRpbS9Qcm9qZWN0cy9WaXNBUEkvbGlicy9iYWNrZW5kL3V0aWwtcmVkaXMvc3JjL2xpYi9yZWRpcy5tb2R1bGUudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgR2xvYmFsLCBNb2R1bGUgfSBmcm9tICdAbmVzdGpzL2NvbW1vbic7XG5pbXBvcnQgeyBSZWRpc1NlcnZpY2UgfSBmcm9tICcuL3JlZGlzLnNlcnZpY2UnO1xuaW1wb3J0IHsgSWRlbXBvdGVuY3lTZXJ2aWNlIH0gZnJvbSAnLi9pZGVtcG90ZW5jeS5zZXJ2aWNlJztcblxuQEdsb2JhbCgpXG5ATW9kdWxlKHtcbiAgcHJvdmlkZXJzOiBbXG4gICAgUmVkaXNTZXJ2aWNlLFxuICAgIElkZW1wb3RlbmN5U2VydmljZSxcbiAgICB7XG4gICAgICBwcm92aWRlOiAnUkVESVNfQ0xJRU5UJyxcbiAgICAgIHVzZUZhY3Rvcnk6IChyZWRpc1NlcnZpY2U6IFJlZGlzU2VydmljZSkgPT4gcmVkaXNTZXJ2aWNlLmdldENsaWVudCgpLFxuICAgICAgaW5qZWN0OiBbUmVkaXNTZXJ2aWNlXSxcbiAgICB9LFxuICBdLFxuICBleHBvcnRzOiBbUmVkaXNTZXJ2aWNlLCBJZGVtcG90ZW5jeVNlcnZpY2VdLFxufSlcbmV4cG9ydCBjbGFzcyBSZWRpc01vZHVsZSB7fVxuIl0sInZlcnNpb24iOjN9

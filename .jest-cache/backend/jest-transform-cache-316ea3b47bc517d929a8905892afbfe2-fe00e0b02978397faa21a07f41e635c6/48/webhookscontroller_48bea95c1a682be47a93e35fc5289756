@@ -1,0 +1,85 @@
+51e2793605890b701f32cc78ed7afed5
+"use strict";
+var _a, _b;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebhooksController = void 0;
+const tslib_1 = require("tslib");
+const common_1 = require("@nestjs/common");
+const queue_service_1 = require("../queue/queue.service");
+const shared_types_1 = require("@visapi/shared-types");
+const util_redis_1 = require("@visapi/util-redis");
+const api_key_guard_1 = require("../auth/guards/api-key.guard");
+const scopes_decorator_1 = require("../auth/decorators/scopes.decorator");
+const swagger_1 = require("@nestjs/swagger");
+let WebhooksController = class WebhooksController {
+    constructor(queueService, idempotencyService) {
+        this.queueService = queueService;
+        this.idempotencyService = idempotencyService;
+        this.MAX_PAYLOAD_SIZE = 512 * 1024; // 512KB
+    }
+    handleWebhook(webhookKey, payload, idempotencyKey, contentType) {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            // Validate content type
+            if (contentType &&
+                !contentType.includes('application/json') &&
+                !contentType.includes('application/x-www-form-urlencoded')) {
+                throw new common_1.BadRequestException('Unsupported content type. Use application/json or application/x-www-form-urlencoded');
+            }
+            // Check payload size (this is a simplified check)
+            const payloadSize = JSON.stringify(payload).length;
+            if (payloadSize > this.MAX_PAYLOAD_SIZE) {
+                throw new common_1.PayloadTooLargeException('Payload exceeds 512KB limit');
+            }
+            // Require idempotency key for webhook requests
+            if (!idempotencyKey) {
+                throw new common_1.BadRequestException('Idempotency-Key header is required');
+            }
+            // Handle idempotency using Redis-based service
+            return this.idempotencyService.checkAndExecute(idempotencyKey, () => tslib_1.__awaiter(this, void 0, void 0, function* () {
+                // Add job to queue
+                const job = yield this.queueService.addJob(shared_types_1.QUEUE_NAMES.DEFAULT, shared_types_1.JOB_NAMES.PROCESS_WORKFLOW, {
+                    webhookKey,
+                    payload,
+                    receivedAt: new Date().toISOString(),
+                    idempotencyKey,
+                });
+                return {
+                    status: 'accepted',
+                    jobId: job.id,
+                    message: 'Webhook received and queued for processing',
+                };
+            }), 3600 // 1 hour TTL
+            );
+        });
+    }
+};
+exports.WebhooksController = WebhooksController;
+tslib_1.__decorate([
+    (0, common_1.Post)(':key'),
+    (0, common_1.UseGuards)(api_key_guard_1.ApiKeyGuard),
+    (0, scopes_decorator_1.Scopes)('triggers:create'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
+    (0, swagger_1.ApiOperation)({ summary: 'Trigger a workflow via webhook' }),
+    (0, swagger_1.ApiSecurity)('api-key'),
+    (0, swagger_1.ApiHeader)({
+        name: 'Idempotency-Key',
+        description: 'Optional key to prevent duplicate processing',
+        required: false,
+    }),
+    (0, swagger_1.ApiResponse)({ status: 202, description: 'Webhook accepted for processing' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid request' }),
+    (0, swagger_1.ApiResponse)({ status: 413, description: 'Payload too large' }),
+    tslib_1.__param(0, (0, common_1.Param)('key')),
+    tslib_1.__param(1, (0, common_1.Body)()),
+    tslib_1.__param(2, (0, common_1.Headers)('idempotency-key')),
+    tslib_1.__param(3, (0, common_1.Headers)('content-type')),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", [String, Object, String, String]),
+    tslib_1.__metadata("design:returntype", Promise)
+], WebhooksController.prototype, "handleWebhook", null);
+exports.WebhooksController = WebhooksController = tslib_1.__decorate([
+    (0, swagger_1.ApiTags)('Webhooks'),
+    (0, common_1.Controller)('api/v1/triggers'),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof queue_service_1.QueueService !== "undefined" && queue_service_1.QueueService) === "function" ? _a : Object, typeof (_b = typeof util_redis_1.IdempotencyService !== "undefined" && util_redis_1.IdempotencyService) === "function" ? _b : Object])
+], WebhooksController);
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL3dlYmhvb2tzL3dlYmhvb2tzLmNvbnRyb2xsZXIudHMiLCJtYXBwaW5ncyI6Ijs7Ozs7QUFBQSwyQ0FXd0I7QUFDeEIsMERBQXNEO0FBQ3RELHVEQUE4RDtBQUM5RCxtREFBd0Q7QUFDeEQsZ0VBQTJEO0FBQzNELDBFQUE2RDtBQUM3RCw2Q0FNeUI7QUFJbEIsSUFBTSxrQkFBa0IsR0FBeEIsTUFBTSxrQkFBa0I7SUFHN0IsWUFDbUIsWUFBMEIsRUFDMUIsa0JBQXNDO1FBRHRDLGlCQUFZLEdBQVosWUFBWSxDQUFjO1FBQzFCLHVCQUFrQixHQUFsQixrQkFBa0IsQ0FBb0I7UUFKeEMscUJBQWdCLEdBQUcsR0FBRyxHQUFHLElBQUksQ0FBQyxDQUFDLFFBQVE7SUFLckQsQ0FBQztJQWdCRSxhQUFhLENBQ0gsVUFBa0IsRUFDeEIsT0FBWSxFQUNRLGNBQXVCLEVBQzFCLFdBQW9COztZQUU3Qyx3QkFBd0I7WUFDeEIsSUFDRSxXQUFXO2dCQUNYLENBQUMsV0FBVyxDQUFDLFFBQVEsQ0FBQyxrQkFBa0IsQ0FBQztnQkFDekMsQ0FBQyxXQUFXLENBQUMsUUFBUSxDQUFDLG1DQUFtQyxDQUFDLEVBQzFELENBQUM7Z0JBQ0QsTUFBTSxJQUFJLDRCQUFtQixDQUMzQixxRkFBcUYsQ0FDdEYsQ0FBQztZQUNKLENBQUM7WUFFRCxrREFBa0Q7WUFDbEQsTUFBTSxXQUFXLEdBQUcsSUFBSSxDQUFDLFNBQVMsQ0FBQyxPQUFPLENBQUMsQ0FBQyxNQUFNLENBQUM7WUFDbkQsSUFBSSxXQUFXLEdBQUcsSUFBSSxDQUFDLGdCQUFnQixFQUFFLENBQUM7Z0JBQ3hDLE1BQU0sSUFBSSxpQ0FBd0IsQ0FBQyw2QkFBNkIsQ0FBQyxDQUFDO1lBQ3BFLENBQUM7WUFFRCwrQ0FBK0M7WUFDL0MsSUFBSSxDQUFDLGNBQWMsRUFBRSxDQUFDO2dCQUNwQixNQUFNLElBQUksNEJBQW1CLENBQUMsb0NBQW9DLENBQUMsQ0FBQztZQUN0RSxDQUFDO1lBRUQsK0NBQStDO1lBQy9DLE9BQU8sSUFBSSxDQUFDLGtCQUFrQixDQUFDLGVBQWUsQ0FDNUMsY0FBYyxFQUNkLEdBQVMsRUFBRTtnQkFDVCxtQkFBbUI7Z0JBQ25CLE1BQU0sR0FBRyxHQUFHLE1BQU0sSUFBSSxDQUFDLFlBQVksQ0FBQyxNQUFNLENBQ3hDLDBCQUFXLENBQUMsT0FBTyxFQUNuQix3QkFBUyxDQUFDLGdCQUFnQixFQUMxQjtvQkFDRSxVQUFVO29CQUNWLE9BQU87b0JBQ1AsVUFBVSxFQUFFLElBQUksSUFBSSxFQUFFLENBQUMsV0FBVyxFQUFFO29CQUNwQyxjQUFjO2lCQUNmLENBQ0YsQ0FBQztnQkFFRixPQUFPO29CQUNMLE1BQU0sRUFBRSxVQUFVO29CQUNsQixLQUFLLEVBQUUsR0FBRyxDQUFDLEVBQUU7b0JBQ2IsT0FBTyxFQUFFLDRDQUE0QztpQkFDdEQsQ0FBQztZQUNKLENBQUMsQ0FBQSxFQUNELElBQUksQ0FBQyxhQUFhO2FBQ25CLENBQUM7UUFDSixDQUFDO0tBQUE7Q0FDRixDQUFBO0FBM0VZLGdEQUFrQjtBQXNCdkI7SUFkTCxJQUFBLGFBQUksRUFBQyxNQUFNLENBQUM7SUFDWixJQUFBLGtCQUFTLEVBQUMsMkJBQVcsQ0FBQztJQUN0QixJQUFBLHlCQUFNLEVBQUMsaUJBQWlCLENBQUM7SUFDekIsSUFBQSxpQkFBUSxFQUFDLG1CQUFVLENBQUMsUUFBUSxDQUFDO0lBQzdCLElBQUEsc0JBQVksRUFBQyxFQUFFLE9BQU8sRUFBRSxnQ0FBZ0MsRUFBRSxDQUFDO0lBQzNELElBQUEscUJBQVcsRUFBQyxTQUFTLENBQUM7SUFDdEIsSUFBQSxtQkFBUyxFQUFDO1FBQ1QsSUFBSSxFQUFFLGlCQUFpQjtRQUN2QixXQUFXLEVBQUUsOENBQThDO1FBQzNELFFBQVEsRUFBRSxLQUFLO0tBQ2hCLENBQUM7SUFDRCxJQUFBLHFCQUFXLEVBQUMsRUFBRSxNQUFNLEVBQUUsR0FBRyxFQUFFLFdBQVcsRUFBRSxpQ0FBaUMsRUFBRSxDQUFDO0lBQzVFLElBQUEscUJBQVcsRUFBQyxFQUFFLE1BQU0sRUFBRSxHQUFHLEVBQUUsV0FBVyxFQUFFLGlCQUFpQixFQUFFLENBQUM7SUFDNUQsSUFBQSxxQkFBVyxFQUFDLEVBQUUsTUFBTSxFQUFFLEdBQUcsRUFBRSxXQUFXLEVBQUUsbUJBQW1CLEVBQUUsQ0FBQztJQUU1RCxtQkFBQSxJQUFBLGNBQUssRUFBQyxLQUFLLENBQUMsQ0FBQTtJQUNaLG1CQUFBLElBQUEsYUFBSSxHQUFFLENBQUE7SUFDTixtQkFBQSxJQUFBLGdCQUFPLEVBQUMsaUJBQWlCLENBQUMsQ0FBQTtJQUMxQixtQkFBQSxJQUFBLGdCQUFPLEVBQUMsY0FBYyxDQUFDLENBQUE7Ozs7dURBZ0R6Qjs2QkExRVUsa0JBQWtCO0lBRjlCLElBQUEsaUJBQU8sRUFBQyxVQUFVLENBQUM7SUFDbkIsSUFBQSxtQkFBVSxFQUFDLGlCQUFpQixDQUFDO2lFQUtLLDRCQUFZLG9CQUFaLDRCQUFZLG9EQUNOLCtCQUFrQixvQkFBbEIsK0JBQWtCO0dBTDlDLGtCQUFrQixDQTJFOUIiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL3dlYmhvb2tzL3dlYmhvb2tzLmNvbnRyb2xsZXIudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHtcbiAgQ29udHJvbGxlcixcbiAgUG9zdCxcbiAgQm9keSxcbiAgUGFyYW0sXG4gIEhlYWRlcnMsXG4gIEh0dHBDb2RlLFxuICBIdHRwU3RhdHVzLFxuICBCYWRSZXF1ZXN0RXhjZXB0aW9uLFxuICBQYXlsb2FkVG9vTGFyZ2VFeGNlcHRpb24sXG4gIFVzZUd1YXJkcyxcbn0gZnJvbSAnQG5lc3Rqcy9jb21tb24nO1xuaW1wb3J0IHsgUXVldWVTZXJ2aWNlIH0gZnJvbSAnLi4vcXVldWUvcXVldWUuc2VydmljZSc7XG5pbXBvcnQgeyBRVUVVRV9OQU1FUywgSk9CX05BTUVTIH0gZnJvbSAnQHZpc2FwaS9zaGFyZWQtdHlwZXMnO1xuaW1wb3J0IHsgSWRlbXBvdGVuY3lTZXJ2aWNlIH0gZnJvbSAnQHZpc2FwaS91dGlsLXJlZGlzJztcbmltcG9ydCB7IEFwaUtleUd1YXJkIH0gZnJvbSAnLi4vYXV0aC9ndWFyZHMvYXBpLWtleS5ndWFyZCc7XG5pbXBvcnQgeyBTY29wZXMgfSBmcm9tICcuLi9hdXRoL2RlY29yYXRvcnMvc2NvcGVzLmRlY29yYXRvcic7XG5pbXBvcnQge1xuICBBcGlUYWdzLFxuICBBcGlPcGVyYXRpb24sXG4gIEFwaVJlc3BvbnNlLFxuICBBcGlTZWN1cml0eSxcbiAgQXBpSGVhZGVyLFxufSBmcm9tICdAbmVzdGpzL3N3YWdnZXInO1xuXG5AQXBpVGFncygnV2ViaG9va3MnKVxuQENvbnRyb2xsZXIoJ2FwaS92MS90cmlnZ2VycycpXG5leHBvcnQgY2xhc3MgV2ViaG9va3NDb250cm9sbGVyIHtcbiAgcHJpdmF0ZSByZWFkb25seSBNQVhfUEFZTE9BRF9TSVpFID0gNTEyICogMTAyNDsgLy8gNTEyS0JcblxuICBjb25zdHJ1Y3RvcihcbiAgICBwcml2YXRlIHJlYWRvbmx5IHF1ZXVlU2VydmljZTogUXVldWVTZXJ2aWNlLFxuICAgIHByaXZhdGUgcmVhZG9ubHkgaWRlbXBvdGVuY3lTZXJ2aWNlOiBJZGVtcG90ZW5jeVNlcnZpY2VcbiAgKSB7fVxuXG4gIEBQb3N0KCc6a2V5JylcbiAgQFVzZUd1YXJkcyhBcGlLZXlHdWFyZClcbiAgQFNjb3BlcygndHJpZ2dlcnM6Y3JlYXRlJylcbiAgQEh0dHBDb2RlKEh0dHBTdGF0dXMuQUNDRVBURUQpXG4gIEBBcGlPcGVyYXRpb24oeyBzdW1tYXJ5OiAnVHJpZ2dlciBhIHdvcmtmbG93IHZpYSB3ZWJob29rJyB9KVxuICBAQXBpU2VjdXJpdHkoJ2FwaS1rZXknKVxuICBAQXBpSGVhZGVyKHtcbiAgICBuYW1lOiAnSWRlbXBvdGVuY3ktS2V5JyxcbiAgICBkZXNjcmlwdGlvbjogJ09wdGlvbmFsIGtleSB0byBwcmV2ZW50IGR1cGxpY2F0ZSBwcm9jZXNzaW5nJyxcbiAgICByZXF1aXJlZDogZmFsc2UsXG4gIH0pXG4gIEBBcGlSZXNwb25zZSh7IHN0YXR1czogMjAyLCBkZXNjcmlwdGlvbjogJ1dlYmhvb2sgYWNjZXB0ZWQgZm9yIHByb2Nlc3NpbmcnIH0pXG4gIEBBcGlSZXNwb25zZSh7IHN0YXR1czogNDAwLCBkZXNjcmlwdGlvbjogJ0ludmFsaWQgcmVxdWVzdCcgfSlcbiAgQEFwaVJlc3BvbnNlKHsgc3RhdHVzOiA0MTMsIGRlc2NyaXB0aW9uOiAnUGF5bG9hZCB0b28gbGFyZ2UnIH0pXG4gIGFzeW5jIGhhbmRsZVdlYmhvb2soXG4gICAgQFBhcmFtKCdrZXknKSB3ZWJob29rS2V5OiBzdHJpbmcsXG4gICAgQEJvZHkoKSBwYXlsb2FkOiBhbnksXG4gICAgQEhlYWRlcnMoJ2lkZW1wb3RlbmN5LWtleScpIGlkZW1wb3RlbmN5S2V5Pzogc3RyaW5nLFxuICAgIEBIZWFkZXJzKCdjb250ZW50LXR5cGUnKSBjb250ZW50VHlwZT86IHN0cmluZ1xuICApIHtcbiAgICAvLyBWYWxpZGF0ZSBjb250ZW50IHR5cGVcbiAgICBpZiAoXG4gICAgICBjb250ZW50VHlwZSAmJlxuICAgICAgIWNvbnRlbnRUeXBlLmluY2x1ZGVzKCdhcHBsaWNhdGlvbi9qc29uJykgJiZcbiAgICAgICFjb250ZW50VHlwZS5pbmNsdWRlcygnYXBwbGljYXRpb24veC13d3ctZm9ybS11cmxlbmNvZGVkJylcbiAgICApIHtcbiAgICAgIHRocm93IG5ldyBCYWRSZXF1ZXN0RXhjZXB0aW9uKFxuICAgICAgICAnVW5zdXBwb3J0ZWQgY29udGVudCB0eXBlLiBVc2UgYXBwbGljYXRpb24vanNvbiBvciBhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQnXG4gICAgICApO1xuICAgIH1cblxuICAgIC8vIENoZWNrIHBheWxvYWQgc2l6ZSAodGhpcyBpcyBhIHNpbXBsaWZpZWQgY2hlY2spXG4gICAgY29uc3QgcGF5bG9hZFNpemUgPSBKU09OLnN0cmluZ2lmeShwYXlsb2FkKS5sZW5ndGg7XG4gICAgaWYgKHBheWxvYWRTaXplID4gdGhpcy5NQVhfUEFZTE9BRF9TSVpFKSB7XG4gICAgICB0aHJvdyBuZXcgUGF5bG9hZFRvb0xhcmdlRXhjZXB0aW9uKCdQYXlsb2FkIGV4Y2VlZHMgNTEyS0IgbGltaXQnKTtcbiAgICB9XG5cbiAgICAvLyBSZXF1aXJlIGlkZW1wb3RlbmN5IGtleSBmb3Igd2ViaG9vayByZXF1ZXN0c1xuICAgIGlmICghaWRlbXBvdGVuY3lLZXkpIHtcbiAgICAgIHRocm93IG5ldyBCYWRSZXF1ZXN0RXhjZXB0aW9uKCdJZGVtcG90ZW5jeS1LZXkgaGVhZGVyIGlzIHJlcXVpcmVkJyk7XG4gICAgfVxuXG4gICAgLy8gSGFuZGxlIGlkZW1wb3RlbmN5IHVzaW5nIFJlZGlzLWJhc2VkIHNlcnZpY2VcbiAgICByZXR1cm4gdGhpcy5pZGVtcG90ZW5jeVNlcnZpY2UuY2hlY2tBbmRFeGVjdXRlKFxuICAgICAgaWRlbXBvdGVuY3lLZXksXG4gICAgICBhc3luYyAoKSA9PiB7XG4gICAgICAgIC8vIEFkZCBqb2IgdG8gcXVldWVcbiAgICAgICAgY29uc3Qgam9iID0gYXdhaXQgdGhpcy5xdWV1ZVNlcnZpY2UuYWRkSm9iKFxuICAgICAgICAgIFFVRVVFX05BTUVTLkRFRkFVTFQsXG4gICAgICAgICAgSk9CX05BTUVTLlBST0NFU1NfV09SS0ZMT1csXG4gICAgICAgICAge1xuICAgICAgICAgICAgd2ViaG9va0tleSxcbiAgICAgICAgICAgIHBheWxvYWQsXG4gICAgICAgICAgICByZWNlaXZlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksXG4gICAgICAgICAgICBpZGVtcG90ZW5jeUtleSxcbiAgICAgICAgICB9XG4gICAgICAgICk7XG5cbiAgICAgICAgcmV0dXJuIHtcbiAgICAgICAgICBzdGF0dXM6ICdhY2NlcHRlZCcsXG4gICAgICAgICAgam9iSWQ6IGpvYi5pZCxcbiAgICAgICAgICBtZXNzYWdlOiAnV2ViaG9vayByZWNlaXZlZCBhbmQgcXVldWVkIGZvciBwcm9jZXNzaW5nJyxcbiAgICAgICAgfTtcbiAgICAgIH0sXG4gICAgICAzNjAwIC8vIDEgaG91ciBUVExcbiAgICApO1xuICB9XG59XG4iXSwidmVyc2lvbiI6M30=

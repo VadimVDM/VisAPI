@@ -1,0 +1,112 @@
+f04f7712b3988a7b19415c5554c13179
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ApiKeyWithSecretResponseDto = exports.ApiKeyResponseDto = void 0;
+const tslib_1 = require("tslib");
+const swagger_1 = require("@nestjs/swagger");
+class ApiKeyResponseDto {
+    /**
+     * Creates a response DTO from an API key record, excluding sensitive fields
+     */
+    static fromRecord(record) {
+        const { hashed_key, // Exclude legacy field
+        hashed_secret } = record, // Exclude sensitive field
+        safeFields = tslib_1.__rest(record, ["hashed_key", "hashed_secret"]);
+        return safeFields;
+    }
+}
+exports.ApiKeyResponseDto = ApiKeyResponseDto;
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Unique identifier for the API key',
+        example: 'afe8c3a7-3b1d-4c9f-8e2a-1b2c3d4e5f6g',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "id", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Name or description of the API key',
+        example: 'Production API Key',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "name", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Key prefix for identification (first 8 characters)',
+        example: 'vapi_12345678',
+        nullable: true,
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "prefix", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Array of permission scopes',
+        example: ['workflows:read', 'workflows:create'],
+        isArray: true,
+    }),
+    tslib_1.__metadata("design:type", Array)
+], ApiKeyResponseDto.prototype, "scopes", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Expiration timestamp in ISO 8601 format',
+        example: '2024-12-31T23:59:59.999Z',
+        nullable: true,
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "expires_at", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'User ID who created this key',
+        example: 'user-123',
+        nullable: true,
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "created_by", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Creation timestamp in ISO 8601 format',
+        example: '2024-01-01T00:00:00.000Z',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "created_at", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Last usage timestamp in ISO 8601 format',
+        example: '2024-01-15T12:30:45.123Z',
+        nullable: true,
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "last_used_at", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Last update timestamp in ISO 8601 format',
+        example: '2024-01-15T12:30:45.123Z',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyResponseDto.prototype, "updated_at", void 0);
+class ApiKeyWithSecretResponseDto extends ApiKeyResponseDto {
+    /**
+     * Creates a response DTO with the raw key (for creation response only)
+     */
+    static fromRecordWithKey(record, key, message = 'Save this key securely. It will not be shown again.') {
+        const baseResponse = ApiKeyResponseDto.fromRecord(record);
+        return Object.assign(Object.assign({}, baseResponse), { key,
+            message });
+    }
+}
+exports.ApiKeyWithSecretResponseDto = ApiKeyWithSecretResponseDto;
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'The raw API key secret (only shown once upon creation)',
+        example: 'vapi_12345678_abcdef1234567890abcdef1234567890',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyWithSecretResponseDto.prototype, "key", void 0);
+tslib_1.__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Security notice about the key',
+        example: 'Save this key securely. It will not be shown again.',
+    }),
+    tslib_1.__metadata("design:type", String)
+], ApiKeyWithSecretResponseDto.prototype, "message", void 0);
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL2FwaS1rZXlzL2R0by9hcGkta2V5LXJlc3BvbnNlLmR0by50cyIsIm1hcHBpbmdzIjoiOzs7O0FBQUEsNkNBQThDO0FBRzlDLE1BQWEsaUJBQWlCO0lBNEQ1Qjs7T0FFRztJQUNILE1BQU0sQ0FBQyxVQUFVLENBQUMsTUFBb0I7UUFDcEMsTUFBTSxFQUNKLFVBQVUsRUFBTSx1QkFBdUI7UUFDdkMsYUFBYSxLQUVYLE1BQU0sRUFGUSwwQkFBMEI7UUFDdkMsVUFBVSxrQkFDWCxNQUFNLEVBSkosK0JBSUwsQ0FBUyxDQUFDO1FBRVgsT0FBTyxVQUErQixDQUFDO0lBQ3pDLENBQUM7Q0FDRjtBQXhFRCw4Q0F3RUM7QUFuRUM7SUFKQyxJQUFBLHFCQUFXLEVBQUM7UUFDWCxXQUFXLEVBQUUsbUNBQW1DO1FBQ2hELE9BQU8sRUFBRSxzQ0FBc0M7S0FDaEQsQ0FBQzs7NkNBQ1M7QUFNWDtJQUpDLElBQUEscUJBQVcsRUFBQztRQUNYLFdBQVcsRUFBRSxvQ0FBb0M7UUFDakQsT0FBTyxFQUFFLG9CQUFvQjtLQUM5QixDQUFDOzsrQ0FDVztBQU9iO0lBTEMsSUFBQSxxQkFBVyxFQUFDO1FBQ1gsV0FBVyxFQUFFLG9EQUFvRDtRQUNqRSxPQUFPLEVBQUUsZUFBZTtRQUN4QixRQUFRLEVBQUUsSUFBSTtLQUNmLENBQUM7O2lEQUNvQjtBQU90QjtJQUxDLElBQUEscUJBQVcsRUFBQztRQUNYLFdBQVcsRUFBRSw0QkFBNEI7UUFDekMsT0FBTyxFQUFFLENBQUMsZ0JBQWdCLEVBQUUsa0JBQWtCLENBQUM7UUFDL0MsT0FBTyxFQUFFLElBQUk7S0FDZCxDQUFDOztpREFDZTtBQU9qQjtJQUxDLElBQUEscUJBQVcsRUFBQztRQUNYLFdBQVcsRUFBRSx5Q0FBeUM7UUFDdEQsT0FBTyxFQUFFLDBCQUEwQjtRQUNuQyxRQUFRLEVBQUUsSUFBSTtLQUNmLENBQUM7O3FEQUN3QjtBQU8xQjtJQUxDLElBQUEscUJBQVcsRUFBQztRQUNYLFdBQVcsRUFBRSw4QkFBOEI7UUFDM0MsT0FBTyxFQUFFLFVBQVU7UUFDbkIsUUFBUSxFQUFFLElBQUk7S0FDZixDQUFDOztxREFDd0I7QUFNMUI7SUFKQyxJQUFBLHFCQUFXLEVBQUM7UUFDWCxXQUFXLEVBQUUsdUNBQXVDO1FBQ3BELE9BQU8sRUFBRSwwQkFBMEI7S0FDcEMsQ0FBQzs7cURBQ2lCO0FBT25CO0lBTEMsSUFBQSxxQkFBVyxFQUFDO1FBQ1gsV0FBVyxFQUFFLHlDQUF5QztRQUN0RCxPQUFPLEVBQUUsMEJBQTBCO1FBQ25DLFFBQVEsRUFBRSxJQUFJO0tBQ2YsQ0FBQzs7dURBQzBCO0FBTTVCO0lBSkMsSUFBQSxxQkFBVyxFQUFDO1FBQ1gsV0FBVyxFQUFFLDBDQUEwQztRQUN2RCxPQUFPLEVBQUUsMEJBQTBCO0tBQ3BDLENBQUM7O3FEQUNpQjtBQWdCckIsTUFBYSwyQkFBNEIsU0FBUSxpQkFBaUI7SUFhaEU7O09BRUc7SUFDSCxNQUFNLENBQUMsaUJBQWlCLENBQ3RCLE1BQW9CLEVBQ3BCLEdBQVcsRUFDWCxVQUFrQixxREFBcUQ7UUFFdkUsTUFBTSxZQUFZLEdBQUcsaUJBQWlCLENBQUMsVUFBVSxDQUFDLE1BQU0sQ0FBQyxDQUFDO1FBQzFELHVDQUNLLFlBQVksS0FDZixHQUFHO1lBQ0gsT0FBTyxJQUNQO0lBQ0osQ0FBQztDQUNGO0FBNUJELGtFQTRCQztBQXZCQztJQUpDLElBQUEscUJBQVcsRUFBQztRQUNYLFdBQVcsRUFBRSx3REFBd0Q7UUFDckUsT0FBTyxFQUFFLGdEQUFnRDtLQUMxRCxDQUFDOzt3REFDVTtBQU1aO0lBSkMsSUFBQSxxQkFBVyxFQUFDO1FBQ1gsV0FBVyxFQUFFLCtCQUErQjtRQUM1QyxPQUFPLEVBQUUscURBQXFEO0tBQy9ELENBQUM7OzREQUNjIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi9Vc2Vycy92YWRpbS9Qcm9qZWN0cy9WaXNBUEkvYXBwcy9iYWNrZW5kL3NyYy9hcGkta2V5cy9kdG8vYXBpLWtleS1yZXNwb25zZS5kdG8udHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgQXBpUHJvcGVydHkgfSBmcm9tICdAbmVzdGpzL3N3YWdnZXInO1xuaW1wb3J0IHR5cGUgeyBBcGlLZXlSZWNvcmQgfSBmcm9tICdAdmlzYXBpL3NoYXJlZC10eXBlcyc7XG5cbmV4cG9ydCBjbGFzcyBBcGlLZXlSZXNwb25zZUR0byB7XG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdVbmlxdWUgaWRlbnRpZmllciBmb3IgdGhlIEFQSSBrZXknLFxuICAgIGV4YW1wbGU6ICdhZmU4YzNhNy0zYjFkLTRjOWYtOGUyYS0xYjJjM2Q0ZTVmNmcnLFxuICB9KVxuICBpZDogc3RyaW5nO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdOYW1lIG9yIGRlc2NyaXB0aW9uIG9mIHRoZSBBUEkga2V5JyxcbiAgICBleGFtcGxlOiAnUHJvZHVjdGlvbiBBUEkgS2V5JyxcbiAgfSlcbiAgbmFtZTogc3RyaW5nO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdLZXkgcHJlZml4IGZvciBpZGVudGlmaWNhdGlvbiAoZmlyc3QgOCBjaGFyYWN0ZXJzKScsXG4gICAgZXhhbXBsZTogJ3ZhcGlfMTIzNDU2NzgnLFxuICAgIG51bGxhYmxlOiB0cnVlLFxuICB9KVxuICBwcmVmaXg6IHN0cmluZyB8IG51bGw7XG5cbiAgQEFwaVByb3BlcnR5KHtcbiAgICBkZXNjcmlwdGlvbjogJ0FycmF5IG9mIHBlcm1pc3Npb24gc2NvcGVzJyxcbiAgICBleGFtcGxlOiBbJ3dvcmtmbG93czpyZWFkJywgJ3dvcmtmbG93czpjcmVhdGUnXSxcbiAgICBpc0FycmF5OiB0cnVlLFxuICB9KVxuICBzY29wZXM6IHN0cmluZ1tdO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdFeHBpcmF0aW9uIHRpbWVzdGFtcCBpbiBJU08gODYwMSBmb3JtYXQnLFxuICAgIGV4YW1wbGU6ICcyMDI0LTEyLTMxVDIzOjU5OjU5Ljk5OVonLFxuICAgIG51bGxhYmxlOiB0cnVlLFxuICB9KVxuICBleHBpcmVzX2F0OiBzdHJpbmcgfCBudWxsO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdVc2VyIElEIHdobyBjcmVhdGVkIHRoaXMga2V5JyxcbiAgICBleGFtcGxlOiAndXNlci0xMjMnLFxuICAgIG51bGxhYmxlOiB0cnVlLFxuICB9KVxuICBjcmVhdGVkX2J5OiBzdHJpbmcgfCBudWxsO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdDcmVhdGlvbiB0aW1lc3RhbXAgaW4gSVNPIDg2MDEgZm9ybWF0JyxcbiAgICBleGFtcGxlOiAnMjAyNC0wMS0wMVQwMDowMDowMC4wMDBaJyxcbiAgfSlcbiAgY3JlYXRlZF9hdDogc3RyaW5nO1xuXG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdMYXN0IHVzYWdlIHRpbWVzdGFtcCBpbiBJU08gODYwMSBmb3JtYXQnLFxuICAgIGV4YW1wbGU6ICcyMDI0LTAxLTE1VDEyOjMwOjQ1LjEyM1onLFxuICAgIG51bGxhYmxlOiB0cnVlLFxuICB9KVxuICBsYXN0X3VzZWRfYXQ6IHN0cmluZyB8IG51bGw7XG5cbiAgQEFwaVByb3BlcnR5KHtcbiAgICBkZXNjcmlwdGlvbjogJ0xhc3QgdXBkYXRlIHRpbWVzdGFtcCBpbiBJU08gODYwMSBmb3JtYXQnLFxuICAgIGV4YW1wbGU6ICcyMDI0LTAxLTE1VDEyOjMwOjQ1LjEyM1onLFxuICB9KVxuICB1cGRhdGVkX2F0OiBzdHJpbmc7XG5cbiAgLyoqXG4gICAqIENyZWF0ZXMgYSByZXNwb25zZSBEVE8gZnJvbSBhbiBBUEkga2V5IHJlY29yZCwgZXhjbHVkaW5nIHNlbnNpdGl2ZSBmaWVsZHNcbiAgICovXG4gIHN0YXRpYyBmcm9tUmVjb3JkKHJlY29yZDogQXBpS2V5UmVjb3JkKTogQXBpS2V5UmVzcG9uc2VEdG8ge1xuICAgIGNvbnN0IHtcbiAgICAgIGhhc2hlZF9rZXksICAgICAvLyBFeGNsdWRlIGxlZ2FjeSBmaWVsZFxuICAgICAgaGFzaGVkX3NlY3JldCwgIC8vIEV4Y2x1ZGUgc2Vuc2l0aXZlIGZpZWxkXG4gICAgICAuLi5zYWZlRmllbGRzXG4gICAgfSA9IHJlY29yZDtcblxuICAgIHJldHVybiBzYWZlRmllbGRzIGFzIEFwaUtleVJlc3BvbnNlRHRvO1xuICB9XG59XG5cbmV4cG9ydCBjbGFzcyBBcGlLZXlXaXRoU2VjcmV0UmVzcG9uc2VEdG8gZXh0ZW5kcyBBcGlLZXlSZXNwb25zZUR0byB7XG4gIEBBcGlQcm9wZXJ0eSh7XG4gICAgZGVzY3JpcHRpb246ICdUaGUgcmF3IEFQSSBrZXkgc2VjcmV0IChvbmx5IHNob3duIG9uY2UgdXBvbiBjcmVhdGlvbiknLFxuICAgIGV4YW1wbGU6ICd2YXBpXzEyMzQ1Njc4X2FiY2RlZjEyMzQ1Njc4OTBhYmNkZWYxMjM0NTY3ODkwJyxcbiAgfSlcbiAga2V5OiBzdHJpbmc7XG5cbiAgQEFwaVByb3BlcnR5KHtcbiAgICBkZXNjcmlwdGlvbjogJ1NlY3VyaXR5IG5vdGljZSBhYm91dCB0aGUga2V5JyxcbiAgICBleGFtcGxlOiAnU2F2ZSB0aGlzIGtleSBzZWN1cmVseS4gSXQgd2lsbCBub3QgYmUgc2hvd24gYWdhaW4uJyxcbiAgfSlcbiAgbWVzc2FnZTogc3RyaW5nO1xuXG4gIC8qKlxuICAgKiBDcmVhdGVzIGEgcmVzcG9uc2UgRFRPIHdpdGggdGhlIHJhdyBrZXkgKGZvciBjcmVhdGlvbiByZXNwb25zZSBvbmx5KVxuICAgKi9cbiAgc3RhdGljIGZyb21SZWNvcmRXaXRoS2V5KFxuICAgIHJlY29yZDogQXBpS2V5UmVjb3JkLFxuICAgIGtleTogc3RyaW5nLFxuICAgIG1lc3NhZ2U6IHN0cmluZyA9ICdTYXZlIHRoaXMga2V5IHNlY3VyZWx5LiBJdCB3aWxsIG5vdCBiZSBzaG93biBhZ2Fpbi4nXG4gICk6IEFwaUtleVdpdGhTZWNyZXRSZXNwb25zZUR0byB7XG4gICAgY29uc3QgYmFzZVJlc3BvbnNlID0gQXBpS2V5UmVzcG9uc2VEdG8uZnJvbVJlY29yZChyZWNvcmQpO1xuICAgIHJldHVybiB7XG4gICAgICAuLi5iYXNlUmVzcG9uc2UsXG4gICAgICBrZXksXG4gICAgICBtZXNzYWdlLFxuICAgIH07XG4gIH1cbn0iXSwidmVyc2lvbiI6M30=

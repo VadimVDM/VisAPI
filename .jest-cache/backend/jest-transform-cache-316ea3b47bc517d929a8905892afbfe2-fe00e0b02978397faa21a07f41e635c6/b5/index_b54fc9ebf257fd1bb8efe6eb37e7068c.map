@@ -1,0 +1,1 @@
+{"file":"/Users/vadim/Projects/VisAPI/libs/backend/core-supabase/src/index.ts","mappings":";;;AAAA,gEAAsC;AACtC,iEAAuC;AACvC,gEAAsC","names":[],"sources":["/Users/vadim/Projects/VisAPI/libs/backend/core-supabase/src/index.ts"],"sourcesContent":["export * from './lib/supabase.module';\nexport * from './lib/supabase.service';\nexport * from './lib/storage.service';\n"],"version":3}
