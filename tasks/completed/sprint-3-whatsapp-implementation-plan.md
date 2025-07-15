@@ -384,7 +384,7 @@ CGB_TEMPLATE_DOCUMENT_REQUEST=12347
 - 🏗️ New shared library: `@visapi/backend-core-cgb`
 - 📱 Enhanced WhatsApp processor with real API integration
 - 🧪 Comprehensive test suite (4 files, 140+ test cases)
-- 📄 Complete documentation: `docs/sprint-3.0-whatsapp.md`
+- 📄 Complete documentation: `docs/sprint-3-whatsapp.md`
 - ⚙️ Environment configuration with optional template mappings
 
 **Build Status**: ✅ All builds passing  

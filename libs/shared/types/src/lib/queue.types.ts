@@ -20,6 +20,7 @@ export const JOB_NAMES = {
   GENERATE_PDF: 'pdf.generate',
   PROCESS_IMAGE: 'image.process',
   PROCESS_WORKFLOW: 'workflow.process',
+  PRUNE_LOGS: 'logs.prune',
 } as const;
 
 export interface WhatsAppJobData {
@@ -36,6 +37,17 @@ export interface WhatsAppJobResult {
   contactId: number;                       // CGB contact ID
   messageId?: string;                      // CGB message ID if available
   to: string;                             // Original phone number
+  timestamp: string;
+  error?: string;
+}
+
+export interface LogPruneJobData {
+  olderThanDays: number;
+}
+
+export interface LogPruneJobResult {
+  success: boolean;
+  deleted: number;
   timestamp: string;
   error?: string;
 }

@@ -87,3 +87,31 @@ export interface QueueMetrics {
   delayed: number;
   paused: boolean;
 }
+
+// Log entry types
+export interface LogEntry {
+  id: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  message: string;
+  metadata?: any;
+  workflow_id?: string;
+  job_id?: string;
+  pii_redacted: boolean;
+  created_at: string;
+}
+
+export interface LogFilters {
+  level?: 'info' | 'warn' | 'error' | 'debug';
+  workflow_id?: string;
+  job_id?: string;
+  start_date?: string;
+  end_date?: string;
+  search?: string;
+}
+
+export interface LogStats {
+  total: number;
+  withPii: number;
+  recentCount: number;
+  byLevel: Record<string, number>;
+}

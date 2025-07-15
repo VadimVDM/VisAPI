@@ -10,6 +10,8 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { AdminModule } from '../admin/admin.module';
 import { CronModule } from '../cron/cron.module';
+import { WorkflowsModule } from '../workflows/workflows.module';
+import { LogsModule } from '../logs/logs.module';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -44,6 +46,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
     WebhooksModule,
     AdminModule,
     CronModule,
+    WorkflowsModule,
+    LogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

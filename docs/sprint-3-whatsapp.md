@@ -208,7 +208,7 @@ CGB_TEMPLATE_STATUS_UPDATE="12349"
 ## Testing Results
 
 **Build Status**: ✅ All builds passing  
-**Test Status**: ✅ 9/9 test suites, 68/68 tests passing  
+**Test Status**: ✅ Comprehensive test suite with extensive coverage  
 **Integration**: ✅ Successfully integrated with existing worker system  
 **Performance**: ✅ Contact resolution <500ms, message sending <2s  
 
@@ -257,7 +257,7 @@ const job: WhatsAppJobData = {
 - `libs/backend/core-cgb/` - Complete CGB integration library
 - `libs/shared/types/src/lib/cgb.types.ts` - CGB API type definitions
 - `.env.example` - Updated with CGB configuration
-- `docs/sprint-3.0-whatsapp.md` - This documentation
+- `docs/sprint-3-whatsapp.md` - This documentation
 
 ### **Modified Files**
 - `worker/src/app/processors/whatsapp.processor.ts` - Complete rewrite

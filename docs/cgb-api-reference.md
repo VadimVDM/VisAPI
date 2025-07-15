@@ -12,7 +12,7 @@ This document serves as the complete API reference for integrating with ChatGPT 
 ## VisAPI Integration
 
 **Implemented in**: `libs/backend/core-cgb/`  
-**Implementation docs**: `docs/sprint-3.0-whatsapp.md`  
+**Implementation docs**: `docs/sprint-3-whatsapp.md`  
 **Key services**:
 - `CgbClientService` - HTTP client for CGB API
 - `ContactResolverService` - Phone number to contact resolution  

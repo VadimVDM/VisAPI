@@ -26,16 +26,18 @@ export class CronSeederService implements OnModuleInit {
       
       if (workflows.length === 0) {
         this.logger.info('No workflows with cron triggers found');
-        return;
+      } else {
+        this.logger.info(
+          { count: workflows.length },
+          'Found workflows with cron triggers',
+        );
       }
-
-      this.logger.info(
-        { count: workflows.length },
-        'Found workflows with cron triggers',
-      );
 
       // Clear existing repeatable jobs first to ensure clean state
       await this.clearExistingCronJobs();
+
+      // Schedule log pruning job (daily at 2 AM)
+      await this.scheduleLogPruning();
 
       // Schedule each workflow
       for (const workflow of workflows) {
@@ -78,11 +80,11 @@ export class CronSeederService implements OnModuleInit {
 
       // Remove jobs that match our cron pattern
       for (const job of repeatableJobs) {
-        if (job.id?.startsWith('cron-')) {
-          const workflowId = job.id.replace('cron-', '');
+        if (job.id?.startsWith('cron-') || job.id === 'log-pruning') {
+          const jobId = job.id.startsWith('cron-') ? job.id.replace('cron-', '') : job.id;
           await this.queueService.removeRepeatableJob(
             QUEUE_NAMES.DEFAULT,
-            workflowId,
+            jobId,
           );
         }
       }
@@ -254,5 +256,40 @@ export class CronSeederService implements OnModuleInit {
     }
 
     return metrics;
+  }
+
+  /**
+   * Schedule log pruning job to run daily at 2 AM UTC
+   */
+  private async scheduleLogPruning(): Promise<void> {
+    try {
+      const schedule = '0 2 * * *'; // Daily at 2 AM UTC
+      const olderThanDays = 90; // Default retention period
+
+      await this.queueService.addRepeatableJob(
+        QUEUE_NAMES.DEFAULT,
+        JOB_NAMES.PRUNE_LOGS,
+        {
+          olderThanDays,
+        },
+        {
+          pattern: schedule,
+          tz: 'UTC',
+        },
+      );
+
+      this.logger.info(
+        {
+          schedule,
+          olderThanDays,
+        },
+        'Scheduled log pruning job',
+      );
+    } catch (error) {
+      this.logger.error(
+        { error },
+        'Failed to schedule log pruning job',
+      );
+    }
   }
 }

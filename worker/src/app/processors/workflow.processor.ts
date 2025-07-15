@@ -116,14 +116,14 @@ export class WorkflowProcessor {
       switch (step.type) {
         case 'slack.send':
           await this.defaultQueue.add(
-            JOB_NAMES.SEND_SLACK_MESSAGE,
+            JOB_NAMES.SEND_SLACK,
             jobData,
           );
           break;
 
         case 'whatsapp.send':
           await this.defaultQueue.add(
-            JOB_NAMES.SEND_WHATSAPP_MESSAGE,
+            JOB_NAMES.SEND_WHATSAPP,
             jobData,
           );
           break;

@@ -11,11 +11,12 @@ export interface WorkflowTrigger {
 
 export interface WorkflowStep {
   id: string;
-  type: 'slack.send' | 'whatsapp.send' | 'pdf.generate' | 'email.send';
+  type: 'slack.send' | 'whatsapp.send' | 'pdf.generate' | 'email.send' | 'delay';
   config: {
     template?: string;
     channel?: string;
     recipient?: string;
+    duration?: number; // For delay steps
     [key: string]: any;
   };
   retries?: number;

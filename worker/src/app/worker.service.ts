@@ -12,6 +12,7 @@ import { WhatsAppProcessor } from './processors/whatsapp.processor';
 import { PdfProcessor } from './processors/pdf.processor';
 import { DlqProcessor } from './processors/dlq.processor';
 import { WorkflowProcessor } from './processors/workflow.processor';
+import { LogPruneProcessor } from './processors/log-prune.processor';
 
 @Injectable()
 export class WorkerService implements OnModuleInit, OnModuleDestroy {
@@ -24,7 +25,8 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly whatsAppProcessor: WhatsAppProcessor,
     private readonly pdfProcessor: PdfProcessor,
     private readonly dlqProcessor: DlqProcessor,
-    private readonly workflowProcessor: WorkflowProcessor
+    private readonly workflowProcessor: WorkflowProcessor,
+    private readonly logPruneProcessor: LogPruneProcessor
   ) {}
 
   async onModuleInit() {
@@ -114,10 +116,10 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     const jobType = job.name;
 
     switch (jobType) {
-      case JOB_NAMES.SEND_SLACK_MESSAGE:
+      case JOB_NAMES.SEND_SLACK:
       case 'slack.send':
         return this.slackProcessor.process(job);
-      case JOB_NAMES.SEND_WHATSAPP_MESSAGE:
+      case JOB_NAMES.SEND_WHATSAPP:
       case 'whatsapp.send':
         return this.whatsAppProcessor.process(job);
       case JOB_NAMES.GENERATE_PDF:
@@ -125,6 +127,8 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         return this.pdfProcessor.process(job);
       case JOB_NAMES.PROCESS_WORKFLOW:
         return this.workflowProcessor.process(job.data);
+      case JOB_NAMES.PRUNE_LOGS:
+        return this.logPruneProcessor.process(job);
       default:
         throw new Error(`Unknown job type: ${jobType}`);
     }

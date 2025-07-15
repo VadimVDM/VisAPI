@@ -135,7 +135,7 @@ describe('CronSeederService', () => {
       await service.onModuleInit();
 
       expect(mockLogger.info).toHaveBeenCalledWith('Starting cron job seeding');
-      expect(queueService.addRepeatableJob).toHaveBeenCalledTimes(2); // Only workflows 1 and 2 have cron triggers
+      expect(queueService.addRepeatableJob).toHaveBeenCalledTimes(3); // 2 workflow jobs + 1 log pruning job
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Cron job seeding completed successfully',
       );
@@ -158,7 +158,7 @@ describe('CronSeederService', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         'No workflows with cron triggers found',
       );
-      expect(queueService.addRepeatableJob).not.toHaveBeenCalled();
+      expect(queueService.addRepeatableJob).toHaveBeenCalledTimes(1); // Only log pruning job
     });
 
     it('should handle database errors', async () => {
@@ -235,13 +235,27 @@ describe('CronSeederService', () => {
           tz: 'UTC',
         },
       );
+
+      // Verify log pruning job is scheduled
+      expect(queueService.addRepeatableJob).toHaveBeenCalledWith(
+        QUEUE_NAMES.DEFAULT,
+        JOB_NAMES.PRUNE_LOGS,
+        {
+          olderThanDays: 90,
+        },
+        {
+          pattern: '0 2 * * *',
+          tz: 'UTC',
+        },
+      );
     });
 
     it('should clear existing cron jobs before seeding', async () => {
       const existingJobs = [
         { id: 'cron-workflow-1', key: 'key1' },
         { id: 'cron-workflow-2', key: 'key2' },
-        { id: 'other-job', key: 'key3' },
+        { id: 'log-pruning', key: 'key3' },
+        { id: 'other-job', key: 'key4' },
       ];
 
       const mockFrom = {
@@ -266,7 +280,11 @@ describe('CronSeederService', () => {
         QUEUE_NAMES.DEFAULT,
         'workflow-2',
       );
-      expect(queueService.removeRepeatableJob).toHaveBeenCalledTimes(2);
+      expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
+        QUEUE_NAMES.DEFAULT,
+        'log-pruning',
+      );
+      expect(queueService.removeRepeatableJob).toHaveBeenCalledTimes(3);
     });
   });
 
