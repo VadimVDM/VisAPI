@@ -42,6 +42,7 @@ export default function ApiKeysPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyWithSecret | null>(null);
   const [creating, setCreating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState({
     name: '',
     scopes: [] as string[],
@@ -55,7 +56,7 @@ export default function ApiKeysPage() {
   async function createApiKey() {
     try {
       setCreating(true);
-      setError(null);
+      setActionError(null);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
       const response = await authenticatedFetch(`${apiUrl}/api/v1/api-keys`, {
@@ -76,7 +77,7 @@ export default function ApiKeysPage() {
       refetch(); // Refresh the list
     } catch (err) {
       console.error('Error creating API key:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create API key');
+      setActionError(err instanceof Error ? err.message : 'Failed to create API key');
     } finally {
       setCreating(false);
     }
@@ -107,7 +108,7 @@ export default function ApiKeysPage() {
       refetch(); // Refresh the list
     } catch (err) {
       console.error('Error deleting API key:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete API key');
+      setActionError(err instanceof Error ? err.message : 'Failed to delete API key');
     }
   }
 
@@ -250,7 +251,9 @@ export default function ApiKeysPage() {
                     <div>
                       <span className="text-gray-500">Expires:</span>
                       <div className="text-gray-900">
-                        {new Date(apiKey.expires_at).toLocaleDateString()}
+                        {apiKey.expires_at 
+                          ? new Date(apiKey.expires_at).toLocaleDateString() 
+                          : 'Never'}
                       </div>
                     </div>
                   </div>
@@ -423,7 +426,9 @@ export default function ApiKeysPage() {
                     Expires
                   </label>
                   <p className="mt-1 text-sm text-gray-900">
-                    {new Date(createdKey.expires_at).toLocaleDateString()}
+                    {createdKey.expires_at 
+                      ? new Date(createdKey.expires_at).toLocaleDateString() 
+                      : 'Never'}
                   </p>
                 </div>
               </div>

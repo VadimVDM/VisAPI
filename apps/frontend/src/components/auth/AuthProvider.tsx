@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@visapi/frontend-data-access';
+import { supabase } from '@visapi/frontend-data';
 
 interface AuthContextType {
   user: User | null;
