@@ -8,7 +8,7 @@ import { Scopes } from '../auth/decorators/scopes.decorator';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @All('queues*')
+  @All('queues/*path')
   getQueues(@Req() req: Request, @Res() res: Response) {
     const router = this.adminService.getRouter();
     return router(req, res, () => {});
