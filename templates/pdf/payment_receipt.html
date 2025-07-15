@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }
+        
+        .logo-section {
+            flex: 1;
+        }
+        
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 5px;
+        }
+        
+        .company-info {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .receipt-info {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .receipt-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .receipt-date {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .customer-section {
+            margin-bottom: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .items-table th {
+            background-color: #0066cc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+        
+        .summary-box {
+            width: 300px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .summary-row.total {
+            border-top: 2px solid #0066cc;
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            padding-top: 15px;
+        }
+        
+        .payment-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .payment-status {
+            font-size: 18px;
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .terms {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        @media print {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">VISANET</div>
+                <div class="company-info">
+                    Visa Processing Services<br>
+                    123 Business Avenue<br>
+                    City, State 12345<br>
+                    Phone: +1-800-VISANET<br>
+                    Email: billing@visanet.app
+                </div>
+            </div>
+            <div class="receipt-info">
+                <div class="receipt-number">RECEIPT</div>
+                <div class="receipt-number">#{{receipt.number}}</div>
+                <div class="receipt-date">Date: {{formatDate receipt.date 'short'}}</div>
+            </div>
+        </div>
+        
+        <div class="customer-section">
+            <h2 class="section-title">Bill To</h2>
+            <div>
+                <strong>{{customer.name}}</strong><br>
+                {{#if customer.company}}{{customer.company}}<br>{{/if}}
+                {{customer.address}}<br>
+                {{customer.city}}, {{customer.state}} {{customer.zip}}<br>
+                {{#if customer.email}}Email: {{customer.email}}<br>{{/if}}
+                {{#if customer.phone}}Phone: {{customer.phone}}{{/if}}
+            </div>
+        </div>
+        
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="text-right">Quantity</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each items}}
+                <tr>
+                    <td>
+                        <strong>{{this.description}}</strong>
+                        {{#if this.details}}<br><small>{{this.details}}</small>{{/if}}
+                    </td>
+                    <td class="text-right">{{this.quantity}}</td>
+                    <td class="text-right">{{currency this.unitPrice}}</td>
+                    <td class="text-right">{{currency this.amount}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        
+        <div class="summary-section">
+            <div class="summary-box">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>{{currency summary.subtotal}}</span>
+                </div>
+                {{#if summary.tax}}
+                <div class="summary-row">
+                    <span>Tax ({{summary.taxRate}}%):</span>
+                    <span>{{currency summary.tax}}</span>
+                </div>
+                {{/if}}
+                {{#if summary.discount}}
+                <div class="summary-row">
+                    <span>Discount:</span>
+                    <span>-{{currency summary.discount}}</span>
+                </div>
+                {{/if}}
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span>{{currency summary.total}}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="payment-info">
+            <div class="payment-status">PAYMENT RECEIVED</div>
+            <div>
+                <strong>Payment Method:</strong> {{payment.method}}<br>
+                {{#if payment.transactionId}}
+                <strong>Transaction ID:</strong> {{payment.transactionId}}<br>
+                {{/if}}
+                <strong>Payment Date:</strong> {{formatDate payment.date 'short'}}
+            </div>
+        </div>
+        
+        <div class="terms">
+            <strong>Terms & Conditions:</strong><br>
+            This receipt confirms payment for the services described above. All visa processing fees are non-refundable unless the service cannot be provided due to circumstances within our control. Processing times are estimates and may vary based on embassy/consulate workload.
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing VisaNet for your visa processing needs!</p>
+            <p>This is an official receipt. Please retain for your records.</p>
+            <p>Document ID: {{jobId}} | Generated: {{generatedAt}}</p>
+        </div>
+    </div>
+</body>
+</html>

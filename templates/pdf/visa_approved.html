@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visa Application Approved</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }
+        
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 24px;
+            color: #28a745;
+            margin-top: 20px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .value {
+            color: #333;
+        }
+        
+        .status-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .status-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #155724;
+        }
+        
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .instructions {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        
+        @media print {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">VISANET</div>
+            <div class="title">Visa Application Certificate</div>
+        </div>
+        
+        <div class="status-box">
+            <div class="status-text">APPLICATION APPROVED</div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">Applicant Information</h2>
+            <div class="info-grid">
+                <div class="label">Full Name:</div>
+                <div class="value">{{applicant.fullName}}</div>
+                
+                <div class="label">Passport Number:</div>
+                <div class="value">{{applicant.passportNumber}}</div>
+                
+                <div class="label">Nationality:</div>
+                <div class="value">{{applicant.nationality}}</div>
+                
+                <div class="label">Date of Birth:</div>
+                <div class="value">{{formatDate applicant.dateOfBirth 'short'}}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">Visa Details</h2>
+            <div class="info-grid">
+                <div class="label">Application ID:</div>
+                <div class="value">{{visa.applicationId}}</div>
+                
+                <div class="label">Visa Type:</div>
+                <div class="value">{{visa.type}}</div>
+                
+                <div class="label">Valid From:</div>
+                <div class="value">{{formatDate visa.validFrom 'short'}}</div>
+                
+                <div class="label">Valid Until:</div>
+                <div class="value">{{formatDate visa.validUntil 'short'}}</div>
+                
+                <div class="label">Duration of Stay:</div>
+                <div class="value">{{visa.durationOfStay}} days</div>
+                
+                <div class="label">Number of Entries:</div>
+                <div class="value">{{visa.numberOfEntries}}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">Processing Information</h2>
+            <div class="info-grid">
+                <div class="label">Application Date:</div>
+                <div class="value">{{formatDate processing.applicationDate 'short'}}</div>
+                
+                <div class="label">Approval Date:</div>
+                <div class="value">{{formatDate processing.approvalDate 'short'}}</div>
+                
+                <div class="label">Processing Time:</div>
+                <div class="value">{{processing.processingDays}} days</div>
+                
+                <div class="label">Reference Number:</div>
+                <div class="value">{{processing.referenceNumber}}</div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>Next Steps</h3>
+            <ul>
+                <li>Print this certificate and keep it with your travel documents</li>
+                <li>Present this certificate along with your passport at the port of entry</li>
+                <li>Ensure your passport is valid for at least 6 months from the date of travel</li>
+                <li>Review and comply with all entry requirements for your destination</li>
+            </ul>
+        </div>
+        
+        <div class="qr-code">
+            <p><strong>Verification Code:</strong> {{verification.code}}</p>
+            <p><small>Scan to verify authenticity</small></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an official document generated by VisaNet</p>
+            <p>Document ID: {{jobId}} | Generated: {{generatedAt}}</p>
+            <p>For support, contact: support@visanet.app | +1-800-VISANET</p>
+        </div>
+    </div>
+</body>
+</html>

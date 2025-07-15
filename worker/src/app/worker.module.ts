@@ -7,6 +7,8 @@ import { SlackProcessor } from './processors/slack.processor';
 import { WhatsAppProcessor } from './processors/whatsapp.processor';
 import { PdfProcessor } from './processors/pdf.processor';
 import { DlqProcessor } from './processors/dlq.processor';
+import { PdfTemplateService } from './services/pdf-template.service';
+import { PdfGeneratorService } from './services/pdf-generator.service';
 
 @Module({
   imports: [ConfigModule, SupabaseModule, CgbModule],
@@ -16,6 +18,8 @@ import { DlqProcessor } from './processors/dlq.processor';
     WhatsAppProcessor,
     PdfProcessor,
     DlqProcessor,
+    PdfTemplateService,
+    PdfGeneratorService,
   ],
 })
 export class WorkerModule {}

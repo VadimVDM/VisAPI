@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import { PdfGeneratorService } from '../services/pdf-generator.service';
 
 interface PdfJobData {
   template: string;
@@ -9,63 +10,64 @@ interface PdfJobData {
     format?: 'A4' | 'Letter';
     orientation?: 'portrait' | 'landscape';
   };
+  workflowId?: string;
+  url?: string; // For URL-based PDF generation
 }
 
 @Injectable()
 export class PdfProcessor {
   private readonly logger = new Logger(PdfProcessor.name);
 
-  async process(job: Job<PdfJobData>) {
-    const { template, data, filename, options } = job.data;
+  constructor(private readonly pdfGenerator: PdfGeneratorService) {}
 
-    this.logger.log(`Processing PDF generation for template: ${template}`);
+  async process(job: Job<PdfJobData>) {
+    const { template, data, filename, options, workflowId, url } = job.data;
+
+    this.logger.log(`Processing PDF generation job: ${job.id}`);
+    this.logger.log(`Template: ${template || 'URL-based'}, Workflow: ${workflowId || 'none'}`);
 
     try {
-      // For now, simulate PDF generation
-      // In Sprint 3, we'll implement Puppeteer
-      await this.simulatePdfGeneration(template, data, filename, options);
+      let result;
 
-      const generatedFilename = filename || `pdf_${job.id}_${Date.now()}.pdf`;
+      if (url) {
+        // Generate PDF from URL
+        result = await this.pdfGenerator.generateFromUrl(url, options);
+      } else if (template) {
+        // Generate PDF from template
+        // Include workflowId in data for storage path
+        const enrichedData = {
+          ...data,
+          workflowId,
+          generatedAt: new Date().toISOString(),
+          jobId: job.id,
+        };
 
-      return {
+        result = await this.pdfGenerator.generateFromTemplate(
+          template,
+          enrichedData,
+          options
+        );
+      } else {
+        throw new Error('Either template or url must be provided');
+      }
+
+      const response = {
         success: true,
-        filename: generatedFilename,
-        template,
-        url: `https://storage.example.com/pdfs/${generatedFilename}`,
+        jobId: result.jobId,
+        filename: result.filename,
+        template: template || 'url',
+        url: result.publicUrl,
+        signedUrl: result.signedUrl,
+        size: result.size,
         timestamp: new Date().toISOString(),
+        workflowId,
       };
+
+      this.logger.log(`PDF generated successfully: ${result.filename} (${result.size} bytes)`);
+      return response;
     } catch (error) {
-      this.logger.error(`Failed to generate PDF:`, error);
+      this.logger.error('Failed to generate PDF:', error);
       throw error;
-    }
-  }
-
-  private async simulatePdfGeneration(
-    template: string,
-    data: Record<string, any>,
-    filename?: string,
-    options?: any
-  ) {
-    // Simulate PDF generation time (longer for complex documents)
-    const complexity = Object.keys(data).length;
-    const baseTime = 1000;
-    const complexityTime = complexity * 100;
-    const randomTime = Math.random() * 500;
-
-    await new Promise((resolve) =>
-      setTimeout(resolve, baseTime + complexityTime + randomTime)
-    );
-
-    this.logger.log(`[SIMULATED] PDF generated from template: ${template}`);
-    this.logger.log(`[SIMULATED] Data fields: ${Object.keys(data).length}`);
-
-    if (options) {
-      this.logger.log(`[SIMULATED] Options:`, options);
-    }
-
-    // Simulate occasional failures (2% chance)
-    if (Math.random() < 0.02) {
-      throw new Error('Simulated PDF generation error');
     }
   }
 }
