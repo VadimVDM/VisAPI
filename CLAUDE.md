@@ -7,16 +7,23 @@ Essential information for working with the VisAPI project. Updated: July 2025
 **VisAPI** - Enterprise workflow automation system for Visanet, automating visa processing, notifications, and document generation.
 
 ### Production Environment
+
 - **Frontend**: https://app.visanet.app (Vercel)
 - **Backend**: https://api.visanet.app (Render)
 - **Database**: Supabase (pangdzwamawwgmvxnwkk)
 - **Queue**: Upstash Redis
 
 ### Key Achievements
-- ✅ Production deployments live
-- ✅ Custom domains configured
-- ✅ Health monitoring active
-- ✅ CORS and security configured
+
+- ✅ Production deployments live and operational
+- ✅ Custom domains configured (app.visanet.app, api.visanet.app)
+- ✅ Health monitoring active with comprehensive endpoints
+- ✅ CORS and security headers configured
+- ✅ Complete workflow automation system operational
+- ✅ Full-stack admin dashboard with authentication
+- ✅ Queue processing with Bull-Board monitoring
+- ✅ API key authentication and scoped authorization
+- ✅ Webhook processing with idempotency
 
 ## Project Structure
 
@@ -43,6 +50,7 @@ VisAPI/
 ## Architecture
 
 ### System Architecture
+
 ```
 ┌──────────────┐ HTTPS  ┌────────────────┐  WebSocket  ┌──────────────────┐
 │   Vercel     │──────▶│ Render Gateway │────────────▶│   Render Worker  │
@@ -60,18 +68,21 @@ VisAPI/
 ### Technology Stack
 
 **Frontend** (app.visanet.app)
+
 - Next.js 14 with App Router
 - TypeScript, Tailwind CSS
 - Supabase Auth (Magic Link)
 - Deployed on Vercel
 
 **Backend** (api.visanet.app)
+
 - NestJS with TypeScript
 - BullMQ + Upstash Redis
 - Supabase PostgreSQL
 - Deployed on Render
 
 **Infrastructure**
+
 - NX Monorepo + pnpm
 - Docker for local dev
 - GitHub auto-deploy
@@ -80,6 +91,7 @@ VisAPI/
 ## Development Workflow
 
 ### Quick Start Commands
+
 ```bash
 # Initial setup
 pnpm setup                 # Install deps + start Docker services
@@ -107,12 +119,14 @@ pnpm clean                 # Reset NX cache
 ```
 
 ### Local Services
+
 - **Frontend:** http://localhost:3001
 - **Backend:** http://localhost:3000/api
 - **PostgreSQL:** localhost:5432
 - **Redis:** localhost:6379
 
 ### Production Services
+
 - **Frontend:** https://app.visanet.app
 - **Backend:** https://api.visanet.app
 - **Health Check:** https://api.visanet.app/api/v1/healthz
@@ -122,6 +136,7 @@ pnpm clean                 # Reset NX cache
 ### Production Configuration
 
 **Frontend (Vercel)**
+
 ```env
 NEXT_PUBLIC_API_URL=https://api.visanet.app
 NEXT_PUBLIC_SUPABASE_URL=https://pangdzwamawwgmvxnwkk.supabase.co
@@ -130,6 +145,7 @@ NEXT_PUBLIC_ENV=production
 ```
 
 **Backend (Render)**
+
 ```env
 NODE_ENV=production
 DATABASE_URL=[supabase_connection_string]
@@ -141,6 +157,7 @@ CORS_ORIGIN=https://app.visanet.app
 ## Coding Standards
 
 ### General Rules
+
 - **TypeScript:** Strict mode enabled across all projects
 - **Code Style:** ESLint + Prettier configuration enforced
 - **Testing:** >80% backend coverage, >70% frontend coverage
@@ -148,6 +165,7 @@ CORS_ORIGIN=https://app.visanet.app
 - **Security:** Never commit secrets, API keys, or sensitive data
 
 ### NestJS Backend Standards
+
 ```typescript
 // Use dependency injection
 @Injectable()
@@ -170,12 +188,13 @@ async createWorkflow(@Body() dto: CreateWorkflowDto) {}
 ```
 
 ### Next.js Frontend Standards
+
 ```typescript
 // Use App Router file conventions
 // app/page.tsx, app/layout.tsx, app/loading.tsx
 
 // Use server/client components appropriately
-'use client' // Only when needed for interactivity
+'use client'; // Only when needed for interactivity
 
 // Use TypeScript interfaces
 interface User {
@@ -196,6 +215,7 @@ const { data, error, isLoading } = useQuery({
 ### Core Tables (Supabase PostgreSQL)
 
 **users**
+
 ```sql
 - id: uuid (primary key)
 - email: text (unique)
@@ -205,6 +225,7 @@ const { data, error, isLoading } = useQuery({
 ```
 
 **api_keys**
+
 ```sql
 - id: uuid (primary key)
 - name: text
@@ -216,6 +237,7 @@ const { data, error, isLoading } = useQuery({
 ```
 
 **workflows**
+
 ```sql
 - id: uuid (primary key)
 - name: text
@@ -227,6 +249,7 @@ const { data, error, isLoading } = useQuery({
 ```
 
 **logs**
+
 ```sql
 - id: uuid (primary key)
 - level: text
@@ -241,6 +264,7 @@ const { data, error, isLoading } = useQuery({
 ## API Design
 
 ### REST API Conventions
+
 - **Base URL:** `/api/v1/*`
 - **Authentication:** API Key in header `X-API-Key`
 - **Content-Type:** `application/json`
@@ -248,6 +272,7 @@ const { data, error, isLoading } = useQuery({
 - **Error Format:** RFC 7807 Problem Details
 
 ### Key Endpoints
+
 ```
 POST /api/v1/triggers/{key}     # Webhook trigger with idempotency
 GET  /api/v1/workflows          # List workflows
@@ -262,17 +287,20 @@ GET  /api/v1/version            # Git SHA and build info
 ## Security Guidelines
 
 ### Authentication & Authorization
+
 - **Frontend:** Supabase Email Magic-Link with @visanet.com domain allowlist
 - **Backend:** API key authentication with scoped permissions
 - **API Keys:** 90-day rotation, hashed storage, unique per service
 
 ### Data Protection
+
 - **PII Redaction:** Automatic regex-based redaction in logs
 - **Secrets Management:** Environment variables only, never in code
 - **Database:** Row-Level Security (RLS) enabled on all tables
 - **HTTPS:** Required for all external communications
 
 ### Security Checklist
+
 - [ ] No hardcoded secrets or API keys
 - [ ] All database queries use parameterized statements
 - [ ] Input validation on all endpoints
@@ -283,19 +311,34 @@ GET  /api/v1/version            # Git SHA and build info
 
 ## Workflow Automation
 
+### MCP Tools Usage
+
+Use these tools:
+
+- **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
+- **upstash**: for Redis, a versatile Vector Database
+- **resend**: Emails
+- **playwright**: Web testing and accessibility testing
+- **fetch** & **puppeteer**: Simple web browsing tasks
+- **browserbase**: Headless browser automation and interaction (only live, it can't access localhost)
+- **filesystem, sequential-thinking, memory**: Core development tools
+
 ### Connector Types
+
 1. **Slack:** SDK wrapper for notifications
 2. **WhatsApp:** Twilio SDK with template registry
 3. **PDF Generator:** Puppeteer-core with S3 storage
 4. **Image Processing:** Sharp for transformations
 
 ### Queue System (BullMQ)
+
 - **Priorities:** critical, default, bulk
 - **Features:** Dead Letter Queue (DLQ), retry with jitter backoff
 - **Monitoring:** Bull-Board UI embedded in admin dashboard
 - **Redis:** Upstash with TLS (rediss://) and AOF persistence
 
 ### Workflow JSON Schema
+
 ```json
 {
   "id": "uuid",
@@ -320,6 +363,7 @@ GET  /api/v1/version            # Git SHA and build info
 ## Testing Strategy
 
 ### Backend Testing
+
 ```bash
 # Unit tests (Jest)
 pnpm test:backend
@@ -332,6 +376,7 @@ pnpm test:backend --coverage
 ```
 
 ### Frontend Testing
+
 ```bash
 # Component tests (React Testing Library + Vitest)
 pnpm test:frontend
@@ -344,6 +389,7 @@ pnpm test:frontend --coverage
 ```
 
 ### Integration Testing
+
 ```bash
 # Postman collections for API testing
 newman run postman/visapi-collection.json
@@ -355,23 +401,29 @@ k6 run load-tests/smoke-test.js
 ## Monitoring & Observability
 
 ### Logging (Pino)
+
 ```typescript
 // Structured logging with correlation IDs
-logger.info({
-  correlationId: req.headers['x-correlation-id'],
-  userId: req.user?.id,
-  action: 'workflow.triggered',
-  workflowId: workflow.id,
-}, 'Workflow triggered successfully');
+logger.info(
+  {
+    correlationId: req.headers['x-correlation-id'],
+    userId: req.user?.id,
+    action: 'workflow.triggered',
+    workflowId: workflow.id,
+  },
+  'Workflow triggered successfully'
+);
 ```
 
 ### Metrics (Prometheus)
+
 - **Request Duration:** `http_request_duration_seconds`
 - **Job Latency:** `job_latency_seconds`
 - **Job Failures:** `job_fail_total`
 - **Queue Depth:** `queue_depth_total`
 
 ### Alerts (Grafana Cloud → Slack)
+
 - API latency > 200ms (p95)
 - Error rate > 5%
 - Queue depth > 1000 jobs
@@ -382,17 +434,20 @@ logger.info({
 ### Production Setup
 
 **Frontend (Vercel)**
+
 - URL: https://app.visanet.app
 - Auto-deploy from `main` branch
 - Environment variables in dashboard
 
 **Backend (Render)**
+
 - URL: https://api.visanet.app
 - Auto-deploy from `main` branch
 - Build: `pnpm install && pnpm nx build backend`
 - Start: `node dist/apps/backend/main.js`
 
 ### Deployment Commands
+
 ```bash
 # Deploy via git push
 git push origin main
@@ -406,6 +461,7 @@ curl https://api.visanet.app/api/v1/healthz
 ### Common Issues
 
 **Build Failures**
+
 ```bash
 # Clear NX cache
 pnpm clean
@@ -416,6 +472,7 @@ pnpm install
 ```
 
 **Database Connection Issues**
+
 ```bash
 # Check Supabase connection
 curl -I https://your-project.supabase.co/health
@@ -425,6 +482,7 @@ docker-compose logs postgres
 ```
 
 **Redis Connection Issues**
+
 ```bash
 # Check Redis connectivity
 redis-cli -h localhost -p 6379 ping
@@ -434,6 +492,7 @@ docker-compose logs redis
 ```
 
 ### Debug Commands
+
 ```bash
 # View running processes
 pnpm ps
@@ -452,6 +511,7 @@ pnpm nx show project frontend
 ## Project Contacts & Resources
 
 ### External Services
+
 - **Supabase:** Database + Auth + File Storage
 - **Upstash:** Redis for production queues
 - **Render:** Backend API gateway and workers
@@ -460,6 +520,7 @@ pnpm nx show project frontend
 - **Slack:** Internal notifications
 
 ### Documentation Links
+
 - **NX Workspace:** https://nx.dev/getting-started/intro
 - **Next.js 14:** https://nextjs.org/docs
 - **NestJS:** https://docs.nestjs.com/
@@ -469,6 +530,7 @@ pnpm nx show project frontend
 ## Current Sprint Status
 
 **Sprint 0: Foundation** ✅ **COMPLETED** (July 14, 2025)
+
 - NX monorepo structure established
 - Next.js frontend with App Router
 - NestJS backend with basic API
@@ -476,16 +538,43 @@ pnpm nx show project frontend
 - ESLint, Prettier, TypeScript configs
 - Development documentation
 
-**Next Sprint 1: Core Engine & Gateway**
-- Supabase database setup
-- API key authentication
-- BullMQ job queue system
+**Sprint 1: Core Engine & Gateway** ✅ **COMPLETED** (January 13, 2025)
+
+- Supabase database setup and schema
+- API key authentication system
+- BullMQ job queue with Redis
 - Health check endpoints
 - OpenAPI documentation
+- Worker process architecture
+
+**Sprint 2: Frontend Integration & Testing** ✅ **COMPLETED** (January 14, 2025)
+
+- Admin dashboard with Supabase auth
+- Bull-Board queue monitoring
+- Complete workflow automation
+- Unit testing infrastructure
+- Production deployment ready
+
+**Sprint 2.5: Architecture & Security Overhaul** ✅ **COMPLETED** (July 15, 2025)
+
+- Shared libraries architecture with 7 specialized libraries
+- Zero app-to-app imports enforced by NX boundaries
+- Critical API key security vulnerability patched
+- Distributed Redis-based idempotency service
+- Frontend integration with live data
+- Complete removal of hardcoded credentials
+
+**Current Status: Ready for Sprint 3**
+
+- All core systems operational and secure
+- Production deployments stable
+- Clean, maintainable monorepo architecture
+- Ready for advanced workflow features
 
 ## Notes for Claude Code
 
 ### When Working on This Project:
+
 1. **Always check the current sprint status** in `tasks/roadmap.md`
 2. **Follow the established patterns** in existing code
 3. **Update documentation** when making architectural changes
@@ -497,6 +586,7 @@ pnpm nx show project frontend
 9. **Keep CLAUDE.md updated** with important project changes
 
 ### Code Quality Reminders:
+
 - Run `pnpm lint` before committing
 - Ensure tests pass with `pnpm test`
 - Check TypeScript compilation with `pnpm build`
@@ -509,5 +599,5 @@ pnpm nx show project frontend
 
 ---
 
-**Last Updated:** July 14, 2025
-**Version:** Sprint 0 Foundation Complete
+**Last Updated:** July 15, 2025
+**Version:** Sprint 2.5 Complete - Architecture & Security Hardened

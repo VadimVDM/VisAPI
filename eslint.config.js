@@ -18,8 +18,24 @@ module.exports = [
           enforceBuildableLibDependency: true,
           allow: [],
           depConstraints: [
+            // Shared libraries can't depend on anything except each other
             {
-              sourceTag: '*',
+              sourceTag: 'scope:shared',
+              onlyDependOnLibsWithTags: ['scope:shared'],
+            },
+            // Backend libraries can depend on shared libraries
+            {
+              sourceTag: 'scope:backend',
+              onlyDependOnLibsWithTags: ['scope:shared', 'scope:backend'],
+            },
+            // Frontend libraries can depend on shared libraries
+            {
+              sourceTag: 'scope:frontend',
+              onlyDependOnLibsWithTags: ['scope:shared', 'scope:frontend'],
+            },
+            // Apps can depend on all libraries
+            {
+              sourceTag: 'type:app',
               onlyDependOnLibsWithTags: ['*'],
             },
           ],
@@ -42,7 +58,10 @@ module.exports = [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
     },
   }),
   ...compat.config({

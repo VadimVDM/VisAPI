@@ -168,6 +168,8 @@ Thumbs.db
 /apps/*/build
 /packages/*/dist
 /packages/*/build
+/libs/*/dist
+/libs/*/build
 
 # Playwright
 /apps/*/playwright-report/

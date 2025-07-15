@@ -77,7 +77,7 @@ If anything remains unclear, pause and ask the user before proceeding.
 Use these tools as needed:
 
 - **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
-- **redis**: Versatile Vector Database
+- **upstash**: for Redis, a versatile Vector Database
 - **resend**: Emails
 - **playwright**: Web testing and accessibility testing
 - **fetch** & **puppeteer**: Simple web browsing tasks
