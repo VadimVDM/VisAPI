@@ -11,9 +11,9 @@ This directory contains the CI/CD pipeline configurations for VisAPI.
 **Jobs**:
 
 - **Setup**: Determines affected projects using NX
-- **Lint**: Runs ESLint across the codebase
-- **Test**: Runs unit tests with coverage reporting
-- **Build**: Builds affected applications
+- **Lint**: Runs ESLint across the codebase with continue-on-error
+- **Test**: Runs unit tests with coverage reporting (frontend, backend, worker)
+- **Build**: Builds affected applications with proper artifact paths
 - **Security**: Runs Trivy vulnerability scanner
 - **Lighthouse**: Performance and accessibility testing for frontend
 
@@ -22,7 +22,9 @@ This directory contains the CI/CD pipeline configurations for VisAPI.
 - NX affected commands for efficient builds
 - Parallel execution for faster feedback
 - Coverage reporting to Codecov
-- Build artifact uploads
+- Build artifact uploads with correct paths
+- Stable test execution using `pnpm test:backend:serial`
+- Frontend tests with `--passWithNoTests` flag
 
 ### 2. Deploy to Production (`deploy-production.yml`)
 
@@ -50,12 +52,20 @@ This directory contains the CI/CD pipeline configurations for VisAPI.
 
 **Jobs**:
 
-- **Dependency Scan**: Snyk vulnerability scanning
-- **Container Scan**: Trivy for Docker images
+- **Dependency Scan**: Snyk vulnerability scanning with SARIF output
+- **Container Scan**: Trivy for Docker images (worker Dockerfile)
 - **Secrets Scan**: TruffleHog for leaked credentials
 - **License Check**: Validates approved licenses
-- **CodeQL**: Static code analysis
+- **CodeQL**: Static code analysis for JavaScript
 - **SBOM**: Generates Software Bill of Materials
+
+**Security Features**:
+
+- SARIF file generation for proper security reporting
+- Container security scanning with Alpine base image verification
+- Non-root user validation (user ID 1001)
+- Minimal attack surface verification
+- Conditional uploads to prevent missing file errors
 
 **Security Reports**: Uploaded to GitHub Security tab
 
@@ -108,6 +118,16 @@ Configure these in GitHub repository settings:
    - Update dependencies with `pnpm update`
    - Add exceptions to `.snyk` file if needed
 
+4. **Container Build Failures**
+   - Verify Dockerfile paths are correct for NX monorepo structure
+   - Check that Docker build context includes all necessary files
+   - Ensure worker project doesn't reference non-existent package.json files
+
+5. **Test Failures in CI**
+   - Use `pnpm test:backend:serial` for stable backend tests
+   - Frontend tests should use `--passWithNoTests` flag
+   - Check that test setup files are properly configured
+
 ### Useful Commands
 
 ```bash
@@ -119,4 +139,33 @@ actionlint .github/workflows/*.yml
 
 # Check secret usage
 grep -r "secrets\." .github/workflows/
+
+# Test Docker build locally
+docker build -t visapi-worker:test -f worker/Dockerfile .
+
+# Run tests locally matching CI configuration
+pnpm test:backend:serial
+pnpm nx test frontend --passWithNoTests
+
+# Check workflow run status
+gh run list --limit 5
+gh run view <run-id>
 ```
+
+## Recent Fixes (July 2025)
+
+### CI/CD Pipeline Improvements
+
+1. **Container Security Scanning**: Fixed worker Dockerfile to work with NX monorepo structure
+2. **SARIF Generation**: Fixed Snyk scan to properly generate SARIF files for security reporting
+3. **Test Stability**: Improved test execution with proper flags and serial mode for backend tests
+4. **Build Artifacts**: Fixed artifact paths to match NX build output structure
+5. **Error Handling**: Added proper error handling and conditional uploads
+
+### Security Enhancements
+
+- Alpine base image verification for container security
+- Non-root user validation (UID 1001)
+- Proper SARIF file generation for vulnerability reporting
+- Conditional uploads to prevent missing file errors
+- Container security best practices validation
