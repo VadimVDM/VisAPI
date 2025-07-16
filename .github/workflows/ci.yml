@@ -147,7 +147,7 @@ jobs:
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
           (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
           (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.project }}-build
           path: |
