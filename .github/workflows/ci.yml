@@ -34,17 +34,10 @@ jobs:
       - name: Derive affected projects
         id: affected
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_SHA=${{ github.event.pull_request.base.sha }}
-          else
-            BASE_SHA=$(git rev-parse HEAD~1)
-          fi
-
-          AFFECTED=$(pnpm nx print-affected --base=$BASE_SHA --head=HEAD --select=projects)
-
-          echo "frontend=$([[ $AFFECTED == *"frontend"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-          echo "backend=$([[ $AFFECTED == *"backend"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-          echo "worker=$([[ $AFFECTED == *"worker"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          # Simplified: always run all projects for now
+          echo "frontend=true" >> $GITHUB_OUTPUT
+          echo "backend=true" >> $GITHUB_OUTPUT
+          echo "worker=true" >> $GITHUB_OUTPUT
 
   lint:
     name: Lint
