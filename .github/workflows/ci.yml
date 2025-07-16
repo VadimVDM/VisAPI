@@ -99,7 +99,7 @@ jobs:
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
           (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
           (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.project }}
