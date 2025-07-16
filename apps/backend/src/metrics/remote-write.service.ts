@@ -5,9 +5,8 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { register as globalRegistry } from 'prom-client';
-import { pushTimeseries } from 'prometheus-remote-write';
+import axios from 'axios';
 
 @Injectable()
 export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
@@ -69,23 +68,30 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
     try {
       const metrics = await globalRegistry.metrics();
 
-      // Parse the metrics and convert them to time series format
-      const timeSeries = this.parseMetricsToTimeSeries(metrics);
-      
-      if (timeSeries.length === 0) {
-        this.logger.warn('No valid metrics found to push');
+      // Filter to only include visapi_ metrics to reduce payload size
+      const filteredMetrics = metrics
+        .split('\n')
+        .filter(line => line.includes('visapi_') || line.startsWith('# TYPE visapi_') || line.startsWith('# HELP visapi_'))
+        .join('\n');
+
+      if (!filteredMetrics.trim()) {
+        this.logger.warn('No visapi_ metrics found to push');
         return;
       }
 
-      this.logger.debug(`Pushing ${timeSeries.length} time series to Grafana Cloud`);
-      
-      // Send using the remote write protocol
-      await pushTimeseries(timeSeries, {
-        url: this.url,
+      this.logger.debug(`Pushing ${filteredMetrics.split('\n').length} lines of metrics to Grafana Cloud`);
+
+      // Send directly as plain text - some remote write endpoints support this
+      await axios.post(this.url, filteredMetrics, {
+        headers: {
+          'Content-Type': 'text/plain; version=0.0.4',
+          'User-Agent': 'visapi-remote-write/1.0',
+        },
         auth: {
           username: this.username,
           password: this.password,
         },
+        timeout: 10000, // 10 second timeout
       });
       
       this.logger.debug('Successfully pushed metrics to Grafana Cloud');
@@ -99,73 +105,13 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       if (error.response) {
         this.logger.error(`Status: ${error.response.status}`);
         this.logger.error(`Response: ${JSON.stringify(error.response.data)}`);
-      }
-    }
-  }
-
-  private parseMetricsToTimeSeries(metrics: string): Array<{
-    labels: { __name__: string; [key: string]: string };
-    samples: Array<{ value: number; timestamp: number }>;
-  }> {
-    const lines = metrics.trim().split('\n');
-    const timeSeries: Array<{
-      labels: { __name__: string; [key: string]: string };
-      samples: Array<{ value: number; timestamp: number }>;
-    }> = [];
-    const timestamp = Date.now();
-
-    for (const line of lines) {
-      // Skip comments and empty lines
-      if (line.startsWith('#') || !line.trim()) {
-        continue;
-      }
-
-      // Only process visapi_ metrics
-      if (!line.includes('visapi_')) {
-        continue;
-      }
-
-      // Parse metric line: metric_name{labels} value
-      const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*(?:\{[^}]*\})?) ([0-9.-]+)$/);
-      if (!match) {
-        continue;
-      }
-
-      const [, metricWithLabels, value] = match;
-      const [metricName, labelsStr] = metricWithLabels.split('{');
-      
-      // Parse labels - start with __name__
-      const labels: { __name__: string; [key: string]: string } = {
-        __name__: metricName,
-      };
-      
-      if (labelsStr) {
-        const labelPairs = labelsStr.slice(0, -1).split(','); // Remove closing }
-        for (const pair of labelPairs) {
-          const [key, val] = pair.split('=');
-          if (key && val) {
-            labels[key.trim()] = val.trim().replace(/^"(.*)"$/, '$1'); // Remove quotes
-          }
+        if (error.response.headers) {
+          this.logger.error(`Headers: ${JSON.stringify(error.response.headers)}`);
         }
       }
-
-      // Add app and version labels
-      labels.app = 'visapi';
-      labels.version = process.env.npm_package_version || 'unknown';
-
-      timeSeries.push({
-        labels,
-        samples: [
-          {
-            value: parseFloat(value),
-            timestamp,
-          },
-        ],
-      });
     }
-
-    return timeSeries;
   }
+
 
   onModuleDestroy() {
     if (this.intervalId) {
