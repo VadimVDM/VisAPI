@@ -10,7 +10,18 @@
         "preset": "desktop",
         "onlyCategories": ["accessibility", "best-practices"],
         "skipAudits": ["uses-http2"],
-        "chromeFlags": ["--no-sandbox", "--disable-dev-shm-usage"]
+        "chromeFlags": [
+          "--no-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--disable-background-timer-throttling",
+          "--disable-renderer-backgrounding",
+          "--disable-backgrounding-occluded-windows",
+          "--disable-features=TranslateUI",
+          "--disable-web-security",
+          "--no-first-run",
+          "--disable-default-apps"
+        ]
       }
     },
     "assert": {

@@ -627,7 +627,8 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 1. **Frontend Build**: Next.js 15 static generation has Html import issue - production deployments work fine
 2. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining (significantly improved from 200+ and 65+)
-3. **Accessibility Testing**: Fully functional - server detection and report generation working correctly
+3. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility issues causing 500 errors in CI environment
+4. **Local Accessibility Testing**: Fully functional via `pnpm test:accessibility` - generates reports and uploads to temporary storage
 
 ---
 
