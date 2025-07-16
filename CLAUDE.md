@@ -440,29 +440,49 @@ GRAFANA_PUSH_INTERVAL_MS=30000
 
 ## Deployment
 
-### Production Setup
+### Automatic Production Deployment
 
 **Frontend (Vercel)**
-
 - URL: https://app.visanet.app
-- Auto-deploy from `main` branch
-- Environment variables in dashboard
+- **Auto-deploy**: Triggered automatically on every push to `main`
+- Configuration: `/vercel.json` + `.vercel/project.json`
+- Build: `pnpm nx build frontend`
 
 **Backend (Render)**
-
 - URL: https://api.visanet.app
-- Auto-deploy from `main` branch
+- **Auto-deploy**: Triggered automatically on every push to `main`
 - Build: `pnpm install && pnpm nx build backend`
 - Start: `node dist/apps/backend/main.js`
+
+### GitHub Actions Workflows
+
+**CI Pipeline** (`ci.yml`)
+- Runs on: All pushes and pull requests
+- Jobs: Lint, Test, Build, Security scan, Lighthouse
+- Purpose: Validation before deployment
+
+**Security Scanning** (`security.yml`)
+- Runs on: Daily at 2 AM UTC + all pushes to main
+- Jobs: Dependency scan, Container scan, Secrets scan, CodeQL v3, SBOM
+- Purpose: Continuous security monitoring
+
+**Manual Production Deploy** (`deploy-production.yml`)
+- Runs on: Manual trigger or releases
+- Purpose: Controlled deployment with health checks and rollback
+
+**Note**: Workflows have been cleaned up to remove staging references (no staging environment) and duplicate workflows. Auto-deployment handles routine deployments, while workflows provide testing and security validation.
 
 ### Deployment Commands
 
 ```bash
-# Deploy via git push
+# Automatic deployment via git push
 git push origin main
 
 # Check deployment status
 curl https://api.visanet.app/api/v1/healthz
+
+# Manual production deployment (optional)
+gh workflow run deploy-production.yml
 ```
 
 ## Troubleshooting
