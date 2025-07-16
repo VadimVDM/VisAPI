@@ -37,6 +37,7 @@ jobs:
           # Simplified: always run all projects for now
           echo "frontend=true" >> $GITHUB_OUTPUT
           echo "backend=true" >> $GITHUB_OUTPUT
+          echo "worker=true" >> $GITHUB_OUTPUT
 
   lint:
     name: Lint
@@ -68,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [frontend, backend]
+        project: [frontend, backend, worker]
     steps:
       - uses: actions/checkout@v4
 
@@ -87,7 +88,8 @@ jobs:
       - name: Run tests
         if: |
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
-          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true')
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
         run: pnpm nx test ${{ matrix.project }}
         env:
           NODE_ENV: test
@@ -95,7 +97,8 @@ jobs:
       - name: Upload coverage
         if: |
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
-          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true')
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -107,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [frontend, backend]
+        project: [frontend, backend, worker]
     steps:
       - uses: actions/checkout@v4
 
@@ -126,13 +129,15 @@ jobs:
       - name: Build project
         if: |
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
-          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true')
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
         run: pnpm nx build ${{ matrix.project }}
 
       - name: Upload build artifacts
         if: |
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
-          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true')
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.project }}-build
