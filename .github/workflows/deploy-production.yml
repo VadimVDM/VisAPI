@@ -143,7 +143,6 @@ jobs:
             🚨 PRODUCTION DEPLOYMENT FAILED - ROLLBACK INITIATED 🚨
             Version: ${{ github.event.inputs.version || github.event.release.tag_name }}
             Action Required: Check production services immediately
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -176,6 +175,5 @@ jobs:
             Backend: https://api.visanet.app
 
             Please monitor for the next 30 minutes.
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

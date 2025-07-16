@@ -27,6 +27,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
           vercel-args: '--prod'
           scope: ${{ secrets.VERCEL_ORG_ID }}
+          working-directory: './apps/frontend'
 
   deploy-backend:
     name: Deploy Backend to Render (Staging)
@@ -98,6 +99,5 @@ jobs:
             Frontend: https://app-staging.visanet.app
             Backend: https://api-staging.visanet.app
             Commit: ${{ github.sha }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
