@@ -24,23 +24,7 @@ This directory contains the CI/CD pipeline configurations for VisAPI.
 - Coverage reporting to Codecov
 - Build artifact uploads
 
-### 2. Deploy to Staging (`deploy-staging.yml`)
-
-**Trigger**: Automatic on push to main branch
-
-**Jobs**:
-
-- **Deploy Frontend**: Deploys to Vercel staging
-- **Deploy Backend**: Deploys to Render staging (Gateway + Worker)
-- **Health Check**: Validates deployment success
-- **Notify**: Slack notification with deployment status
-
-**URLs**:
-
-- Frontend: https://app-staging.visanet.app
-- Backend: https://api-staging.visanet.app
-
-### 3. Deploy to Production (`deploy-production.yml`)
+### 2. Deploy to Production (`deploy-production.yml`)
 
 **Trigger**: Manual workflow dispatch or GitHub release
 
@@ -58,7 +42,9 @@ This directory contains the CI/CD pipeline configurations for VisAPI.
 - Frontend: https://app.visanet.app
 - Backend: https://api.visanet.app
 
-### 4. Security Scanning (`security.yml`)
+**Note**: Production deployments also happen automatically on every push to `main` via platform-native auto-deploy (Vercel and Render). This workflow provides additional safety checks and rollback capabilities for manual deployments.
+
+### 3. Security Scanning (`security.yml`)
 
 **Trigger**: Daily at 2 AM UTC, and on all pushes/PRs to main
 
@@ -83,8 +69,6 @@ Configure these in GitHub repository settings:
 - `VERCEL_ORG_ID`: Vercel organization ID
 - `VERCEL_PROJECT_ID_FRONTEND`: Vercel project ID
 - `RENDER_API_KEY`: Render API key
-- `RENDER_GATEWAY_SERVICE_ID_STAGING`: Render service ID (staging gateway)
-- `RENDER_WORKER_SERVICE_ID_STAGING`: Render service ID (staging worker)
 - `RENDER_GATEWAY_SERVICE_ID_PROD`: Render service ID (production gateway)
 - `RENDER_WORKER_SERVICE_ID_PROD`: Render service ID (production worker)
 
