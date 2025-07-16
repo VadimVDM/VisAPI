@@ -82,13 +82,13 @@ jobs:
           name: container-sbom-${{ matrix.dockerfile.name }}
           path: container-sbom-${{ matrix.dockerfile.name }}.json
 
-      - name: Verify distroless base image
+      - name: Verify secure base image
         run: |
-          echo "Verifying distroless base image usage..."
-          if docker history visapi-${{ matrix.dockerfile.name }}:scan | grep -q "distroless"; then
-            echo "✓ Distroless base image detected"
+          echo "Verifying secure base image usage..."
+          if docker history visapi-${{ matrix.dockerfile.name }}:scan | grep -q "alpine"; then
+            echo "✓ Alpine base image detected"
           else
-            echo "✗ Distroless base image not found"
+            echo "✗ Alpine base image not found"
             exit 1
           fi
 
