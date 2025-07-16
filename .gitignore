@@ -8,6 +8,7 @@ node_modules
 # Testing
 coverage
 *.lcov
+.jest-cache/
 
 # Next.js
 .next/
