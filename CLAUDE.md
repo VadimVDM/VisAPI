@@ -35,6 +35,7 @@ Essential information for working with the VisAPI project. Updated: July 17, 202
 - ✅ Security hardening with threat modeling and vulnerability scanning (Sprint 4)
 - ✅ Container hardening with distroless images and SBOM generation (Sprint 4)
 - ✅ Lighthouse accessibility testing fully operational with automated reporting
+- ✅ Dependencies updated to latest stable versions (NX 21.2, NestJS 11.1, PostgreSQL 16, Redis 8)
 
 ## Project Structure
 
@@ -91,23 +92,23 @@ VisAPI/
 
 **Frontend** (app.visanet.app)
 
-- Next.js 14 with App Router
-- TypeScript, Tailwind CSS
+- Next.js 15 with App Router
+- TypeScript 5.8, Tailwind CSS 4.1
 - Supabase Auth (Magic Link)
 - Deployed on Vercel
 
 **Backend** (api.visanet.app)
 
-- NestJS with TypeScript
-- BullMQ + Upstash Redis
-- Supabase PostgreSQL
+- NestJS 11.1 with TypeScript
+- BullMQ + Redis 8 (Upstash)
+- PostgreSQL 16 (Supabase)
 - Deployed on Render
 
 **Infrastructure**
 
-- NX Monorepo + pnpm
-- Docker for local dev
-- GitHub auto-deploy
+- NX 21.2 Monorepo + pnpm 10.13
+- Docker for local dev (PostgreSQL 16, Redis 8)
+- GitHub Actions CI/CD with security scanning
 - Domain: visanet.app
 
 ## Development Workflow
@@ -146,8 +147,8 @@ pnpm clean                 # Reset NX cache
 
 - **Frontend:** http://localhost:3001
 - **Backend:** http://localhost:3000/api
-- **PostgreSQL:** localhost:5432
-- **Redis:** localhost:6379
+- **PostgreSQL 16:** localhost:5432
+- **Redis 8:** localhost:6379
 
 ### Production Services
 
@@ -443,12 +444,14 @@ GRAFANA_PUSH_INTERVAL_MS=30000
 ### Automatic Production Deployment
 
 **Frontend (Vercel)**
+
 - URL: https://app.visanet.app
 - **Auto-deploy**: Triggered automatically on every push to `main`
 - Configuration: `/vercel.json` + `.vercel/project.json`
 - Build: `pnpm nx build frontend`
 
 **Backend (Render)**
+
 - URL: https://api.visanet.app
 - **Auto-deploy**: Triggered automatically on every push to `main`
 - Build: `pnpm install && pnpm nx build backend`
@@ -457,16 +460,19 @@ GRAFANA_PUSH_INTERVAL_MS=30000
 ### GitHub Actions Workflows
 
 **CI Pipeline** (`ci.yml`)
+
 - Runs on: All pushes and pull requests
 - Jobs: Lint, Test, Build, Security scan, Lighthouse
 - Purpose: Validation before deployment
 
 **Security Scanning** (`security.yml`)
+
 - Runs on: Daily at 2 AM UTC + all pushes to main
 - Jobs: Dependency scan, Container scan, Secrets scan, CodeQL v3, SBOM
 - Purpose: Continuous security monitoring
 
 **Manual Production Deploy** (`deploy-production.yml`)
+
 - Runs on: Manual trigger or releases
 - Purpose: Controlled deployment with health checks and rollback
 
@@ -615,7 +621,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 - Run `pnpm test:backend:serial` to verify all tests pass
 - Use `pnpm lint:backend` and `pnpm lint:frontend` for project-specific linting
-- Check TypeScript compilation with `pnpm build:backend` (frontend has Next.js 15 issue)
+- Check TypeScript compilation with `pnpm build:backend`
 - Use descriptive variable and function names
 - Follow the established project structure
 - Document complex business logic
@@ -629,9 +635,10 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 2. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining (significantly improved from 200+ and 65+)
 3. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility issues causing 500 errors in CI environment
 4. **Local Accessibility Testing**: Fully functional via `pnpm test:accessibility` - generates reports and uploads to temporary storage
+5. **NX Peer Dependencies**: Minor @nx/linter version mismatch (19.8.4 vs 21.2.4) - non-blocking, project builds successfully
 
 ---
 
 **Last Updated:** July 17, 2025
 **Version:** v1.0.0 - Production Ready
-**Status:** All 5 sprints completed (100% feature completion)
+**Status:** All 5 sprints completed, dependencies updated to latest stable versions
