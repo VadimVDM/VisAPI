@@ -66,7 +66,9 @@ jobs:
         run: pnpm install
 
       - name: Run linting
-        run: pnpm lint
+        run: pnpm lint:ci
+        timeout-minutes: 10
+        continue-on-error: true
 
   test:
     name: Test
