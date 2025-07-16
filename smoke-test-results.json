@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-07-16T19:44:41.046Z",
+  "passed": false,
+  "checks": {
+    "passed": 315,
+    "failed": 735,
+    "total": 1050,
+    "passRate": "30.0"
+  },
+  "performance": {
+    "avgLatency": "89.74",
+    "p95Latency": "120.96",
+    "errorRate": "60.00"
+  },
+  "requests": 525
+}

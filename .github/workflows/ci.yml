@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '8'
+  PNPM_VERSION: '10'
 
 jobs:
   setup:
@@ -33,7 +33,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Derive affected projects
         id: affected
@@ -67,7 +67,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run linting
         run: pnpm lint
@@ -92,7 +92,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run tests
         if: |
@@ -105,10 +105,12 @@ jobs:
 
       - name: Upload coverage
         if: |
-          (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
-          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
-          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
-        uses: codecov/codecov-action@v3
+          secrets.CODECOV_TOKEN != '' && (
+            (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
+            (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+            (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
+          )
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.project }}
@@ -133,7 +135,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build project
         if: |
@@ -147,7 +149,7 @@ jobs:
           (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
           (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
           (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.project }}-build
           path: |
@@ -194,7 +196,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build frontend
         run: pnpm nx build frontend

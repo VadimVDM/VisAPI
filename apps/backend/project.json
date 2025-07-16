@@ -40,6 +40,12 @@
       "options": {
         "jestConfig": "apps/backend/jest.config.ts"
       }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/backend/**/*.ts"]
+      }
     }
   },
   "tags": ["scope:backend", "type:app"]

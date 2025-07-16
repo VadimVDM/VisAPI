@@ -24,7 +24,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 COPY worker/package.json ./worker/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Build stage
 FROM base AS builder

@@ -8,8 +8,8 @@ const compat = new FlatCompat({
 });
 
 module.exports = [
-  { plugins: { '@nx': nxEslintPlugin } },
   {
+    plugins: { '@nx': nxEslintPlugin },
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
     rules: {
       '@nx/enforce-module-boundaries': [
@@ -65,18 +65,21 @@ module.exports = [
     },
   }),
   ...compat.config({
-    files: ['**/*.ts', '**/*.tsx'],
     extends: [
       'plugin:@typescript-eslint/recommended',
       'plugin:@typescript-eslint/recommended-requiring-type-checking',
     ],
-  }),
+  }).map(config => ({
+    ...config,
+    files: ['**/*.ts', '**/*.tsx'],
+  })),
   ...compat.config({
-    files: ['**/*.js', '**/*.jsx'],
     extends: ['eslint:recommended'],
-  }),
+  }).map(config => ({
+    ...config,
+    files: ['**/*.js', '**/*.jsx'],
+  })),
   ...compat.config({
-    files: ['**/*.jsx', '**/*.tsx'],
     extends: ['plugin:jsx-a11y/recommended'],
     rules: {
       'jsx-a11y/alt-text': 'error',
@@ -103,5 +106,8 @@ module.exports = [
       'jsx-a11y/scope': 'error',
       'jsx-a11y/tabindex-no-positive': 'error',
     },
-  }),
+  }).map(config => ({
+    ...config,
+    files: ['**/*.jsx', '**/*.tsx'],
+  })),
 ];

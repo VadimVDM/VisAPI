@@ -14,6 +14,7 @@ describe('LogService', () => {
 
   beforeEach(async () => {
     const mockSupabaseService = {
+      client: mockSupabaseClient,
       getClient: jest.fn().mockReturnValue(mockSupabaseClient),
     };
 
@@ -49,7 +50,7 @@ describe('LogService', () => {
       log: jest.fn(),
       verbose: jest.fn(),
     };
-    
+
     service['logger'] = mockLogger as any;
   });
 
@@ -156,7 +157,9 @@ describe('LogService', () => {
       });
 
       const mockQuery = {
-        insert: jest.fn().mockResolvedValue({ error: { message: 'Database error' } }),
+        insert: jest
+          .fn()
+          .mockResolvedValue({ error: { message: 'Database error' } }),
       };
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
@@ -213,10 +216,18 @@ describe('LogService', () => {
       expect(mockQuery.select).toHaveBeenCalledWith('*', { count: 'exact' });
       expect(mockQuery.eq).toHaveBeenCalledWith('level', 'info');
       expect(mockQuery.eq).toHaveBeenCalledWith('workflow_id', 'workflow-123');
-      expect(mockQuery.gte).toHaveBeenCalledWith('created_at', '2025-07-15T00:00:00Z');
-      expect(mockQuery.lte).toHaveBeenCalledWith('created_at', '2025-07-15T23:59:59Z');
+      expect(mockQuery.gte).toHaveBeenCalledWith(
+        'created_at',
+        '2025-07-15T00:00:00Z'
+      );
+      expect(mockQuery.lte).toHaveBeenCalledWith(
+        'created_at',
+        '2025-07-15T23:59:59Z'
+      );
       expect(mockQuery.ilike).toHaveBeenCalledWith('message', '%test%');
-      expect(mockQuery.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
       expect(mockQuery.range).toHaveBeenCalledWith(0, 9);
 
       expect(result).toEqual({
@@ -314,7 +325,9 @@ describe('LogService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.getLogsByWorkflow('workflow-123')).rejects.toThrow('Failed to fetch workflow logs');
+      await expect(service.getLogsByWorkflow('workflow-123')).rejects.toThrow(
+        'Failed to fetch workflow logs'
+      );
     });
   });
 
@@ -409,7 +422,9 @@ describe('LogService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.getLogStats()).rejects.toThrow('Failed to fetch log stats');
+      await expect(service.getLogStats()).rejects.toThrow(
+        'Failed to fetch log stats'
+      );
     });
   });
 
@@ -429,7 +444,10 @@ describe('LogService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('logs');
       expect(mockQuery.delete).toHaveBeenCalled();
-      expect(mockQuery.lt).toHaveBeenCalledWith('created_at', expect.any(String));
+      expect(mockQuery.lt).toHaveBeenCalledWith(
+        'created_at',
+        expect.any(String)
+      );
       expect(result).toEqual({ deleted: 2 });
     });
 
@@ -444,7 +462,9 @@ describe('LogService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.pruneOldLogs(90)).rejects.toThrow('Failed to prune old logs');
+      await expect(service.pruneOldLogs(90)).rejects.toThrow(
+        'Failed to prune old logs'
+      );
     });
   });
 

@@ -45,6 +45,7 @@ describe('WorkflowsService', () => {
 
   beforeEach(async () => {
     const mockSupabaseService = {
+      client: mockSupabaseClient,
       getClient: jest.fn().mockReturnValue(mockSupabaseClient),
     };
 
@@ -158,7 +159,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.create(createDto)).rejects.toThrow('Failed to create workflow');
+      await expect(service.create(createDto)).rejects.toThrow(
+        'Failed to create workflow'
+      );
     });
   });
 
@@ -178,7 +181,9 @@ describe('WorkflowsService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('workflows');
       expect(mockQuery.select).toHaveBeenCalledWith('*');
-      expect(mockQuery.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(mockWorkflowData.id);
     });
@@ -194,7 +199,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.findAll()).rejects.toThrow('Failed to fetch workflows');
+      await expect(service.findAll()).rejects.toThrow(
+        'Failed to fetch workflows'
+      );
     });
   });
 
@@ -231,7 +238,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.findOne('nonexistent-id')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent-id')).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -289,7 +298,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.update('nonexistent-id', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('nonexistent-id', updateDto)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -321,7 +332,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.remove('nonexistent-id')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('nonexistent-id')).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -343,7 +356,9 @@ describe('WorkflowsService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('workflows');
       expect(mockQuery.select).toHaveBeenCalledWith('*');
       expect(mockQuery.eq).toHaveBeenCalledWith('enabled', true);
-      expect(mockQuery.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
       expect(result).toHaveLength(1);
       expect(result[0].enabled).toBe(true);
     });
@@ -360,7 +375,9 @@ describe('WorkflowsService', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      await expect(service.findEnabled()).rejects.toThrow('Failed to fetch enabled workflows');
+      await expect(service.findEnabled()).rejects.toThrow(
+        'Failed to fetch enabled workflows'
+      );
     });
   });
 });

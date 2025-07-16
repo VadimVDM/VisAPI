@@ -2,10 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RemoteWriteService } from './remote-write.service';
 import { register as globalRegistry } from 'prom-client';
-import axios from 'axios';
+import { pushTimeseries } from 'prometheus-remote-write';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('prometheus-remote-write', () => ({
+  pushTimeseries: jest.fn(),
+}));
+
+const mockPushTimeseries = pushTimeseries as jest.MockedFunction<
+  typeof pushTimeseries
+>;
 
 describe('RemoteWriteService', () => {
   let service: RemoteWriteService;
@@ -16,7 +21,7 @@ describe('RemoteWriteService', () => {
     jest
       .spyOn(globalRegistry, 'metrics')
       .mockResolvedValue(
-        '# HELP test_metric Test metric\n# TYPE test_metric counter\ntest_metric 1'
+        '# HELP visapi_test_metric Test metric\n# TYPE visapi_test_metric counter\nvisapi_test_metric 1'
       );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -50,6 +55,7 @@ describe('RemoteWriteService', () => {
     if (service['intervalId']) {
       clearInterval(service['intervalId']);
     }
+    mockPushTimeseries.mockReset();
   });
 
   it('should be defined', () => {
@@ -79,36 +85,40 @@ describe('RemoteWriteService', () => {
         return defaultValue;
       });
 
-    const newService = new RemoteWriteService(configService, registry);
+    const newService = new RemoteWriteService(configService);
     newService.onModuleInit();
 
     expect(newService['intervalId']).toBeUndefined();
   });
 
   it('should start pushing metrics when enabled with valid credentials', async () => {
-    mockedAxios.post.mockResolvedValueOnce({ status: 200, data: {} });
+    mockPushTimeseries.mockResolvedValueOnce({ status: 200, statusText: 'OK' });
 
     service.onModuleInit();
 
     expect(service['intervalId']).toBeDefined();
-    expect(mockedAxios.post).toHaveBeenCalledWith(
-      'https://prometheus.grafana.net/api/prom/push',
-      expect.any(String),
+
+    // Wait for the initial push to complete
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(mockPushTimeseries).toHaveBeenCalledWith(
+      expect.any(Array),
       expect.objectContaining({
-        headers: {
-          'Content-Type': 'text/plain; version=0.0.4',
-        },
+        url: 'https://prometheus.grafana.net/api/prom/push',
         auth: {
           username: '123456',
           password: 'test-api-key',
         },
         timeout: 10000,
+        headers: {
+          'User-Agent': 'visapi-remote-write/1.0',
+        },
       })
     );
   });
 
   it('should handle push errors gracefully', async () => {
-    mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
+    mockPushTimeseries.mockRejectedValueOnce(new Error('Network error'));
     const loggerSpy = jest.spyOn(service['logger'], 'error');
 
     await service['pushMetrics']();

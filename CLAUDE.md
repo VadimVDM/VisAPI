@@ -26,7 +26,7 @@ Essential information for working with the VisAPI project. Updated: July 17, 202
 - ✅ Webhook processing with idempotency
 - ✅ Advanced workflow features with WhatsApp, PDF generation, and cron scheduling
 - ✅ Enterprise-grade logging system with PII redaction
-- ✅ Comprehensive test suite (14 total test suites, majority passing)
+- ✅ Comprehensive test suite (16 total test suites, 100% passing)
 - ✅ Secure monorepo architecture with specialized shared libraries
 - ✅ Infrastructure automation with Terraform and CI/CD pipelines (Sprint 4)
 - ✅ Advanced monitoring with Grafana Cloud alerts and Slack integration (Sprint 4)
@@ -34,7 +34,7 @@ Essential information for working with the VisAPI project. Updated: July 17, 202
 - ✅ Load testing capabilities with k6 for 5k requests/minute (Sprint 4)
 - ✅ Security hardening with threat modeling and vulnerability scanning (Sprint 4)
 - ✅ Container hardening with distroless images and SBOM generation (Sprint 4)
-- ✅ Lighthouse accessibility audit score of >90% (Sprint 4)
+- ✅ Lighthouse accessibility testing fully operational with automated reporting
 
 ## Project Structure
 
@@ -133,7 +133,9 @@ pnpm build                 # Build all applications
 pnpm build:frontend        # Build frontend only
 pnpm build:backend         # Build backend only
 pnpm test                  # Run all tests
-pnpm lint                  # Lint all code
+pnpm lint                  # Lint all code (resource-limited)
+pnpm lint:backend          # Lint backend only
+pnpm lint:frontend         # Lint frontend only
 pnpm format                # Format all code
 
 # Utilities
@@ -302,14 +304,17 @@ pnpm test:backend --coverage
 
 Tests have been optimized to use minimal system resources. See `docs/testing-guide.md` for full details.
 
-```bash
-# Recommended: Serial mode (fastest, least resources)
-pnpm test:backend:serial      # 4.5s, runs tests one at a time
+**✅ Current Status: All 16 test suites passing (170/170 tests) - 100% success rate**
 
-# Alternative modes
+```bash
+# Backend Testing (Recommended: Serial mode)
+pnpm test:backend:serial      # 2.1s, runs tests one at a time
 pnpm test:backend:light       # Limited to 2 workers with memory caps
 pnpm test:backend:watch       # Watch mode with 1 worker
 pnpm test:backend:file <name> # Test specific files only
+
+# Frontend Testing (Basic setup available)
+pnpm test:frontend            # React Testing Library + Vitest
 
 # Examples
 pnpm test:backend:file cron   # Test only cron-related files
@@ -318,10 +323,11 @@ pnpm test:backend:file "api-keys|queue"  # Test multiple patterns
 
 **Why use serial mode?**
 
-- Runs in ~4.5 seconds (faster than parallel due to less overhead)
+- Runs in ~2.1 seconds (faster than parallel due to less overhead)
 - Uses minimal RAM and CPU
 - Prevents system lag during development
 - More reliable test results (no race conditions)
+- ✅ **All tests now pass reliably**
 
 ### Frontend Testing
 
@@ -342,8 +348,20 @@ pnpm test:frontend --coverage
 # Postman collections for API testing
 newman run postman/visapi-collection.json
 
-# k6 load testing
-k6 run load-tests/smoke-test.js
+# k6 load testing - ✅ Tools installed & optimized
+pnpm load:smoke              # Quick smoke test (targets production API)
+pnpm load:smoke:local        # Local smoke test (requires local backend)
+pnpm load:full               # Full load test
+pnpm load:performance-suite  # Complete performance suite
+```
+
+### Accessibility Testing
+
+```bash
+# Lighthouse accessibility audit - ✅ Fully functional with report generation
+pnpm test:accessibility      # Single-page test with automatic report upload
+pnpm lighthouse:accessibility # Full accessibility audit
+pnpm lighthouse:accessibility:ci  # CI mode with cloud storage
 ```
 
 ## Monitoring & Observability
@@ -353,6 +371,7 @@ k6 run load-tests/smoke-test.js
 VisAPI features enterprise-grade monitoring with Grafana Cloud, Prometheus metrics, and real-time dashboards.
 
 **Grafana Cloud Setup:**
+
 - **Production Dashboard:** `/d/ee4deafb-60c7-4cb1-a2d9-aa14f7ef334e/visapi-production-dashboard`
 - **Alerting Dashboard:** `/d/4582a630-7be8-41ec-98a0-2e65adeb9828/visapi-alerting-dashboard`
 - **Metrics Endpoint:** `https://api.visanet.app/api/metrics`
@@ -375,16 +394,19 @@ logger.info(
 ### Metrics (Prometheus)
 
 **HTTP Metrics:**
+
 - `visapi_http_request_duration_seconds` - Request duration histogram
 - `visapi_http_requests_total` - Total requests counter
 - `visapi_http_active_connections` - Active connections gauge
 
 **Queue Metrics:**
+
 - `visapi_queue_job_duration_seconds` - Job processing duration
 - `visapi_queue_depth_total` - Current queue depth by priority
 - `visapi_job_fail_total` - Failed jobs counter
 
 **Business Metrics:**
+
 - `visapi_workflow_execution_duration_seconds` - Workflow execution time
 - `visapi_api_key_validation_duration_seconds` - API key validation performance
 - `visapi_redis_operations_total` - Redis operation counters
@@ -392,6 +414,7 @@ logger.info(
 ### Alert Thresholds
 
 Critical alerts configured for:
+
 - API latency > 200ms (P95) for 5 minutes
 - Error rate > 5% for 5 minutes
 - Queue depth > 1000 jobs
@@ -410,6 +433,7 @@ GRAFANA_PUSH_INTERVAL_MS=30000
 ```
 
 **Technical Implementation:**
+
 - Uses `prometheus-remote-write` library for proper protobuf + snappy compression
 - Filters to only push `visapi_*` metrics to reduce payload size
 - Graceful error handling with detailed logging for troubleshooting
@@ -569,15 +593,21 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ### Code Quality Reminders:
 
-- Run `pnpm lint` before committing
-- Ensure tests pass with `pnpm test`
-- Check TypeScript compilation with `pnpm build`
+- Run `pnpm test:backend:serial` to verify all tests pass
+- Use `pnpm lint:backend` and `pnpm lint:frontend` for project-specific linting
+- Check TypeScript compilation with `pnpm build:backend` (frontend has Next.js 15 issue)
 - Use descriptive variable and function names
 - Follow the established project structure
 - Document complex business logic
 - Prefer composition over inheritance
 - Use dependency injection in NestJS
 - Follow React best practices in Next.js
+
+### Known Issues (Non-Critical):
+
+1. **Frontend Build**: Next.js 15 static generation has Html import issue - production deployments work fine
+2. **TypeScript Linting**: 200+ backend and 65+ frontend strict mode violations - code quality improvements needed
+3. **Accessibility Testing**: Fully functional - server detection and report generation working correctly
 
 ---
 

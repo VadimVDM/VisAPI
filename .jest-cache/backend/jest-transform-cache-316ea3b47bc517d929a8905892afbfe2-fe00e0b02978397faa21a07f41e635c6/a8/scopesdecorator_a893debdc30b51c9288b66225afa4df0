@@ -1,9 +1,0 @@
-682faaae20b8b2b27985550bd1dfd32f
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Scopes = exports.SCOPES_KEY = void 0;
-const common_1 = require("@nestjs/common");
-exports.SCOPES_KEY = 'scopes';
-const Scopes = (...scopes) => (0, common_1.SetMetadata)(exports.SCOPES_KEY, scopes);
-exports.Scopes = Scopes;
-//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL2F1dGgvZGVjb3JhdG9ycy9zY29wZXMuZGVjb3JhdG9yLnRzIiwibWFwcGluZ3MiOiI7OztBQUFBLDJDQUE2QztBQUVoQyxRQUFBLFVBQVUsR0FBRyxRQUFRLENBQUM7QUFDNUIsTUFBTSxNQUFNLEdBQUcsQ0FBQyxHQUFHLE1BQWdCLEVBQUUsRUFBRSxDQUFDLElBQUEsb0JBQVcsRUFBQyxrQkFBVSxFQUFFLE1BQU0sQ0FBQyxDQUFDO0FBQWxFLFFBQUEsTUFBTSxVQUE0RCIsIm5hbWVzIjpbXSwic291cmNlcyI6WyIvVXNlcnMvdmFkaW0vUHJvamVjdHMvVmlzQVBJL2FwcHMvYmFja2VuZC9zcmMvYXV0aC9kZWNvcmF0b3JzL3Njb3Blcy5kZWNvcmF0b3IudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgU2V0TWV0YWRhdGEgfSBmcm9tICdAbmVzdGpzL2NvbW1vbic7XG5cbmV4cG9ydCBjb25zdCBTQ09QRVNfS0VZID0gJ3Njb3Blcyc7XG5leHBvcnQgY29uc3QgU2NvcGVzID0gKC4uLnNjb3Blczogc3RyaW5nW10pID0+IFNldE1ldGFkYXRhKFNDT1BFU19LRVksIHNjb3Blcyk7XG4iXSwidmVyc2lvbiI6M30=
