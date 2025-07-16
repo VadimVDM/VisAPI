@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main, develop]
 
-env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '10'
-
 jobs:
   setup:
     name: Setup
@@ -25,11 +21,11 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -59,11 +55,11 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -84,11 +80,11 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -127,11 +123,11 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -188,11 +184,11 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
