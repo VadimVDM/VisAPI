@@ -169,5 +169,11 @@
     "snappy": "^7.3.0",
     "tailwindcss": "^4.1.11",
     "uuid": "^11.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "glob@<8.0.0": "^10.4.5",
+      "inflight": "npm:noop2@^2.0.0"
+    }
   }
 }

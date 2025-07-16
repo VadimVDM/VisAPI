@@ -1,56 +1,54 @@
-FROM python:3.11-slim
+# Use multi-stage build with Alpine for minimal attack surface
+FROM python:3.12-alpine as builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    jq \
-    netcat-traditional \
-    docker.io \
-    iptables \
-    iproute2 \
-    procps \
-    && rm -rf /var/lib/apt/lists/*
+# Install build dependencies in builder stage
+RUN apk add --no-cache \
+    build-base \
+    libffi-dev \
+    openssl-dev \
+    curl
 
-# Install Chaos Toolkit and extensions
-RUN pip install --no-cache-dir \
-    chaostoolkit \
-    chaostoolkit-kubernetes \
-    chaostoolkit-prometheus \
-    chaostoolkit-slack \
-    requests
+# Install Python packages with pinned versions
+RUN pip install --no-cache-dir --user \
+    chaostoolkit==1.21.0 \
+    chaostoolkit-kubernetes==0.28.0 \
+    chaostoolkit-prometheus==0.4.0 \
+    chaostoolkit-slack==0.5.0 \
+    requests==2.31.0
 
-# Create chaos user
-RUN useradd -m -s /bin/bash chaos
+# Use minimal Alpine runtime for final stage
+FROM python:3.12-alpine
+
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    libffi \
+    openssl \
+    ca-certificates \
+    && adduser -D -s /bin/false chaos
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Copy application files
+COPY --chown=chaos:chaos ../scripts /chaos-engineering/scripts
+COPY --chown=chaos:chaos ../chaostoolkit /chaos-engineering/chaostoolkit
+COPY --chown=chaos:chaos ../monitoring /chaos-engineering/monitoring
+COPY --chown=chaos:chaos ../safety /chaos-engineering/safety
 
 # Set working directory
 WORKDIR /chaos-engineering
 
-# Copy chaos engineering scripts
-COPY ../scripts /chaos-engineering/scripts
-COPY ../chaostoolkit /chaos-engineering/chaostoolkit
-COPY ../monitoring /chaos-engineering/monitoring
-COPY ../safety /chaos-engineering/safety
+# Create logs and reports directories
+RUN mkdir -p /chaos-engineering/logs /chaos-engineering/reports && \
+    chown -R chaos:chaos /chaos-engineering
 
-# Make scripts executable
-RUN chmod +x /chaos-engineering/scripts/*.sh
-RUN chmod +x /chaos-engineering/safety/*.sh
+# Set Python path for packages
+ENV PYTHONPATH=/root/.local/lib/python3.12/site-packages:/chaos-engineering
+ENV PATH=/root/.local/bin:$PATH
+ENV CHAOS_SCRIPTS_DIR=/chaos-engineering/scripts
 
-# Create logs directory
-RUN mkdir -p /chaos-engineering/logs /chaos-engineering/reports
-
-# Set permissions
-RUN chown -R chaos:chaos /chaos-engineering
-
-# Switch to chaos user
+# Use chaos user (no shell access)
 USER chaos
 
-# Set environment variables
-ENV CHAOS_SCRIPTS_DIR=/chaos-engineering/scripts
-ENV PYTHONPATH=/chaos-engineering
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-# Default command
-CMD ["python", "-m", "http.server", "8080"]
+# Default command - run chaos toolkit directly
+CMD ["python", "-m", "chaostoolkit", "info"]
