@@ -1,5 +1,5 @@
 # Base stage with build tools
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install dependencies for Puppeteer
 RUN apk add --no-cache \
@@ -32,7 +32,7 @@ COPY . .
 RUN pnpm nx build worker
 
 # Runtime stage using Node.js alpine for easier dependency management
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 
 # Install runtime dependencies for Chromium
 RUN apk add --no-cache \
