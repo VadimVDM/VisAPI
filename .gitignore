@@ -33,6 +33,12 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.frontend
+.env.backend
+# Keep example files and documentation
+# .env.frontend.example
+# .env.backend.example
+# .env.README.md
 
 # Vercel
 .vercel
