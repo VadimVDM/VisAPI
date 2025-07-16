@@ -1,16 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { ConfigService } from '@visapi/core-config';
 
 @Injectable()
 export class RedisService {
   private redis: Redis;
+  private readonly logger = new Logger(RedisService.name);
 
   constructor(private readonly config: ConfigService) {
-    this.redis = new Redis(this.config.redisUrl, {
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-    });
+    const redisUrl = this.config.redisUrl;
+    
+    if (!redisUrl || redisUrl === 'h') {
+      this.logger.error('Invalid or missing REDIS_URL environment variable');
+      // Use a dummy Redis instance that will fail gracefully
+      this.redis = new Redis({
+        host: 'localhost',
+        port: 6379,
+        maxRetriesPerRequest: 0,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+        retryStrategy: () => null, // Don't retry
+      });
+    } else {
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+      });
+    }
   }
 
   getClient(): Redis {

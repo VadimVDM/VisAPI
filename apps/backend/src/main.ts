@@ -46,14 +46,29 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3000;
-  // Bind to 0.0.0.0 to accept external connections
-  await app.listen(port, '0.0.0.0');
-  Logger.log(
-    `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`
-  );
-  Logger.log(
-    `📚 API Documentation: http://0.0.0.0:${port}/${globalPrefix}/docs`
-  );
+  Logger.log(`Attempting to start server on port ${port}...`);
+  
+  try {
+    // Bind to 0.0.0.0 to accept external connections
+    await app.listen(port, '0.0.0.0');
+    Logger.log(
+      `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`
+    );
+    Logger.log(
+      `📚 API Documentation: http://0.0.0.0:${port}/${globalPrefix}/docs`
+    );
+    
+    // Log environment info for debugging
+    Logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    Logger.log(`REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`);
+    Logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`);
+  } catch (error) {
+    Logger.error(`Failed to start server: ${error.message}`, error.stack);
+    process.exit(1);
+  }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  Logger.error(`Bootstrap failed: ${error.message}`, error.stack);
+  process.exit(1);
+});

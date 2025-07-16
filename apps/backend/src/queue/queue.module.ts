@@ -12,11 +12,28 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          url: configService.redisUrl,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.redisUrl;
+        
+        if (!redisUrl || redisUrl === 'h') {
+          // Return a config that will fail gracefully
+          return {
+            connection: {
+              host: 'localhost',
+              port: 6379,
+              maxRetriesPerRequest: 0,
+              retryStrategy: () => null,
+              enableOfflineQueue: false,
+            },
+          };
+        }
+        
+        return {
+          connection: {
+            url: redisUrl,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     BullModule.registerQueue(
