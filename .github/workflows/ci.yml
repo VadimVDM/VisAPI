@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   setup:
     name: Setup
@@ -139,6 +144,14 @@ jobs:
           (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
           (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
         run: pnpm nx build ${{ matrix.project }}
+        env:
+          # Frontend build environment variables
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_ENV: production
+          NODE_ENV: production
+          CI: true
 
       - name: Upload build artifacts
         if: |
@@ -196,6 +209,13 @@ jobs:
 
       - name: Build frontend
         run: pnpm nx build frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_ENV: production
+          NODE_ENV: production
+          CI: true
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
