@@ -1,3 +1,7 @@
+// IMPORTANT: Make sure to import `instrument.ts` at the top of your file.
+import './instrument';
+
+// All other imports below
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -47,7 +51,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   Logger.log(`Attempting to start server on port ${port}...`);
-  
+
   try {
     // Bind to 0.0.0.0 to accept external connections
     await app.listen(port, '0.0.0.0');
@@ -57,11 +61,15 @@ async function bootstrap() {
     Logger.log(
       `📚 API Documentation: http://0.0.0.0:${port}/${globalPrefix}/docs`
     );
-    
+
     // Log environment info for debugging
     Logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    Logger.log(`REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`);
-    Logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`);
+    Logger.log(
+      `REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`
+    );
+    Logger.log(
+      `DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`
+    );
   } catch (error) {
     Logger.error(`Failed to start server: ${error.message}`, error.stack);
     process.exit(1);

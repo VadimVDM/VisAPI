@@ -1,0 +1,350 @@
+{
+  "version": "1.0.0",
+  "title": "External Service Failure Resilience Test",
+  "description": "Test system resilience when external services (Slack, WhatsApp, Email) become unavailable",
+  "tags": ["external", "api", "failure", "integration", "medium-priority"],
+  "contributions": {
+    "availability": "medium",
+    "reliability": "high",
+    "performance": "low"
+  },
+  "steady-state-hypothesis": {
+    "title": "System continues to function when external services fail",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "api-health-check",
+        "tolerance": 200,
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/healthz",
+          "method": "GET",
+          "timeout": 5
+        }
+      },
+      {
+        "type": "probe",
+        "name": "core-workflows-functional",
+        "tolerance": [200, 202],
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/workflows",
+          "method": "GET",
+          "timeout": 5,
+          "headers": {
+            "X-API-Key": "${api_key}"
+          }
+        }
+      },
+      {
+        "type": "probe",
+        "name": "queue-processing-active",
+        "tolerance": 200,
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/queue/metrics",
+          "method": "GET",
+          "timeout": 5,
+          "headers": {
+            "X-API-Key": "${api_key}"
+          }
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "record-baseline-external-calls",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; services = ['https://api.slack.com', 'https://api.resend.com', 'https://app.chatgptbuilder.io']; results = {}; for service in services: try: response = requests.get(service, timeout=5); results[service] = response.status_code; except: results[service] = 'timeout'; print(f'Baseline external service status: {results}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "simulate-slack-api-failure",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./external-chaos.sh slack_500_errors -d 60 --environment ${environment} --failure-rate 100"
+        ]
+      },
+      "pauses": {
+        "after": 5
+      }
+    },
+    {
+      "type": "action",
+      "name": "simulate-whatsapp-timeout",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./external-chaos.sh whatsapp_timeout -d 60 --environment ${environment} --failure-rate 100"
+        ]
+      },
+      "pauses": {
+        "after": 5
+      }
+    },
+    {
+      "type": "action",
+      "name": "simulate-email-service-failure",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./external-chaos.sh email_failures -d 60 --environment ${environment} --failure-rate 100"
+        ]
+      },
+      "pauses": {
+        "after": 5
+      }
+    },
+    {
+      "type": "probe",
+      "name": "verify-external-services-blocked",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; services = ['https://api.slack.com', 'https://api.resend.com', 'https://app.chatgptbuilder.io']; results = {}; for service in services: try: response = requests.get(service, timeout=5); results[service] = response.status_code; except: results[service] = 'blocked'; print(f'External services blocked: {results}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "trigger-slack-notification-workflow",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/triggers/slack-test",
+        "method": "POST",
+        "timeout": 10,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "${api_key}"
+        },
+        "body": {
+          "message": "Test Slack notification during external service failure",
+          "channel": "#chaos-engineering",
+          "timestamp": "${timestamp}"
+        }
+      },
+      "tolerance": [200, 202, 503]
+    },
+    {
+      "type": "action",
+      "name": "trigger-whatsapp-workflow",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/triggers/whatsapp-test",
+        "method": "POST",
+        "timeout": 10,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "${api_key}"
+        },
+        "body": {
+          "to": "+1234567890",
+          "message": "Test WhatsApp message during external service failure",
+          "timestamp": "${timestamp}"
+        }
+      },
+      "tolerance": [200, 202, 503]
+    },
+    {
+      "type": "action",
+      "name": "trigger-email-workflow",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/triggers/email-test",
+        "method": "POST",
+        "timeout": 10,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "${api_key}"
+        },
+        "body": {
+          "to": "test@example.com",
+          "subject": "Test email during external service failure",
+          "message": "This is a test email during chaos engineering experiment",
+          "timestamp": "${timestamp}"
+        }
+      },
+      "tolerance": [200, 202, 503]
+    },
+    {
+      "type": "probe",
+      "name": "monitor-api-health-during-failure",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": [200, 503]
+    },
+    {
+      "type": "action",
+      "name": "monitor-queue-during-failure",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; import json; for i in range(6): time.sleep(5); response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); if response.status_code == 200: metrics = response.json(); print(f'Queue metrics during failure at {i*5}s: Failed jobs: {metrics.get(\"failed\", 0)}, Waiting jobs: {metrics.get(\"waiting\", 0)}'); else: print(f'Queue metrics unavailable at {i*5}s')"
+        }
+      }
+    },
+    {
+      "type": "probe",
+      "name": "verify-graceful-degradation",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); if response.status_code == 200: metrics = response.json(); failed_jobs = metrics.get('failed', 0); if failed_jobs > 0: print(f'Graceful degradation: {failed_jobs} jobs failed due to external service unavailability'); else: print('No jobs failed - system may not be properly testing external services'); else: print('Unable to verify graceful degradation')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "measure-error-rate-during-failure",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; try: response = requests.get('${prometheus_url}/api/v1/query?query=rate(http_requests_total{code!~\"2..\"}[5m])', timeout=5); if response.status_code == 200: data = response.json(); print(f'Error rate during failure: {data}'); else: print('Unable to query error rate'); except: print('Prometheus metrics unavailable')"
+        }
+      }
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "restore-external-service-connectivity",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./safety/emergency-stop.sh"
+        ]
+      }
+    },
+    {
+      "type": "action",
+      "name": "verify-external-services-restored",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; time.sleep(10); services = ['https://api.slack.com', 'https://api.resend.com', 'https://app.chatgptbuilder.io']; results = {}; for service in services: try: response = requests.get(service, timeout=5); results[service] = response.status_code; except: results[service] = 'still_blocked'; print(f'External services after restore: {results}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "verify-system-health",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": 200
+    },
+    {
+      "type": "action",
+      "name": "retry-failed-external-requests",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; response = requests.post('${api_url}/api/v1/admin/queue/retry-failed', headers={'X-API-Key': '${api_key}'}, timeout=5); print(f'Retry failed jobs: {response.status_code}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "verify-external-integrations-working",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; time.sleep(5); # Test each integration; integrations = [{'name': 'slack', 'url': '${api_url}/api/v1/triggers/slack-test', 'data': {'message': 'Recovery test', 'channel': '#chaos-engineering'}}, {'name': 'whatsapp', 'url': '${api_url}/api/v1/triggers/whatsapp-test', 'data': {'to': '+1234567890', 'message': 'Recovery test'}}, {'name': 'email', 'url': '${api_url}/api/v1/triggers/email-test', 'data': {'to': 'test@example.com', 'subject': 'Recovery test', 'message': 'Recovery test'}}]; results = {}; for integration in integrations: try: response = requests.post(integration['url'], json=integration['data'], headers={'X-API-Key': '${api_key}'}, timeout=5); results[integration['name']] = response.status_code; except: results[integration['name']] = 'failed'; print(f'External integrations after recovery: {results}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "record-final-queue-state",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); metrics = response.json() if response.status_code == 200 else {}; print(f'Final queue state: {json.dumps(metrics, indent=2)}')"
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "api_url": {
+      "type": "env",
+      "key": "VISAPI_API_URL",
+      "default": "http://localhost:3000"
+    },
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY"
+    },
+    "prometheus_url": {
+      "type": "env",
+      "key": "PROMETHEUS_URL",
+      "default": "http://localhost:9090"
+    },
+    "chaos_scripts_dir": {
+      "type": "env",
+      "key": "CHAOS_SCRIPTS_DIR",
+      "default": "/Users/vadim/Projects/VisAPI/chaos-engineering/scripts"
+    },
+    "environment": {
+      "type": "env",
+      "key": "ENVIRONMENT",
+      "default": "local"
+    },
+    "timestamp": {
+      "type": "env",
+      "key": "TIMESTAMP",
+      "default": "2025-01-01T00:00:00Z"
+    }
+  },
+  "secrets": {},
+  "extensions": [
+    {
+      "name": "chaostoolkit-slack",
+      "slack_webhook_url": "${slack_webhook_url}",
+      "notification_channel": "#chaos-engineering"
+    },
+    {
+      "name": "chaostoolkit-prometheus",
+      "prometheus_base_url": "${prometheus_url}"
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+{
+  "version": "1.0.0",
+  "title": "Worker Process Failure Resilience Test",
+  "description": "Test system resilience when worker processes are killed during job processing",
+  "tags": ["worker", "process", "failure", "queue", "high-priority"],
+  "contributions": {
+    "availability": "high",
+    "reliability": "high",
+    "performance": "medium"
+  },
+  "steady-state-hypothesis": {
+    "title": "System continues processing jobs after worker failures",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "api-health-check",
+        "tolerance": 200,
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/healthz",
+          "method": "GET",
+          "timeout": 5
+        }
+      },
+      {
+        "type": "probe",
+        "name": "queue-processing-active",
+        "tolerance": 200,
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/queue/metrics",
+          "method": "GET",
+          "timeout": 5,
+          "headers": {
+            "X-API-Key": "${api_key}"
+          }
+        }
+      },
+      {
+        "type": "probe",
+        "name": "worker-processes-running",
+        "tolerance": 0,
+        "provider": {
+          "type": "process",
+          "path": "bash",
+          "arguments": ["-c", "pgrep -f 'worker' | wc -l"]
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "record-initial-queue-state",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); metrics = response.json() if response.status_code == 200 else {}; print(f'Initial queue state: {json.dumps(metrics, indent=2)}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "submit-test-jobs",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; jobs = []; for i in range(5): response = requests.post('${api_url}/api/v1/triggers/test-webhook', json={'test': f'worker-failure-job-{i}', 'timestamp': '${timestamp}'}, headers={'X-API-Key': '${api_key}'}, timeout=5); jobs.append(response.status_code); print(f'Submitted jobs: {jobs}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "kill-worker-process",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./service-chaos.sh kill_worker -d 30 --environment ${environment}"
+        ]
+      },
+      "pauses": {
+        "after": 5
+      }
+    },
+    {
+      "type": "probe",
+      "name": "verify-worker-killed",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "worker_count=$(pgrep -f 'worker' | wc -l); echo \"Worker processes: $worker_count\"; if [ $worker_count -eq 0 ]; then echo 'Worker successfully killed'; else echo 'Worker still running'; fi"
+        ]
+      },
+      "tolerance": "Worker successfully killed"
+    },
+    {
+      "type": "probe",
+      "name": "api-still-responsive",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": [200, 503]
+    },
+    {
+      "type": "action",
+      "name": "monitor-job-processing",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; import json; for i in range(6): time.sleep(5); response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); if response.status_code == 200: metrics = response.json(); print(f'Queue metrics at {i*5}s: {json.dumps(metrics, indent=2)}'); else: print(f'Queue metrics unavailable at {i*5}s')"
+        }
+      }
+    },
+    {
+      "type": "probe",
+      "name": "measure-worker-recovery",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import time; import subprocess; start_time = time.time(); while time.time() - start_time < 60: result = subprocess.run(['pgrep', '-f', 'worker'], capture_output=True, text=True); if result.stdout.strip(): recovery_time = time.time() - start_time; print(f'Worker recovery time: {recovery_time:.2f}s'); break; time.sleep(1); else: print('Worker did not recover within 60 seconds')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "submit-recovery-test-jobs",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; jobs = []; for i in range(3): response = requests.post('${api_url}/api/v1/triggers/test-webhook', json={'test': f'recovery-job-{i}', 'timestamp': '${timestamp}'}, headers={'X-API-Key': '${api_key}'}, timeout=5); jobs.append(response.status_code); print(f'Recovery test jobs: {jobs}')"
+        }
+      }
+    },
+    {
+      "type": "probe",
+      "name": "verify-job-processing-resumed",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; import json; time.sleep(10); response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); if response.status_code == 200: metrics = response.json(); print(f'Job processing resumed: {json.dumps(metrics, indent=2)}'); else: print('Job processing status unknown')"
+        }
+      }
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "ensure-worker-processes-running",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./safety/emergency-stop.sh"
+        ]
+      }
+    },
+    {
+      "type": "action",
+      "name": "verify-worker-recovery",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "worker_count=$(pgrep -f 'worker' | wc -l); echo \"Worker processes after recovery: $worker_count\"; if [ $worker_count -gt 0 ]; then echo 'Workers recovered successfully'; else echo 'Workers failed to recover'; fi"
+        ]
+      },
+      "tolerance": "Workers recovered successfully"
+    },
+    {
+      "type": "action",
+      "name": "verify-system-health",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": 200
+    },
+    {
+      "type": "action",
+      "name": "clear-failed-jobs",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; response = requests.post('${api_url}/api/v1/admin/queue/clear-failed', headers={'X-API-Key': '${api_key}'}, timeout=5); print(f'Clear failed jobs: {response.status_code}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "record-final-queue-state",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); metrics = response.json() if response.status_code == 200 else {}; print(f'Final queue state: {json.dumps(metrics, indent=2)}')"
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "api_url": {
+      "type": "env",
+      "key": "VISAPI_API_URL",
+      "default": "http://localhost:3000"
+    },
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY"
+    },
+    "chaos_scripts_dir": {
+      "type": "env",
+      "key": "CHAOS_SCRIPTS_DIR",
+      "default": "/Users/vadim/Projects/VisAPI/chaos-engineering/scripts"
+    },
+    "environment": {
+      "type": "env",
+      "key": "ENVIRONMENT",
+      "default": "local"
+    },
+    "timestamp": {
+      "type": "env",
+      "key": "TIMESTAMP",
+      "default": "2025-01-01T00:00:00Z"
+    }
+  },
+  "secrets": {},
+  "extensions": [
+    {
+      "name": "chaostoolkit-slack",
+      "slack_webhook_url": "${slack_webhook_url}",
+      "notification_channel": "#chaos-engineering"
+    }
+  ]
+}

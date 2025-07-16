@@ -1,0 +1,262 @@
+{
+  "version": "1.0.0",
+  "title": "Redis Failover Resilience Test",
+  "description": "Test system resilience when Redis becomes unavailable",
+  "tags": ["redis", "failover", "infrastructure", "high-priority"],
+  "contributions": {
+    "availability": "high",
+    "reliability": "high",
+    "performance": "medium"
+  },
+  "steady-state-hypothesis": {
+    "title": "System remains functional with Redis unavailable",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "api-responds-to-health-check",
+        "tolerance": [200, 503],
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/healthz",
+          "method": "GET",
+          "timeout": 5
+        }
+      },
+      {
+        "type": "probe",
+        "name": "queue-metrics-accessible",
+        "tolerance": [200, 503],
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/api/v1/queue/metrics",
+          "method": "GET",
+          "timeout": 5,
+          "headers": {
+            "X-API-Key": "${api_key}"
+          }
+        }
+      },
+      {
+        "type": "probe",
+        "name": "prometheus-metrics-available",
+        "tolerance": [200, 503],
+        "provider": {
+          "type": "http",
+          "url": "${api_url}/metrics",
+          "method": "GET",
+          "timeout": 5
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "record-baseline-metrics",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; import time; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); print(f'Baseline metrics: {response.json() if response.status_code == 200 else \"API unavailable\"}')"
+        }
+      }
+    },
+    {
+      "type": "action",
+      "name": "block-redis-connections",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./network-chaos.sh redis_unreachable -d 60 --environment ${environment}"
+        ]
+      },
+      "pauses": {
+        "after": 5
+      }
+    },
+    {
+      "type": "probe",
+      "name": "verify-redis-unavailable",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "redis-cli -h ${redis_host} -p ${redis_port} ping || echo 'Redis unavailable as expected'"
+        ]
+      },
+      "tolerance": "Redis unavailable as expected"
+    },
+    {
+      "type": "probe",
+      "name": "api-handles-redis-failure",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": [200, 503]
+    },
+    {
+      "type": "action",
+      "name": "trigger-queue-operation",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/triggers/test-webhook",
+        "method": "POST",
+        "timeout": 10,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "${api_key}"
+        },
+        "body": {
+          "test": "redis-failover-experiment",
+          "timestamp": "${timestamp}"
+        }
+      },
+      "tolerance": [200, 202, 503]
+    },
+    {
+      "type": "probe",
+      "name": "monitor-error-rate",
+      "provider": {
+        "type": "http",
+        "url": "${prometheus_url}/api/v1/query",
+        "method": "GET",
+        "timeout": 10,
+        "arguments": {
+          "query": "rate(http_requests_total{code!~\"2..\"}[5m])"
+        }
+      },
+      "tolerance": 200
+    },
+    {
+      "type": "action",
+      "name": "wait-for-system-adaptation",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import time; print('Waiting for system to adapt to Redis failure...'); time.sleep(30)"
+        }
+      }
+    },
+    {
+      "type": "probe",
+      "name": "measure-recovery-metrics",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import time; start_time = time.time(); response = requests.get('${api_url}/api/v1/healthz', timeout=10); recovery_time = time.time() - start_time; print(f'Recovery time: {recovery_time:.2f}s, Status: {response.status_code}')"
+        }
+      }
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "restore-redis-connections",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": [
+          "-c",
+          "cd ${chaos_scripts_dir} && ./safety/emergency-stop.sh"
+        ]
+      }
+    },
+    {
+      "type": "action",
+      "name": "verify-redis-connectivity",
+      "provider": {
+        "type": "process",
+        "path": "bash",
+        "arguments": ["-c", "redis-cli -h ${redis_host} -p ${redis_port} ping"]
+      },
+      "tolerance": "PONG"
+    },
+    {
+      "type": "action",
+      "name": "verify-system-recovery",
+      "provider": {
+        "type": "http",
+        "url": "${api_url}/api/v1/healthz",
+        "method": "GET",
+        "timeout": 10
+      },
+      "tolerance": 200
+    },
+    {
+      "type": "action",
+      "name": "record-final-metrics",
+      "provider": {
+        "type": "python",
+        "module": "chaostoolkit.lib.actions",
+        "func": "run_python",
+        "arguments": {
+          "code": "import requests; import json; response = requests.get('${api_url}/api/v1/queue/metrics', headers={'X-API-Key': '${api_key}'}, timeout=5); print(f'Final metrics: {response.json() if response.status_code == 200 else \"API unavailable\"}')"
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "api_url": {
+      "type": "env",
+      "key": "VISAPI_API_URL",
+      "default": "http://localhost:3000"
+    },
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY"
+    },
+    "redis_host": {
+      "type": "env",
+      "key": "REDIS_HOST",
+      "default": "localhost"
+    },
+    "redis_port": {
+      "type": "env",
+      "key": "REDIS_PORT",
+      "default": "6379"
+    },
+    "prometheus_url": {
+      "type": "env",
+      "key": "PROMETHEUS_URL",
+      "default": "http://localhost:9090"
+    },
+    "chaos_scripts_dir": {
+      "type": "env",
+      "key": "CHAOS_SCRIPTS_DIR",
+      "default": "/Users/vadim/Projects/VisAPI/chaos-engineering/scripts"
+    },
+    "environment": {
+      "type": "env",
+      "key": "ENVIRONMENT",
+      "default": "local"
+    },
+    "timestamp": {
+      "type": "env",
+      "key": "TIMESTAMP",
+      "default": "2025-01-01T00:00:00Z"
+    }
+  },
+  "secrets": {},
+  "extensions": [
+    {
+      "name": "chaostoolkit-slack",
+      "slack_webhook_url": "${slack_webhook_url}",
+      "notification_channel": "#chaos-engineering"
+    },
+    {
+      "name": "chaostoolkit-prometheus",
+      "prometheus_base_url": "${prometheus_url}"
+    }
+  ]
+}

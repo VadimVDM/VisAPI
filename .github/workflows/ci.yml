@@ -1,0 +1,226 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      affected-frontend: ${{ steps.affected.outputs.frontend }}
+      affected-backend: ${{ steps.affected.outputs.backend }}
+      affected-worker: ${{ steps.affected.outputs.worker }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive affected projects
+        id: affected
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA=${{ github.event.pull_request.base.sha }}
+          else
+            BASE_SHA=$(git rev-parse HEAD~1)
+          fi
+
+          AFFECTED=$(pnpm nx print-affected --base=$BASE_SHA --head=HEAD --select=projects)
+
+          echo "frontend=$([[ $AFFECTED == *"frontend"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          echo "backend=$([[ $AFFECTED == *"backend"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          echo "worker=$([[ $AFFECTED == *"worker"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm lint
+
+  test:
+    name: Test
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [frontend, backend, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        if: |
+          (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
+        run: pnpm nx test ${{ matrix.project }} --coverage
+        env:
+          NODE_ENV: test
+
+      - name: Upload coverage
+        if: |
+          (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.project }}
+
+  build:
+    name: Build
+    needs: [setup, lint, test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [frontend, backend, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        if: |
+          (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
+        run: pnpm nx build ${{ matrix.project }}
+
+      - name: Upload build artifacts
+        if: |
+          (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
+          (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
+          (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.project }}-build
+          path: |
+            dist/apps/${{ matrix.project }}
+            apps/${{ matrix.project }}/.next
+          retention-days: 7
+
+  security:
+    name: Security Scan
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  lighthouse:
+    name: Lighthouse CI
+    needs: [setup, build]
+    if: needs.setup.outputs.affected-frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm nx build frontend
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  notify:
+    name: Notify
+    needs: [lint, test, build, security, lighthouse]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            CI Pipeline ${{ job.status == 'success' && 'passed ✅' || 'failed ❌' }}
+            Commit: ${{ github.event.head_commit.message }}
+            Author: ${{ github.event.head_commit.author.name }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

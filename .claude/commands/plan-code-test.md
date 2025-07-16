@@ -78,11 +78,13 @@ Use these tools as needed:
 
 - **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
 - **render**: Direct backend access
+- **vercel**: Direct frontend access
 - **upstash**: Direct Redis access
 - **resend**: Emails
+- **grafana**: Monitoring, Grafana & Prometheus
 - **playwright**: Web testing and accessibility testing
 - **fetch** & **puppeteer**: Simple web browsing tasks
-- **browserbase**: Headless browser automation and interaction (only live, it can't access localhost)
+- **browserbase**: Headless browser automation and interaction (only live, browserbase can't access localhost)
 - **filesystem, sequential-thinking, memory**: Core development tools
 
 ### Code Quality

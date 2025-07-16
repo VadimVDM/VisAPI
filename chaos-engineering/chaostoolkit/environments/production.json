@@ -1,0 +1,84 @@
+{
+  "configuration": {
+    "api_url": "https://api.visanet.app",
+    "redis_host": "production-redis.upstash.io",
+    "redis_port": "6379",
+    "prometheus_url": "https://prometheus.grafana.net",
+    "grafana_url": "https://visanet.grafana.net",
+    "chaos_scripts_dir": "/opt/chaos-engineering/scripts",
+    "environment": "production",
+    "slack_webhook_url": "https://hooks.slack.com/services/YOUR/PRODUCTION/WEBHOOK",
+    "notification_channel": "#chaos-engineering-production"
+  },
+  "secrets": {
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY_PRODUCTION"
+    }
+  },
+  "runtime": {
+    "hypothesis": {
+      "tolerance": {
+        "api_timeout": 20,
+        "queue_timeout": 15,
+        "max_error_rate": 0.02
+      }
+    },
+    "method": {
+      "chaos_duration": 180,
+      "recovery_timeout": 120,
+      "monitoring_interval": 15
+    }
+  },
+  "safety": {
+    "max_experiment_duration": 900,
+    "auto_rollback_on_failure": true,
+    "require_approval": true,
+    "abort_on_system_unresponsive": true,
+    "blast_radius": "limited",
+    "business_hours_only": true,
+    "pre_experiment_checklist": [
+      "On-call team notified",
+      "Monitoring systems operational",
+      "Emergency contacts available",
+      "Rollback procedures verified"
+    ]
+  },
+  "monitoring": {
+    "collect_metrics": true,
+    "metrics_interval": 5,
+    "alert_thresholds": {
+      "api_response_time_ms": 500,
+      "error_rate_percent": 2,
+      "queue_depth": 25
+    },
+    "external_monitoring": {
+      "enabled": true,
+      "pagerduty_integration": true,
+      "slack_alerts": true,
+      "email_alerts": true
+    }
+  },
+  "pre_conditions": {
+    "required_services": [
+      "api-gateway",
+      "worker-service",
+      "redis",
+      "database",
+      "monitoring"
+    ],
+    "health_check_endpoints": [
+      "/api/v1/healthz",
+      "/api/v1/queue/metrics",
+      "/api/v1/livez"
+    ],
+    "minimum_replica_count": 2,
+    "traffic_percentage": 10
+  },
+  "post_conditions": {
+    "required_recovery_time": 120,
+    "alert_validation": true,
+    "performance_baseline_check": true,
+    "incident_report_required": true
+  }
+}

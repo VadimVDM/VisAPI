@@ -1,0 +1,58 @@
+{
+  "configuration": {
+    "api_url": "https://api-staging.visanet.app",
+    "redis_host": "staging-redis.upstash.io",
+    "redis_port": "6379",
+    "prometheus_url": "https://prometheus-staging.grafana.net",
+    "grafana_url": "https://staging.grafana.net",
+    "chaos_scripts_dir": "/opt/chaos-engineering/scripts",
+    "environment": "staging",
+    "slack_webhook_url": "https://hooks.slack.com/services/YOUR/STAGING/WEBHOOK",
+    "notification_channel": "#chaos-engineering-staging"
+  },
+  "secrets": {
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY_STAGING"
+    }
+  },
+  "runtime": {
+    "hypothesis": {
+      "tolerance": {
+        "api_timeout": 15,
+        "queue_timeout": 10,
+        "max_error_rate": 0.05
+      }
+    },
+    "method": {
+      "chaos_duration": 120,
+      "recovery_timeout": 60,
+      "monitoring_interval": 10
+    }
+  },
+  "safety": {
+    "max_experiment_duration": 600,
+    "auto_rollback_on_failure": true,
+    "require_approval": false,
+    "abort_on_system_unresponsive": true,
+    "blast_radius": "staging-only"
+  },
+  "monitoring": {
+    "collect_metrics": true,
+    "metrics_interval": 5,
+    "alert_thresholds": {
+      "api_response_time_ms": 1000,
+      "error_rate_percent": 5,
+      "queue_depth": 50
+    },
+    "external_monitoring": {
+      "enabled": true,
+      "pagerduty_integration": false,
+      "slack_alerts": true
+    }
+  },
+  "pre_conditions": {
+    "required_services": ["api-gateway", "worker-service", "redis", "database"],
+    "health_check_endpoints": ["/api/v1/healthz", "/api/v1/queue/metrics"]
+  }
+}

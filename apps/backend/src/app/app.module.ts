@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@visapi/core-config';
@@ -12,11 +13,17 @@ import { AdminModule } from '../admin/admin.module';
 import { CronModule } from '../cron/cron.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
 import { LogsModule } from '../logs/logs.module';
+import { MetricsModule } from '../metrics/metrics.module';
+import { HttpMetricsInterceptor } from '../metrics/http-metrics.interceptor';
+import { SlackModule } from '../notifications/slack.module';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SentryModule } from '@sentry/nestjs/setup';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule,
     LoggerModule.forRoot({
       pinoHttp: {
@@ -48,8 +55,20 @@ import { ThrottlerModule } from '@nestjs/throttler';
     CronModule,
     WorkflowsModule,
     LogsModule,
+    MetricsModule,
+    SlackModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
+    },
+  ],
 })
 export class AppModule {}

@@ -1,0 +1,50 @@
+# =============================================================================
+# TERRAFORM VARIABLES EXAMPLE
+# =============================================================================
+# Instructions:
+# 1. Copy this file to terraform.tfvars
+# 2. Replace all placeholder values with your actual values
+# 3. Run: terraform init && terraform plan
+# =============================================================================
+
+# Environment Configuration
+environment = "production"  # or "staging"
+project_name = "visapi"
+github_repo = "visanet/visapi"
+github_branch = "main"
+region = "us-east-1"
+domain = "visanet.app"
+
+# Node.js Configuration
+node_version = "20"
+
+# Supabase Configuration
+supabase_org_id = "your_supabase_org_id_here"
+supabase_project_id = "pangdzwamawwgmvxnwkk"
+
+# Cloud Provider API Keys
+render_api_key = "your_render_api_key_here"
+vercel_api_token = "your_vercel_api_token_here"
+upstash_api_key = "your_upstash_api_key_here"
+upstash_email = "your_upstash_email_here"
+
+# Monitoring & Alerting
+grafana_cloud_api_key = "your_grafana_cloud_api_key_here"
+grafana_cloud_stack_id = "your_grafana_cloud_stack_id_here"
+grafana_cloud_org_id = "your_grafana_cloud_org_id_here"
+
+# Notification Configuration
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+alert_email = "alerts@visanet.app"
+
+# Optional: PagerDuty Integration
+pagerduty_integration_key = "your_pagerduty_integration_key_optional"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# 1. Never commit terraform.tfvars to version control
+# 2. Add terraform.tfvars to .gitignore
+# 3. Use strong, unique API keys and secrets
+# 4. Rotate credentials regularly
+# 5. Different values for staging vs production environments

@@ -11,7 +11,12 @@ export interface WorkflowTrigger {
 
 export interface WorkflowStep {
   id: string;
-  type: 'slack.send' | 'whatsapp.send' | 'pdf.generate' | 'email.send' | 'delay';
+  type:
+    | 'slack.send'
+    | 'whatsapp.send'
+    | 'pdf.generate'
+    | 'email.send'
+    | 'delay';
   config: {
     template?: string;
     channel?: string;
@@ -83,4 +88,91 @@ export interface JobInfo {
   error?: string;
   attempts: number;
   maxAttempts: number;
+}
+
+// Grafana webhook types
+export interface GrafanaAlert {
+  id: number;
+  uid: string;
+  title: string;
+  state: 'alerting' | 'ok' | 'no_data' | 'paused' | 'pending';
+  evalMatches: Array<{
+    value: number;
+    metric: string;
+    tags: Record<string, string>;
+  }>;
+  executionError: string;
+  noDataFound: boolean;
+  message: string;
+  ruleId: number;
+  ruleName: string;
+  ruleUrl: string;
+  dashboardId: number;
+  panelId: number;
+  tags: Record<string, string>;
+  imageUrl?: string;
+}
+
+export interface GrafanaWebhookPayload {
+  dashboardId: number;
+  evalMatches: Array<{
+    value: number;
+    metric: string;
+    tags: Record<string, string>;
+  }>;
+  message: string;
+  orgId: number;
+  panelId: number;
+  ruleId: number;
+  ruleName: string;
+  ruleUrl: string;
+  state: 'alerting' | 'ok' | 'no_data' | 'paused' | 'pending';
+  tags: Record<string, string>;
+  title: string;
+  imageUrl?: string;
+  alerts?: GrafanaAlert[];
+}
+
+export interface SlackMessage {
+  channel?: string;
+  username?: string;
+  icon_emoji?: string;
+  icon_url?: string;
+  text?: string;
+  attachments?: SlackAttachment[];
+  blocks?: SlackBlock[];
+}
+
+export interface SlackAttachment {
+  color?: string;
+  pretext?: string;
+  author_name?: string;
+  author_link?: string;
+  author_icon?: string;
+  title?: string;
+  title_link?: string;
+  text?: string;
+  fields?: SlackField[];
+  image_url?: string;
+  thumb_url?: string;
+  footer?: string;
+  footer_icon?: string;
+  ts?: number;
+  mrkdwn_in?: string[];
+}
+
+export interface SlackField {
+  title: string;
+  value: string;
+  short?: boolean;
+}
+
+export interface SlackBlock {
+  type: string;
+  text?: {
+    type: string;
+    text: string;
+  };
+  elements?: any[];
+  accessory?: any;
 }

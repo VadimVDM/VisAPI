@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: July 15, 2025
+Essential information for working with the VisAPI project. Updated: July 16, 2025
 
 ## Project Overview
 
@@ -28,6 +28,11 @@ Essential information for working with the VisAPI project. Updated: July 15, 202
 - ✅ Enterprise-grade logging system with PII redaction
 - ✅ Comprehensive test suite (14 total test suites, majority passing)
 - ✅ Secure monorepo architecture with specialized shared libraries
+- ✅ Infrastructure automation with Terraform and CI/CD pipelines (Sprint 4)
+- ✅ Advanced monitoring with Grafana Cloud alerts and Slack integration (Sprint 4)
+- ✅ Operational excellence with comprehensive runbooks and chaos engineering (Sprint 4)
+- ✅ Load testing capabilities with k6 for 5k requests/minute (Sprint 4)
+- ✅ Security hardening with threat modeling and vulnerability scanning (Sprint 4)
 
 ## Project Structure
 
@@ -49,9 +54,13 @@ VisAPI/
 ├── tools/
 │   └── scripts/           # Build and deployment scripts
 ├── docs/                  # Project documentation
+│   ├── runbooks/          # Operational runbooks (DLQ, Redis, secrets)
+│   └── security/          # Security documentation and threat models
 ├── tasks/                 # Sprint planning and completed tasks
 │   └── completed/         # Completed sprint plans
 ├── infrastructure/        # Terraform and deployment configs
+├── load-tests/            # k6 load testing suite
+├── chaos-engineering/     # Chaos testing toolkit
 ├── docker-compose.yml     # Local development services
 ├── README.md              # Setup and development guide
 ├── CLAUDE.md              # This file - project guide for Claude
@@ -144,138 +153,27 @@ pnpm clean                 # Reset NX cache
 
 ## Environment Variables
 
-### Production Configuration
+Configuration is managed via environment variables. The `.env.example` file in the root directory provides a complete template for local development.
 
-**Frontend (Vercel)**
+For detailed descriptions of each variable, please refer to the comprehensive guide:
 
-```env
-NEXT_PUBLIC_API_URL=https://api.visanet.app
-NEXT_PUBLIC_SUPABASE_URL=https://pangdzwamawwgmvxnwkk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[your_anon_key]
-NEXT_PUBLIC_ENV=production
-```
-
-**Backend (Render)**
-
-```env
-NODE_ENV=production
-DATABASE_URL=[supabase_connection_string]
-REDIS_URL=[upstash_redis_url]
-JWT_SECRET=[generated_secret]
-CORS_ORIGIN=https://app.visanet.app
-```
+- **[Environment Variables Guide](./docs/environment-variables.md)**
 
 ## Coding Standards
 
-### General Rules
+The project enforces strict coding standards to maintain quality and consistency. All code is written in TypeScript with strict mode and formatted with ESLint and Prettier.
 
-- **TypeScript:** Strict mode enabled across all projects
-- **Code Style:** ESLint + Prettier configuration enforced
-- **Testing:** >80% backend coverage, >70% frontend coverage
-- **Comments:** Minimal comments, prefer descriptive names
-- **Security:** Never commit secrets, API keys, or sensitive data
+For detailed guidelines and code examples for both NestJS and Next.js, please refer to our comprehensive guide:
 
-### NestJS Backend Standards
-
-```typescript
-// Use dependency injection
-@Injectable()
-export class MyService {
-  constructor(private readonly logger: PinoLogger) {}
-}
-
-// Use DTOs for validation
-export class CreateWorkflowDto {
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-}
-
-// Use guards for authentication
-@UseGuards(ApiKeyGuard)
-@Scopes('workflows:create')
-@Post('workflows')
-async createWorkflow(@Body() dto: CreateWorkflowDto) {}
-```
-
-### Next.js Frontend Standards
-
-```typescript
-// Use App Router file conventions
-// app/page.tsx, app/layout.tsx, app/loading.tsx
-
-// Use server/client components appropriately
-'use client'; // Only when needed for interactivity
-
-// Use TypeScript interfaces
-interface User {
-  id: string;
-  email: string;
-  role: 'viewer' | 'operator' | 'admin';
-}
-
-// Use React Query for data fetching
-const { data, error, isLoading } = useQuery({
-  queryKey: ['workflows'],
-  queryFn: fetchWorkflows,
-});
-```
+- **[Coding Standards Guide](./docs/coding-standards.md)**
 
 ## Database Schema
 
-### Core Tables (Supabase PostgreSQL)
+Our database is a Supabase PostgreSQL instance. All tables have Row-Level Security (RLS) enabled and follow consistent conventions for keys and timestamps.
 
-**users**
+For a detailed breakdown of all core tables (`users`, `api_keys`, `workflows`, `logs`), see the dedicated schema documentation:
 
-```sql
-- id: uuid (primary key)
-- email: text (unique) -- DEPRECATED: Will be removed after auth.users integration
-- role: enum ('viewer', 'operator', 'admin')
-- auth_user_id: uuid (nullable, for future auth.users integration)
-- created_at: timestamptz (NOT NULL, default now())
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
-```
-
-**api_keys** (SECURE PREFIX/SECRET PATTERN)
-
-```sql
-- id: uuid (primary key)
-- name: text (NOT NULL)
-- hashed_key: text (LEGACY - will be removed)
-- prefix: text (for fast lookups, indexed)
-- hashed_secret: text (bcrypt hashed, secure storage)
-- scopes: text[] (default empty array)
-- expires_at: timestamptz (nullable, indexed)
-- created_by: uuid (foreign key to users, nullable)
-- created_at: timestamptz (NOT NULL, default now())
-- last_used_at: timestamptz (nullable, tracks API key usage)
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
-```
-
-**workflows**
-
-```sql
-- id: uuid (primary key)
-- name: text (NOT NULL)
-- description: text (nullable)
-- schema: jsonb (workflow definition, NOT NULL)
-- enabled: boolean (NOT NULL, default true)
-- created_at: timestamptz (NOT NULL, default now())
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
-```
-
-**logs**
-
-```sql
-- id: uuid (primary key)
-- level: text
-- message: text
-- metadata: jsonb
-- workflow_id: uuid (nullable)
-- job_id: text (nullable)
-- pii_redacted: boolean
-- created_at: timestamptz (90-day retention)
-```
+- **[Database Schema Guide](./docs/database-schema.md)**
 
 ## API Design
 
@@ -334,11 +232,13 @@ Use these tools:
 
 - **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
 - **render**: Direct backend access
-- **upstash**: for direct Redis access
+- **vercel**: Direct frontend access
+- **upstash**: Direct Redis access
 - **resend**: Emails
+- **grafana**: Monitoring, Grafana & Prometheus
 - **playwright**: Web testing and accessibility
 - **fetch** & **puppeteer**: Simple web browsing tasks
-- **browserbase**: Headless browser automation and interaction (only live, it can't access localhost)
+- **browserbase**: Headless browser automation and interaction (only live, browserbase can't access localhost)
 - **filesystem, sequential-thinking, memory**: Core development tools
 
 ### Connector Types
@@ -396,13 +296,6 @@ pnpm test:backend --coverage
 
 **Important:** Use `pnpm test:backend` instead of `nx test` to avoid infinite loop issues.
 
-### Test Status (Updated July 15, 2025)
-
-- ✅ **Test Infrastructure**: 14 test suites with comprehensive coverage
-- ✅ **Complete Coverage**: All Sprint 3 features including cron scheduling, PDF generation, and logging
-- ✅ **Test Stability**: Optimized resource-friendly testing preventing system lag
-- ✅ **Sprint 3 Integration**: Full test coverage for workflow automation features
-
 ### Resource-Friendly Test Commands
 
 Tests have been optimized to use minimal system resources. See `docs/testing-guide.md` for full details.
@@ -421,7 +314,8 @@ pnpm test:backend:file cron   # Test only cron-related files
 pnpm test:backend:file "api-keys|queue"  # Test multiple patterns
 ```
 
-**Why use serial mode?** 
+**Why use serial mode?**
+
 - Runs in ~4.5 seconds (faster than parallel due to less overhead)
 - Uses minimal RAM and CPU
 - Prevents system lag during development
@@ -568,7 +462,6 @@ pnpm nx show project frontend
 - **Upstash:** Redis for production queues
 - **Render:** Backend API gateway and workers
 - **Vercel:** Frontend hosting
-- **Twilio:** WhatsApp messaging
 - **Slack:** Internal notifications
 
 ### Documentation Links
@@ -579,96 +472,59 @@ pnpm nx show project frontend
 - **Supabase:** https://supabase.com/docs
 - **BullMQ:** https://docs.bullmq.io/
 
-## Current Sprint Status
+## Project Status & Roadmap
 
-**Sprint 0: Foundation** ✅ **COMPLETED** (July 14, 2025)
+**Current Status: Production Live + Sprint 4 Near Completion (92%)**
 
-- NX monorepo structure established
-- Next.js frontend with App Router
-- NestJS backend with basic API
-- Docker development environment
-- ESLint, Prettier, TypeScript configs
-- Development documentation
+VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 3 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is 92% complete with 10 out of 13 tasks finished, focusing on infrastructure automation, enhanced monitoring, and operational excellence.
 
-**Sprint 1: Core Engine & Gateway** ✅ **COMPLETED** (January 13, 2025)
+**Key Milestones Achieved:**
 
-- Supabase database setup and schema
-- API key authentication system
-- BullMQ job queue with Redis
-- Health check endpoints
-- OpenAPI documentation
-- Worker process architecture
+- **Core Platform**: Robust foundation with an NX monorepo, NestJS backend, Next.js frontend, and comprehensive CI/CD pipeline with GitHub Actions.
+- **Infrastructure as Code**: Complete Terraform automation for all cloud resources (Render, Vercel, Upstash, Supabase).
+- **Secure Architecture**: Secure-by-design, featuring shared libraries, prefix/secret API key authentication, Row-Level Security, and multi-layer security scanning.
+- **Monitoring & Observability**: Prometheus metrics collection with Grafana dashboards and comprehensive logging system.
+- **Admin Dashboard**: A full-featured frontend for system monitoring, including a live log explorer and queue management.
+- **Advanced Workflows**: End-to-end automation capabilities including WhatsApp messaging, dynamic PDF generation, and cron-based job scheduling.
+- **Comprehensive Testing**: A suite of 14 test suites covering unit, E2E, and load testing, with resource-friendly test commands available.
+- **Infrastructure Automation**: Complete Terraform infrastructure-as-code with CI/CD pipelines for all environments.
+- **Advanced Monitoring**: Grafana Cloud alerts with Slack integration, comprehensive metrics collection, and chaos engineering capabilities.
+- **Operational Excellence**: Production-ready runbooks for DLQ replay, Redis failover, secret rotation, and emergency procedures.
+- **Security Hardening**: Complete threat modeling with STRIDE analysis, vulnerability scanning, and security assessment framework.
 
-**Sprint 2: Frontend Integration & Testing** ✅ **COMPLETED** (January 14, 2025)
+**Detailed Roadmap & History**
 
-- Admin dashboard with Supabase auth
-- Bull-Board queue monitoring
-- Complete workflow automation
-- Unit testing infrastructure
-- Production deployment ready
+For a detailed breakdown of all past sprints, completed tasks, and current Sprint 4 progress, please refer to the canonical source of truth:
 
-**Sprint 2.5: Architecture & Security Overhaul** ✅ **COMPLETED** (July 15, 2025)
+- **[Project Roadmap](./tasks/roadmap.md)**
 
-- Shared libraries architecture with 7 specialized libraries
-- Zero app-to-app imports enforced by NX boundaries
-- Critical API key security vulnerability patched
-- Distributed Redis-based idempotency service
-- Frontend integration with live data
-- Complete removal of hardcoded credentials
+This document contains the complete project history and is the single source for sprint planning.
 
-**Database Security & Schema Enhancement** ✅ **COMPLETED** (July 15, 2025)
+**Key Technical Documentation**
 
-- ✅ **Secure API Key Pattern**: Implemented industry-standard prefix/secret pattern with bcrypt hashing
-- ✅ **Row-Level Security**: Enabled RLS on all tables with comprehensive access policies
-- ✅ **Schema Hardening**: Standardized triggers, timestamps, and constraints across all tables
-- ✅ **Auth.users Integration**: Prepared users table for Supabase Auth integration with backward compatibility
-- ✅ **Database Migration**: Applied 4 migrations safely with data preservation and backups
-- ✅ **Test Coverage**: Comprehensive test suite with Sprint 3 features covered
-- ✅ **Type Safety**: Updated TypeScript types to match new secure database schema
+For deeper dives into specific technical implementations, see the `docs/` directory. Key documents include:
 
-**Sprint 7.5: Polish & Improvements** ✅ **COMPLETED** (July 15, 2025)
-
-- ✅ **Architectural Cleanup**: Eliminated Supabase client duplication, consolidated types
-- ✅ **Critical Bug Fix**: Fixed API endpoint mismatch (/apikeys vs /api-keys)
-- ✅ **Backend Optimizations**: Streamlined health checks, simplified service APIs
-- ✅ **Frontend Enhancements**: Implemented useApiData hook, live data integration
-- ✅ **Test Suite Completion**: Comprehensive test infrastructure with 14 test suites
-
-**Sprint 3: Advanced Workflow Features** ✅ **COMPLETED** (July 15, 2025)
-
-- ✅ **WhatsApp Integration**: Complete CGB API integration with contact resolution
-- ✅ **PDF Generation**: Puppeteer-based PDF generation with Supabase Storage
-- ✅ **Cron Scheduling**: Automatic workflow scheduling with drift detection
-- ✅ **Workflow Validation**: JSON schema validation with AJV
-- ✅ **Logging System**: PII redaction and structured logging
-- ✅ **Log Pruning**: Automated nightly cleanup of old logs
-- ✅ **Logs API**: Paginated logs endpoint with filtering
-- ✅ **Logs Explorer UI**: Real-time logs dashboard with export functionality
-- ✅ **E2E Testing**: Comprehensive workflow automation testing
-- ✅ **Load Testing**: Performance validation and optimization
-
-**Current Status: Complete Enterprise-Grade Workflow Automation System**
-
-- All core systems operational and secure
-- Production deployments stable and optimized
-- Advanced workflow features fully implemented (10/10 tasks complete)
-- Clean, maintainable monorepo architecture with zero duplication
-- Complete test suite with comprehensive coverage (14 test suites)
-- Production-ready enterprise automation platform
+- `docs/testing-guide.md`: Best practices for running the test suite efficiently.
+- `docs/cgb-api-reference.md`: Detailed reference for the WhatsApp integration.
+- `docs/sprint-*.md` files: Individual sprint plans with technical specifications.
+- `docs/runbooks/`: Operational runbooks for DLQ replay, Redis failover, and secret rotation.
+- `docs/security/`: Security documentation, threat models, and assessment checklists.
+- `load-tests/`: k6 load testing suite for performance validation.
+- `chaos-engineering/`: Chaos testing toolkit for failure simulation.
 
 ## Notes for Claude Code
 
 ### When Working on This Project:
 
-1. **Always check the current sprint status** in `tasks/roadmap.md`
-2. **Follow the established patterns** in existing code
-3. **Update documentation** when making architectural changes
-4. **Test locally** using `pnpm dev` before pushing changes
-5. **Use the TodoWrite tool** for complex multi-step tasks
-6. **Check environment variables** in `.env.example` for requirements
-7. **Follow security guidelines** - never commit secrets
-8. **Use NX commands** for generating new components/services
-9. **Keep CLAUDE.md updated** with important project changes
+1.  **Always check the current sprint status** in `tasks/roadmap.md`
+2.  **Follow the established patterns** in existing code
+3.  **Update documentation** when making architectural changes
+4.  **Test locally** using `pnpm dev` before pushing changes
+5.  **Use the TodoWrite tool** for complex multi-step tasks
+6.  **Check environment variables** in `.env.example` for requirements
+7.  **Follow security guidelines** - never commit secrets
+8.  **Use NX commands** for generating new components/services
+9.  **Keep CLAUDE.md updated** with important project changes
 
 ### Code Quality Reminders:
 
@@ -684,5 +540,5 @@ pnpm nx show project frontend
 
 ---
 
-**Last Updated:** July 15, 2025
-**Version:** Sprint 3 Complete - Enterprise Workflow Automation System
+**Last Updated:** July 16, 2025
+**Version:** Sprint 4 In Progress - Infrastructure Automation & Launch Preparation

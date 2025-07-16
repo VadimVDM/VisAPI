@@ -1,0 +1,89 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+    open-pull-requests-limit: 10
+    groups:
+      development-dependencies:
+        patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'prettier*'
+          - 'jest*'
+          - 'vitest*'
+          - '@testing-library/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      production-dependencies:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'prettier*'
+          - 'jest*'
+          - 'vitest*'
+          - '@testing-library/*'
+        update-types:
+          - 'patch'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'automated'
+    reviewers:
+      - 'visanet/engineering'
+    assignees:
+      - 'octocat'
+
+  # Enable version updates for Docker
+  - package-ecosystem: 'docker'
+    directory: '/worker'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'docker'
+      - 'automated'
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'ci'
+      - 'automated'
+
+  # Enable version updates for Terraform
+  - package-ecosystem: 'terraform'
+    directory: '/infrastructure/terraform'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+    commit-message:
+      prefix: 'infra'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'infrastructure'
+      - 'automated'

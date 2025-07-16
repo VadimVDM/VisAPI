@@ -1,0 +1,48 @@
+{
+  "configuration": {
+    "api_url": "http://localhost:3000",
+    "redis_host": "localhost",
+    "redis_port": "6379",
+    "prometheus_url": "http://localhost:9090",
+    "grafana_url": "http://localhost:3001",
+    "chaos_scripts_dir": "/Users/vadim/Projects/VisAPI/chaos-engineering/scripts",
+    "environment": "local",
+    "slack_webhook_url": "https://hooks.slack.com/services/YOUR/LOCAL/WEBHOOK",
+    "notification_channel": "#chaos-engineering-local"
+  },
+  "secrets": {
+    "api_key": {
+      "type": "env",
+      "key": "VISAPI_API_KEY_LOCAL"
+    }
+  },
+  "runtime": {
+    "hypothesis": {
+      "tolerance": {
+        "api_timeout": 10,
+        "queue_timeout": 5,
+        "max_error_rate": 0.1
+      }
+    },
+    "method": {
+      "chaos_duration": 60,
+      "recovery_timeout": 30,
+      "monitoring_interval": 5
+    }
+  },
+  "safety": {
+    "max_experiment_duration": 300,
+    "auto_rollback_on_failure": true,
+    "require_approval": false,
+    "abort_on_system_unresponsive": true
+  },
+  "monitoring": {
+    "collect_metrics": true,
+    "metrics_interval": 10,
+    "alert_thresholds": {
+      "api_response_time_ms": 2000,
+      "error_rate_percent": 10,
+      "queue_depth": 100
+    }
+  }
+}

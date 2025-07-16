@@ -4,11 +4,13 @@ import { Reflector } from '@nestjs/core';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthService } from '../auth.service';
 import { ApiKeyRecord } from '@visapi/shared-types';
+import { MetricsService } from '../../metrics/metrics.service';
 
 describe('ApiKeyGuard', () => {
   let guard: ApiKeyGuard;
   let authService: jest.Mocked<AuthService>;
   let reflector: jest.Mocked<Reflector>;
+  let metricsService: jest.Mocked<MetricsService>;
 
   const mockApiKey: ApiKeyRecord = {
     id: 'api-key-123',
@@ -52,12 +54,19 @@ describe('ApiKeyGuard', () => {
             getAllAndOverride: jest.fn(),
           },
         },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordApiKeyValidation: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     guard = module.get<ApiKeyGuard>(ApiKeyGuard);
     authService = module.get(AuthService);
     reflector = module.get(Reflector);
+    metricsService = module.get(MetricsService);
   });
 
   it('should be defined', () => {
@@ -76,7 +85,9 @@ describe('ApiKeyGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_validkey123');
+      expect(authService.validateApiKey).toHaveBeenCalledWith(
+        'vapi_validkey123'
+      );
       expect(context.switchToHttp().getRequest().apiKey).toEqual(mockApiKey);
     });
 
@@ -156,7 +167,9 @@ describe('ApiKeyGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_bearerkey123');
+      expect(authService.validateApiKey).toHaveBeenCalledWith(
+        'vapi_bearerkey123'
+      );
     });
 
     it('should extract API key from X-API-Key header', async () => {
@@ -170,7 +183,9 @@ describe('ApiKeyGuard', () => {
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(authService.validateApiKey).toHaveBeenCalledWith('vapi_xapikeyheader123');
+      expect(authService.validateApiKey).toHaveBeenCalledWith(
+        'vapi_xapikeyheader123'
+      );
     });
 
     it('should handle multiple required scopes', async () => {
@@ -204,6 +219,50 @@ describe('ApiKeyGuard', () => {
 
       const request = context.switchToHttp().getRequest();
       expect(request.apiKey).toEqual(mockApiKey);
+    });
+
+    it('should record API key validation metrics for successful validation', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'vapi_validkey123',
+      });
+
+      authService.validateApiKey.mockResolvedValue(mockApiKey);
+      reflector.getAllAndOverride.mockReturnValue([]);
+
+      await guard.canActivate(context);
+
+      expect(metricsService.recordApiKeyValidation).toHaveBeenCalledWith(
+        expect.any(Number),
+        true
+      );
+    });
+
+    it('should record API key validation metrics for failed validation', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'invalid-key',
+      });
+
+      authService.validateApiKey.mockResolvedValue(null);
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+
+      expect(metricsService.recordApiKeyValidation).toHaveBeenCalledWith(
+        expect.any(Number),
+        false
+      );
+    });
+
+    it('should record API key validation metrics when missing API key', async () => {
+      const context = createMockExecutionContext({});
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException
+      );
+
+      // Metrics should not be recorded when API key is missing (no validation occurred)
+      expect(metricsService.recordApiKeyValidation).not.toHaveBeenCalled();
     });
   });
 });

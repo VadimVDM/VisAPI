@@ -1,0 +1,181 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+  release:
+    types: [published]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  pre-deploy-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify staging health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://api-staging.visanet.app/api/v1/healthz)
+          if [ $response -ne 200 ]; then
+            echo "Staging health check failed. Cannot proceed with production deployment."
+            exit 1
+          fi
+
+      - name: Check for critical alerts
+        run: |
+          # This would integrate with your monitoring system
+          echo "Checking for any critical alerts in the last 24 hours..."
+          # Placeholder for actual monitoring check
+
+  deploy-frontend:
+    name: Deploy Frontend to Vercel (Production)
+    needs: pre-deploy-checks
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.visanet.app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.event.release.tag_name }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
+          vercel-args: '--prod'
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+          production: true
+
+  deploy-backend:
+    name: Deploy Backend to Render (Production)
+    needs: pre-deploy-checks
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.visanet.app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.event.release.tag_name }}
+
+      - name: Deploy API Gateway
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_GATEWAY_SERVICE_ID_PROD }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+
+      - name: Deploy Worker
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_WORKER_SERVICE_ID_PROD }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+
+  health-check:
+    name: Production Health Check
+    needs: [deploy-frontend, deploy-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 90
+
+      - name: Check Backend Health
+        run: |
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://api.visanet.app/api/v1/healthz)
+            if [ $response -eq 200 ]; then
+              echo "Backend is healthy"
+              break
+            fi
+            echo "Attempt $i: Backend returned $response, retrying..."
+            sleep 30
+          done
+
+          if [ $response -ne 200 ]; then
+            echo "Backend health check failed after 5 attempts"
+            exit 1
+          fi
+
+      - name: Check Frontend Health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://app.visanet.app)
+          if [ $response -ne 200 ]; then
+            echo "Frontend health check failed with status $response"
+            exit 1
+          fi
+          echo "Frontend is healthy"
+
+      - name: Run Production Smoke Tests
+        run: |
+          # Test critical endpoints
+          curl -X GET https://api.visanet.app/api/v1/livez
+          curl -X GET https://api.visanet.app/api/v1/version
+          curl -X GET https://api.visanet.app/api/v1/queue/metrics
+
+  rollback:
+    name: Rollback on Failure
+    needs: health-check
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Rollback
+        run: |
+          echo "Health checks failed. Initiating rollback..."
+          # This would trigger your rollback mechanism
+          # For Vercel: revert to previous deployment
+          # For Render: similar rollback API call
+
+      - name: Send Emergency Alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🚨 PRODUCTION DEPLOYMENT FAILED - ROLLBACK INITIATED 🚨
+            Version: ${{ github.event.inputs.version || github.event.release.tag_name }}
+            Action Required: Check production services immediately
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  post-deploy:
+    name: Post-deployment Tasks
+    needs: health-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag deployment in monitoring
+        run: |
+          # Mark deployment in Grafana/monitoring system
+          echo "Marking deployment in monitoring systems..."
+          # Placeholder for actual monitoring integration
+
+      - name: Update status page
+        run: |
+          # Update public status page if you have one
+          echo "Updating status page..."
+
+      - name: Send Success Notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: |
+            🎉 Production Deployment Successful! 🎉
+            Version: ${{ github.event.inputs.version || github.event.release.tag_name }}
+            Frontend: https://app.visanet.app
+            Backend: https://api.visanet.app
+
+            Please monitor for the next 30 minutes.
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

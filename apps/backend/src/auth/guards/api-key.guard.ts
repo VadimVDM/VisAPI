@@ -3,16 +3,19 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from '../auth.service';
 import { SCOPES_KEY } from '../decorators/scopes.decorator';
+import { MetricsService } from '../../metrics/metrics.service';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,
-    private readonly reflector: Reflector
+    private readonly reflector: Reflector,
+    @Optional() private readonly metricsService?: MetricsService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -23,37 +26,50 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('API key is required');
     }
 
-    const validatedKey = await this.authService.validateApiKey(apiKey);
-    if (!validatedKey) {
-      throw new UnauthorizedException('Invalid or expired API key');
-    }
+    // Start timing API key validation
+    const startTime = Date.now();
+    let isValid = false;
 
-    // Check scopes if specified
-    const requiredScopes =
-      this.reflector.getAllAndOverride<string[]>(SCOPES_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]) || [];
+    try {
+      const validatedKey = await this.authService.validateApiKey(apiKey);
+      if (!validatedKey) {
+        throw new UnauthorizedException('Invalid or expired API key');
+      }
+      isValid = true;
 
-    if (requiredScopes.length > 0) {
-      const hasScopes = await this.authService.checkScopes(
-        validatedKey,
-        requiredScopes
-      );
+      // Check scopes if specified
+      const requiredScopes =
+        this.reflector.getAllAndOverride<string[]>(SCOPES_KEY, [
+          context.getHandler(),
+          context.getClass(),
+        ]) || [];
 
-      if (!hasScopes) {
-        throw new UnauthorizedException(
-          `Insufficient permissions. Required scopes: ${requiredScopes.join(
-            ', '
-          )}`
+      if (requiredScopes.length > 0) {
+        const hasScopes = await this.authService.checkScopes(
+          validatedKey,
+          requiredScopes
         );
+
+        if (!hasScopes) {
+          throw new UnauthorizedException(
+            `Insufficient permissions. Required scopes: ${requiredScopes.join(
+              ', '
+            )}`
+          );
+        }
+      }
+
+      // Attach the validated key to the request
+      request.apiKey = validatedKey;
+
+      return true;
+    } finally {
+      // Record the validation duration regardless of success or failure
+      const duration = Date.now() - startTime;
+      if (this.metricsService) {
+        this.metricsService.recordApiKeyValidation(duration, isValid);
       }
     }
-
-    // Attach the validated key to the request
-    request.apiKey = validatedKey;
-
-    return true;
   }
 
   private extractApiKey(request: any): string | null {

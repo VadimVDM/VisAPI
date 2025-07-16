@@ -1,0 +1,389 @@
+# Grafana Cloud Alert Rules Configuration
+# VisAPI Production Monitoring Alerts
+# Last Updated: July 16, 2025
+
+apiVersion: 1
+
+groups:
+  - name: visapi_alerts
+    folder: VisAPI
+    interval: 1m
+    rules:
+      # API Latency Alert - p95 > 200ms for 5 minutes
+      - uid: api_latency_high
+        title: High API Latency (p95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-uid
+            model:
+              expr: |
+                histogram_quantile(0.95, 
+                  sum(rate(visapi_http_request_duration_seconds_bucket[5m])) by (le, method, route)
+                ) * 1000 > 200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: avg
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              reducer: last
+              refId: C
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          description: 'API endpoint {{ $labels.route }} has p95 latency of {{ $value }}ms (threshold: 200ms)'
+          runbook_url: 'https://github.com/visanet/visapi/wiki/runbooks/high-api-latency'
+          summary: 'High API latency detected on {{ $labels.method }} {{ $labels.route }}'
+        labels:
+          severity: warning
+          team: platform
+          service: visapi
+
+      # Error Rate Alert - > 5% for 5 minutes
+      - uid: error_rate_high
+        title: High Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-uid
+            model:
+              expr: |
+                (
+                  sum(rate(visapi_http_requests_total{status=~"5.."}[5m])) by (method, route)
+                  /
+                  sum(rate(visapi_http_requests_total[5m])) by (method, route)
+                ) * 100 > 5
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: avg
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              reducer: last
+              refId: C
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          description: 'Error rate for {{ $labels.method }} {{ $labels.route }} is {{ $value }}% (threshold: 5%)'
+          runbook_url: 'https://github.com/visanet/visapi/wiki/runbooks/high-error-rate'
+          summary: 'High error rate detected on {{ $labels.method }} {{ $labels.route }}'
+        labels:
+          severity: critical
+          team: platform
+          service: visapi
+
+      # Queue Depth Alert - > 1000 jobs
+      - uid: queue_depth_high
+        title: High Queue Depth
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-uid
+            model:
+              expr: |
+                sum(visapi_queue_depth_total) by (queue_name, priority) > 1000
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: avg
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              reducer: last
+              refId: C
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          description: 'Queue {{ $labels.queue_name }} (priority: {{ $labels.priority }}) has {{ $value }} pending jobs (threshold: 1000)'
+          runbook_url: 'https://github.com/visanet/visapi/wiki/runbooks/high-queue-depth'
+          summary: 'High queue depth detected in {{ $labels.queue_name }}'
+        labels:
+          severity: warning
+          team: platform
+          service: visapi
+
+      # Redis Connection Failures Alert
+      - uid: redis_connection_failures
+        title: Redis Connection Failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-uid
+            model:
+              expr: |
+                increase(visapi_redis_operations_total{status="error"}[1m]) > 0
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: avg
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              reducer: last
+              refId: C
+        noDataState: NoData
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          description: 'Redis operation {{ $labels.operation }} is failing with {{ $value }} errors in the last minute'
+          runbook_url: 'https://github.com/visanet/visapi/wiki/runbooks/redis-connection-failure'
+          summary: 'Redis connection failures detected'
+        labels:
+          severity: critical
+          team: platform
+          service: visapi
+
+# Notification Policies
+notification_policies:
+  - name: visapi_notifications
+    receiver: slack-platform
+    group_by:
+      - alertname
+      - cluster
+      - service
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 12h
+    routes:
+      - receiver: slack-critical
+        match:
+          severity: critical
+        continue: true
+      - receiver: pagerduty
+        match:
+          severity: critical
+        match_re:
+          alertname: ^(redis_connection_failures|error_rate_high)$
+
+# Contact Points
+contact_points:
+  - name: slack-platform
+    slack_configs:
+      - url: '${SLACK_WEBHOOK_URL}'
+        channel: '#platform-alerts'
+        title: 'VisAPI Alert'
+        text: |-
+          {{ range .Alerts }}
+            *Alert:* {{ .Annotations.summary }}
+            *Severity:* {{ .Labels.severity }}
+            *Description:* {{ .Annotations.description }}
+            *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+
+  - name: slack-critical
+    slack_configs:
+      - url: '${SLACK_WEBHOOK_URL}'
+        channel: '#critical-alerts'
+        title: '🚨 CRITICAL: VisAPI Alert'
+        text: |-
+          {{ range .Alerts }}
+            *Alert:* {{ .Annotations.summary }}
+            *Severity:* {{ .Labels.severity }}
+            *Description:* {{ .Annotations.description }}
+            *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+
+  - name: pagerduty
+    pagerduty_configs:
+      - integration_key: '${PAGERDUTY_INTEGRATION_KEY}'
+        severity: critical
+
+# Mute Timings (for maintenance windows)
+mute_timings:
+  - name: maintenance_window
+    time_intervals:
+      - weekdays: ['sunday']
+        times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        location: 'America/New_York'

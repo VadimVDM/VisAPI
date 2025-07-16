@@ -1,0 +1,260 @@
+version: '3.8'
+
+services:
+  # VisAPI Backend with chaos testing capabilities
+  visapi-backend-chaos:
+    build:
+      context: ../../
+      dockerfile: apps/backend/Dockerfile
+    container_name: visapi-backend-chaos
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@chaos-postgres:5432/visapi_dev
+      - REDIS_URL=redis://chaos-redis:6379
+      - LOG_LEVEL=debug
+      - CHAOS_ENABLED=true
+    depends_on:
+      - chaos-postgres
+      - chaos-redis
+    networks:
+      - chaos-network
+    volumes:
+      - ../../:/app
+      - ./network-chaos:/etc/network-chaos
+    labels:
+      - 'chaos.service=backend'
+      - 'chaos.criticality=high'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/healthz']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # VisAPI Worker with chaos testing capabilities
+  visapi-worker-chaos:
+    build:
+      context: ../../
+      dockerfile: worker/Dockerfile
+    container_name: visapi-worker-chaos
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@chaos-postgres:5432/visapi_dev
+      - REDIS_URL=redis://chaos-redis:6379
+      - LOG_LEVEL=debug
+      - CHAOS_ENABLED=true
+    depends_on:
+      - chaos-postgres
+      - chaos-redis
+    networks:
+      - chaos-network
+    volumes:
+      - ../../:/app
+    labels:
+      - 'chaos.service=worker'
+      - 'chaos.criticality=high'
+    restart: unless-stopped
+
+  # PostgreSQL Database for chaos testing
+  chaos-postgres:
+    image: postgres:15-alpine
+    container_name: chaos-postgres
+    environment:
+      - POSTGRES_DB=visapi_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - chaos-postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - chaos-network
+    labels:
+      - 'chaos.service=database'
+      - 'chaos.criticality=critical'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for chaos testing
+  chaos-redis:
+    image: redis:7-alpine
+    container_name: chaos-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - chaos-redis-data:/data
+      - ./redis-config:/usr/local/etc/redis
+    networks:
+      - chaos-network
+    labels:
+      - 'chaos.service=redis'
+      - 'chaos.criticality=high'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Prometheus for monitoring during chaos
+  chaos-prometheus:
+    image: prom/prometheus:latest
+    container_name: chaos-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - chaos-prometheus-data:/prometheus
+    networks:
+      - chaos-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    labels:
+      - 'chaos.service=monitoring'
+      - 'chaos.criticality=medium'
+    restart: unless-stopped
+
+  # Grafana for visualization during chaos
+  chaos-grafana:
+    image: grafana/grafana:latest
+    container_name: chaos-grafana
+    ports:
+      - '3001:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=chaos123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - chaos-grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - chaos-network
+    depends_on:
+      - chaos-prometheus
+    labels:
+      - 'chaos.service=monitoring'
+      - 'chaos.criticality=medium'
+    restart: unless-stopped
+
+  # Network chaos engineering tool
+  chaos-network:
+    image: alexei-led/pumba:latest
+    container_name: chaos-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --log-level=info --interval=30s netem --duration=60s --delay=100ms chaos-redis
+    networks:
+      - chaos-network
+    labels:
+      - 'chaos.service=network-chaos'
+      - 'chaos.criticality=low'
+    depends_on:
+      - chaos-redis
+    restart: 'no'
+
+  # Resource chaos engineering tool
+  chaos-resource:
+    image: alexei-led/pumba:latest
+    container_name: chaos-resource
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --log-level=info --interval=60s stress --duration=30s --stress-memory=256m visapi-backend-chaos
+    networks:
+      - chaos-network
+    labels:
+      - 'chaos.service=resource-chaos'
+      - 'chaos.criticality=low'
+    depends_on:
+      - visapi-backend-chaos
+    restart: 'no'
+
+  # Container killer for chaos testing
+  chaos-killer:
+    image: alexei-led/pumba:latest
+    container_name: chaos-killer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --log-level=info --random --interval=120s kill --signal=SIGTERM visapi-worker-chaos
+    networks:
+      - chaos-network
+    labels:
+      - 'chaos.service=container-killer'
+      - 'chaos.criticality=low'
+    depends_on:
+      - visapi-worker-chaos
+    restart: 'no'
+
+  # Mock external services for testing
+  mock-slack:
+    image: mockserver/mockserver:latest
+    container_name: mock-slack
+    ports:
+      - '1080:1080'
+    environment:
+      - MOCKSERVER_SERVER_PORT=1080
+      - MOCKSERVER_LOG_LEVEL=INFO
+    volumes:
+      - ./mock-servers/slack:/config
+    networks:
+      - chaos-network
+    command: -serverPort 1080 -logLevel INFO
+    labels:
+      - 'chaos.service=mock-external'
+      - 'chaos.criticality=low'
+    restart: unless-stopped
+
+  # Chaos experiment runner
+  chaos-runner:
+    build:
+      context: ./chaos-runner
+      dockerfile: Dockerfile
+    container_name: chaos-runner
+    volumes:
+      - ../:/chaos-engineering
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CHAOS_SCRIPTS_DIR=/chaos-engineering/scripts
+      - VISAPI_API_URL=http://visapi-backend-chaos:3000
+      - PROMETHEUS_URL=http://chaos-prometheus:9090
+      - ENVIRONMENT=docker
+    networks:
+      - chaos-network
+    depends_on:
+      - visapi-backend-chaos
+      - chaos-prometheus
+    labels:
+      - 'chaos.service=chaos-runner'
+      - 'chaos.criticality=low'
+    restart: 'no'
+
+networks:
+  chaos-network:
+    driver: bridge
+    name: chaos-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  chaos-postgres-data:
+    driver: local
+  chaos-redis-data:
+    driver: local
+  chaos-prometheus-data:
+    driver: local
+  chaos-grafana-data:
+    driver: local

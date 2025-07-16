@@ -84,4 +84,24 @@ export class ConfigService {
   get logFormat(): string {
     return this.configService.get<string>('logging.format');
   }
+
+  get slackWebhookUrl(): string {
+    return this.configService.get<string>('slack.webhookUrl');
+  }
+
+  get slackBotToken(): string {
+    return this.configService.get<string>('slack.botToken');
+  }
+
+  get slackSigningSecret(): string {
+    return this.configService.get<string>('slack.signingSecret');
+  }
+
+  get slackDefaultChannel(): string {
+    return this.configService.get<string>('slack.defaultChannel');
+  }
+
+  get slackEnabled(): boolean {
+    return this.configService.get<boolean>('slack.enabled');
+  }
 }

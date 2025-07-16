@@ -1,0 +1,25 @@
+# Snyk (https://snyk.io) policy file
+version: v1.25.0
+
+# Ignore specific vulnerabilities
+ignore: {}
+
+# Patches to apply
+patch: {}
+
+# Exclude files and folders from scanning
+exclude:
+  global:
+    - 'node_modules/**'
+    - 'dist/**'
+    - 'coverage/**'
+    - '.next/**'
+    - '*.test.ts'
+    - '*.spec.ts'
+    - 'infrastructure/terraform/.terraform/**'
+
+# Language settings
+language-settings:
+  node:
+    enableLicensesScan: true
+    enableVulnerabilitiesScan: true

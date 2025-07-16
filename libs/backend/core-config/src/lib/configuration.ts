@@ -15,7 +15,9 @@ export default () => ({
   supabase: {
     url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    anonKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    anonKey:
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
   auth: {
     jwtSecret: process.env.JWT_SECRET,
@@ -41,5 +43,12 @@ export default () => ({
     timeout: parseInt(process.env.CGB_TIMEOUT, 10) || 30000,
     retryAttempts: parseInt(process.env.CGB_RETRY_ATTEMPTS, 10) || 3,
     cacheTimeout: parseInt(process.env.CGB_CACHE_TIMEOUT, 10) || 3600,
+  },
+  slack: {
+    webhookUrl: process.env.SLACK_WEBHOOK_URL || '',
+    botToken: process.env.SLACK_BOT_TOKEN || '',
+    signingSecret: process.env.SLACK_SIGNING_SECRET || '',
+    defaultChannel: process.env.SLACK_DEFAULT_CHANNEL || '#alerts',
+    enabled: process.env.SLACK_ENABLED === 'true',
   },
 });
