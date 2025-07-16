@@ -1,0 +1,62 @@
+234c678556e07c0d207716d9de26bb38
+"use strict";
+var RedisService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RedisService = void 0;
+const tslib_1 = require("tslib");
+const common_1 = require("@nestjs/common");
+const ioredis_1 = require("ioredis");
+const core_config_1 = require("@visapi/core-config");
+let RedisService = RedisService_1 = class RedisService {
+    constructor(config) {
+        this.config = config;
+        this.logger = new common_1.Logger(RedisService_1.name);
+        const redisUrl = this.config.redisUrl;
+        if (!redisUrl || redisUrl === 'h') {
+            this.logger.error('Invalid or missing REDIS_URL environment variable');
+            // Use a dummy Redis instance that will fail gracefully
+            this.redis = new ioredis_1.Redis({
+                host: 'localhost',
+                port: 6379,
+                maxRetriesPerRequest: 0,
+                lazyConnect: true,
+                enableOfflineQueue: false,
+                retryStrategy: () => null, // Don't retry
+            });
+        }
+        else {
+            this.redis = new ioredis_1.Redis(redisUrl, {
+                maxRetriesPerRequest: 3,
+                lazyConnect: true,
+            });
+        }
+    }
+    getClient() {
+        return this.redis;
+    }
+    checkConnection() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            try {
+                const start = Date.now();
+                yield this.redis.ping();
+                const responseTime = Date.now() - start;
+                return responseTime < 1000; // Consider healthy if ping < 1s
+            }
+            catch (_a) {
+                return false;
+            }
+        });
+    }
+    disconnect() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            yield this.redis.disconnect();
+        });
+    }
+};
+exports.RedisService = RedisService;
+exports.RedisService = RedisService = RedisService_1 = tslib_1.__decorate([
+    (0, common_1.Injectable)(),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof core_config_1.ConfigService !== "undefined" && core_config_1.ConfigService) === "function" ? _a : Object])
+], RedisService);
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9saWJzL2JhY2tlbmQvdXRpbC1yZWRpcy9zcmMvbGliL3JlZGlzLnNlcnZpY2UudHMiLCJtYXBwaW5ncyI6Ijs7Ozs7O0FBQUEsMkNBQW9EO0FBQ3BELHFDQUFnQztBQUNoQyxxREFBb0Q7QUFHN0MsSUFBTSxZQUFZLG9CQUFsQixNQUFNLFlBQVk7SUFJdkIsWUFBNkIsTUFBcUI7UUFBckIsV0FBTSxHQUFOLE1BQU0sQ0FBZTtRQUZqQyxXQUFNLEdBQUcsSUFBSSxlQUFNLENBQUMsY0FBWSxDQUFDLElBQUksQ0FBQyxDQUFDO1FBR3RELE1BQU0sUUFBUSxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsUUFBUSxDQUFDO1FBRXRDLElBQUksQ0FBQyxRQUFRLElBQUksUUFBUSxLQUFLLEdBQUcsRUFBRSxDQUFDO1lBQ2xDLElBQUksQ0FBQyxNQUFNLENBQUMsS0FBSyxDQUFDLG1EQUFtRCxDQUFDLENBQUM7WUFDdkUsdURBQXVEO1lBQ3ZELElBQUksQ0FBQyxLQUFLLEdBQUcsSUFBSSxlQUFLLENBQUM7Z0JBQ3JCLElBQUksRUFBRSxXQUFXO2dCQUNqQixJQUFJLEVBQUUsSUFBSTtnQkFDVixvQkFBb0IsRUFBRSxDQUFDO2dCQUN2QixXQUFXLEVBQUUsSUFBSTtnQkFDakIsa0JBQWtCLEVBQUUsS0FBSztnQkFDekIsYUFBYSxFQUFFLEdBQUcsRUFBRSxDQUFDLElBQUksRUFBRSxjQUFjO2FBQzFDLENBQUMsQ0FBQztRQUNMLENBQUM7YUFBTSxDQUFDO1lBQ04sSUFBSSxDQUFDLEtBQUssR0FBRyxJQUFJLGVBQUssQ0FBQyxRQUFRLEVBQUU7Z0JBQy9CLG9CQUFvQixFQUFFLENBQUM7Z0JBQ3ZCLFdBQVcsRUFBRSxJQUFJO2FBQ2xCLENBQUMsQ0FBQztRQUNMLENBQUM7SUFDSCxDQUFDO0lBRUQsU0FBUztRQUNQLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQztJQUNwQixDQUFDO0lBRUssZUFBZTs7WUFDbkIsSUFBSSxDQUFDO2dCQUNILE1BQU0sS0FBSyxHQUFHLElBQUksQ0FBQyxHQUFHLEVBQUUsQ0FBQztnQkFDekIsTUFBTSxJQUFJLENBQUMsS0FBSyxDQUFDLElBQUksRUFBRSxDQUFDO2dCQUN4QixNQUFNLFlBQVksR0FBRyxJQUFJLENBQUMsR0FBRyxFQUFFLEdBQUcsS0FBSyxDQUFDO2dCQUN4QyxPQUFPLFlBQVksR0FBRyxJQUFJLENBQUMsQ0FBQyxnQ0FBZ0M7WUFDOUQsQ0FBQztZQUFDLFdBQU0sQ0FBQztnQkFDUCxPQUFPLEtBQUssQ0FBQztZQUNmLENBQUM7UUFDSCxDQUFDO0tBQUE7SUFFSyxVQUFVOztZQUNkLE1BQU0sSUFBSSxDQUFDLEtBQUssQ0FBQyxVQUFVLEVBQUUsQ0FBQztRQUNoQyxDQUFDO0tBQUE7Q0FDRixDQUFBO0FBNUNZLG9DQUFZO3VCQUFaLFlBQVk7SUFEeEIsSUFBQSxtQkFBVSxHQUFFO2lFQUswQiwyQkFBYSxvQkFBYiwyQkFBYTtHQUp2QyxZQUFZLENBNEN4QiIsIm5hbWVzIjpbXSwic291cmNlcyI6WyIvVXNlcnMvdmFkaW0vUHJvamVjdHMvVmlzQVBJL2xpYnMvYmFja2VuZC91dGlsLXJlZGlzL3NyYy9saWIvcmVkaXMuc2VydmljZS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBJbmplY3RhYmxlLCBMb2dnZXIgfSBmcm9tICdAbmVzdGpzL2NvbW1vbic7XG5pbXBvcnQgeyBSZWRpcyB9IGZyb20gJ2lvcmVkaXMnO1xuaW1wb3J0IHsgQ29uZmlnU2VydmljZSB9IGZyb20gJ0B2aXNhcGkvY29yZS1jb25maWcnO1xuXG5ASW5qZWN0YWJsZSgpXG5leHBvcnQgY2xhc3MgUmVkaXNTZXJ2aWNlIHtcbiAgcHJpdmF0ZSByZWRpczogUmVkaXM7XG4gIHByaXZhdGUgcmVhZG9ubHkgbG9nZ2VyID0gbmV3IExvZ2dlcihSZWRpc1NlcnZpY2UubmFtZSk7XG5cbiAgY29uc3RydWN0b3IocHJpdmF0ZSByZWFkb25seSBjb25maWc6IENvbmZpZ1NlcnZpY2UpIHtcbiAgICBjb25zdCByZWRpc1VybCA9IHRoaXMuY29uZmlnLnJlZGlzVXJsO1xuICAgIFxuICAgIGlmICghcmVkaXNVcmwgfHwgcmVkaXNVcmwgPT09ICdoJykge1xuICAgICAgdGhpcy5sb2dnZXIuZXJyb3IoJ0ludmFsaWQgb3IgbWlzc2luZyBSRURJU19VUkwgZW52aXJvbm1lbnQgdmFyaWFibGUnKTtcbiAgICAgIC8vIFVzZSBhIGR1bW15IFJlZGlzIGluc3RhbmNlIHRoYXQgd2lsbCBmYWlsIGdyYWNlZnVsbHlcbiAgICAgIHRoaXMucmVkaXMgPSBuZXcgUmVkaXMoe1xuICAgICAgICBob3N0OiAnbG9jYWxob3N0JyxcbiAgICAgICAgcG9ydDogNjM3OSxcbiAgICAgICAgbWF4UmV0cmllc1BlclJlcXVlc3Q6IDAsXG4gICAgICAgIGxhenlDb25uZWN0OiB0cnVlLFxuICAgICAgICBlbmFibGVPZmZsaW5lUXVldWU6IGZhbHNlLFxuICAgICAgICByZXRyeVN0cmF0ZWd5OiAoKSA9PiBudWxsLCAvLyBEb24ndCByZXRyeVxuICAgICAgfSk7XG4gICAgfSBlbHNlIHtcbiAgICAgIHRoaXMucmVkaXMgPSBuZXcgUmVkaXMocmVkaXNVcmwsIHtcbiAgICAgICAgbWF4UmV0cmllc1BlclJlcXVlc3Q6IDMsXG4gICAgICAgIGxhenlDb25uZWN0OiB0cnVlLFxuICAgICAgfSk7XG4gICAgfVxuICB9XG5cbiAgZ2V0Q2xpZW50KCk6IFJlZGlzIHtcbiAgICByZXR1cm4gdGhpcy5yZWRpcztcbiAgfVxuXG4gIGFzeW5jIGNoZWNrQ29ubmVjdGlvbigpOiBQcm9taXNlPGJvb2xlYW4+IHtcbiAgICB0cnkge1xuICAgICAgY29uc3Qgc3RhcnQgPSBEYXRlLm5vdygpO1xuICAgICAgYXdhaXQgdGhpcy5yZWRpcy5waW5nKCk7XG4gICAgICBjb25zdCByZXNwb25zZVRpbWUgPSBEYXRlLm5vdygpIC0gc3RhcnQ7XG4gICAgICByZXR1cm4gcmVzcG9uc2VUaW1lIDwgMTAwMDsgLy8gQ29uc2lkZXIgaGVhbHRoeSBpZiBwaW5nIDwgMXNcbiAgICB9IGNhdGNoIHtcbiAgICAgIHJldHVybiBmYWxzZTtcbiAgICB9XG4gIH1cblxuICBhc3luYyBkaXNjb25uZWN0KCk6IFByb21pc2U8dm9pZD4ge1xuICAgIGF3YWl0IHRoaXMucmVkaXMuZGlzY29ubmVjdCgpO1xuICB9XG59XG4iXSwidmVyc2lvbiI6M30=

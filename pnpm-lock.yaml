@@ -149,6 +149,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      snappy:
+        specifier: ^7.3.0
+        version: 7.3.0
       tailwindcss:
         specifier: ^4.1.11
         version: 4.1.11
@@ -1980,6 +1983,113 @@ packages:
   '@napi-rs/nice@1.0.4':
     resolution: {integrity: sha512-Sqih1YARrmMoHlXGgI9JrrgkzxcaaEso0AH+Y7j8NHonUs+xe4iDsgC3IBIDNdzEewbNpccNN6hip+b5vmyRLw==}
     engines: {node: '>= 10'}
+
+  '@napi-rs/snappy-android-arm-eabi@7.3.0':
+    resolution: {integrity: sha512-KgD+8wNtS4/w7JqpiyONTwPAF74mhLnH7up+Ke4l5+jS9WFC1UexFsp+g62ugCIAmsdWfWKIpNTPpxkV7yrdYw==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@napi-rs/snappy-android-arm64@7.3.0':
+    resolution: {integrity: sha512-HUX9icvbWPgBDNwdxrFt1+lDfOmVsxAOMnJ+jzSYFDp2EclQjxAhPUV/rSRtS23xakHZgi6aBiJ+aY1p9Z/Fkg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@napi-rs/snappy-darwin-arm64@7.3.0':
+    resolution: {integrity: sha512-shU1IOgMJRBLxqNvuqRvIr3lP8i2q/UJiwHfkipN05wzjlLN327ej0E98TarsfDgn8SDX92ovsc6zVfb4bhHbg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@napi-rs/snappy-darwin-x64@7.3.0':
+    resolution: {integrity: sha512-j/gaU69biRWyYq46DocHYBLjJezQhLNEjaWW3J7Y/dbil3P/+iCkvJkA0uHnIG2KXJk/QSyu2kzuy6YnMSk9Qw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@napi-rs/snappy-freebsd-x64@7.3.0':
+    resolution: {integrity: sha512-JnZDZDoWrUO2E8hmiU6oyrD34xazB8CVoZYCsHmkF5Yrl/5jvr/0BG3jd4SQ10wAdhQDHVwS8iaEB6GXdQxZGg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@napi-rs/snappy-linux-arm-gnueabihf@7.3.0':
+    resolution: {integrity: sha512-qjEItUn91kuR6oLhXrLXSiUSB1LEz9L4lHCidmGmcIvvdM9FrceS0ny8seYuiU5fa6pZTwTO/6O3nQFQlgI+tg==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-arm64-gnu@7.3.0':
+    resolution: {integrity: sha512-+v3IjUgphndbzRQ/PXoEDyORW3X4xfMPBAoQfziW1g+f+7nms+PCobWoAbGMneIGf6QP4KuLsv3clVa9+noW9g==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-arm64-musl@7.3.0':
+    resolution: {integrity: sha512-8XFJIYXYrmesQ4m8xHX7jfon7HFdxY1n3eykfQaAWrKLpLMQL2x+caS6So7wpRFJI/2NyYWiY7FWYTAuMDbFVw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-arm64-ohos@7.3.0':
+    resolution: {integrity: sha512-PlKHoHxeiNOQakbdMoQ0nF6GOKC52wHNCJ0Ii/JJHF8YfPIOv/BRZBEY32b8IidGj9RMq8vCa/ftBvNjIYdF5Q==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [openharmony]
+
+  '@napi-rs/snappy-linux-ppc64-gnu@7.3.0':
+    resolution: {integrity: sha512-OJTssYn5nZC6UX9O85z4/Mtwr4ya09P0ebatb7IVNRN8GKcnkZbDOZX4HosSNNAllVQgn3n18gP45RSbtXzcGQ==}
+    engines: {node: '>= 10'}
+    cpu: [ppc64]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-riscv64-gnu@7.3.0':
+    resolution: {integrity: sha512-3O0QwzFtUm9sxDVBPjYgvAeHDw+omNJdtvamS60Yn87UZMk8V50vgDDr5NKcksmyfgdftdZfR/bFqDYCucTQuA==}
+    engines: {node: '>= 10'}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-s390x-gnu@7.3.0':
+    resolution: {integrity: sha512-hGgPn0M1tX4gUsJ/FieLsmKQgiI5p/TOlxh9WDqtIp52k9m965V9lRTEQrlUL//CndlEz3m6bk0PVgd4klNF8w==}
+    engines: {node: '>= 10'}
+    cpu: [s390x]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-x64-gnu@7.3.0':
+    resolution: {integrity: sha512-pBDHRUOJqC/6ZG7zy068pTItGeF4gJwO9zcZVgt951WXCvn7cIEjHhZSRim2ud8IoeH0Oumew1QYxZIxOFACJg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@napi-rs/snappy-linux-x64-musl@7.3.0':
+    resolution: {integrity: sha512-S+lWMBIvNYbTqGx1V2ndmcXyzIqsBTCBiU0cgtWxDNMTea5LCC749k+xxcCms/D0vwEe98qYkqAbs8IIEh1hKA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@napi-rs/snappy-wasm32-wasi@7.3.0':
+    resolution: {integrity: sha512-8K6OVGRzJ21BVXCYmbOa0wZrpalOWT8k/v8PbFHWcLLlghPEMJYGuGMlkzTd+VgKYjkjX1qBLaDA51+UMRWPug==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
+
+  '@napi-rs/snappy-win32-arm64-msvc@7.3.0':
+    resolution: {integrity: sha512-TzBl/dmHt+8JGZrv0eQ1j7dL6XuSor7K/1EZ2hwX1vxe/rdygZfIlMJlYbUuEqiK2ZJD1AVuc5WhqyQADu0t+A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@napi-rs/snappy-win32-ia32-msvc@7.3.0':
+    resolution: {integrity: sha512-UVIIzEcxSo4TKNs8PGrfAjCHKlbxCljnQFjYPEwv8O9YaNpQoSy6pZU4SdO5aB4SRbqhSoqtkJlaKFBiHLa8Zw==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@napi-rs/snappy-win32-x64-msvc@7.3.0':
+    resolution: {integrity: sha512-4vI5r2QY0NRIe0l/Vsgs+cqZDIFqtsqwSJVVBuCfcf1G39AXQ7g1bstdxnE4s6MHh/Xis7h2vsajYNnQh6xX4Q==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
 
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
@@ -7639,6 +7749,10 @@ packages:
   snake-case@3.0.4:
     resolution: {integrity: sha512-LAOh4z89bGQvl9pFfNF8V146i7o7/CqFPbqzYgP+yYzDIDeS9HaNFtXABamRW+AQzEVODcvE79ljJ+8a9YSdMg==}
 
+  snappy@7.3.0:
+    resolution: {integrity: sha512-Qd1XxFO71HOOA6RxWkO5yHcYrQyBZOqGFKv99DD75bS34I3J6HEudlO4Lo617B6A6fJJ87YS5oYY9NZXxlXGkw==}
+    engines: {node: '>= 10'}
+
   snappyjs@0.6.1:
     resolution: {integrity: sha512-YIK6I2lsH072UE0aOFxxY1dPDCS43I5ktqHpeAsuLNYWkE5pGxRGWfDM4/vSUfNzXjC1Ivzt3qx31PCLmc9yqg==}
 
@@ -10466,6 +10580,62 @@ snapshots:
       '@napi-rs/nice-win32-arm64-msvc': 1.0.4
       '@napi-rs/nice-win32-ia32-msvc': 1.0.4
       '@napi-rs/nice-win32-x64-msvc': 1.0.4
+    optional: true
+
+  '@napi-rs/snappy-android-arm-eabi@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-android-arm64@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-darwin-arm64@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-darwin-x64@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-freebsd-x64@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-arm-gnueabihf@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-arm64-gnu@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-arm64-musl@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-arm64-ohos@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-ppc64-gnu@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-riscv64-gnu@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-s390x-gnu@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-x64-gnu@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-linux-x64-musl@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-wasm32-wasi@7.3.0':
+    dependencies:
+      '@napi-rs/wasm-runtime': 0.2.12
+    optional: true
+
+  '@napi-rs/snappy-win32-arm64-msvc@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-win32-ia32-msvc@7.3.0':
+    optional: true
+
+  '@napi-rs/snappy-win32-x64-msvc@7.3.0':
     optional: true
 
   '@napi-rs/wasm-runtime@0.2.12':
@@ -17273,6 +17443,27 @@ snapshots:
     dependencies:
       dot-case: 3.0.4
       tslib: 2.8.1
+
+  snappy@7.3.0:
+    optionalDependencies:
+      '@napi-rs/snappy-android-arm-eabi': 7.3.0
+      '@napi-rs/snappy-android-arm64': 7.3.0
+      '@napi-rs/snappy-darwin-arm64': 7.3.0
+      '@napi-rs/snappy-darwin-x64': 7.3.0
+      '@napi-rs/snappy-freebsd-x64': 7.3.0
+      '@napi-rs/snappy-linux-arm-gnueabihf': 7.3.0
+      '@napi-rs/snappy-linux-arm64-gnu': 7.3.0
+      '@napi-rs/snappy-linux-arm64-musl': 7.3.0
+      '@napi-rs/snappy-linux-arm64-ohos': 7.3.0
+      '@napi-rs/snappy-linux-ppc64-gnu': 7.3.0
+      '@napi-rs/snappy-linux-riscv64-gnu': 7.3.0
+      '@napi-rs/snappy-linux-s390x-gnu': 7.3.0
+      '@napi-rs/snappy-linux-x64-gnu': 7.3.0
+      '@napi-rs/snappy-linux-x64-musl': 7.3.0
+      '@napi-rs/snappy-wasm32-wasi': 7.3.0
+      '@napi-rs/snappy-win32-arm64-msvc': 7.3.0
+      '@napi-rs/snappy-win32-ia32-msvc': 7.3.0
+      '@napi-rs/snappy-win32-x64-msvc': 7.3.0
 
   snappyjs@0.6.1: {}
 

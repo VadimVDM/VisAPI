@@ -346,6 +346,15 @@ k6 run load-tests/smoke-test.js
 
 ## Monitoring & Observability
 
+### Comprehensive Monitoring Stack
+
+VisAPI features enterprise-grade monitoring with Grafana Cloud, Prometheus metrics, and real-time dashboards.
+
+**Grafana Cloud Setup:**
+- **Production Dashboard:** `/d/ee4deafb-60c7-4cb1-a2d9-aa14f7ef334e/visapi-production-dashboard`
+- **Alerting Dashboard:** `/d/4582a630-7be8-41ec-98a0-2e65adeb9828/visapi-alerting-dashboard`
+- **Metrics Endpoint:** `https://api.visanet.app/api/metrics`
+
 ### Logging (Pino)
 
 ```typescript
@@ -363,17 +372,40 @@ logger.info(
 
 ### Metrics (Prometheus)
 
-- **Request Duration:** `http_request_duration_seconds`
-- **Job Latency:** `job_latency_seconds`
-- **Job Failures:** `job_fail_total`
-- **Queue Depth:** `queue_depth_total`
+**HTTP Metrics:**
+- `visapi_http_request_duration_seconds` - Request duration histogram
+- `visapi_http_requests_total` - Total requests counter
+- `visapi_http_active_connections` - Active connections gauge
 
-### Alerts (Grafana Cloud → Slack)
+**Queue Metrics:**
+- `visapi_queue_job_duration_seconds` - Job processing duration
+- `visapi_queue_depth_total` - Current queue depth by priority
+- `visapi_job_fail_total` - Failed jobs counter
 
-- API latency > 200ms (p95)
-- Error rate > 5%
+**Business Metrics:**
+- `visapi_workflow_execution_duration_seconds` - Workflow execution time
+- `visapi_api_key_validation_duration_seconds` - API key validation performance
+- `visapi_redis_operations_total` - Redis operation counters
+
+### Alert Thresholds
+
+Critical alerts configured for:
+- API latency > 200ms (P95) for 5 minutes
+- Error rate > 5% for 5 minutes
 - Queue depth > 1000 jobs
 - Redis connection failures
+- Database connection pool issues
+
+### Monitoring Configuration
+
+```bash
+# Environment variables for Grafana Cloud
+GRAFANA_REMOTE_WRITE_ENABLED=true
+GRAFANA_PROMETHEUS_URL=https://prometheus-prod-24-prod-eu-west-2.grafana.net/api/prom/push
+GRAFANA_PROMETHEUS_USERNAME=2563247
+GRAFANA_PROMETHEUS_PASSWORD=glc_your_token_here
+GRAFANA_PUSH_INTERVAL_MS=30000
+```
 
 ## Deployment
 
@@ -474,21 +506,21 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live + Sprint 4 Near Completion (92%)**
+**Current Status: Production Live + Sprint 4 Near Completion (77%)**
 
-VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 3 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is 92% complete with 10 out of 13 tasks finished, focusing on infrastructure automation, enhanced monitoring, and operational excellence.
+VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 3 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is 77% complete with 10 out of 13 tasks finished, focusing on infrastructure automation, enhanced monitoring, and operational excellence.
 
 **Key Milestones Achieved:**
 
 - **Core Platform**: Robust foundation with an NX monorepo, NestJS backend, Next.js frontend, and comprehensive CI/CD pipeline with GitHub Actions.
 - **Infrastructure as Code**: Complete Terraform automation for all cloud resources (Render, Vercel, Upstash, Supabase).
 - **Secure Architecture**: Secure-by-design, featuring shared libraries, prefix/secret API key authentication, Row-Level Security, and multi-layer security scanning.
-- **Monitoring & Observability**: Prometheus metrics collection with Grafana dashboards and comprehensive logging system.
+- **Monitoring & Observability**: Enterprise-grade monitoring with Grafana Cloud dashboards, Prometheus metrics, and real-time alerting system.
 - **Admin Dashboard**: A full-featured frontend for system monitoring, including a live log explorer and queue management.
 - **Advanced Workflows**: End-to-end automation capabilities including WhatsApp messaging, dynamic PDF generation, and cron-based job scheduling.
 - **Comprehensive Testing**: A suite of 14 test suites covering unit, E2E, and load testing, with resource-friendly test commands available.
 - **Infrastructure Automation**: Complete Terraform infrastructure-as-code with CI/CD pipelines for all environments.
-- **Advanced Monitoring**: Grafana Cloud alerts with Slack integration, comprehensive metrics collection, and chaos engineering capabilities.
+- **Advanced Monitoring**: Production-ready Grafana Cloud dashboards with comprehensive metrics collection, alerting thresholds, and chaos engineering capabilities.
 - **Operational Excellence**: Production-ready runbooks for DLQ replay, Redis failover, secret rotation, and emergency procedures.
 - **Security Hardening**: Complete threat modeling with STRIDE analysis, vulnerability scanning, and security assessment framework.
 
@@ -506,6 +538,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 - `docs/testing-guide.md`: Best practices for running the test suite efficiently.
 - `docs/cgb-api-reference.md`: Detailed reference for the WhatsApp integration.
+- `docs/grafana-prometheus-setup.md`: Complete monitoring setup guide with dashboard URLs and troubleshooting.
 - `docs/sprint-*.md` files: Individual sprint plans with technical specifications.
 - `docs/runbooks/`: Operational runbooks for DLQ replay, Redis failover, and secret rotation.
 - `docs/security/`: Security documentation, threat models, and assessment checklists.

@@ -1,0 +1,39 @@
+f6df8f29bb33e5a3a2e8545e2a0e4a18
+"use strict";
+var _a;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.QueueController = void 0;
+const tslib_1 = require("tslib");
+const common_1 = require("@nestjs/common");
+const queue_service_1 = require("./queue.service");
+const api_key_guard_1 = require("../auth/guards/api-key.guard");
+const scopes_decorator_1 = require("../auth/decorators/scopes.decorator");
+const swagger_1 = require("@nestjs/swagger");
+let QueueController = class QueueController {
+    constructor(queueService) {
+        this.queueService = queueService;
+    }
+    getMetrics() {
+        return tslib_1.__awaiter(this, void 0, void 0, function* () {
+            return this.queueService.getQueueMetrics();
+        });
+    }
+};
+exports.QueueController = QueueController;
+tslib_1.__decorate([
+    (0, common_1.Get)('metrics'),
+    (0, common_1.UseGuards)(api_key_guard_1.ApiKeyGuard),
+    (0, scopes_decorator_1.Scopes)('queues:read'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get queue metrics' }),
+    (0, swagger_1.ApiSecurity)('api-key'),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns queue metrics' }),
+    tslib_1.__metadata("design:type", Function),
+    tslib_1.__metadata("design:paramtypes", []),
+    tslib_1.__metadata("design:returntype", Promise)
+], QueueController.prototype, "getMetrics", null);
+exports.QueueController = QueueController = tslib_1.__decorate([
+    (0, swagger_1.ApiTags)('Queue'),
+    (0, common_1.Controller)('api/v1/queue'),
+    tslib_1.__metadata("design:paramtypes", [typeof (_a = typeof queue_service_1.QueueService !== "undefined" && queue_service_1.QueueService) === "function" ? _a : Object])
+], QueueController);
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL3F1ZXVlL3F1ZXVlLmNvbnRyb2xsZXIudHMiLCJtYXBwaW5ncyI6Ijs7Ozs7QUFBQSwyQ0FBNEQ7QUFDNUQsbURBQStDO0FBQy9DLGdFQUEyRDtBQUMzRCwwRUFBNkQ7QUFDN0QsNkNBS3lCO0FBSWxCLElBQU0sZUFBZSxHQUFyQixNQUFNLGVBQWU7SUFDMUIsWUFBNkIsWUFBMEI7UUFBMUIsaUJBQVksR0FBWixZQUFZLENBQWM7SUFBRyxDQUFDO0lBUXJELFVBQVU7O1lBQ2QsT0FBTyxJQUFJLENBQUMsWUFBWSxDQUFDLGVBQWUsRUFBRSxDQUFDO1FBQzdDLENBQUM7S0FBQTtDQUNGLENBQUE7QUFaWSwwQ0FBZTtBQVNwQjtJQU5MLElBQUEsWUFBRyxFQUFDLFNBQVMsQ0FBQztJQUNkLElBQUEsa0JBQVMsRUFBQywyQkFBVyxDQUFDO0lBQ3RCLElBQUEseUJBQU0sRUFBQyxhQUFhLENBQUM7SUFDckIsSUFBQSxzQkFBWSxFQUFDLEVBQUUsT0FBTyxFQUFFLG1CQUFtQixFQUFFLENBQUM7SUFDOUMsSUFBQSxxQkFBVyxFQUFDLFNBQVMsQ0FBQztJQUN0QixJQUFBLHFCQUFXLEVBQUMsRUFBRSxNQUFNLEVBQUUsR0FBRyxFQUFFLFdBQVcsRUFBRSx1QkFBdUIsRUFBRSxDQUFDOzs7O2lEQUdsRTswQkFYVSxlQUFlO0lBRjNCLElBQUEsaUJBQU8sRUFBQyxPQUFPLENBQUM7SUFDaEIsSUFBQSxtQkFBVSxFQUFDLGNBQWMsQ0FBQztpRUFFa0IsNEJBQVksb0JBQVosNEJBQVk7R0FENUMsZUFBZSxDQVkzQiIsIm5hbWVzIjpbXSwic291cmNlcyI6WyIvVXNlcnMvdmFkaW0vUHJvamVjdHMvVmlzQVBJL2FwcHMvYmFja2VuZC9zcmMvcXVldWUvcXVldWUuY29udHJvbGxlci50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBDb250cm9sbGVyLCBHZXQsIFVzZUd1YXJkcyB9IGZyb20gJ0BuZXN0anMvY29tbW9uJztcbmltcG9ydCB7IFF1ZXVlU2VydmljZSB9IGZyb20gJy4vcXVldWUuc2VydmljZSc7XG5pbXBvcnQgeyBBcGlLZXlHdWFyZCB9IGZyb20gJy4uL2F1dGgvZ3VhcmRzL2FwaS1rZXkuZ3VhcmQnO1xuaW1wb3J0IHsgU2NvcGVzIH0gZnJvbSAnLi4vYXV0aC9kZWNvcmF0b3JzL3Njb3Blcy5kZWNvcmF0b3InO1xuaW1wb3J0IHtcbiAgQXBpVGFncyxcbiAgQXBpT3BlcmF0aW9uLFxuICBBcGlSZXNwb25zZSxcbiAgQXBpU2VjdXJpdHksXG59IGZyb20gJ0BuZXN0anMvc3dhZ2dlcic7XG5cbkBBcGlUYWdzKCdRdWV1ZScpXG5AQ29udHJvbGxlcignYXBpL3YxL3F1ZXVlJylcbmV4cG9ydCBjbGFzcyBRdWV1ZUNvbnRyb2xsZXIge1xuICBjb25zdHJ1Y3Rvcihwcml2YXRlIHJlYWRvbmx5IHF1ZXVlU2VydmljZTogUXVldWVTZXJ2aWNlKSB7fVxuXG4gIEBHZXQoJ21ldHJpY3MnKVxuICBAVXNlR3VhcmRzKEFwaUtleUd1YXJkKVxuICBAU2NvcGVzKCdxdWV1ZXM6cmVhZCcpXG4gIEBBcGlPcGVyYXRpb24oeyBzdW1tYXJ5OiAnR2V0IHF1ZXVlIG1ldHJpY3MnIH0pXG4gIEBBcGlTZWN1cml0eSgnYXBpLWtleScpXG4gIEBBcGlSZXNwb25zZSh7IHN0YXR1czogMjAwLCBkZXNjcmlwdGlvbjogJ1JldHVybnMgcXVldWUgbWV0cmljcycgfSlcbiAgYXN5bmMgZ2V0TWV0cmljcygpIHtcbiAgICByZXR1cm4gdGhpcy5xdWV1ZVNlcnZpY2UuZ2V0UXVldWVNZXRyaWNzKCk7XG4gIH1cbn1cbiJdLCJ2ZXJzaW9uIjozfQ==

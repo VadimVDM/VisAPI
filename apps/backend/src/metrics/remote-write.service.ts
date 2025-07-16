@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { register as globalRegistry } from 'prom-client';
-import axios from 'axios';
+import { pushTimeseries } from 'prometheus-remote-write';
 
 @Injectable()
 export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
@@ -79,22 +79,40 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      this.logger.debug(`Pushing ${filteredMetrics.split('\n').length} lines of metrics to Grafana Cloud`);
+      this.logger.debug(`Converting ${filteredMetrics.split('\n').length} lines of metrics to protobuf format`);
 
-      // Send directly as plain text - some remote write endpoints support this
-      await axios.post(this.url, filteredMetrics, {
-        headers: {
-          'Content-Type': 'text/plain; version=0.0.4',
-          'User-Agent': 'visapi-remote-write/1.0',
-        },
+      // Parse metrics and convert to protobuf TimeSeries format
+      const timeSeries = this.parseMetricsToTimeSeries(filteredMetrics);
+      
+      if (timeSeries.length === 0) {
+        this.logger.warn('No time series data parsed from metrics');
+        return;
+      }
+
+      this.logger.debug(`Pushing ${timeSeries.length} time series to Grafana Cloud`);
+
+      // Use the prometheus-remote-write library to push metrics
+      const result = await pushTimeseries(timeSeries, {
+        url: this.url,
         auth: {
           username: this.username,
           password: this.password,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
+        verbose: false,
+        headers: {
+          'User-Agent': 'visapi-remote-write/1.0',
+        },
       });
-      
-      this.logger.debug('Successfully pushed metrics to Grafana Cloud');
+
+      if (result.status === 200) {
+        this.logger.debug('Successfully pushed metrics to Grafana Cloud');
+      } else {
+        this.logger.error(`Failed to push metrics: ${result.status} ${result.statusText}`);
+        if (result.errorMessage) {
+          this.logger.error(`Error message: ${result.errorMessage}`);
+        }
+      }
     } catch (error) {
       this.logger.error(
         'Failed to push metrics to Grafana Cloud',
@@ -110,6 +128,69 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
         }
       }
     }
+  }
+
+  private parseMetricsToTimeSeries(metrics: string): Array<{
+    labels: { __name__: string; [key: string]: string };
+    samples: Array<{ value: number; timestamp?: number }>;
+  }> {
+    const lines = metrics.trim().split('\n');
+    const timeSeries: Array<{
+      labels: { __name__: string; [key: string]: string };
+      samples: Array<{ value: number; timestamp?: number }>;
+    }> = [];
+    const timestamp = Date.now();
+
+    for (const line of lines) {
+      // Skip comments and empty lines
+      if (line.startsWith('#') || !line.trim()) {
+        continue;
+      }
+
+      // Only process visapi_ metrics
+      if (!line.includes('visapi_')) {
+        continue;
+      }
+
+      // Parse metric line: metric_name{labels} value
+      const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*(?:\{[^}]*\})?) ([0-9.-]+)$/);
+      if (!match) {
+        continue;
+      }
+
+      const [, metricWithLabels, value] = match;
+      const [metricName, labelsStr] = metricWithLabels.split('{');
+      
+      // Create labels object for the timeseries
+      const labels: { __name__: string; [key: string]: string } = {
+        __name__: metricName,
+      };
+      
+      if (labelsStr) {
+        const labelPairs = labelsStr.slice(0, -1).split(','); // Remove closing }
+        for (const pair of labelPairs) {
+          const [key, val] = pair.split('=');
+          if (key && val) {
+            labels[key.trim()] = val.trim().replace(/^"(.*)"$/, '$1'); // Remove quotes
+          }
+        }
+      }
+
+      // Add app and version labels
+      labels.app = 'visapi';
+      labels.version = process.env.npm_package_version || 'unknown';
+
+      // Create TimeSeries entry
+      timeSeries.push({
+        labels,
+        samples: [{
+          value: parseFloat(value),
+          timestamp: timestamp
+        }]
+      });
+    }
+
+    return timeSeries;
   }
 
 

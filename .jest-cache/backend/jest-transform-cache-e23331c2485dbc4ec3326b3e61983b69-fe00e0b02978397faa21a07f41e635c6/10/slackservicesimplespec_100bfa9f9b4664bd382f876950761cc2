@@ -1,0 +1,52 @@
+cb01486663e10fd006bf796819518476
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const tslib_1 = require("tslib");
+const testing_1 = require("@nestjs/testing");
+const axios_1 = require("@nestjs/axios");
+const core_config_1 = require("@visapi/core-config");
+const slack_service_1 = require("./slack.service");
+const rxjs_1 = require("rxjs");
+describe('SlackService - Simple', () => {
+    let service;
+    beforeEach(() => tslib_1.__awaiter(void 0, void 0, void 0, function* () {
+        const module = yield testing_1.Test.createTestingModule({
+            providers: [
+                slack_service_1.SlackService,
+                {
+                    provide: axios_1.HttpService,
+                    useValue: {
+                        post: jest.fn().mockReturnValue((0, rxjs_1.of)({ data: { ok: true } })),
+                    },
+                },
+                {
+                    provide: core_config_1.ConfigService,
+                    useValue: {
+                        slackEnabled: true,
+                        slackWebhookUrl: 'https://hooks.slack.com/services/test/webhook',
+                        slackDefaultChannel: '#alerts',
+                        slackSigningSecret: 'test-secret',
+                    },
+                },
+                {
+                    provide: `PinoLogger:${slack_service_1.SlackService.name}`,
+                    useValue: {
+                        debug: jest.fn(),
+                        info: jest.fn(),
+                        error: jest.fn(),
+                        warn: jest.fn(),
+                    },
+                },
+            ],
+        }).compile();
+        service = module.get(slack_service_1.SlackService);
+    }));
+    it('should be defined', () => {
+        expect(service).toBeDefined();
+    });
+    it('should send custom alert', () => tslib_1.__awaiter(void 0, void 0, void 0, function* () {
+        const result = yield service.sendCustomAlert('Test message');
+        expect(result).toBeUndefined(); // void function
+    }));
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL1VzZXJzL3ZhZGltL1Byb2plY3RzL1Zpc0FQSS9hcHBzL2JhY2tlbmQvc3JjL25vdGlmaWNhdGlvbnMvc2xhY2suc2VydmljZS5zaW1wbGUuc3BlYy50cyIsIm1hcHBpbmdzIjoiOzs7QUFBQSw2Q0FBc0Q7QUFDdEQseUNBQTRDO0FBQzVDLHFEQUFvRDtBQUNwRCxtREFBK0M7QUFDL0MsK0JBQTBCO0FBRzFCLFFBQVEsQ0FBQyx1QkFBdUIsRUFBRSxHQUFHLEVBQUU7SUFDckMsSUFBSSxPQUFxQixDQUFDO0lBRTFCLFVBQVUsQ0FBQyxHQUFTLEVBQUU7UUFDcEIsTUFBTSxNQUFNLEdBQWtCLE1BQU0sY0FBSSxDQUFDLG1CQUFtQixDQUFDO1lBQzNELFNBQVMsRUFBRTtnQkFDVCw0QkFBWTtnQkFDWjtvQkFDRSxPQUFPLEVBQUUsbUJBQVc7b0JBQ3BCLFFBQVEsRUFBRTt3QkFDUixJQUFJLEVBQUUsSUFBSSxDQUFDLEVBQUUsRUFBRSxDQUFDLGVBQWUsQ0FBQyxJQUFBLFNBQUUsRUFBQyxFQUFFLElBQUksRUFBRSxFQUFFLEVBQUUsRUFBRSxJQUFJLEVBQUUsRUFBRSxDQUFDLENBQUM7cUJBQzVEO2lCQUNGO2dCQUNEO29CQUNFLE9BQU8sRUFBRSwyQkFBYTtvQkFDdEIsUUFBUSxFQUFFO3dCQUNSLFlBQVksRUFBRSxJQUFJO3dCQUNsQixlQUFlLEVBQUUsK0NBQStDO3dCQUNoRSxtQkFBbUIsRUFBRSxTQUFTO3dCQUM5QixrQkFBa0IsRUFBRSxhQUFhO3FCQUNsQztpQkFDRjtnQkFDRDtvQkFDRSxPQUFPLEVBQUUsY0FBYyw0QkFBWSxDQUFDLElBQUksRUFBRTtvQkFDMUMsUUFBUSxFQUFFO3dCQUNSLEtBQUssRUFBRSxJQUFJLENBQUMsRUFBRSxFQUFFO3dCQUNoQixJQUFJLEVBQUUsSUFBSSxDQUFDLEVBQUUsRUFBRTt3QkFDZixLQUFLLEVBQUUsSUFBSSxDQUFDLEVBQUUsRUFBRTt3QkFDaEIsSUFBSSxFQUFFLElBQUksQ0FBQyxFQUFFLEVBQUU7cUJBQ2hCO2lCQUNGO2FBQ0Y7U0FDRixDQUFDLENBQUMsT0FBTyxFQUFFLENBQUM7UUFFYixPQUFPLEdBQUcsTUFBTSxDQUFDLEdBQUcsQ0FBZSw0QkFBWSxDQUFDLENBQUM7SUFDbkQsQ0FBQyxDQUFBLENBQUMsQ0FBQztJQUVILEVBQUUsQ0FBQyxtQkFBbUIsRUFBRSxHQUFHLEVBQUU7UUFDM0IsTUFBTSxDQUFDLE9BQU8sQ0FBQyxDQUFDLFdBQVcsRUFBRSxDQUFDO0lBQ2hDLENBQUMsQ0FBQyxDQUFDO0lBRUgsRUFBRSxDQUFDLDBCQUEwQixFQUFFLEdBQVMsRUFBRTtRQUN4QyxNQUFNLE1BQU0sR0FBRyxNQUFNLE9BQU8sQ0FBQyxlQUFlLENBQUMsY0FBYyxDQUFDLENBQUM7UUFDN0QsTUFBTSxDQUFDLE1BQU0sQ0FBQyxDQUFDLGFBQWEsRUFBRSxDQUFDLENBQUMsZ0JBQWdCO0lBQ2xELENBQUMsQ0FBQSxDQUFDLENBQUM7QUFDTCxDQUFDLENBQUMsQ0FBQyIsIm5hbWVzIjpbXSwic291cmNlcyI6WyIvVXNlcnMvdmFkaW0vUHJvamVjdHMvVmlzQVBJL2FwcHMvYmFja2VuZC9zcmMvbm90aWZpY2F0aW9ucy9zbGFjay5zZXJ2aWNlLnNpbXBsZS5zcGVjLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IFRlc3QsIFRlc3RpbmdNb2R1bGUgfSBmcm9tICdAbmVzdGpzL3Rlc3RpbmcnO1xuaW1wb3J0IHsgSHR0cFNlcnZpY2UgfSBmcm9tICdAbmVzdGpzL2F4aW9zJztcbmltcG9ydCB7IENvbmZpZ1NlcnZpY2UgfSBmcm9tICdAdmlzYXBpL2NvcmUtY29uZmlnJztcbmltcG9ydCB7IFNsYWNrU2VydmljZSB9IGZyb20gJy4vc2xhY2suc2VydmljZSc7XG5pbXBvcnQgeyBvZiB9IGZyb20gJ3J4anMnO1xuaW1wb3J0IHsgUGlub0xvZ2dlciB9IGZyb20gJ25lc3Rqcy1waW5vJztcblxuZGVzY3JpYmUoJ1NsYWNrU2VydmljZSAtIFNpbXBsZScsICgpID0+IHtcbiAgbGV0IHNlcnZpY2U6IFNsYWNrU2VydmljZTtcblxuICBiZWZvcmVFYWNoKGFzeW5jICgpID0+IHtcbiAgICBjb25zdCBtb2R1bGU6IFRlc3RpbmdNb2R1bGUgPSBhd2FpdCBUZXN0LmNyZWF0ZVRlc3RpbmdNb2R1bGUoe1xuICAgICAgcHJvdmlkZXJzOiBbXG4gICAgICAgIFNsYWNrU2VydmljZSxcbiAgICAgICAge1xuICAgICAgICAgIHByb3ZpZGU6IEh0dHBTZXJ2aWNlLFxuICAgICAgICAgIHVzZVZhbHVlOiB7XG4gICAgICAgICAgICBwb3N0OiBqZXN0LmZuKCkubW9ja1JldHVyblZhbHVlKG9mKHsgZGF0YTogeyBvazogdHJ1ZSB9IH0pKSxcbiAgICAgICAgICB9LFxuICAgICAgICB9LFxuICAgICAgICB7XG4gICAgICAgICAgcHJvdmlkZTogQ29uZmlnU2VydmljZSxcbiAgICAgICAgICB1c2VWYWx1ZToge1xuICAgICAgICAgICAgc2xhY2tFbmFibGVkOiB0cnVlLFxuICAgICAgICAgICAgc2xhY2tXZWJob29rVXJsOiAnaHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvdGVzdC93ZWJob29rJyxcbiAgICAgICAgICAgIHNsYWNrRGVmYXVsdENoYW5uZWw6ICcjYWxlcnRzJyxcbiAgICAgICAgICAgIHNsYWNrU2lnbmluZ1NlY3JldDogJ3Rlc3Qtc2VjcmV0JyxcbiAgICAgICAgICB9LFxuICAgICAgICB9LFxuICAgICAgICB7XG4gICAgICAgICAgcHJvdmlkZTogYFBpbm9Mb2dnZXI6JHtTbGFja1NlcnZpY2UubmFtZX1gLFxuICAgICAgICAgIHVzZVZhbHVlOiB7XG4gICAgICAgICAgICBkZWJ1ZzogamVzdC5mbigpLFxuICAgICAgICAgICAgaW5mbzogamVzdC5mbigpLFxuICAgICAgICAgICAgZXJyb3I6IGplc3QuZm4oKSxcbiAgICAgICAgICAgIHdhcm46IGplc3QuZm4oKSxcbiAgICAgICAgICB9LFxuICAgICAgICB9LFxuICAgICAgXSxcbiAgICB9KS5jb21waWxlKCk7XG5cbiAgICBzZXJ2aWNlID0gbW9kdWxlLmdldDxTbGFja1NlcnZpY2U+KFNsYWNrU2VydmljZSk7XG4gIH0pO1xuXG4gIGl0KCdzaG91bGQgYmUgZGVmaW5lZCcsICgpID0+IHtcbiAgICBleHBlY3Qoc2VydmljZSkudG9CZURlZmluZWQoKTtcbiAgfSk7XG5cbiAgaXQoJ3Nob3VsZCBzZW5kIGN1c3RvbSBhbGVydCcsIGFzeW5jICgpID0+IHtcbiAgICBjb25zdCByZXN1bHQgPSBhd2FpdCBzZXJ2aWNlLnNlbmRDdXN0b21BbGVydCgnVGVzdCBtZXNzYWdlJyk7XG4gICAgZXhwZWN0KHJlc3VsdCkudG9CZVVuZGVmaW5lZCgpOyAvLyB2b2lkIGZ1bmN0aW9uXG4gIH0pO1xufSk7Il0sInZlcnNpb24iOjN9

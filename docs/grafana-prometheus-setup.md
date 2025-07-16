@@ -1,7 +1,7 @@
 # Grafana Cloud Prometheus Setup Guide
 
 **Last Updated:** July 16, 2025  
-**Status:** ✅ Implemented and Operational
+**Status:** ✅ Implemented and Operational with Production Dashboards
 
 This guide explains how to configure VisAPI to send metrics to Grafana Cloud using Prometheus remote write.
 
@@ -137,19 +137,54 @@ Adjust push interval if needed:
 GRAFANA_PUSH_INTERVAL_MS=60000  # Push every 60 seconds instead of 30
 ```
 
+### Environment Variable Issues
+
+Common configuration problems:
+
+- **Remove legacy variables**: Ensure `PROMETHEUS_ENABLED` and `PROMETHEUS_PORT` are not set (conflicts with Grafana remote write)
+- **No quotes in environment variables**: Values should be set without quotes in Render environment
+- **Check all required variables**: Ensure all `GRAFANA_*` variables are properly configured
+
 ### Common Issues
 
 - **400 Bad Request**: Check metrics format, ensure valid Prometheus format
-- **401 Unauthorized**: Verify API credentials
+- **401 Unauthorized**: Verify API credentials, check for quotes in environment variables
 - **Connection refused**: Check network connectivity to Grafana Cloud
+- **Metrics not appearing**: Verify `GRAFANA_REMOTE_WRITE_ENABLED=true` and check backend logs for RemoteWriteService messages
 
-## Creating Dashboards
+## Pre-Built Dashboards
 
-1. Go to Grafana Cloud → Dashboards → New Dashboard
-2. Add panels with queries like:
-   - `rate(visapi_http_requests_total[5m])` - Request rate
-   - `histogram_quantile(0.95, rate(visapi_http_request_duration_seconds_bucket[5m]))` - 95th percentile latency
-   - `sum(visapi_queue_depth) by (priority)` - Queue depth by priority
+VisAPI comes with two comprehensive dashboards already configured:
+
+### 1. VisAPI Production Dashboard
+**URL:** `/d/ee4deafb-60c7-4cb1-a2d9-aa14f7ef334e/visapi-production-dashboard`
+
+**Features:**
+- **HTTP Request Rate**: Real-time request monitoring by method and route
+- **Response Time (P95)**: 95th percentile latency with color-coded thresholds
+- **Error Rate**: Percentage of 5xx errors with alerting thresholds
+- **Queue Depth**: Current queue depth by priority level
+- **Memory Usage**: Process memory and heap monitoring
+- **Active Connections**: Live HTTP connection count
+- **Job Processing Time**: P50, P95, P99 job latency percentiles
+- **Failed Jobs**: Rate of failed jobs by type and queue
+
+### 2. VisAPI Alerting Dashboard
+**URL:** `/d/4582a630-7be8-41ec-98a0-2e65adeb9828/visapi-alerting-dashboard`
+
+**Features:**
+- **API Latency Alert**: Visual threshold for P95 > 200ms
+- **Error Rate Alert**: Visual threshold for error rate > 5%
+- **Queue Depth Alert**: Visual threshold for queue depth > 1000 jobs
+- **Redis Connection Failures**: Real-time Redis error monitoring
+
+### Key Metrics Queries
+
+Common queries used in the dashboards:
+- `rate(visapi_http_requests_total[5m])` - Request rate
+- `histogram_quantile(0.95, rate(visapi_http_request_duration_seconds_bucket[5m]))` - 95th percentile latency
+- `sum(visapi_queue_depth_total) by (queue, priority)` - Queue depth by priority
+- `rate(visapi_http_requests_total{status_code=~"5.."}[5m]) / rate(visapi_http_requests_total[5m]) * 100` - Error rate percentage
 
 ## Security Notes
 
