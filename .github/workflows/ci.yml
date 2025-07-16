@@ -208,7 +208,7 @@ jobs:
 
   notify:
     name: Notify
-    needs: [lint, test, build, security, lighthouse]
+    needs: [lint, test, build, security]
     if: always()
     runs-on: ubuntu-latest
     steps:
