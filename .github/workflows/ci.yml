@@ -189,7 +189,7 @@ jobs:
 
   lighthouse:
     name: Lighthouse CI
-    needs: [setup, build]
+    needs: [setup]
     if: needs.setup.outputs.affected-frontend == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -207,22 +207,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build frontend
-        run: pnpm nx build frontend
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_ENV: production
-          NODE_ENV: production
-          CI: true
-
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
         with:
           configPath: './.lighthouserc.json'
           uploadArtifacts: true
           temporaryPublicStorage: true
+          artifactName: lighthouse-results
+        env:
+          PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
 
   notify:
     name: Notify
