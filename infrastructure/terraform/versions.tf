@@ -8,7 +8,7 @@ terraform {
     }
     vercel = {
       source  = "vercel/vercel"
-      version = "~> 1.0.0"
+      version = "~> 3.8.0"
     }
     upstash = {
       source  = "upstash/upstash"
