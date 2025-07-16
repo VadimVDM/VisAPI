@@ -333,9 +333,10 @@ GET  /api/v1/version            # Git SHA and build info
 Use these tools:
 
 - **supabase**: Direct database access and SQL operations (Project ID = pangdzwamawwgmvxnwkk)
-- **upstash**: for Redis, a versatile Vector Database
+- **render**: Direct backend access
+- **upstash**: for direct Redis access
 - **resend**: Emails
-- **playwright**: Web testing and accessibility testing
+- **playwright**: Web testing and accessibility
 - **fetch** & **puppeteer**: Simple web browsing tasks
 - **browserbase**: Headless browser automation and interaction (only live, it can't access localhost)
 - **filesystem, sequential-thinking, memory**: Core development tools
