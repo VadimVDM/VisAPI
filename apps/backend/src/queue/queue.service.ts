@@ -37,7 +37,7 @@ export class QueueService {
   async addJob(
     queueName: string,
     jobName: string,
-    data: any,
+    data: unknown,
     options?: {
       delay?: number;
       attempts?: number;

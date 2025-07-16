@@ -71,12 +71,12 @@ async function bootstrap() {
       `DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`
     );
   } catch (error) {
-    Logger.error(`Failed to start server: ${error.message}`, error.stack);
+    Logger.error(`Failed to start server: ${(error as Error).message}`, (error as Error).stack);
     process.exit(1);
   }
 }
 
 bootstrap().catch((error) => {
-  Logger.error(`Bootstrap failed: ${error.message}`, error.stack);
+  Logger.error(`Bootstrap failed: ${(error as Error).message}`, (error as Error).stack);
   process.exit(1);
 });

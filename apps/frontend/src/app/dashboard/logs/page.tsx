@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { Search, Download, RefreshCw } from 'lucide-react';
 import { useLogs } from '@visapi/frontend-data';
 import { LogFilters } from '@visapi/shared-types';
 
@@ -19,7 +19,6 @@ const getLevelColor = (level: string) => {
 };
 
 export default function LogsPage() {
-  const [filters, setFilters] = useState<LogFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedWorkflow, setSelectedWorkflow] = useState('');

@@ -38,7 +38,7 @@ export class ApiKeysController {
     description: 'Returns array of API keys',
     type: [ApiKeyResponseDto],
   })
-  async listApiKeys(@Request() req: any): Promise<ApiKeyResponseDto[]> {
+  async listApiKeys(): Promise<ApiKeyResponseDto[]> {
     const keys = await this.authService.listApiKeys();
     return keys.map(ApiKeyResponseDto.fromRecord);
   }
@@ -53,7 +53,7 @@ export class ApiKeysController {
   })
   async createApiKey(
     @Body() dto: CreateApiKeyDto,
-    @Request() req: any
+    @Request() req: Express.Request & { apiKey: { created_by?: string } }
   ): Promise<ApiKeyWithSecretResponseDto> {
     const { key, apiKey } = await this.authService.createApiKey(
       dto.name,
@@ -68,7 +68,7 @@ export class ApiKeysController {
   @Scopes('keys:delete')
   @ApiOperation({ summary: 'Revoke an API key' })
   @ApiResponse({ status: 204, description: 'Key successfully revoked' })
-  async revokeApiKey(@Param('id') id: string) {
+  async revokeApiKey(@Param('id') id: string): Promise<{ message: string }> {
     await this.authService.revokeApiKey(id);
     return { message: 'API key revoked successfully' };
   }

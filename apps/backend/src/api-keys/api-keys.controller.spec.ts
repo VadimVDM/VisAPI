@@ -69,7 +69,7 @@ describe('ApiKeysController', () => {
 
       const result = await controller.createApiKey(
         createApiKeyDto,
-        mockRequest as any
+        mockRequest as Express.Request & { apiKey: { created_by?: string } }
       );
 
       expect(result).toEqual({
@@ -99,7 +99,7 @@ describe('ApiKeysController', () => {
       );
 
       await expect(
-        controller.createApiKey(createApiKeyDto, mockRequest as any)
+        controller.createApiKey(createApiKeyDto, mockRequest as Express.Request & { apiKey: { created_by?: string } })
       ).rejects.toThrow('Failed to create API key');
     });
   });
@@ -139,7 +139,7 @@ describe('ApiKeysController', () => {
 
       authService.listApiKeys.mockResolvedValue(mockApiKeys);
 
-      const result = await controller.listApiKeys(mockRequest as any);
+      const result = await controller.listApiKeys();
 
       expect(result).toEqual([
         {
@@ -174,7 +174,7 @@ describe('ApiKeysController', () => {
         new Error('Failed to list API keys')
       );
 
-      await expect(controller.listApiKeys(mockRequest as any)).rejects.toThrow(
+      await expect(controller.listApiKeys()).rejects.toThrow(
         'Failed to list API keys'
       );
     });

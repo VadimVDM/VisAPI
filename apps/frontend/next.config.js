@@ -1,7 +1,7 @@
-//@ts-check
+// @ts-check
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
+const path = require('path');
 
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
@@ -14,22 +14,14 @@ const nextConfig = {
   },
   output: 'standalone',
   reactStrictMode: true,
-  outputFileTracingRoot: require('path').join(__dirname, '../../'),
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   
   // Skip problematic pages during CI builds
   ...(process.env.NODE_ENV === 'production' && process.env.CI === 'true' && {
     skipTrailingSlashRedirect: true,
     skipMiddlewareUrlNormalize: true,
-    exportPathMap: async function (defaultPathMap) {
-      return {
-        '/': { page: '/' },
-        '/dashboard': { page: '/dashboard' },
-        '/dashboard/api-keys': { page: '/dashboard/api-keys' },
-        '/dashboard/workflows': { page: '/dashboard/workflows' },
-        // Skip logs page that causes build issues
-        // '/dashboard/logs': { page: '/dashboard/logs' },
-      };
-    },
+    // exportPathMap is not compatible with app directory
+    // Use generateStaticParams in page components instead
   }),
 };
 

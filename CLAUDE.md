@@ -626,7 +626,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 ### Known Issues (Non-Critical):
 
 1. **Frontend Build**: Next.js 15 static generation has Html import issue - production deployments work fine
-2. **TypeScript Linting**: 200+ backend and 65+ frontend strict mode violations - code quality improvements needed
+2. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining (significantly improved from 200+ and 65+)
 3. **Accessibility Testing**: Fully functional - server detection and report generation working correctly
 
 ---

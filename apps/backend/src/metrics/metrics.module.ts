@@ -3,7 +3,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { MetricsService } from './metrics.service';
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
-import { QueueMetricsService } from './queue-metrics.service';
 import { RemoteWriteService } from './remote-write.service';
 import { metricsProviders } from './metrics.providers';
 
@@ -28,7 +27,6 @@ import { metricsProviders } from './metrics.providers';
     ...metricsProviders,
     MetricsService,
     HttpMetricsInterceptor,
-    // QueueMetricsService, // TODO: Move to queue module or make optional
     RemoteWriteService,
   ],
   exports: [MetricsService, HttpMetricsInterceptor, PrometheusModule], // Export PrometheusModule for global metrics access

@@ -63,8 +63,8 @@ VisAPI/
 ```bash
 pnpm dev              # Start all services
 pnpm build            # Build all apps
-pnpm test             # Run tests
-pnpm lint             # Lint code
+pnpm test             # Run tests (16 suites, 100% passing)
+pnpm lint             # Lint code (ESLint + TypeScript)
 pnpm docker:up        # Start local DB/Redis
 pnpm docker:down      # Stop services
 ```

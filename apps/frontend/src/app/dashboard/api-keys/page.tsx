@@ -5,8 +5,6 @@ import {
   Plus,
   Copy,
   Trash2,
-  Eye,
-  EyeOff,
   Key,
   Loader2,
   AlertCircle,
@@ -38,11 +36,9 @@ const availableScopes = [
 
 export default function ApiKeysPage() {
   const { data: apiKeys, loading, error, refetch } = useApiData<ApiKeyWithSecret[]>('/api/v1/api-keys');
-  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyWithSecret | null>(null);
   const [creating, setCreating] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState({
     name: '',
     scopes: [] as string[],
@@ -72,7 +68,7 @@ export default function ApiKeysPage() {
         throw new Error(`Failed to create API key: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as ApiKeyWithSecret;
       setCreatedKey(data);
       refetch(); // Refresh the list
     } catch (err) {
@@ -112,12 +108,9 @@ export default function ApiKeysPage() {
     }
   }
 
-  const toggleKeyVisibility = (keyId: string) => {
-    setShowKey((prev) => ({ ...prev, [keyId]: !prev[keyId] }));
-  };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     // TODO: Show toast notification
   };
 
@@ -130,9 +123,6 @@ export default function ApiKeysPage() {
     }));
   };
 
-  const maskKey = (key: string) => {
-    return key.slice(0, 12) + '•'.repeat(20) + key.slice(-8);
-  };
 
 
   return (
@@ -275,10 +265,11 @@ export default function ApiKeysPage() {
 
               <form className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="api-key-name" className="block text-sm font-medium text-gray-700">
                     Name
                   </label>
                   <input
+                    id="api-key-name"
                     type="text"
                     value={newKeyData.name}
                     onChange={(e) =>
@@ -293,10 +284,11 @@ export default function ApiKeysPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="api-key-expires" className="block text-sm font-medium text-gray-700">
                     Expires in
                   </label>
                   <select
+                    id="api-key-expires"
                     value={newKeyData.expiresIn}
                     onChange={(e) =>
                       setNewKeyData((prev) => ({
@@ -314,9 +306,10 @@ export default function ApiKeysPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Scopes
-                  </label>
+                  <fieldset>
+                    <legend className="block text-sm font-medium text-gray-700">
+                      Scopes
+                    </legend>
                   <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
                     {availableScopes.map((scope) => (
                       <label key={scope} className="flex items-center">
@@ -332,6 +325,7 @@ export default function ApiKeysPage() {
                       </label>
                     ))}
                   </div>
+                  </fieldset>
                 </div>
               </form>
 
@@ -347,12 +341,14 @@ export default function ApiKeysPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={async () => {
-                    await createApiKey();
-                    if (!error) {
-                      setShowCreateModal(false);
-                      setNewKeyData({ name: '', scopes: [], expiresIn: '90' });
-                    }
+                  onClick={() => {
+                    void (async () => {
+                      await createApiKey();
+                      if (!error) {
+                        setShowCreateModal(false);
+                        setNewKeyData({ name: '', scopes: [], expiresIn: '90' });
+                      }
+                    })();
                   }}
                   disabled={
                     creating ||
@@ -396,18 +392,18 @@ export default function ApiKeysPage() {
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <span className="block text-sm font-medium text-gray-700">
                     Name
-                  </label>
+                  </span>
                   <p className="mt-1 text-sm text-gray-900">
                     {createdKey.name}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <span className="block text-sm font-medium text-gray-700">
                     API Key
-                  </label>
+                  </span>
                   <div className="mt-1 flex items-center space-x-2">
                     <code className="flex-1 text-xs font-mono bg-gray-100 px-2 py-2 rounded break-all">
                       {createdKey.key}
@@ -422,9 +418,9 @@ export default function ApiKeysPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <span className="block text-sm font-medium text-gray-700">
                     Expires
-                  </label>
+                  </span>
                   <p className="mt-1 text-sm text-gray-900">
                     {createdKey.expires_at 
                       ? new Date(createdKey.expires_at).toLocaleDateString() 

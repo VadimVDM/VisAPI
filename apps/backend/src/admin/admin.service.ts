@@ -38,7 +38,7 @@ export class AdminService {
     });
   }
 
-  getRouter() {
+  getRouter(): ReturnType<ExpressAdapter['getRouter']> {
     return this.serverAdapter.getRouter();
   }
 }

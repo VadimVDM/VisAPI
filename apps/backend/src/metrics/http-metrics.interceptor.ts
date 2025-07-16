@@ -12,10 +12,10 @@ import { MetricsService } from './metrics.service';
 export class HttpMetricsInterceptor implements NestInterceptor {
   constructor(private readonly metricsService: MetricsService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
-    const request = ctx.getRequest();
-    const response = ctx.getResponse();
+    const request = ctx.getRequest() as { route?: { path: string }; url: string; method: string };
+    const response = ctx.getResponse() as { statusCode: number };
 
     const startTime = Date.now();
 
@@ -40,7 +40,7 @@ export class HttpMetricsInterceptor implements NestInterceptor {
           );
           this.metricsService.decrementActiveConnections();
         },
-        error: (error) => {
+        error: (error: { status?: number }) => {
           const duration = Date.now() - startTime;
           const statusCode = error.status || 500;
 
