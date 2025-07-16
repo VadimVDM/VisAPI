@@ -91,7 +91,7 @@
     "nx": "21.2.3",
     "prettier": "^2.8.8",
     "ts-jest": "^29.4.0",
-    "ts-node": "10.9.1",
+    "ts-node": "10.9.2",
     "tslib": "^2.8.1",
     "typescript": "~5.8.3",
     "webpack-cli": "^5.1.4"
