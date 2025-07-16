@@ -103,11 +103,11 @@ jobs:
 
       - name: Upload coverage
         if: |
-          ${{ secrets.CODECOV_TOKEN != '' && (
+          secrets.CODECOV_TOKEN != '' && (
             (matrix.project == 'frontend' && needs.setup.outputs.affected-frontend == 'true') ||
             (matrix.project == 'backend' && needs.setup.outputs.affected-backend == 'true') ||
             (matrix.project == 'worker' && needs.setup.outputs.affected-worker == 'true')
-          ) }}
+          )
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
