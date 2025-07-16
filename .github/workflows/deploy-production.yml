@@ -55,6 +55,7 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
           vercel-args: '--prod'
           scope: ${{ secrets.VERCEL_ORG_ID }}
+          working-directory: '.'
           production: true
 
   deploy-backend:
