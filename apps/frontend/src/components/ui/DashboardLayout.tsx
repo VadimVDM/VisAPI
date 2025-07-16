@@ -15,8 +15,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading dashboard"
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" aria-hidden="true" />
+        <span className="sr-only">Loading dashboard...</span>
       </div>
     );
   }
@@ -27,10 +33,18 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-md z-50">
+        Skip to main content
+      </a>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+        <main 
+          id="main-content" 
+          className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50"
+          role="main"
+          aria-labelledby="page-title"
+        >
           <div className="container mx-auto px-6 py-8">{children}</div>
         </main>
       </div>

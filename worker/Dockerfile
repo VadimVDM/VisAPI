@@ -1,4 +1,4 @@
-# Base stage
+# Base stage with build tools
 FROM node:20-alpine AS base
 
 # Install dependencies for Puppeteer
@@ -33,25 +33,31 @@ COPY --from=deps /app/worker/node_modules ./worker/node_modules
 COPY . .
 RUN pnpm nx build worker
 
-# Runtime stage
-FROM base AS runner
+# Distroless runtime stage for enhanced security
+FROM gcr.io/distroless/nodejs20-debian11 AS runner
 
-# Create non-root user
-RUN addgroup -g 1001 nodejs && \
-    adduser -u 1001 -G nodejs -s /bin/sh -D nodejs
-
+# Set working directory
 WORKDIR /app
 
-# Copy necessary files
-COPY --from=builder --chown=nodejs:nodejs /app/dist/worker ./
-COPY --from=builder --chown=nodejs:nodejs /app/templates ./templates
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+# Copy necessary files from builder
+COPY --from=builder --chown=1001:1001 /app/dist/worker ./
+COPY --from=builder --chown=1001:1001 /app/templates ./templates
+COPY --from=builder --chown=1001:1001 /app/node_modules ./node_modules
 
-# Set memory limit for PDF generation
+# Copy Chromium and dependencies from Alpine build stage
+COPY --from=builder --chown=1001:1001 /usr/bin/chromium-browser /usr/bin/chromium-browser
+COPY --from=builder --chown=1001:1001 /usr/lib/chromium /usr/lib/chromium
+COPY --from=builder --chown=1001:1001 /usr/share/fonts /usr/share/fonts
+COPY --from=builder --chown=1001:1001 /lib/libz.so.1 /lib/libz.so.1
+
+# Set environment variables
 ENV NODE_OPTIONS="--max-old-space-size=1024"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-USER nodejs
+# Use non-root user (distroless nodejs user)
+USER 1001:1001
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+CMD ["main.js"]

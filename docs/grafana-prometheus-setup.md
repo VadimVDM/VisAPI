@@ -1,7 +1,7 @@
 # Grafana Cloud Prometheus Setup Guide
 
-**Last Updated:** July 16, 2025  
-**Status:** ✅ Implemented and Operational with Production Dashboards
+**Last Updated:** July 17, 2025  
+**Status:** ✅ Fully Implemented in v1.0.0 with Production Dashboards
 
 This guide explains how to configure VisAPI to send metrics to Grafana Cloud using Prometheus remote write.
 
@@ -101,9 +101,10 @@ The metrics are pushed via a custom NestJS service (`apps/backend/src/metrics/re
 
 - **Initialization**: Starts automatically when `GRAFANA_REMOTE_WRITE_ENABLED=true`
 - **Push Interval**: Every 30 seconds (configurable via `GRAFANA_PUSH_INTERVAL_MS`)
-- **Format**: Standard Prometheus text format
+- **Format**: Protobuf with snappy compression using `prometheus-remote-write` library
 - **Authentication**: HTTP Basic Auth with username/password
 - **Error Handling**: Graceful error handling with retry logic
+- **Filtering**: Only `visapi_*` metrics are pushed to reduce payload size
 
 ### Architecture
 
@@ -147,10 +148,17 @@ Common configuration problems:
 
 ### Common Issues
 
-- **400 Bad Request**: Check metrics format, ensure valid Prometheus format
+- **400 Bad Request**: Ensure proper protobuf + snappy compression format using `prometheus-remote-write` library
 - **401 Unauthorized**: Verify API credentials, check for quotes in environment variables
 - **Connection refused**: Check network connectivity to Grafana Cloud
 - **Metrics not appearing**: Verify `GRAFANA_REMOTE_WRITE_ENABLED=true` and check backend logs for RemoteWriteService messages
+- **"decompress snappy: snappy: corrupt input"**: Fixed by using proper protobuf serialization instead of plain text
+
+### Recent Issues Fixed (July 16, 2025)
+
+- **Snappy Compression Error**: Resolved by replacing custom HTTP implementation with `prometheus-remote-write` library
+- **Intermittent 400 Errors**: Fixed by using proper protobuf format with snappy compression
+- **Metrics Format**: Migrated from plain text to protobuf TimeSeries format for Grafana Cloud compatibility
 
 ## Pre-Built Dashboards
 

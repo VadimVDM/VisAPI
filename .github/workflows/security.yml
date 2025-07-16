@@ -39,7 +39,7 @@ jobs:
       matrix:
         dockerfile:
           - path: ./worker/Dockerfile
-            context: ./worker
+            context: .
             name: worker
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +64,48 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-${{ matrix.dockerfile.name }}.sarif'
+
+      - name: Generate container SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: visapi-${{ matrix.dockerfile.name }}:scan
+          format: cyclonedx-json
+          output-file: container-sbom-${{ matrix.dockerfile.name }}.json
+
+      - name: Upload container SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: container-sbom-${{ matrix.dockerfile.name }}
+          path: container-sbom-${{ matrix.dockerfile.name }}.json
+
+      - name: Verify distroless base image
+        run: |
+          echo "Verifying distroless base image usage..."
+          if docker history visapi-${{ matrix.dockerfile.name }}:scan | grep -q "distroless"; then
+            echo "✓ Distroless base image detected"
+          else
+            echo "✗ Distroless base image not found"
+            exit 1
+          fi
+
+      - name: Check container security best practices
+        run: |
+          echo "Checking container security configurations..."
+          # Check for non-root user
+          if docker inspect visapi-${{ matrix.dockerfile.name }}:scan | jq -e '.[]|.Config.User' | grep -q "1001"; then
+            echo "✓ Non-root user configured"
+          else
+            echo "✗ Root user detected"
+            exit 1
+          fi
+          
+          # Check for minimal attack surface
+          layers=$(docker history visapi-${{ matrix.dockerfile.name }}:scan --format "table {{.Size}}" | tail -n +2 | wc -l)
+          if [ "$layers" -lt 20 ]; then
+            echo "✓ Minimal layer count: $layers"
+          else
+            echo "⚠ High layer count detected: $layers"
+          fi
 
   secrets-scan:
     name: Secrets Scanning

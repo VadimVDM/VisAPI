@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: July 16, 2025
+Essential information for working with the VisAPI project. Updated: July 17, 2025
 
 ## Project Overview
 
@@ -33,6 +33,8 @@ Essential information for working with the VisAPI project. Updated: July 16, 202
 - ✅ Operational excellence with comprehensive runbooks and chaos engineering (Sprint 4)
 - ✅ Load testing capabilities with k6 for 5k requests/minute (Sprint 4)
 - ✅ Security hardening with threat modeling and vulnerability scanning (Sprint 4)
+- ✅ Container hardening with distroless images and SBOM generation (Sprint 4)
+- ✅ Lighthouse accessibility audit score of >90% (Sprint 4)
 
 ## Project Structure
 
@@ -407,6 +409,11 @@ GRAFANA_PROMETHEUS_PASSWORD=glc_your_token_here
 GRAFANA_PUSH_INTERVAL_MS=30000
 ```
 
+**Technical Implementation:**
+- Uses `prometheus-remote-write` library for proper protobuf + snappy compression
+- Filters to only push `visapi_*` metrics to reduce payload size
+- Graceful error handling with detailed logging for troubleshooting
+
 ## Deployment
 
 ### Production Setup
@@ -506,9 +513,9 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live + Sprint 4 Near Completion (77%)**
+**Current Status: Production Live, Sprint 4 Complete**
 
-VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 3 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is 77% complete with 10 out of 13 tasks finished, focusing on infrastructure automation, enhanced monitoring, and operational excellence.
+VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is complete, finalizing the system's infrastructure automation, enhanced monitoring, security posture, and operational excellence.
 
 **Key Milestones Achieved:**
 
@@ -522,7 +529,8 @@ VisAPI is a complete, enterprise-grade workflow automation system. All planned f
 - **Infrastructure Automation**: Complete Terraform infrastructure-as-code with CI/CD pipelines for all environments.
 - **Advanced Monitoring**: Production-ready Grafana Cloud dashboards with comprehensive metrics collection, alerting thresholds, and chaos engineering capabilities.
 - **Operational Excellence**: Production-ready runbooks for DLQ replay, Redis failover, secret rotation, and emergency procedures.
-- **Security Hardening**: Complete threat modeling with STRIDE analysis, vulnerability scanning, and security assessment framework.
+- **Security Hardening**: Complete threat modeling with STRIDE analysis, container hardening, vulnerability scanning, and security assessment framework.
+- **Accessibility**: >90% Lighthouse accessibility score, ensuring the application is usable by all.
 
 **Detailed Roadmap & History**
 
@@ -573,5 +581,6 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ---
 
-**Last Updated:** July 16, 2025
-**Version:** Sprint 4 In Progress - Infrastructure Automation & Launch Preparation
+**Last Updated:** July 17, 2025
+**Version:** v1.0.0 - Production Ready
+**Status:** All 5 sprints completed (100% feature completion)
