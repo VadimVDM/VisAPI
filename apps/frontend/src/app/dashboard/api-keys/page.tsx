@@ -39,6 +39,7 @@ export default function ApiKeysPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyWithSecret | null>(null);
   const [creating, setCreating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState({
     name: '',
     scopes: [] as string[],
