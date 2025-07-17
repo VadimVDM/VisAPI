@@ -14,7 +14,15 @@ export class CronSeederService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.seedCronJobs();
+    try {
+      await this.seedCronJobs();
+    } catch (error) {
+      this.logger.error(
+        { error },
+        'Failed to seed cron jobs during startup - application will continue without cron job seeding'
+      );
+      // Don't throw the error to prevent application startup failure
+    }
   }
 
   async seedCronJobs(): Promise<void> {
