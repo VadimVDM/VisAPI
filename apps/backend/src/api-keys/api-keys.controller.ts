@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Scopes } from '../auth/decorators/scopes.decorator';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import {
@@ -25,13 +28,12 @@ import {
 
 @ApiTags('API Keys')
 @Controller('api/v1/api-keys')
-@UseGuards(ApiKeyGuard)
-@ApiSecurity('api-key')
 export class ApiKeysController {
   constructor(private readonly authService: AuthService) {}
 
   @Get()
-  @Scopes('keys:read')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('keys:read')
   @ApiOperation({ summary: 'List all API keys' })
   @ApiResponse({
     status: 200,
@@ -44,7 +46,8 @@ export class ApiKeysController {
   }
 
   @Post()
-  @Scopes('keys:create')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('keys:create')
   @ApiOperation({ summary: 'Create a new API key' })
   @ApiResponse({
     status: 201,
@@ -53,19 +56,20 @@ export class ApiKeysController {
   })
   async createApiKey(
     @Body() dto: CreateApiKeyDto,
-    @Request() req: Express.Request & { apiKey: { created_by?: string } }
+    @Request() req: any
   ): Promise<ApiKeyWithSecretResponseDto> {
     const { key, apiKey } = await this.authService.createApiKey(
       dto.name,
       dto.scopes,
-      req.apiKey.created_by || 'system'
+      req.userRecord?.id || 'system'
     );
 
     return ApiKeyWithSecretResponseDto.fromRecordWithKey(apiKey, key);
   }
 
   @Delete(':id')
-  @Scopes('keys:delete')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('keys:delete')
   @ApiOperation({ summary: 'Revoke an API key' })
   @ApiResponse({ status: 204, description: 'Key successfully revoked' })
   async revokeApiKey(@Param('id') id: string): Promise<{ message: string }> {

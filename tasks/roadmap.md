@@ -11,6 +11,7 @@ This document translates the VisAPI PRD (prd.md) into an actionable release plan
 - **Sprint 3** ✅ **COMPLETED** (July 15, 2025) - Advanced Workflow Features: WhatsApp integration, PDF generation, cron scheduling, comprehensive logging system
 - **Sprint 4** ✅ **COMPLETED** (July 17, 2025) - Hardening & Launch: Infrastructure automation, monitoring, security scanning, operational excellence (100% complete - 13/13 tasks)
 - **Production** ✅ **LIVE** - Enterprise-grade workflow automation system operational at app.visanet.app and api.visanet.app
+- **Sprint 5** 🚧 **IN PLANNING** (July 18 - August 8, 2025) - Frontend Excellence: Beautiful authentication pages, role-based access control, world-class dashboard UI/UX
 
 ## Common Conventions & Project Hygiene
 
@@ -323,3 +324,93 @@ The VisAPI platform is now a complete, production-ready enterprise workflow auto
 - 🏋️ **Load Testing**: k6 suite validated for 5k req/min with PDF batch processing
 - 🎮 **Game Day Ready**: Full documentation, runbooks, and templates for quarterly chaos sessions
 - 📈 **Production Metrics**: Real-time monitoring with alerts, SLOs, and performance baselines
+
+---
+
+## Sprint 5: Frontend Excellence (RC v1.1.0-rc) 🚧 IN PLANNING
+
+> Theme: "World-class authentication and dashboard experience"  
+> **Target Start:** July 18, 2025 | **Target End:** August 8, 2025 (3 weeks)
+
+| RC Tag    | DoD Checklist                                                                                                            | Stakeholder Demo                                                                                                                            |
+| :-------- | :----------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| v1.1.0-rc | ⬜ Beautiful auth pages live<br>⬜ Role-based access working<br>⬜ Dashboard UI complete<br>⬜ All emails sending correctly | **DEMO TARGET:** Premium authentication experience with OTP verification, comprehensive role management, and Stripe-quality dashboard UI with real-time visualizations. |
+
+### Sprint 5.1: Beautiful Authentication Pages (Week 1)
+
+| ID       | Task                                                                      | Est. | Owner | Dependencies | Status | Acceptance Notes                                                        |
+| :------- | :------------------------------------------------------------------------ | :--: | :---- | :----------- | :----: | :---------------------------------------------------------------------- |
+| S5-FE-01 | Create signup page with shadcn Form, Input, Button components             |  3   | FE    | –            |   ⬜   | Form validation, email domain checking, loading states, Visanet branding |
+| S5-FE-02 | Create login page with email/password and magic link toggle               |  2   | FE    | S5-FE-01     |   ⬜   | Toggle between auth methods, remember me, smooth transitions             |
+| S5-FE-03 | Create forgot password page with email validation                         |  2   | FE    | S5-FE-01     |   ⬜   | Email validation, success message, rate limiting UI                      |
+| S5-FE-04 | Create password reset page with token handling                            |  2   | FE    | S5-FE-03     |   ⬜   | Token validation, password strength meter, auto-redirect                 |
+| S5-FE-05 | Create OTP confirmation page with animated loading states                 |  3   | FE    | S5-FE-01     |   ⬜   | 6-digit OTP input, auto-focus, resend option, animated success          |
+| S5-BE-01 | Implement Supabase Auth signup with email domain validation               |  2   | BE-A  | –            |   ⬜   | Check ALLOWED_EMAIL_DOMAINS, custom errors, user metadata               |
+| S5-BE-02 | Create email templates for auth flows (welcome, reset, confirmation)      |  2   | BE-B  | S5-BE-01     |   ⬜   | Responsive HTML, Visanet branding, clear CTAs, plain text fallbacks     |
+| S5-BE-03 | Integrate Resend for transactional emails                                 |  1   | BE-B  | S5-BE-02     |   ⬜   | Configure Resend MCP, email service, error handling, delivery tracking   |
+
+### Sprint 5.2: Role Management & Security (Week 2)
+
+| ID       | Task                                                           | Est. | Owner | Dependencies | Status | Acceptance Notes                                                      |
+| :------- | :------------------------------------------------------------- | :--: | :---- | :----------- | :----: | :-------------------------------------------------------------------- |
+| S5-BE-04 | Update database schema with roles table and user_roles junction |  2   | BE-A  | Sprint 5.1   |   ⬜   | roles table, user_roles junction, migrations, seed default roles      |
+| S5-BE-05 | Create RBAC service with role checking logic                   |  2   | BE-A  | S5-BE-04     |   ⬜   | Role hierarchy logic, permission checking, caching, TypeScript types  |
+| S5-BE-06 | Implement NestJS guards for role-based access                  |  2   | BE-A  | S5-BE-05     |   ⬜   | @Roles decorator, RolesGuard, apply to endpoints, error messages     |
+| S5-FE-06 | Create role management UI for admins                           |  3   | FE    | S5-BE-04     |   ⬜   | User list with roles, assignment modal, bulk operations, activity log |
+| S5-FE-07 | Implement useRole hook and ProtectedRoute component            |  2   | FE    | S5-FE-06     |   ⬜   | useRole hook, ProtectedRoute wrapper, unauthorized page, role-based nav |
+| S5-BE-07 | Add email domain validation to signup process                  |  1   | BE-B  | S5-BE-01     |   ⬜   | Parse ALLOWED_EMAIL_DOMAINS env, validate on signup, clear errors     |
+
+### Sprint 5.3: World-Class Dashboard UI/UX (Week 3)
+
+| ID       | Task                                                    | Est. | Owner | Dependencies | Status | Acceptance Notes                                                           |
+| :------- | :------------------------------------------------------ | :--: | :---- | :----------- | :----: | :------------------------------------------------------------------------- |
+| S5-FE-08 | Install and configure shadcn/ui with Visanet theme      |  2   | FE    | –            |   ⬜   | Custom theme config, Visanet colors, typography, dark mode support         |
+| S5-FE-09 | Create new dashboard layout with sidebar navigation     |  3   | FE    | S5-FE-08     |   ⬜   | Collapsible sidebar, logo placement, user menu, breadcrumbs, mobile        |
+| S5-FE-10 | Implement dynamic charts with Recharts/Tremor           |  3   | FE    | S5-FE-08     |   ⬜   | Real-time updates, multiple chart types, interactive tooltips, export      |
+| S5-FE-11 | Create metric cards with real-time data                 |  2   | FE    | S5-FE-09     |   ⬜   | Animated transitions, trend indicators, mini sparklines, loading states    |
+| S5-FE-12 | Build workflow visualization components                 |  3   | FE    | S5-FE-10     |   ⬜   | Workflow DAG view, status indicators, interactive nodes, execution timeline |
+| S5-FE-13 | Implement dark mode support with theme persistence      |  1   | FE    | S5-FE-08     |   ⬜   | System preference detection, manual toggle, localStorage, smooth transitions |
+| S5-QA-01 | E2E tests for auth flows and role permissions          |  2   | QA    | All tasks    |   ⬜   | Playwright tests, all auth flows, role-based access, mobile testing        |
+
+### Sprint 5 Key Features
+
+**Authentication Excellence:**
+- 🎨 **Beautiful UI**: Custom-branded pages with Visanet logo and color scheme
+- 🔐 **Multiple Auth Methods**: Email/password, magic link, and OTP verification
+- 📧 **Transactional Emails**: Responsive templates for all auth flows
+- 🎯 **Domain Restrictions**: Only allowed email domains can register
+
+**Role-Based Access Control:**
+- 👥 **5 Role Types**: Admin, Manager, Developer, Support, Analytics
+- 🔒 **Granular Permissions**: Each role has specific access levels
+- 🛡️ **Backend Guards**: All API endpoints protected with role checks
+- 📊 **Admin UI**: Complete role management interface
+
+**Dashboard Transformation:**
+- 🎨 **shadcn/ui Components**: Modern, accessible UI components
+- 📊 **Dynamic Visualizations**: Real-time charts and metrics
+- 🌓 **Dark Mode**: System-aware with manual toggle
+- 📱 **Fully Responsive**: Mobile-first design approach
+
+### Sprint 5 Technical Highlights
+
+**Frontend Stack Upgrade:**
+- shadcn/ui with Radix UI primitives
+- Framer Motion for animations
+- Recharts for data visualization
+- TanStack Query for data fetching
+- Zustand for state management
+
+**Security Enhancements:**
+- Email domain validation (ALLOWED_EMAIL_DOMAINS)
+- Role hierarchy with inheritance
+- Comprehensive audit logging
+- Session management improvements
+
+**Design System:**
+- Visanet brand colors: #1d41ff, #021cb3, #4fedb8
+- Inter font for UI consistency
+- 4px grid system for spacing
+- Card-based layout patterns
+
+For complete Sprint 5 details, see: [Sprint 5 Plan](./sprint-5-frontend-auth-dashboard.md)

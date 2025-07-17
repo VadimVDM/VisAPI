@@ -10,18 +10,19 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { LogService } from './services/log.service';
 import { LogFiltersDto, PaginatedLogsDto, LogStatsDto } from './dto';
-import { ApiKeyGuard } from '../auth/guards/api-key.guard';
-import { Scopes } from '../auth/decorators/scopes.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('logs')
 @Controller('api/v1/logs')
-@UseGuards(ApiKeyGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class LogsController {
   constructor(private readonly logService: LogService) {}
 
   @Get()
-  @Scopes('logs:read')
+  @RequirePermissions('logs:read')
   @ApiOperation({ summary: 'Get logs with filtering and pagination' })
   @ApiResponse({
     status: 200,
@@ -51,7 +52,7 @@ export class LogsController {
   }
 
   @Get('stats')
-  @Scopes('logs:read')
+  @RequirePermissions('logs:read')
   @ApiOperation({ summary: 'Get log statistics' })
   @ApiResponse({
     status: 200,
@@ -78,7 +79,7 @@ export class LogsController {
   }
 
   @Get('workflow/:workflowId')
-  @Scopes('logs:read')
+  @RequirePermissions('logs:read')
   @ApiOperation({ summary: 'Get logs for a specific workflow' })
   @ApiResponse({
     status: 200,
@@ -100,7 +101,7 @@ export class LogsController {
   }
 
   @Get('job/:jobId')
-  @Scopes('logs:read')
+  @RequirePermissions('logs:read')
   @ApiOperation({ summary: 'Get logs for a specific job' })
   @ApiResponse({
     status: 200,

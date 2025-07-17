@@ -36,6 +36,8 @@ Essential information for working with the VisAPI project. Updated: July 17, 202
 - ✅ Container hardening with distroless images and SBOM generation (Sprint 4)
 - ✅ Lighthouse accessibility testing fully operational with automated reporting
 - ✅ Dependencies updated to latest stable versions (NX 21.2, NestJS 11.1, PostgreSQL 16, Redis 8)
+- ✅ Complete frontend dashboard with real-time API integration and auto-refresh (Sprint 5)
+- ✅ Enterprise email system with branded templates and Resend integration (Sprint 5)
 
 ## Project Structure
 
@@ -44,15 +46,21 @@ VisAPI/
 ├── apps/
 │   ├── frontend/          # Next.js 14 admin dashboard (Vercel)
 │   └── backend/           # NestJS API gateway (Render)
+├── libs/                  # NX shared libraries (9 specialized libraries)
+│   ├── frontend/          # Frontend-specific libraries
+│   │   ├── data-access/   # API clients and React hooks
+│   │   └── ui-components/ # Reusable UI components
+│   ├── backend/           # Backend-specific libraries
+│   │   ├── core-cgb/      # WhatsApp CGB API integration
+│   │   ├── core-config/   # Configuration management
+│   │   ├── core-supabase/ # Database and storage services
+│   │   ├── email-service/ # Email templates and Resend integration
+│   │   ├── logging/       # Structured logging with PII redaction
+│   │   └── util-redis/    # Redis utilities and idempotency
+│   └── shared/            # Cross-platform shared libraries
+│       ├── types/         # TypeScript type definitions
+│       └── utils/         # Common utility functions
 ├── packages/
-│   ├── shared/            # 7 specialized shared libraries
-│   │   ├── api-client/    # API client for frontend
-│   │   ├── auth/          # Authentication utilities
-│   │   ├── data-access/   # Database access layer
-│   │   ├── queue/         # BullMQ job queue management
-│   │   ├── types/         # Shared TypeScript types
-│   │   ├── utils/         # Common utilities
-│   │   └── validation/    # Schema validation (AJV)
 │   └── config/            # Shared configuration
 ├── tools/
 │   └── scripts/           # Build and deployment scripts
@@ -93,8 +101,10 @@ VisAPI/
 **Frontend** (app.visanet.app)
 
 - Next.js 15 with App Router
-- TypeScript 5.8, Tailwind CSS 4.1
-- Supabase Auth (Magic Link)
+- TypeScript 5.8, Tailwind CSS 4.1, shadcn/ui components
+- Supabase Auth (Magic Link) with role-based access control
+- Real-time dashboard with Recharts data visualization
+- Dark/light mode with system preference detection
 - Deployed on Vercel
 
 **Backend** (api.visanet.app)
@@ -198,6 +208,7 @@ GET  /api/v1/workflows          # List workflows
 POST /api/v1/workflows          # Create workflow
 GET  /api/v1/logs               # Paginated logs with filters
 GET  /api/v1/queue/metrics      # Queue health and metrics
+POST /api/v1/email/auth-hook    # Supabase auth email webhook
 GET  /api/v1/healthz            # Health check (DB + Redis)
 GET  /api/v1/livez              # Liveness probe
 GET  /api/v1/version            # Git SHA and build info
@@ -229,6 +240,48 @@ GET  /api/v1/version            # Git SHA and build info
 - [ ] Rate limiting implemented
 - [ ] Error messages don't leak sensitive data
 
+## Email System
+
+### Enterprise Email Infrastructure
+
+VisAPI features a complete enterprise email system with branded templates and Resend integration for all authentication and transactional emails.
+
+**Email Service (`@visapi/email-service`):**
+- **Branded Templates**: Magic link, welcome, password reset, and email verification templates
+- **Resend SDK**: Direct integration with `resend` Node.js package for reliable delivery
+- **Template Engine**: Dynamic email generation with user data and secure URLs
+- **Error Handling**: Comprehensive error handling with typed responses and logging
+- **Webhook Processing**: Supabase auth hook handler for intercepting default emails
+
+**Email Templates:**
+```typescript
+// Available templates with VisAPI branding
+generateMagicLinkEmail()       // Passwordless authentication
+generateWelcomeEmail()         // New user onboarding
+generatePasswordResetEmail()   // Secure password recovery
+generateEmailVerificationEmail() // Account confirmation
+```
+
+**Configuration:**
+```bash
+# Required environment variables
+RESEND_API_KEY=re_your_api_key_here
+RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
+```
+
+**Authentication Email Flow:**
+1. User triggers auth action (signup, login, password reset)
+2. Supabase sends webhook to `/api/v1/email/auth-hook`
+3. Email service processes webhook and selects appropriate template
+4. Branded email sent via Resend with proper URLs and styling
+5. User receives professional email with VisAPI branding
+
+**Production Ready:**
+- Email templates tested across major email clients
+- Error recovery with detailed logging
+- Rate limiting and delivery monitoring
+- Production environment configured with API keys
+
 ## Workflow Automation
 
 ### MCP Tools Usage
@@ -251,7 +304,7 @@ Use these tools:
 1. **Slack:** SDK wrapper for notifications
 2. **WhatsApp:** Complete CGB API integration with contact resolution
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
-4. **Email:** Resend integration for notifications
+4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations
 
 ### Queue System (BullMQ)
@@ -516,6 +569,17 @@ curl -I https://your-project.supabase.co/health
 docker-compose logs postgres
 ```
 
+**Library Import Issues**
+
+```bash
+# Check NX library paths are configured correctly
+cat apps/frontend/tsconfig.json | grep -A 10 "paths"
+
+# Verify library builds
+pnpm nx build types
+pnpm nx build frontend-data
+```
+
 **Redis Connection Issues**
 
 ```bash
@@ -563,9 +627,9 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live, Sprint 4 Complete**
+**Current Status: Production Live, Sprint 5 Week 1-3 Complete**
 
-VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 4 (Hardening & Launch) is complete, finalizing the system's infrastructure automation, enhanced monitoring, security posture, and operational excellence.
+VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved major milestones with Week 1 authentication system, Week 2 dashboard UI, and Week 3 email integration all fully completed, featuring real-time API integration, beautiful shadcn/ui components, comprehensive role-based access control, and enterprise-grade email system.
 
 **Key Milestones Achieved:**
 
@@ -573,7 +637,8 @@ VisAPI is a complete, enterprise-grade workflow automation system. All planned f
 - **Infrastructure as Code**: Complete Terraform automation for all cloud resources (Render, Vercel, Upstash, Supabase).
 - **Secure Architecture**: Secure-by-design, featuring shared libraries, prefix/secret API key authentication, Row-Level Security, and multi-layer security scanning.
 - **Monitoring & Observability**: Enterprise-grade monitoring with Grafana Cloud dashboards, Prometheus metrics, and real-time alerting system.
-- **Admin Dashboard**: A full-featured frontend for system monitoring, including a live log explorer and queue management.
+- **Enterprise Dashboard**: World-class admin dashboard with real-time API integration, Recharts data visualization, dark mode support, and role-based access control.
+- **Email System**: Complete enterprise email infrastructure with branded templates, Resend SDK integration, and Supabase auth webhook processing.
 - **Advanced Workflows**: End-to-end automation capabilities including WhatsApp messaging, dynamic PDF generation, and cron-based job scheduling.
 - **Comprehensive Testing**: A suite of 14 test suites covering unit, E2E, and load testing, with resource-friendly test commands available.
 - **Infrastructure Automation**: Complete Terraform infrastructure-as-code with CI/CD pipelines for all environments.
@@ -607,7 +672,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ### When Working on This Project:
 
-1.  **Always check the current sprint status** in `tasks/roadmap.md`
+1.  **Always check the current sprint status** in `tasks/sprint-5-frontend-auth-dashboard.md`
 2.  **Follow the established patterns** in existing code
 3.  **Update documentation** when making architectural changes
 4.  **Test locally** using `pnpm dev` before pushing changes
@@ -616,6 +681,14 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 7.  **Follow security guidelines** - never commit secrets
 8.  **Use NX commands** for generating new components/services
 9.  **Keep CLAUDE.md updated** with important project changes
+
+### Email System Development Notes:
+
+- **Email Service**: Use `@visapi/email-service` library for all email operations
+- **Templates**: All email templates are in `libs/backend/email-service/src/lib/`
+- **Testing**: Use `POST /api/v1/email/test` endpoint to test email delivery
+- **Configuration**: Email settings configured in `libs/backend/core-config/src/lib/configuration.ts`
+- **Webhook**: Supabase auth emails processed via `/api/v1/email/auth-hook`
 
 ### Code Quality Reminders:
 
@@ -641,4 +714,4 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 **Last Updated:** July 17, 2025
 **Version:** v1.0.0 - Production Ready
-**Status:** All 5 sprints completed, dependencies updated to latest stable versions
+**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (Frontend Auth + Dashboard + Email System)

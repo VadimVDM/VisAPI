@@ -1,0 +1,291 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
+const signupSchema = z.object({
+  fullName: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  email: z.string().email({
+    message: 'Please enter a valid email address.',
+  }),
+  password: z.string().min(8, {
+    message: 'Password must be at least 8 characters.',
+  }).regex(/[A-Z]/, {
+    message: 'Password must contain at least one uppercase letter.',
+  }).regex(/[a-z]/, {
+    message: 'Password must contain at least one lowercase letter.',
+  }).regex(/[0-9]/, {
+    message: 'Password must contain at least one number.',
+  }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
+
+export default function SignupPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      fullName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
+
+  async function onSubmit(data: SignupFormValues) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // TODO: Implement actual signup logic with Supabase
+      console.log('Signup data:', data);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Redirect to OTP verification page
+      router.push('/auth/verify-otp');
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+      console.error('Signup error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50 px-4 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="shadow-xl border-0">
+          <CardHeader className="space-y-1 text-center pb-8">
+            <div className="flex justify-center mb-6">
+              <Image
+                src="/Visanet-Logo.svg"
+                alt="Visanet"
+                width={200}
+                height={60}
+                priority
+              />
+            </div>
+            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+            <CardDescription>
+              Join Visanet to streamline your visa workflow automation
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="pb-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="John Doe" 
+                            className="pl-10"
+                            disabled={isLoading}
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="email"
+                            placeholder="john@visanet.app" 
+                            className="pl-10"
+                            disabled={isLoading}
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Only allowed email domains can register
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="password"
+                            placeholder="••••••••" 
+                            className="pl-10"
+                            disabled={isLoading}
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Must be at least 8 characters with uppercase, lowercase, and numbers
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="password"
+                            placeholder="••••••••" 
+                            className="pl-10"
+                            disabled={isLoading}
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-destructive/10 text-destructive text-sm p-3 rounded-md"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Create account
+                    </>
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              size="lg"
+              disabled={isLoading}
+              onClick={() => router.push('/auth/login?method=magic-link')}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Sign up with Magic Link
+            </Button>
+          </CardContent>
+
+          <CardFooter>
+            <p className="text-center text-sm text-muted-foreground w-full">
+              Already have an account?{' '}
+              <Link 
+                href="/auth/login" 
+                className="font-medium text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          By creating an account, you agree to our{' '}
+          <Link href="/terms" className="font-medium hover:underline">
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="font-medium hover:underline">
+            Privacy Policy
+          </Link>
+        </p>
+      </motion.div>
+    </div>
+  );
+}

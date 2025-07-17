@@ -1,3 +1,111 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Visanet-themed Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 12%; /* #1e1e1e */
+    
+    --muted: 0 0% 66%; /* #a9a9a9 */
+    --muted-foreground: 0 0% 40%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 12%;
+    
+    --border: 220 30% 90%; /* Light border based on #e4ecf5 */
+    --input: 220 30% 90%;
+    
+    --primary: 229 100% 56%; /* #1d41ff */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 165 77% 61%; /* #4fedb8 */
+    --secondary-foreground: 0 0% 12%;
+    
+    --accent: 165 77% 61%; /* #4fedb8 */
+    --accent-foreground: 0 0% 12%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --ring: 229 100% 56%; /* Primary color for focus rings */
+    
+    --radius: 0.5rem;
+  }
+  
+  .dark {
+    /* Visanet-themed Dark Mode */
+    --background: 0 0% 12%; /* #1e1e1e */
+    --foreground: 220 30% 94%; /* #e4ecf5 */
+    
+    --muted: 0 0% 15%; /* #252525 */
+    --muted-foreground: 0 0% 66%; /* #a9a9a9 */
+    
+    --popover: 0 0% 15%; /* #252525 */
+    --popover-foreground: 220 30% 94%;
+    
+    --card: 0 0% 15%; /* #252525 */
+    --card-foreground: 220 30% 94%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    
+    --primary: 229 100% 56%; /* #1d41ff */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 165 77% 61%; /* #4fedb8 */
+    --secondary-foreground: 0 0% 12%;
+    
+    --accent: 165 77% 61%; /* #4fedb8 */
+    --accent-foreground: 0 0% 12%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --ring: 229 100% 56%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom animations for OTP and loading states */
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}

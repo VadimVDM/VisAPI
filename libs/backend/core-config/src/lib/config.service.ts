@@ -57,6 +57,14 @@ export class ConfigService {
     return this.configService.get<number>('auth.apiKeyExpiryDays');
   }
 
+  get allowedEmailDomains(): string[] {
+    return this.configService.get<string[]>('auth.allowedEmailDomains');
+  }
+
+  get frontendUrl(): string {
+    return this.configService.get<string>('frontend.url');
+  }
+
   get rateLimitBurst(): number {
     return this.configService.get<number>('rateLimit.burst');
   }

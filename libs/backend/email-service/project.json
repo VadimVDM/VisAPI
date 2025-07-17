@@ -1,0 +1,40 @@
+{
+  "name": "email-service",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/email-service/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/email-service",
+        "main": "libs/backend/email-service/src/index.ts",
+        "tsConfig": "libs/backend/email-service/tsconfig.lib.json",
+        "assets": ["libs/backend/email-service/*.md"]
+      },
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/backend/email-service/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/backend/email-service/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "coverageReporters": ["text"]
+        }
+      }
+    }
+  },
+  "tags": ["type:feature", "scope:backend"]
+}

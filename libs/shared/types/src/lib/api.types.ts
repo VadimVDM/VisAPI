@@ -115,3 +115,20 @@ export interface LogStats {
   recentCount: number;
   byLevel: Record<string, number>;
 }
+
+// Dashboard metrics types
+export interface WorkflowStats {
+  total: number;
+  active: number;
+  completed: number;
+  failed: number;
+  pending: number;
+}
+
+export interface SystemStats {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  uptime: number;
+  version: string;
+  environment: string;
+  timestamp: string;
+}

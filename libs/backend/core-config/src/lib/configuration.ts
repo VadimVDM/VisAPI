@@ -23,6 +23,10 @@ export default () => ({
     jwtSecret: process.env.JWT_SECRET,
     apiKeyPrefix: process.env.API_KEY_PREFIX || 'visapi_',
     apiKeyExpiryDays: parseInt(process.env.API_KEY_EXPIRY_DAYS, 10) || 90,
+    allowedEmailDomains: process.env.ALLOWED_EMAIL_DOMAINS?.split(',') || ['visanet.app'],
+  },
+  frontend: {
+    url: process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
   },
   rateLimit: {
     burst: parseInt(process.env.API_RATE_LIMIT_BURST, 10) || 200,
@@ -50,5 +54,9 @@ export default () => ({
     signingSecret: process.env.SLACK_SIGNING_SECRET || '',
     defaultChannel: process.env.SLACK_DEFAULT_CHANNEL || '#alerts',
     enabled: process.env.SLACK_ENABLED === 'true',
+  },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'VisAPI <noreply@visanet.app>',
   },
 });

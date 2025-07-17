@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
-import { AppController } from './app.controller';
+import { AppController } from '../app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@visapi/core-config';
 import { SupabaseModule } from '@visapi/core-supabase';
@@ -14,6 +14,7 @@ import { CronModule } from '../cron/cron.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
 import { LogsModule } from '../logs/logs.module';
 import { MetricsModule } from '../metrics/metrics.module';
+import { EmailModule } from '../email/email.module';
 import { HttpMetricsInterceptor } from '../metrics/http-metrics.interceptor';
 import { SlackModule } from '../notifications/slack.module';
 import { LoggerModule } from 'nestjs-pino';
@@ -57,6 +58,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     LogsModule,
     MetricsModule,
     SlackModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

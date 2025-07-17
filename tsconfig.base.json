@@ -19,6 +19,8 @@
       "@visapi/backend-logging": ["libs/backend/logging/src/index.ts"],
       "@visapi/core-config": ["libs/backend/core-config/src/index.ts"],
       "@visapi/core-supabase": ["libs/backend/core-supabase/src/index.ts"],
+      "@visapi/email-service": ["libs/backend/email-service/src/index.ts"],
+      "@visapi/email-templates": ["libs/backend/email-templates/src/index.ts"],
       "@visapi/frontend-data": ["libs/frontend/data-access/src/index.ts"],
       "@visapi/frontend-ui": ["libs/frontend/ui-components/src/index.ts"],
       "@visapi/shared-types": ["libs/shared/types/src/index.ts"],

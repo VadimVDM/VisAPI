@@ -19,6 +19,13 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@visapi/frontend-data": ["../../libs/frontend/data-access/src/index.ts"],
+      "@visapi/shared-types": ["../../libs/shared/types/src/index.ts"],
+      "@visapi/shared-utils": ["../../libs/shared/utils/src/index.ts"]
+    },
     "plugins": [
       {
         "name": "next"

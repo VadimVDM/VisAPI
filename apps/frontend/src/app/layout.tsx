@@ -1,5 +1,6 @@
 import './global.css';
 import { AuthProvider } from '../components/auth/AuthProvider';
+import { ThemeProvider } from '../components/theme-provider';
 
 export const metadata = {
   title: 'VisAPI Admin Dashboard',
@@ -17,9 +18,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

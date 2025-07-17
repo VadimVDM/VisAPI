@@ -1,6 +1,7 @@
 'use client';
 
 import { Bell, Search } from 'lucide-react';
+import { UserMenu } from './UserMenu';
 
 export const Header = () => {
   return (
@@ -37,6 +38,8 @@ export const Header = () => {
             ></span>
             <span id="notification-count" className="sr-only">1 unread notification</span>
           </button>
+
+          <UserMenu />
         </div>
       </div>
     </header>

@@ -13,19 +13,20 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { WorkflowsService } from './workflows.service';
 import { CreateWorkflowDto, UpdateWorkflowDto, WorkflowResponseDto } from './dto';
-import { ApiKeyGuard } from '../auth/guards/api-key.guard';
-import { Scopes } from '../auth/decorators/scopes.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { WorkflowValidationInterceptor } from './interceptors/workflow-validation.interceptor';
 
 @ApiTags('workflows')
 @Controller('api/v1/workflows')
-@UseGuards(ApiKeyGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class WorkflowsController {
   constructor(private readonly workflowsService: WorkflowsService) {}
 
   @Post()
-  @Scopes('workflows:create')
+  @RequirePermissions('workflows:create')
   @UseInterceptors(WorkflowValidationInterceptor)
   @ApiOperation({ summary: 'Create a new workflow' })
   @ApiResponse({
@@ -50,7 +51,7 @@ export class WorkflowsController {
   }
 
   @Get()
-  @Scopes('workflows:read')
+  @RequirePermissions('workflows:read')
   @ApiOperation({ summary: 'Get all workflows' })
   @ApiResponse({
     status: 200,
@@ -70,7 +71,7 @@ export class WorkflowsController {
   }
 
   @Get('enabled')
-  @Scopes('workflows:read')
+  @RequirePermissions('workflows:read')
   @ApiOperation({ summary: 'Get all enabled workflows' })
   @ApiResponse({
     status: 200,
@@ -90,7 +91,7 @@ export class WorkflowsController {
   }
 
   @Get(':id')
-  @Scopes('workflows:read')
+  @RequirePermissions('workflows:read')
   @ApiOperation({ summary: 'Get a workflow by ID' })
   @ApiResponse({
     status: 200,
@@ -114,7 +115,7 @@ export class WorkflowsController {
   }
 
   @Patch(':id')
-  @Scopes('workflows:update')
+  @RequirePermissions('workflows:update')
   @UseInterceptors(WorkflowValidationInterceptor)
   @ApiOperation({ summary: 'Update a workflow' })
   @ApiResponse({
@@ -146,7 +147,7 @@ export class WorkflowsController {
   }
 
   @Delete(':id')
-  @Scopes('workflows:delete')
+  @RequirePermissions('workflows:delete')
   @ApiOperation({ summary: 'Delete a workflow' })
   @ApiResponse({
     status: 204,

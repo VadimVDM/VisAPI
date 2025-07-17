@@ -130,6 +130,55 @@ export type Database = {
           created_at?: string;
         };
       };
+      roles: {
+        Row: {
+          id: string;
+          name: string;
+          display_name: string;
+          description: string | null;
+          permissions: Record<string, any>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          display_name: string;
+          description?: string | null;
+          permissions?: Record<string, any>;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          display_name?: string;
+          description?: string | null;
+          permissions?: Record<string, any>;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_roles: {
+        Row: {
+          user_id: string;
+          role_id: string;
+          assigned_by: string | null;
+          assigned_at: string;
+        };
+        Insert: {
+          user_id: string;
+          role_id: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          role_id?: string;
+          assigned_by?: string | null;
+          assigned_at?: string;
+        };
+      };
     };
   };
 };
@@ -142,11 +191,16 @@ export type ApiKeyRecord = Database['public']['Tables']['api_keys']['Row'];
 export type WorkflowRecord = Database['public']['Tables']['workflows']['Row'];
 export type LogRecord = Database['public']['Tables']['logs']['Row'];
 
+export type RoleRecord = Database['public']['Tables']['roles']['Row'];
+export type UserRoleRecord = Database['public']['Tables']['user_roles']['Row'];
+
 export type InsertUser = Database['public']['Tables']['users']['Insert'];
 export type InsertApiKey = Database['public']['Tables']['api_keys']['Insert'];
 export type InsertWorkflow =
   Database['public']['Tables']['workflows']['Insert'];
 export type InsertLog = Database['public']['Tables']['logs']['Insert'];
+export type InsertRole = Database['public']['Tables']['roles']['Insert'];
+export type InsertUserRole = Database['public']['Tables']['user_roles']['Insert'];
 
 export type UpdateUser = Database['public']['Tables']['users']['Update'];
 export type UpdateApiKey = Database['public']['Tables']['api_keys']['Update'];
