@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
-import { AppController } from '../app.controller';
+import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@visapi/core-config';
 import { SupabaseModule } from '@visapi/core-supabase';
