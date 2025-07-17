@@ -37,8 +37,8 @@ describe('ApiKeysController', () => {
 
   describe('createApiKey', () => {
     const mockRequest = {
-      apiKey: {
-        created_by: 'user-123',
+      userRecord: {
+        id: 'user-123',
       },
     };
 
@@ -69,7 +69,7 @@ describe('ApiKeysController', () => {
 
       const result = await controller.createApiKey(
         createApiKeyDto,
-        mockRequest as Express.Request & { apiKey: { created_by?: string } }
+        mockRequest as Express.Request & { userRecord: { id?: string } }
       );
 
       expect(result).toEqual({
