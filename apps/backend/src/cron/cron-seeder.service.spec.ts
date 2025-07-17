@@ -161,7 +161,7 @@ describe('CronSeederService', () => {
       expect(queueService.addRepeatableJob).toHaveBeenCalledTimes(1); // Only log pruning job
     });
 
-    it('should handle database errors', async () => {
+    it('should handle database errors gracefully', async () => {
       const error = new Error('Database connection failed');
       const mockFrom = {
         select: jest.fn().mockReturnValue({
@@ -174,8 +174,15 @@ describe('CronSeederService', () => {
       
       supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
 
-      await expect(service.onModuleInit()).rejects.toThrow(
-        'Failed to fetch workflows: Database connection failed',
+      // onModuleInit should not throw errors anymore, it should handle them gracefully
+      await expect(service.onModuleInit()).resolves.not.toThrow();
+      
+      // Verify that error logging occurred
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+        }),
+        'Failed to seed cron jobs during startup - application will continue without cron job seeding'
       );
     });
   });
