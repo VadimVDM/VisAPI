@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+@tailwind theme {
+  --dark-mode: 'class';
+}
+
 @layer base {
   :root {
     /* Visanet Brand Design System */

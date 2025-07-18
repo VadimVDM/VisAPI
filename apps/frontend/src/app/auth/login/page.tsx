@@ -159,7 +159,7 @@ function LoginForm() {
               Welcome back
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Sign in to your account to continue
+              Login to your account to continue
             </CardDescription>
           </CardHeader>
 
@@ -294,10 +294,10 @@ function LoginForm() {
                             )}
                           />
 
-                          <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
+                          <div className="bg-white/0 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
                             <p className="text-sm text-foreground flex items-center">
                               <Sparkles className="h-4 w-4 mr-2 text-emerald-600" />
-                              We'll send you a magic link to sign in instantly
+                              We'll send you a magic link to login instantly
                             </p>
                           </div>
 
@@ -432,18 +432,18 @@ function LoginForm() {
 
                           <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-visanet-blue to-visanet-blue/90 hover:from-visanet-blue/90 hover:to-visanet-blue/80 text-white font-semibold shadow-lg shadow-visanet-blue/25 border border-visanet-blue/20"
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg shadow-blue-600/20 border border-blue-600/20"
                             size="lg"
                             disabled={isLoading}
                           >
                             {isLoading ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Signing in...
+                                Logging in...
                               </>
                             ) : (
                               <>
-                                Sign in
+                                Login
                                 <ArrowRight className="ml-2 h-4 w-4" />
                               </>
                             )}
@@ -490,7 +490,7 @@ function LoginForm() {
                   href="/auth/signup"
                   className="font-medium text-primary hover:underline"
                 >
-                  Sign up
+                  Create account
                 </Link>
               </p>
             </CardFooter>

@@ -77,7 +77,7 @@ export const LoginForm = () => {
             VisAPI Admin Dashboard
           </h1>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in with your email to access the admin dashboard
+            Login with your email to access the admin dashboard
           </p>
         </div>
         <form 

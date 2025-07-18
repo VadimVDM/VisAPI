@@ -25,7 +25,7 @@ export const ProtectedRoute = ({
 
   // Check authentication first
   if (!isAuthenticated) {
-    return fallback || <UnauthorizedPage message="Please sign in to access this page." />;
+    return fallback || <UnauthorizedPage message="Please login to access this page." />;
   }
 
   // Check role-based access
