@@ -136,13 +136,11 @@ function LoginForm() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <div className="px-6 py-4 rounded-xl bg-gradient-to-r from-visanet-blue/10 to-visanet-green/10 border border-visanet-blue/20">
-                <img 
-                  src="/Visanet-Logo.svg" 
-                  alt="Visanet Logo" 
-                  className="h-12 w-auto"
-                />
-              </div>
+              <img 
+                src="/Visanet-Logo.svg" 
+                alt="Visanet Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
               Welcome back

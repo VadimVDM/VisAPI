@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
 
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,27 @@ export default function SignupPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEmailDomainWarning, setShowEmailDomainWarning] = useState(false);
+  
+  // Allowed email domains (should match backend configuration)
+  const allowedDomains = ['visanet.app', 'visanet.co', 'visanet.co.il', 'visanet.ru', 'visanet.se'];
+
+  // Function to check if email domain is valid
+  const validateEmailDomain = (email: string) => {
+    if (!email.includes('@')) {
+      setShowEmailDomainWarning(false);
+      return;
+    }
+    
+    const domain = email.split('@')[1];
+    if (!domain) {
+      setShowEmailDomainWarning(false);
+      return;
+    }
+    
+    const isValidDomain = allowedDomains.includes(domain.toLowerCase());
+    setShowEmailDomainWarning(!isValidDomain);
+  };
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -112,13 +133,11 @@ export default function SignupPage() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <div className="px-6 py-4 rounded-xl bg-gradient-to-r from-visanet-blue/10 to-visanet-green/10 border border-visanet-blue/20">
-                <img 
-                  src="/Visanet-Logo.svg" 
-                  alt="Visanet Logo" 
-                  className="h-12 w-auto"
-                />
-              </div>
+              <img 
+                src="/Visanet-Logo.svg" 
+                alt="Visanet Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">Create an account</CardTitle>
             <CardDescription>
@@ -165,24 +184,39 @@ export default function SignupPage() {
                             placeholder="john@visanet.app" 
                             className="pl-10"
                             disabled={isLoading}
-                            {...field} 
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              validateEmailDomain(e.target.value);
+                            }}
                           />
                         </div>
                       </FormControl>
-                      <FormDescription>
-                        Only allowed email domains can register
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="bg-visanet-blue/10 border border-visanet-blue/20 rounded-lg p-3">
-                  <p className="text-sm text-foreground flex items-center">
-                    <Lock className="h-4 w-4 mr-2 text-visanet-blue" />
-                    Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
-                  </p>
-                </div>
+                <AnimatePresence>
+                  {showEmailDomainWarning && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="bg-amber-50 border border-amber-200 rounded-lg p-3"
+                    >
+                      <p className="text-sm text-amber-800 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2 text-amber-600 flex-shrink-0">
+                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                          <path d="M12 9v4"/>
+                          <path d="m12 17 .01 0"/>
+                        </svg>
+                        Only allowed email domains can register: @visanet.app, @visanet.co, @visanet.co.il, @visanet.ru, @visanet.se
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <FormField
                   control={form.control}
@@ -196,6 +230,7 @@ export default function SignupPage() {
                           disabled={isLoading}
                           showGenerator={true}
                           showStrengthIndicator={true}
+                          showRequirements={true}
                           generatorLength={14}
                           onPasswordChange={(password) => {
                             field.onChange(password);
