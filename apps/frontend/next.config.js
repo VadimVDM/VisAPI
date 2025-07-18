@@ -16,6 +16,9 @@ const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '../../'),
   
+  // Temporarily disable static page generation for error pages to work around Next.js 15 Html import issue
+  trailingSlash: false,
+  
   // Skip problematic pages during CI builds
   ...(process.env.NODE_ENV === 'production' && process.env.CI === 'true' && {
     skipTrailingSlashRedirect: true,
