@@ -12,9 +12,10 @@ const nextConfig = {
   nx: {
     svgr: false,
   },
-  output: 'standalone',
+  // Remove standalone output for Vercel deployment - Vercel handles this automatically
+  // output: 'standalone',
   reactStrictMode: true,
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+  // outputFileTracingRoot: path.join(__dirname, '../../'),
   
   // Temporarily disable static page generation for error pages to work around Next.js 15 Html import issue
   trailingSlash: false,
