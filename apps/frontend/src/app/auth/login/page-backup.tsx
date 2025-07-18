@@ -1,30 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import {
-  Loader2,
-  Mail,
-  Lock,
-  User,
-  CheckCircle2,
-  Sparkles,
-  UserPlus,
-} from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Sparkles, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
+import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PasswordInput } from '@/components/ui/password-input';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -39,164 +30,106 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-const signupSchema = z.object({
-  fullName: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
+const passwordSchema = z.object({
   email: z.string().email({
     message: 'Please enter a valid email address.',
   }),
-  password: z
-    .string()
-    .min(12, {
-      message: 'Password must be at least 12 characters.',
-    })
-    .regex(/[A-Z]/, {
-      message: 'Password must contain at least one uppercase letter.',
-    })
-    .regex(/[a-z]/, {
-      message: 'Password must contain at least one lowercase letter.',
-    })
-    .regex(/[0-9]/, {
-      message: 'Password must contain at least one number.',
-    })
-    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, {
-      message: 'Password must contain at least one symbol (!@#$%^&*...).',
-    }),
+  password: z.string().min(1, {
+    message: 'Password is required.',
+  }),
 });
 
-const magicLinkSignupSchema = z.object({
-  fullName: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
+const magicLinkSchema = z.object({
   email: z.string().email({
     message: 'Please enter a valid email address.',
   }),
 });
 
-type SignupFormValues = z.infer<typeof signupSchema>;
-type MagicLinkSignupFormValues = z.infer<typeof magicLinkSignupSchema>;
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+type MagicLinkFormValues = z.infer<typeof magicLinkSchema>;
 
-export default function SignupPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showEmailDomainWarning, setShowEmailDomainWarning] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  // Default to magic link method
-  const [signupMethod, setSignupMethod] = useState<'magic-link' | 'password'>(
-    'magic-link'
+  // Check if magic link method is requested via URL param, but default to magic-link
+  const defaultMethod =
+    searchParams.get('method') === 'password' ? 'password' : 'magic-link';
+  const [authMethod, setAuthMethod] = useState<'password' | 'magic-link'>(
+    defaultMethod
   );
 
-  // Allowed email domains (should match backend configuration)
-  const allowedDomains = [
-    'visanet.app',
-    'visanet.co',
-    'visanet.co.il',
-    'visanet.ru',
-    'visanet.se',
-  ];
-
-  // Function to check if email domain is valid
-  const validateEmailDomain = (email: string) => {
-    if (!email.includes('@')) {
-      setShowEmailDomainWarning(false);
-      return;
-    }
-
-    const domain = email.split('@')[1];
-    if (!domain) {
-      setShowEmailDomainWarning(false);
-      return;
-    }
-
-    const isValidDomain = allowedDomains.includes(domain.toLowerCase());
-    setShowEmailDomainWarning(!isValidDomain);
-  };
-
-  const passwordForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
     defaultValues: {
-      fullName: '',
       email: '',
       password: '',
     },
   });
 
-  const magicLinkForm = useForm<MagicLinkSignupFormValues>({
-    resolver: zodResolver(magicLinkSignupSchema),
+  const magicLinkForm = useForm<MagicLinkFormValues>({
+    resolver: zodResolver(magicLinkSchema),
     defaultValues: {
-      fullName: '',
       email: '',
     },
   });
 
-  async function onPasswordSubmit(data: SignupFormValues) {
+  async function onPasswordSubmit(data: PasswordFormValues) {
     setIsLoading(true);
     setError(null);
 
     try {
-      const { data: result, error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            full_name: data.fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      const { data: result, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
 
-      if (signUpError) {
-        setError(signUpError.message);
+      if (signInError) {
+        setError(signInError.message);
         return;
       }
 
-      if (!result.user) {
-        setError('Failed to create account. Please try again.');
+      if (!result.session) {
+        setError('Failed to create session. Please try again.');
         return;
       }
 
-      // Show success message - user needs to check email
-      router.push(
-        '/auth/login?method=magic-link&email=' + encodeURIComponent(data.email)
-      );
+      // Redirect to dashboard
+      router.push('/dashboard');
     } catch (err) {
-      setError('Something went wrong. Please try again.');
-      console.error('Signup error:', err);
+      setError('Invalid email or password. Please try again.');
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function onMagicLinkSubmit(data: MagicLinkSignupFormValues) {
+  async function onMagicLinkSubmit(data: MagicLinkFormValues) {
     setIsLoading(true);
     setError(null);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { error: signInError } = await supabase.auth.signInWithOtp({
         email: data.email,
-        password:
-          Math.random().toString(36).slice(-8) +
-          Math.random().toString(36).slice(-8), // Generate temporary password
         options: {
-          data: {
-            full_name: data.fullName,
-          },
+          // This will send the magic link
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
-      if (signUpError) {
-        setError(signUpError.message);
+      if (signInError) {
+        setError(signInError.message);
         return;
       }
 
       setMagicLinkSent(true);
     } catch (err) {
       setError('Failed to send magic link. Please try again.');
-      console.error('Magic link signup error:', err);
+      console.error('Magic link error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -207,19 +140,19 @@ export default function SignupPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-md mx-auto"
+      className="w-full max-w-md"
     >
       <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
         <CardHeader className="space-y-4 text-center pb-8">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-visanet-blue/20 to-visanet-green/20 rounded-2xl flex items-center justify-center shadow-lg shadow-visanet-blue/10">
-            <UserPlus className="h-8 w-8 text-visanet-blue" />
+            <LogIn className="h-8 w-8 text-visanet-blue" />
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold text-foreground">
-              Create your account
+              Welcome back
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              Get started with VisAPI in seconds
+              Sign in to continue to VisAPI
             </CardDescription>
           </div>
         </CardHeader>
@@ -232,13 +165,13 @@ export default function SignupPage() {
                   className="absolute inset-1.5 rounded-lg"
                   initial={false}
                   animate={{
-                    x: signupMethod === 'magic-link' ? 0 : '100%',
+                    x: authMethod === 'magic-link' ? 0 : '100%',
                     background:
-                      signupMethod === 'magic-link'
+                      authMethod === 'magic-link'
                         ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                         : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                     boxShadow:
-                      signupMethod === 'magic-link'
+                      authMethod === 'magic-link'
                         ? '0 2px 8px rgba(16, 185, 129, 0.15), 0 1px 3px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
                         : '0 2px 8px rgba(59, 130, 246, 0.15), 0 1px 3px rgba(59, 130, 246, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
                   }}
@@ -255,24 +188,24 @@ export default function SignupPage() {
                 <button
                   type="button"
                   className={`relative flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ease-out transform ${
-                    signupMethod === 'magic-link'
+                    authMethod === 'magic-link'
                       ? 'text-white z-10 scale-[1.02] shadow-lg'
                       : 'text-muted-foreground hover:text-foreground hover:scale-[1.01] z-0'
                   }`}
-                  onClick={() => setSignupMethod('magic-link')}
+                  onClick={() => setAuthMethod('magic-link')}
                 >
                   <motion.div
                     initial={false}
                     animate={{
-                      scale: signupMethod === 'magic-link' ? 1 : 0.98,
-                      y: signupMethod === 'magic-link' ? 0 : 1,
+                      scale: authMethod === 'magic-link' ? 1 : 0.98,
+                      y: authMethod === 'magic-link' ? 0 : 1,
                     }}
                     transition={{ duration: 0.2 }}
                     className="flex items-center justify-center gap-2"
                   >
                     <Sparkles
                       className={`h-4 w-4 transition-all duration-300 ${
-                        signupMethod === 'magic-link'
+                        authMethod === 'magic-link'
                           ? 'text-white'
                           : 'text-emerald-600'
                       }`}
@@ -283,24 +216,24 @@ export default function SignupPage() {
                 <button
                   type="button"
                   className={`relative flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ease-out transform ${
-                    signupMethod === 'password'
+                    authMethod === 'password'
                       ? 'text-white z-10 scale-[1.02] shadow-lg'
                       : 'text-muted-foreground hover:text-foreground hover:scale-[1.01] z-0'
                   }`}
-                  onClick={() => setSignupMethod('password')}
+                  onClick={() => setAuthMethod('password')}
                 >
                   <motion.div
                     initial={false}
                     animate={{
-                      scale: signupMethod === 'password' ? 1 : 0.98,
-                      y: signupMethod === 'password' ? 0 : 1,
+                      scale: authMethod === 'password' ? 1 : 0.98,
+                      y: authMethod === 'password' ? 0 : 1,
                     }}
                     transition={{ duration: 0.2 }}
                     className="flex items-center justify-center gap-2"
                   >
                     <Lock
                       className={`h-4 w-4 transition-all duration-300 ${
-                        signupMethod === 'password'
+                        authMethod === 'password'
                           ? 'text-white'
                           : 'text-blue-600'
                       }`}
@@ -311,7 +244,7 @@ export default function SignupPage() {
               </div>
 
               <AnimatePresence mode="wait">
-                {signupMethod === 'magic-link' ? (
+                {authMethod === 'magic-link' ? (
                   <motion.div
                     key="magic-link"
                     initial={{ opacity: 0, x: -30, scale: 0.95 }}
@@ -332,28 +265,6 @@ export default function SignupPage() {
                       >
                         <FormField
                           control={magicLinkForm.control}
-                          name="fullName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    placeholder="John Doe"
-                                    className="pl-10"
-                                    disabled={isLoading}
-                                    {...field}
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={magicLinkForm.control}
                           name="email"
                           render={({ field }) => (
                             <FormItem>
@@ -367,10 +278,6 @@ export default function SignupPage() {
                                     className="pl-10"
                                     disabled={isLoading}
                                     {...field}
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      validateEmailDomain(e.target.value);
-                                    }}
                                   />
                                 </div>
                               </FormControl>
@@ -379,45 +286,10 @@ export default function SignupPage() {
                           )}
                         />
 
-                        <AnimatePresence>
-                          {showEmailDomainWarning && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              transition={{ duration: 0.2 }}
-                              className="bg-amber-50 border border-amber-200 rounded-lg p-3"
-                            >
-                              <p className="text-sm text-amber-800 flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="h-4 w-4 mr-2 text-amber-600 flex-shrink-0"
-                                >
-                                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                                  <path d="M12 9v4" />
-                                  <path d="m12 17 .01 0" />
-                                </svg>
-                                Only allowed email domains can register:
-                                @visanet.app, @visanet.co, @visanet.co.il,
-                                @visanet.ru, @visanet.se
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
                         <div className="magic-link-notification border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
                           <p className="text-sm text-foreground flex items-center">
-                            <Sparkles className="h-5 w-5 mr-2 text-emerald-600" />
-                            We'll send you a magic link to create your account
-                            instantly
+                            <Sparkles className="h-4 w-4 mr-2 text-emerald-600" />
+                            We'll send you a magic link to login instantly
                           </p>
                         </div>
 
@@ -445,7 +317,7 @@ export default function SignupPage() {
                           ) : (
                             <>
                               <Mail className="mr-2 h-4 w-4" />
-                              Create account with Magic Link
+                              Send magic link
                             </>
                           )}
                         </Button>
@@ -473,28 +345,6 @@ export default function SignupPage() {
                       >
                         <FormField
                           control={passwordForm.control}
-                          name="fullName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    placeholder="John Doe"
-                                    className="pl-10"
-                                    disabled={isLoading}
-                                    {...field}
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={passwordForm.control}
                           name="email"
                           render={({ field }) => (
                             <FormItem>
@@ -508,10 +358,6 @@ export default function SignupPage() {
                                     className="pl-10"
                                     disabled={isLoading}
                                     {...field}
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      validateEmailDomain(e.target.value);
-                                    }}
                                   />
                                 </div>
                               </FormControl>
@@ -520,60 +366,31 @@ export default function SignupPage() {
                           )}
                         />
 
-                        <AnimatePresence>
-                          {showEmailDomainWarning && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              transition={{ duration: 0.2 }}
-                              className="bg-amber-50 border border-amber-200 rounded-lg p-3"
-                            >
-                              <p className="text-sm text-amber-800 flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="h-4 w-4 mr-2 text-amber-600 flex-shrink-0"
-                                >
-                                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                                  <path d="M12 9v4" />
-                                  <path d="m12 17 .01 0" />
-                                </svg>
-                                Only allowed email domains can register:
-                                @visanet.app, @visanet.co, @visanet.co.il,
-                                @visanet.ru, @visanet.se
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
                         <FormField
                           control={passwordForm.control}
                           name="password"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Password</FormLabel>
+                              <div className="flex items-center justify-between">
+                                <FormLabel>Password</FormLabel>
+                                <Link
+                                  href="/auth/forgot-password"
+                                  className="text-sm text-primary hover:underline"
+                                >
+                                  Forgot password?
+                                </Link>
+                              </div>
                               <FormControl>
-                                <PasswordInput
-                                  placeholder="••••••••••••"
-                                  disabled={isLoading}
-                                  showGenerator={true}
-                                  showStrengthIndicator={true}
-                                  showRequirements={true}
-                                  generatorLength={14}
-                                  onPasswordChange={(password) => {
-                                    field.onChange(password);
-                                    passwordForm.trigger('password');
-                                  }}
-                                  {...field}
-                                />
+                                <div className="relative">
+                                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    className="pl-10"
+                                    disabled={isLoading}
+                                    {...field}
+                                  />
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -599,12 +416,12 @@ export default function SignupPage() {
                           {isLoading ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating account...
+                              Logging in...
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Create account
+                              Login
+                              <ArrowRight className="ml-2 h-4 w-4" />
                             </>
                           )}
                         </Button>
@@ -645,28 +462,34 @@ export default function SignupPage() {
         {!magicLinkSent && (
           <CardFooter>
             <p className="text-center text-sm text-muted-foreground w-full">
-              Already have an account?{' '}
+              Don't have an account?{' '}
               <Link
-                href="/auth/login"
+                href="/auth/signup"
                 className="font-medium text-primary hover:underline"
               >
-                Login
+                Create account
               </Link>
             </p>
           </CardFooter>
         )}
       </Card>
-
-      <p className="text-center text-xs text-muted-foreground mt-6">
-        By creating an account, you agree to our{' '}
-        <Link href="/terms" className="font-medium hover:underline">
-          Terms of Service
-        </Link>{' '}
-        and{' '}
-        <Link href="/privacy" className="font-medium hover:underline">
-          Privacy Policy
-        </Link>
-      </p>
     </motion.div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-visanet-blue" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

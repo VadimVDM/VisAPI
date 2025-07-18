@@ -37,54 +37,54 @@ function AuthErrorContent() {
             <AlertCircle className="h-8 w-8 text-destructive" />
           </motion.div>
           <div className="space-y-2">
-            <CardTitle className="text-3xl font-bold">
+            <CardTitle className="text-3xl font-bold text-foreground">
               Authentication Error
             </CardTitle>
-            <CardDescription className="text-base">
+            <CardDescription className="text-base text-muted-foreground">
               We encountered an issue with your authentication
             </CardDescription>
           </div>
         </CardHeader>
 
-          <CardContent className="pb-8">
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-destructive-foreground">{error}</p>
-            </div>
+        <CardContent className="pb-8">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+            <p className="text-sm text-destructive-foreground">{error}</p>
+          </div>
 
-            <div className="space-y-3">
-              <Button
-                asChild
-                className="w-full bg-gradient-to-r from-visanet-blue to-visanet-blue/90 hover:from-visanet-blue/90 hover:to-visanet-blue/80 text-white font-semibold shadow-lg shadow-visanet-blue/25 border border-visanet-blue/20"
-                size="lg"
+          <div className="space-y-3">
+            <Button
+              asChild
+              className="w-full bg-gradient-to-r from-visanet-blue to-visanet-blue/90 hover:from-visanet-blue/90 hover:to-visanet-blue/80 text-white font-semibold shadow-lg shadow-visanet-blue/25 border border-visanet-blue/20"
+              size="lg"
+            >
+              <Link href="/auth/login">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Login
+              </Link>
+            </Button>
+
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link href="/">
+                <Home className="mr-2 h-4 w-4" />
+                Go to Homepage
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              If this issue persists, please contact support at{' '}
+              <a
+                href="mailto:support@visanet.app"
+                className="text-primary hover:underline"
               >
-                <Link href="/auth/login">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Login
-                </Link>
-              </Button>
-
-              <Button asChild variant="outline" className="w-full" size="lg">
-                <Link href="/">
-                  <Home className="mr-2 h-4 w-4" />
-                  Go to Homepage
-                </Link>
-              </Button>
-            </div>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                If this issue persists, please contact support at{' '}
-                <a
-                  href="mailto:support@visanet.app"
-                  className="text-primary hover:underline"
-                >
-                  support@visanet.app
-                </a>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+                support@visanet.app
+              </a>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 

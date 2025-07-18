@@ -13,10 +13,11 @@ import {
   User,
   CheckCircle2,
   Sparkles,
-  UserPlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
+import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
+import { UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -207,7 +208,7 @@ export default function SignupPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-md mx-auto"
+      className="w-full max-w-md"
     >
       <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
         <CardHeader className="space-y-4 text-center pb-8">
