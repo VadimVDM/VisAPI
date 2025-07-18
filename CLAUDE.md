@@ -41,6 +41,7 @@ Essential information for working with the VisAPI project. Updated: July 18, 202
 - ✅ Magic link authentication with custom domain routing through api.visanet.app (Sprint 5)
 - ✅ Modern Tailwind CSS v4 configuration with complete Visanet brand system (July 18, 2025)
 - ✅ World-class frontend UI matching Stripe/Resend quality with proper styling (July 18, 2025)
+- ✅ Tailwind CSS v4 deployment compatibility resolved with production-ready builds (July 18, 2025)
 
 ## Project Structure
 
@@ -734,14 +735,16 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 4. **Health Endpoints**: Ensure app.module.ts imports correct controller (`./app.controller` not `../app.controller`)
 5. **Email Domains**: Resend requires verified domains - use @visanet.app not @visapi.app
 6. **Supabase Auth Methods**: Use `auth.verifyOtp()` directly, not `auth.admin.verifyOtp()` (admin namespace doesn't have verifyOtp)
-7. **Tailwind CSS v4**: Use `@import "tailwindcss";` instead of legacy `@tailwind` directives (July 18, 2025)
-8. **CSS Build Issues**: Verify PostCSS config uses `@tailwindcss/postcss` for v4 compatibility
+7. **Tailwind CSS v4 Configuration**: Use `darkMode: 'class'` not `darkMode: ['class']` syntax (July 18, 2025)
+8. **Tailwind CSS v4 @apply Issues**: Replace `@apply` directives with native CSS in global.css for v4 compatibility (July 18, 2025)
+9. **CSS Build Issues**: Verify PostCSS config uses `@tailwindcss/postcss` for v4 compatibility
 
 ### Known Issues (Non-Critical):
 
 1. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining
 2. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility  
 3. **NX Peer Dependencies**: Minor @nx/linter version mismatch - non-blocking
+4. **Next.js 15 Html Import Error**: Known Next.js v15 issue during static page generation - doesn't affect runtime (July 18, 2025)
 
 ---
 
