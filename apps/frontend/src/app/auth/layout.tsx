@@ -16,7 +16,6 @@ export default function AuthLayout({
             <Link href="/" className="flex items-center">
               <VisanetLogo width={140} height={40} />
             </Link>
-            <ThemeToggleAnimated />
           </div>
         </div>
       </nav>
@@ -25,6 +24,9 @@ export default function AuthLayout({
       <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
         {children}
       </main>
+
+      {/* Theme toggle - fixed position like in adf99f0 */}
+      <ThemeToggleAnimated />
     </div>
   );
 }
