@@ -8,29 +8,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
-import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '@visapi/core-supabase';
 
 @Controller('v1/auth')
 export class AuthConfirmController {
   private readonly logger = new Logger(AuthConfirmController.name);
-  private readonly supabase;
 
-  constructor(private readonly config: ConfigService) {
-    const supabaseUrl = this.config.get<string>('supabase.url');
-    const supabaseServiceKey = this.config.get<string>('supabase.serviceKey');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Supabase configuration is missing');
-    }
-
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   /**
    * Handle email confirmation/magic link verification
@@ -58,8 +42,8 @@ export class AuthConfirmController {
       const defaultRedirectUrl = 'https://app.visanet.app';
       const finalRedirectUrl = redirectTo || defaultRedirectUrl;
 
-      // Exchange token for session using Supabase Admin API
-      const { data, error } = await this.supabase.auth.admin.verifyOtp({
+      // Exchange token for session using Supabase Auth API
+      const { data, error } = await this.supabaseService.serviceClient.auth.verifyOtp({
         token_hash: tokenHash,
         type: type as any, // Type can be: email, recovery, invite, etc.
       });
