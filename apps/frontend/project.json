@@ -10,7 +10,8 @@
       "executor": "@nx/vite:test",
       "options": {
         "passWithNoTests": true,
-        "reportsDirectory": "../../coverage/apps/frontend"
+        "reportsDirectory": "../../coverage/apps/frontend",
+        "configFile": "apps/frontend/vitest.config.ts"
       }
     },
     "lint": {
