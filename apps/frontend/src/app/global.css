@@ -126,50 +126,51 @@
   }
 }
 
-/* View Transitions API support */
-@supports (view-transition-name: root) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation-duration: 0.3s;
+/* View Transitions API support for theme switching */
+@supports (view-transition-name: theme-transition) {
+  /* Custom properties for animation origin */
+  :root {
+    --theme-toggle-x: 50%;
+    --theme-toggle-y: 50%;
   }
 
-  ::view-transition-old(root) {
-    animation-name: fade-out-scale;
-  }
-
-  ::view-transition-new(root) {
-    animation-name: fade-in-scale;
-  }
-
-  @keyframes fade-out-scale {
+  /* Circle animation that expands from click position */
+  @keyframes theme-circle-out {
     from {
-      opacity: 1;
-      transform: scale(1);
+      clip-path: circle(100% at var(--theme-toggle-x) var(--theme-toggle-y));
     }
     to {
-      opacity: 0;
-      transform: scale(0.95);
+      clip-path: circle(0% at var(--theme-toggle-x) var(--theme-toggle-y));
     }
   }
 
-  @keyframes fade-in-scale {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  /* Apply animation to old view */
+  ::view-transition-old(theme-transition) {
+    animation: 500ms cubic-bezier(0.4, 0, 0.2, 1) both theme-circle-out;
+    z-index: 10;
   }
 
-  /* Smooth transition for theme changes */
-  .dark ::view-transition-old(root) {
-    z-index: 1;
+  /* New view sits underneath */
+  ::view-transition-new(theme-transition) {
+    z-index: 9;
+  }
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media screen and (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
-  .dark ::view-transition-new(root) {
-    z-index: 999;
+  /* Disable view transitions for reduced motion */
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 
