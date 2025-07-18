@@ -8,7 +8,9 @@ interface MagicLinkEmailData {
 }
 
 export function generateMagicLinkEmail(data: MagicLinkEmailData): { subject: string; html: string; text: string } {
-  const magicLinkUrl = `${data.supabase_url}/auth/v1/verify?token=${data.token_hash}&type=${data.email_action_type}&redirect_to=${data.redirect_to}`;
+  // Use our custom domain for magic links instead of Supabase URL
+  const apiDomain = 'https://api.visanet.app';
+  const magicLinkUrl = `${apiDomain}/api/v1/auth/confirm?token_hash=${data.token_hash}&type=${data.email_action_type}&redirect_to=${encodeURIComponent(data.redirect_to)}`;
   
   const subject = 'Sign in to VisAPI - Your Magic Link';
   

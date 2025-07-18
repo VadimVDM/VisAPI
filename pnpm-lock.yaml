@@ -96,9 +96,6 @@ importers:
       '@supabase/auth-ui-shared':
         specifier: ^0.1.8
         version: 0.1.8(@supabase/supabase-js@2.51.0)
-      '@supabase/supabase-js':
-        specifier: ^2.51.0
-        version: 2.51.0
       '@tailwindcss/forms':
         specifier: ^0.5.10
         version: 0.5.10(tailwindcss@4.1.11)
@@ -283,6 +280,9 @@ importers:
       '@playwright/test':
         specifier: ^1.54.1
         version: 1.54.1
+      '@supabase/supabase-js':
+        specifier: ^2.51.0
+        version: 2.51.0
       '@swc-node/register':
         specifier: ~1.9.2
         version: 1.9.2(@swc/core@1.5.29(@swc/helpers@0.5.17))(@swc/types@0.1.23)(typescript@5.8.3)
