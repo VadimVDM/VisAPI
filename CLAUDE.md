@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: July 17, 2025
+Essential information for working with the VisAPI project. Updated: July 18, 2025
 
 ## Project Overview
 
@@ -38,6 +38,7 @@ Essential information for working with the VisAPI project. Updated: July 17, 202
 - ✅ Dependencies updated to latest stable versions (NX 21.2, NestJS 11.1, PostgreSQL 16, Redis 8)
 - ✅ Complete frontend dashboard with real-time API integration and auto-refresh (Sprint 5)
 - ✅ Enterprise email system with branded templates and Resend integration (Sprint 5)
+- ✅ Magic link authentication with custom domain routing through api.visanet.app (Sprint 5)
 
 ## Project Structure
 
@@ -252,6 +253,8 @@ VisAPI features a complete enterprise email system with branded templates and Re
 - **Template Engine**: Dynamic email generation with user data and secure URLs
 - **Error Handling**: Comprehensive error handling with typed responses and logging
 - **Webhook Processing**: Supabase auth hook handler for intercepting default emails
+- **Custom Domain Routing**: All auth links use api.visanet.app for better control
+- **Token Exchange**: Server-side token verification with `/api/v1/auth/confirm` endpoint
 
 **Email Templates:**
 ```typescript
@@ -273,8 +276,11 @@ RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
 1. User triggers auth action (signup, login, password reset)
 2. Supabase sends webhook to `/api/v1/email/auth-hook`
 3. Email service processes webhook and selects appropriate template
-4. Branded email sent via Resend with proper URLs and styling
-5. User receives professional email with VisAPI branding
+4. Branded email sent via Resend with magic link URL pointing to api.visanet.app
+5. User clicks magic link which hits `/api/v1/auth/confirm` endpoint
+6. Backend exchanges token_hash with Supabase using `auth.verifyOtp()`
+7. User redirected to frontend with session tokens in URL params
+8. Frontend establishes authenticated session
 
 **Production Ready:**
 - Email templates tested across major email clients
@@ -627,15 +633,15 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete, Email System Ready**
+**Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete, Magic Link Authentication Operational**
 
 VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved all major milestones:
 - Week 1: Authentication system with magic links ✅
 - Week 2: Premium dashboard UI with real-time data ✅  
-- Week 3: Email integration with branded templates ✅ (99% - ready for testing)
+- Week 3: Email integration with branded templates ✅ (100% - magic links fully implemented)
 - Week 4: Comprehensive testing coverage (upcoming)
 
-The system is production-ready with all infrastructure deployed and operational.
+The system is production-ready with all infrastructure deployed and operational, including custom domain magic link authentication.
 
 **Key Milestones Achieved:**
 
@@ -715,6 +721,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 3. **Test Mocks**: Ensure test mocks match actual controller implementation (e.g., `req.userRecord.id`)
 4. **Health Endpoints**: Ensure app.module.ts imports correct controller (`./app.controller` not `../app.controller`)
 5. **Email Domains**: Resend requires verified domains - use @visanet.app not @visapi.app
+6. **Supabase Auth Methods**: Use `auth.verifyOtp()` directly, not `auth.admin.verifyOtp()` (admin namespace doesn't have verifyOtp)
 
 ### Known Issues (Non-Critical):
 
@@ -726,4 +733,4 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 **Last Updated:** July 18, 2025
 **Version:** v1.0.0 - Production Ready
-**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (99% - email testing remaining) - Production stable
+**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational) - Production stable

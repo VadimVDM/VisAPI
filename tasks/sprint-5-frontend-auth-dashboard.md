@@ -139,26 +139,42 @@ Added comprehensive testing coverage to ensure enterprise-grade reliability:
 
 **Current Priority**: **Email flow testing** - All infrastructure is ready and deployed. Need to test magic link, password reset, welcome, and verification emails end-to-end.
 
-## 🔧 **July 18 Update: Email System Fully Deployed & Tested**
+## 🔧 **July 18 Update: Magic Link Authentication Fully Implemented**
 
-### ✅ Completed Today
+### ✅ Completed Today - Magic Link Custom Domain Integration
+- **Magic Link URLs**: Updated all email templates to use custom domain (api.visanet.app) instead of Supabase URLs
+- **Auth Confirm Endpoint**: Created `/api/v1/auth/confirm` to handle token exchange with Supabase
+- **Token Exchange**: Implemented proper server-side token verification using `auth.verifyOtp()` method
+- **Build Error Fix**: Corrected method call from `auth.admin.verifyOtp()` to `auth.verifyOtp()`
+- **Deployment Success**: Auth confirm endpoint deployed and responding correctly to requests
+- **End-to-End Testing**: Successfully triggered magic link emails with custom domain routing
+
+### ✅ Earlier Today - Email System Deployment
 - **Double API Prefix Fix**: Fixed all controllers from `@Controller('api/v1/*')` to `@Controller('v1/*')`
 - **Email Domain Issue**: Identified and fixed RESEND_FROM_EMAIL using wrong domain (@visapi.app → @visanet.app)
 - **Environment Variable**: Updated production env var to use correct domain
 - **Error Handling**: Enhanced Resend error messages for better debugging
 
-### ✅ Current Status - EMAIL SYSTEM FULLY TESTED!
-- **Backend**: ✅ **FULLY DEPLOYED** - All email endpoints accessible at `/api/v1/email/*`
-- **Frontend**: ✅ Deployed successfully on Vercel
+### ✅ Current Status - MAGIC LINK AUTHENTICATION OPERATIONAL!
+- **Backend**: ✅ **FULLY DEPLOYED** - Auth confirm endpoint live at `/api/v1/auth/confirm`
+- **Email Templates**: ✅ All templates updated to use api.visanet.app for authentication links
+- **Token Exchange**: ✅ Server-side token verification implemented following Supabase SSR best practices
 - **Email Service**: ✅ **OPERATIONAL** - Resend integration working with correct domain
-- **Environment**: ✅ **CONFIGURED** - RESEND_FROM_EMAIL updated to use @visanet.app
-- **Testing**: ✅ **COMPLETED** - All email templates verified and working
+- **Custom Domain Routing**: ✅ All auth flows now route through api.visanet.app for better control
+
+### 📝 Key Implementation Details
+1. **Magic Link URL Pattern**: `https://api.visanet.app/api/v1/auth/confirm?token_hash={hash}&type={type}&redirect_to={url}`
+2. **Token Exchange Flow**: Backend exchanges token_hash with Supabase and redirects with session tokens
+3. **Error Handling**: Invalid tokens redirect to `/auth/error` with descriptive messages
+4. **Password Reset**: Special handling for recovery type redirects to `/auth/reset-password`
+5. **Supabase Method**: Use `auth.verifyOtp()` directly, not through admin namespace
 
 ### 📝 Key Lessons Learned
 1. **NestJS controllers** shouldn't include 'api' prefix when app has global prefix
 2. **Email domains** must be verified in Resend before use
-3. **Environment variables** need careful validation in production
-4. **Error handling** should serialize unknown error types for debugging
+3. **Supabase Auth** methods differ between client and admin APIs - `verifyOtp` is on auth object
+4. **Custom domain routing** provides better control over authentication flows
+5. **Server-side token exchange** follows Supabase SSR best practices for security
 
 ## 🎯 **COMPLETED: Week 3 Email Integration Deep Dive**
 
