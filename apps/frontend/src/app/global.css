@@ -1,9 +1,5 @@
 @import 'tailwindcss';
 
-@tailwind theme {
-  --dark-mode: 'class';
-}
-
 @layer base {
   :root {
     /* Visanet Brand Design System */
@@ -214,5 +210,14 @@
   .shadow-visanet-lg {
     box-shadow: 0 4px 6px hsl(var(--shadow-color) / var(--shadow-strength)),
       0 20px 25px hsl(var(--shadow-color) / calc(var(--shadow-strength) * 0.8));
+  }
+
+  /* Magic link notification background fix */
+  .magic-link-notification {
+    background-color: transparent;
+  }
+
+  .dark .magic-link-notification {
+    background-color: rgb(6 78 59 / 0.2); /* emerald-950/20 */
   }
 }
