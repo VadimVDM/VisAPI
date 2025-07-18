@@ -231,7 +231,7 @@ export default function SignupPage() {
               Create your account
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              Get started with VisAPI
+              Get started with the Visanet API
             </CardDescription>
           </div>
         </CardHeader>

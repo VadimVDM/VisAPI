@@ -233,12 +233,12 @@ export default function ForgotPasswordPage() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-current" />
                     Sending reset email...
                   </>
                 ) : (
                   <>
-                    <Mail className="mr-2 h-4 w-4" />
+                    <Mail className="mr-2 h-4 w-4 text-current" />
                     Send reset email
                   </>
                 )}
