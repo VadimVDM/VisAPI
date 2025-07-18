@@ -2,7 +2,6 @@
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -137,15 +136,15 @@ function LoginForm() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <div className="p-3 rounded-xl bg-visanet-blue/5 border border-visanet-blue/10">
-                <Image
-                  src="/Visanet-Logo.svg"
-                  alt="Visanet"
-                  width={180}
-                  height={54}
-                  priority
-                  className="dark:invert"
-                />
+              <div className="px-6 py-4 rounded-xl bg-gradient-to-r from-visanet-blue/10 to-visanet-green/10 border border-visanet-blue/20">
+                <h1 className="text-3xl font-black tracking-tight">
+                  <span className="bg-gradient-to-r from-visanet-blue via-visanet-blue to-visanet-green bg-clip-text text-transparent">
+                    Visa
+                  </span>
+                  <span className="bg-gradient-to-r from-visanet-green to-visanet-blue bg-clip-text text-transparent">
+                    net
+                  </span>
+                </h1>
               </div>
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
