@@ -231,7 +231,7 @@ export default function SignupPage() {
               Create your account
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              Get started with VisAPI in seconds
+              Get started with VisAPI
             </CardDescription>
           </div>
         </CardHeader>
@@ -668,9 +668,9 @@ export default function SignupPage() {
           <CardFooter className="flex flex-col space-y-4">
             <div className="w-full border-t" />
             <Link href="/auth/login" className="block w-full">
-              <Button variant="ghost" className="w-full">
-                Already have an account? Login
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-center">
+                <span>Already have an account? Login</span>
+                <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </Link>
           </CardFooter>
