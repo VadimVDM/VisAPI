@@ -14,6 +14,7 @@ import {
 import { motion } from 'framer-motion';
 import { Suspense } from 'react';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
+import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
@@ -31,11 +32,7 @@ function AuthErrorContent() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <img
-                src="/Visanet-Logo.svg"
-                alt="Visanet Logo"
-                className="h-12 w-auto"
-              />
+              <VisanetLogo height={48} width={128} className="h-12 w-auto" />
             </div>
             <motion.div
               initial={{ scale: 0 }}

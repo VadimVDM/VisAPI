@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
+import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -214,11 +215,7 @@ export default function SignupPage() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <img
-                src="/Visanet-Logo.svg"
-                alt="Visanet Logo"
-                className="h-12 w-auto"
-              />
+              <VisanetLogo height={48} width={128} className="h-12 w-auto" />
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
               Create an account
