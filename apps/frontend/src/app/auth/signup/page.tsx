@@ -13,6 +13,7 @@ import {
   User,
   CheckCircle2,
   Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
@@ -664,16 +665,14 @@ export default function SignupPage() {
         </CardContent>
 
         {!magicLinkSent && (
-          <CardFooter>
-            <p className="text-center text-sm text-muted-foreground w-full">
-              Already have an account?{' '}
-              <Link
-                href="/auth/login"
-                className="font-medium text-primary hover:underline"
-              >
-                Login
-              </Link>
-            </p>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="w-full border-t" />
+            <Link href="/auth/login" className="block w-full">
+              <Button variant="ghost" className="w-full">
+                Already have an account? Login
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         )}
       </Card>

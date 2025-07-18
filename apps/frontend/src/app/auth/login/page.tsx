@@ -386,7 +386,7 @@ function LoginForm() {
                                   href="/auth/forgot-password"
                                   className="text-sm text-primary hover:underline"
                                 >
-                                  Forgot password?
+                                  Forgot your password?
                                 </Link>
                               </div>
                               <FormControl>
@@ -447,8 +447,18 @@ function LoginForm() {
               className="text-center py-8"
             >
               <div className="mb-6">
-                <div className="mx-auto w-16 h-16 bg-visanet-green/20 rounded-full flex items-center justify-center border border-visanet-green/30">
-                  <Mail className="h-8 w-8 text-visanet-green" />
+                <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center relative overflow-hidden shadow-xl shadow-visanet-green/25 dark:shadow-visanet-green/20">
+                  {/* Gradient background - green for success */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-visanet-green to-emerald-500" />
+                  
+                  {/* Subtle inner glow */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
+                  
+                  {/* Border that works in both themes */}
+                  <div className="absolute inset-0 rounded-full ring-1 ring-white/20 dark:ring-white/10" />
+                  
+                  {/* Icon with subtle shadow for depth */}
+                  <Mail className="h-8 w-8 text-white relative z-10 drop-shadow-lg" />
                 </div>
               </div>
               <h3 className="text-lg font-semibold mb-2">Check your email</h3>
@@ -469,16 +479,14 @@ function LoginForm() {
         </CardContent>
 
         {!magicLinkSent && (
-          <CardFooter>
-            <p className="text-center text-sm text-muted-foreground w-full">
-              Don't have an account?{' '}
-              <Link
-                href="/auth/signup"
-                className="font-medium text-primary hover:underline"
-              >
-                Create account
-              </Link>
-            </p>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="w-full border-t" />
+            <Link href="/auth/signup" className="block w-full">
+              <Button variant="ghost" className="w-full">
+                Don't have an account? Create account
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         )}
       </Card>

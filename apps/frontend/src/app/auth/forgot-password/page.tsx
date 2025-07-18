@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
                 disabled={isLoading}
                 className="w-full"
               >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-current" />}
                 Resend email
               </Button>
             </div>
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold text-foreground">
-              Forgot password?
+              Forgot your password?
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
               No worries, we'll send you reset instructions
