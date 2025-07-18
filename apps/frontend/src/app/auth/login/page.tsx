@@ -143,8 +143,18 @@ function LoginForm() {
     >
       <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
         <CardHeader className="space-y-4 text-center pb-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-visanet-blue/20 to-visanet-green/20 rounded-2xl flex items-center justify-center shadow-lg shadow-visanet-blue/10">
-            <LogIn className="h-8 w-8 text-visanet-blue" />
+          <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-xl shadow-visanet-blue/25 dark:shadow-visanet-blue/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-visanet-blue/30">
+            {/* Gradient background with better visibility */}
+            <div className="absolute inset-0 bg-gradient-to-br from-visanet-blue to-visanet-blue/80" />
+            
+            {/* Subtle inner glow */}
+            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
+            
+            {/* Border that works in both themes */}
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 dark:ring-white/10" />
+            
+            {/* Icon with subtle shadow for depth */}
+            <LogIn className="h-8 w-8 text-white relative z-10 drop-shadow-lg" />
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold text-foreground">
