@@ -47,10 +47,6 @@ const signupSchema = z.object({
     .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, {
       message: 'Password must contain at least one symbol (!@#$%^&*...).',
     }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -66,7 +62,6 @@ export default function SignupPage() {
       fullName: '',
       email: '',
       password: '',
-      confirmPassword: '',
     },
   });
 
@@ -118,14 +113,11 @@ export default function SignupPage() {
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
               <div className="px-6 py-4 rounded-xl bg-gradient-to-r from-visanet-blue/10 to-visanet-green/10 border border-visanet-blue/20">
-                <h1 className="text-3xl font-black tracking-tight">
-                  <span className="bg-gradient-to-r from-visanet-blue via-visanet-blue to-visanet-green bg-clip-text text-transparent">
-                    Visa
-                  </span>
-                  <span className="bg-gradient-to-r from-visanet-green to-visanet-blue bg-clip-text text-transparent">
-                    net
-                  </span>
-                </h1>
+                <img 
+                  src="/Visanet-Logo.svg" 
+                  alt="Visanet Logo" 
+                  className="h-12 w-auto"
+                />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">Create an account</CardTitle>
@@ -205,36 +197,17 @@ export default function SignupPage() {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="password"
-                            placeholder="••••••••" 
-                            className="pl-10"
-                            disabled={isLoading}
-                            {...field} 
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="bg-visanet-blue/10 border border-visanet-blue/20 rounded-lg p-3">
+                  <p className="text-sm text-foreground flex items-center">
+                    <Lock className="h-4 w-4 mr-2 text-visanet-blue" />
+                    Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
+                  </p>
+                </div>
 
                 {error && (
                   <motion.div
@@ -248,7 +221,7 @@ export default function SignupPage() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-visanet-blue to-visanet-blue/90 hover:from-visanet-blue/90 hover:to-visanet-blue/80 text-white font-semibold shadow-lg shadow-visanet-blue/25 border border-visanet-blue/20"
                   size="lg"
                   disabled={isLoading}
                 >
@@ -280,7 +253,7 @@ export default function SignupPage() {
 
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full border-visanet-green/30 text-visanet-green hover:bg-visanet-green/10 hover:border-visanet-green/50 font-semibold shadow-md shadow-visanet-green/10"
               size="lg"
               disabled={isLoading}
               onClick={() => router.push('/auth/login?method=magic-link')}

@@ -137,14 +137,11 @@ function LoginForm() {
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
               <div className="px-6 py-4 rounded-xl bg-gradient-to-r from-visanet-blue/10 to-visanet-green/10 border border-visanet-blue/20">
-                <h1 className="text-3xl font-black tracking-tight">
-                  <span className="bg-gradient-to-r from-visanet-blue via-visanet-blue to-visanet-green bg-clip-text text-transparent">
-                    Visa
-                  </span>
-                  <span className="bg-gradient-to-r from-visanet-green to-visanet-blue bg-clip-text text-transparent">
-                    net
-                  </span>
-                </h1>
+                <img 
+                  src="/Visanet-Logo.svg" 
+                  alt="Visanet Logo" 
+                  className="h-12 w-auto"
+                />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
@@ -158,13 +155,13 @@ function LoginForm() {
           <CardContent className="pb-4">
             {!magicLinkSent ? (
               <>
-                <div className="flex rounded-lg bg-muted/50 p-1 mb-6 border border-visanet-blue/10">
+                <div className="flex rounded-lg bg-muted/30 p-1 mb-6 border border-visanet-blue/20">
                   <button
                     type="button"
-                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
                       authMethod === 'password'
-                        ? 'bg-visanet-blue text-white shadow-md shadow-visanet-blue/25'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                        ? 'bg-visanet-blue text-white shadow-lg shadow-visanet-blue/30 ring-1 ring-visanet-blue/50'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-background/80'
                     }`}
                     onClick={() => setAuthMethod('password')}
                   >
@@ -172,10 +169,10 @@ function LoginForm() {
                   </button>
                   <button
                     type="button"
-                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
                       authMethod === 'magic-link'
-                        ? 'bg-visanet-blue text-white shadow-md shadow-visanet-blue/25'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                        ? 'bg-visanet-blue text-white shadow-lg shadow-visanet-blue/30 ring-1 ring-visanet-blue/50'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-background/80'
                     }`}
                     onClick={() => setAuthMethod('magic-link')}
                   >
@@ -272,7 +269,7 @@ function LoginForm() {
 
                           <Button
                             type="submit"
-                            className="w-full"
+                            className="w-full bg-gradient-to-r from-visanet-blue to-visanet-blue/90 hover:from-visanet-blue/90 hover:to-visanet-blue/80 text-white font-semibold shadow-lg shadow-visanet-blue/25 border border-visanet-blue/20"
                             size="lg"
                             disabled={isLoading}
                           >
@@ -343,7 +340,7 @@ function LoginForm() {
 
                           <Button
                             type="submit"
-                            className="w-full"
+                            className="w-full bg-gradient-to-r from-visanet-green to-visanet-green/90 hover:from-visanet-green/90 hover:to-visanet-green/80 text-white font-semibold shadow-lg shadow-visanet-green/25 border border-visanet-green/20"
                             size="lg"
                             disabled={isLoading}
                           >

@@ -43,11 +43,11 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
   const StrengthIcon = strengthIcons[strength.score as keyof typeof strengthIcons];
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`bg-gradient-to-r from-visanet-green/5 to-visanet-blue/5 border border-visanet-green/20 rounded-lg p-3 space-y-3 ${className}`}>
       {/* Strength Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-medium text-foreground">
             Password Strength
           </span>
           <div className="flex items-center space-x-1">
@@ -64,7 +64,7 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
           </div>
         </div>
         
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-2">
           <div 
             className={`h-2 rounded-full transition-all duration-300 ${
               strengthColors[strength.score as keyof typeof strengthColors]
@@ -76,7 +76,7 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
 
       {/* Requirements Checklist */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <h4 className="text-sm font-medium text-foreground">
           Requirements
         </h4>
         <div className="grid grid-cols-1 gap-1">
@@ -106,7 +106,7 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
       {/* Feedback */}
       {strength.feedback.length > 0 && (
         <div className="space-y-1">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <h4 className="text-sm font-medium text-foreground">
             Suggestions
           </h4>
           <ul className="space-y-1">

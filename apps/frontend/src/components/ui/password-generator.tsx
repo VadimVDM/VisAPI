@@ -35,25 +35,22 @@ export function PasswordGenerator({
   };
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`bg-gradient-to-r from-visanet-blue/5 to-visanet-green/5 border border-visanet-blue/20 rounded-lg p-3 space-y-2 ${className}`}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="text-sm font-medium text-foreground">
           Password Generator
         </label>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {length} characters
-        </span>
       </div>
       
       <div className="flex space-x-2">
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="xs"
           onClick={handleGeneratePassword}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-1 h-7 px-2 text-xs"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="h-3 w-3" />
           <span>Generate</span>
         </Button>
         
@@ -61,14 +58,14 @@ export function PasswordGenerator({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="xs"
             onClick={handleCopyPassword}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-1 h-7 px-2 text-xs"
           >
             {copied ? (
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-3 w-3 text-green-600" />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Copy className="h-3 w-3" />
             )}
             <span>{copied ? 'Copied!' : 'Copy'}</span>
           </Button>
@@ -76,15 +73,10 @@ export function PasswordGenerator({
       </div>
 
       {generatedPassword && (
-        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border">
-          <div className="flex items-center justify-between">
-            <code className="text-sm font-mono break-all text-gray-900 dark:text-gray-100">
-              {generatedPassword}
-            </code>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Secure password with uppercase, lowercase, numbers, and symbols
-          </p>
+        <div className="p-2 bg-background/50 border border-border rounded-md">
+          <code className="text-xs font-mono break-all text-foreground">
+            {generatedPassword}
+          </code>
         </div>
       )}
     </div>
