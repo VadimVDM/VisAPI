@@ -1,8 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import LogoLight from '../../../public/Visanet-Logo.svg';
+import LogoDark from '../../../public/Visanet-Logo-White.svg';
 
 interface VisanetLogoProps {
   width?: number;
@@ -35,17 +36,14 @@ export function VisanetLogo({
   }
 
   const currentTheme = theme === 'system' ? systemTheme : theme;
-  const logoSrc = currentTheme === 'dark' ? '/Visanet-Logo-White.svg' : '/Visanet-Logo.svg';
+  const Logo = currentTheme === 'dark' ? LogoDark : LogoLight;
 
   return (
-    <Image
-      src={logoSrc}
-      alt={alt}
+    <Logo
       width={width}
       height={height}
       className={className}
-      priority
-      unoptimized
+      aria-label={alt}
     />
   );
 }

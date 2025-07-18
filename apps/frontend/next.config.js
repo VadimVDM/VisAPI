@@ -34,6 +34,16 @@ const nextConfig = {
     // exportPathMap is not compatible with app directory
     // Use generateStaticParams in page components instead
   }),
+  
+  // Webpack configuration for SVGR
+  webpack(config) {
+    config.module.rules.push({
+      test: /\.svg$/i,
+      issuer: /\.[jt]sx?$/,
+      use: ['@svgr/webpack'],
+    });
+    return config;
+  },
 };
 
 const plugins = [
