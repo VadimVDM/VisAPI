@@ -414,7 +414,7 @@ export default function SignupPage() {
                           )}
                         </AnimatePresence>
 
-                        <div className="magic-link-notification border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
+                        <div className="magic-link-notification border border-secondary/20 rounded-lg p-3">
                           <p className="text-sm text-foreground flex items-center">
                             <Sparkles className="h-5 w-5 mr-2 text-emerald-600" />
                             We'll send you a magic link to create your account

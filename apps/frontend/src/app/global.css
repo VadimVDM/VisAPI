@@ -214,10 +214,6 @@
 
   /* Magic link notification background fix */
   .magic-link-notification {
-    background-color: transparent;
-  }
-
-  .dark .magic-link-notification {
-    background-color: rgb(6 78 59 / 0.2); /* emerald-950/20 */
+    background-color: hsl(var(--secondary) / 0.1);
   }
 }
