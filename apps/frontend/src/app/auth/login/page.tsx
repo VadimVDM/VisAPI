@@ -151,7 +151,7 @@ function LoginForm() {
               Welcome back
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              Sign in to continue to VisAPI
+              Login to continue to VisAPI
             </CardDescription>
           </div>
         </CardHeader>
