@@ -20,7 +20,14 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 const passwordSchema = z.object({
   email: z.string().email({
@@ -47,10 +54,13 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
-  
-  // Check if magic link method is requested via URL param
-  const defaultMethod = searchParams.get('method') === 'magic-link' ? 'magic-link' : 'password';
-  const [authMethod, setAuthMethod] = useState<'password' | 'magic-link'>(defaultMethod);
+
+  // Check if magic link method is requested via URL param, but default to magic-link
+  const defaultMethod =
+    searchParams.get('method') === 'password' ? 'password' : 'magic-link';
+  const [authMethod, setAuthMethod] = useState<'password' | 'magic-link'>(
+    defaultMethod
+  );
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -73,10 +83,11 @@ function LoginForm() {
     setError(null);
 
     try {
-      const { data: result, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      const { data: result, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
 
       if (signInError) {
         setError(signInError.message);
@@ -136,9 +147,9 @@ function LoginForm() {
         <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <img 
-                src="/Visanet-Logo.svg" 
-                alt="Visanet Logo" 
+              <img
+                src="/Visanet-Logo.svg"
+                alt="Visanet Logo"
                 className="h-12 w-auto"
               />
             </div>
@@ -149,46 +160,195 @@ function LoginForm() {
               Sign in to your account to continue
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="pb-4">
             {!magicLinkSent ? (
               <>
-                <div className="flex rounded-lg bg-muted/30 p-1 mb-6 border border-visanet-blue/20">
+                <div className="relative flex rounded-xl bg-gradient-to-r from-muted/40 to-muted/60 p-1.5 mb-6 border border-border/50 backdrop-blur-sm shadow-inner">
+                  <motion.div
+                    className="absolute inset-1.5 rounded-lg"
+                    initial={false}
+                    animate={{
+                      x: authMethod === 'magic-link' ? 0 : '100%',
+                      background:
+                        authMethod === 'magic-link'
+                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                          : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      boxShadow:
+                        authMethod === 'magic-link'
+                          ? '0 2px 8px rgba(16, 185, 129, 0.15), 0 1px 3px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
+                          : '0 2px 8px rgba(59, 130, 246, 0.15), 0 1px 3px rgba(59, 130, 246, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                    }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
+                    style={{
+                      width: 'calc(50% - 3px)',
+                    }}
+                  />
                   <button
                     type="button"
-                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
-                      authMethod === 'password'
-                        ? 'bg-visanet-blue text-white shadow-lg shadow-visanet-blue/30 ring-1 ring-visanet-blue/50'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-background/80'
-                    }`}
-                    onClick={() => setAuthMethod('password')}
-                  >
-                    Password
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
+                    className={`relative flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ease-out transform ${
                       authMethod === 'magic-link'
-                        ? 'bg-visanet-blue text-white shadow-lg shadow-visanet-blue/30 ring-1 ring-visanet-blue/50'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-background/80'
+                        ? 'text-white z-10 scale-[1.02] shadow-lg'
+                        : 'text-muted-foreground hover:text-foreground hover:scale-[1.01] z-0'
                     }`}
                     onClick={() => setAuthMethod('magic-link')}
                   >
-                    Magic Link
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: authMethod === 'magic-link' ? 1 : 0.98,
+                        y: authMethod === 'magic-link' ? 0 : 1,
+                      }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <Sparkles
+                        className={`h-4 w-4 transition-all duration-300 ${
+                          authMethod === 'magic-link'
+                            ? 'text-white'
+                            : 'text-emerald-600'
+                        }`}
+                      />
+                      Magic Link
+                    </motion.div>
+                  </button>
+                  <button
+                    type="button"
+                    className={`relative flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ease-out transform ${
+                      authMethod === 'password'
+                        ? 'text-white z-10 scale-[1.02] shadow-lg'
+                        : 'text-muted-foreground hover:text-foreground hover:scale-[1.01] z-0'
+                    }`}
+                    onClick={() => setAuthMethod('password')}
+                  >
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: authMethod === 'password' ? 1 : 0.98,
+                        y: authMethod === 'password' ? 0 : 1,
+                      }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <Lock
+                        className={`h-4 w-4 transition-all duration-300 ${
+                          authMethod === 'password'
+                            ? 'text-white'
+                            : 'text-blue-600'
+                        }`}
+                      />
+                      Password
+                    </motion.div>
                   </button>
                 </div>
 
                 <AnimatePresence mode="wait">
-                  {authMethod === 'password' ? (
+                  {authMethod === 'magic-link' ? (
+                    <motion.div
+                      key="magic-link"
+                      initial={{ opacity: 0, x: -30, scale: 0.95 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 30, scale: 0.95 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 260,
+                        damping: 20,
+                        mass: 0.8,
+                        opacity: { duration: 0.2 },
+                      }}
+                    >
+                      <Form {...magicLinkForm}>
+                        <form
+                          onSubmit={magicLinkForm.handleSubmit(
+                            onMagicLinkSubmit
+                          )}
+                          className="space-y-4"
+                        >
+                          <FormField
+                            control={magicLinkForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      type="email"
+                                      placeholder="john@visanet.app"
+                                      className="pl-10"
+                                      disabled={isLoading}
+                                      {...field}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
+                            <p className="text-sm text-foreground flex items-center">
+                              <Sparkles className="h-4 w-4 mr-2 text-emerald-600" />
+                              We'll send you a magic link to sign in instantly
+                            </p>
+                          </div>
+
+                          {error && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-destructive/10 text-destructive text-sm p-3 rounded-md"
+                            >
+                              {error}
+                            </motion.div>
+                          )}
+
+                          <Button
+                            type="submit"
+                            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold shadow-lg shadow-emerald-600/20 border border-emerald-600/20"
+                            size="lg"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Sending magic link...
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send magic link
+                              </>
+                            )}
+                          </Button>
+                        </form>
+                      </Form>
+                    </motion.div>
+                  ) : (
                     <motion.div
                       key="password"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
+                      initial={{ opacity: 0, x: -30, scale: 0.95 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 30, scale: 0.95 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 260,
+                        damping: 20,
+                        mass: 0.8,
+                        opacity: { duration: 0.2 },
+                      }}
                     >
                       <Form {...passwordForm}>
-                        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                        <form
+                          onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+                          className="space-y-4"
+                        >
                           <FormField
                             control={passwordForm.control}
                             name="email"
@@ -198,12 +358,12 @@ function LoginForm() {
                                 <FormControl>
                                   <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input 
+                                    <Input
                                       type="email"
-                                      placeholder="john@visanet.app" 
+                                      placeholder="john@visanet.app"
                                       className="pl-10"
                                       disabled={isLoading}
-                                      {...field} 
+                                      {...field}
                                     />
                                   </div>
                                 </FormControl>
@@ -219,8 +379,8 @@ function LoginForm() {
                               <FormItem>
                                 <div className="flex items-center justify-between">
                                   <FormLabel>Password</FormLabel>
-                                  <Link 
-                                    href="/auth/forgot-password" 
+                                  <Link
+                                    href="/auth/forgot-password"
                                     className="text-sm text-primary hover:underline"
                                   >
                                     Forgot password?
@@ -229,12 +389,12 @@ function LoginForm() {
                                 <FormControl>
                                   <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input 
+                                    <Input
                                       type="password"
-                                      placeholder="••••••••" 
+                                      placeholder="••••••••"
                                       className="pl-10"
                                       disabled={isLoading}
-                                      {...field} 
+                                      {...field}
                                     />
                                   </div>
                                 </FormControl>
@@ -250,7 +410,10 @@ function LoginForm() {
                               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                               {...passwordForm.register('rememberMe')}
                             />
-                            <label htmlFor="remember" className="text-sm text-muted-foreground">
+                            <label
+                              htmlFor="remember"
+                              className="text-sm text-muted-foreground"
+                            >
                               Remember me for 30 days
                             </label>
                           </div>
@@ -280,77 +443,6 @@ function LoginForm() {
                               <>
                                 Sign in
                                 <ArrowRight className="ml-2 h-4 w-4" />
-                              </>
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="magic-link"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Form {...magicLinkForm}>
-                        <form onSubmit={magicLinkForm.handleSubmit(onMagicLinkSubmit)} className="space-y-4">
-                          <FormField
-                            control={magicLinkForm.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input 
-                                      type="email"
-                                      placeholder="john@visanet.app" 
-                                      className="pl-10"
-                                      disabled={isLoading}
-                                      {...field} 
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="bg-visanet-green/10 border border-visanet-green/20 rounded-lg p-3">
-                            <p className="text-sm text-foreground flex items-center">
-                              <Sparkles className="h-4 w-4 mr-2 text-visanet-green" />
-                              We'll send you a magic link to sign in instantly
-                            </p>
-                          </div>
-
-                          {error && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              className="bg-destructive/10 text-destructive text-sm p-3 rounded-md"
-                            >
-                              {error}
-                            </motion.div>
-                          )}
-
-                          <Button
-                            type="submit"
-                            className="w-full bg-gradient-to-r from-visanet-green to-visanet-green/90 hover:from-visanet-green/90 hover:to-visanet-green/80 text-white font-semibold shadow-lg shadow-visanet-green/25 border border-visanet-green/20"
-                            size="lg"
-                            disabled={isLoading}
-                          >
-                            {isLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Sending magic link...
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="mr-2 h-4 w-4" />
-                                Send magic link
                               </>
                             )}
                           </Button>
@@ -392,8 +484,8 @@ function LoginForm() {
             <CardFooter>
               <p className="text-center text-sm text-muted-foreground w-full">
                 Don't have an account?{' '}
-                <Link 
-                  href="/auth/signup" 
+                <Link
+                  href="/auth/signup"
                   className="font-medium text-primary hover:underline"
                 >
                   Sign up
@@ -409,14 +501,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-visanet-blue" />
-          <p className="text-muted-foreground">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-visanet-blue" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
