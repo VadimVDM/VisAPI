@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Loader2, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@visapi/frontend-data';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,12 +74,21 @@ function LoginForm() {
     setError(null);
 
     try {
-      // TODO: Implement actual login logic with Supabase
-      console.log('Login data:', data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const { data: result, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      if (!result.session) {
+        setError('Failed to create session. Please try again.');
+        return;
+      }
+
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
@@ -94,12 +104,19 @@ function LoginForm() {
     setError(null);
 
     try {
-      // TODO: Implement actual magic link logic with Supabase
-      console.log('Magic link data:', data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email: data.email,
+        options: {
+          // This will send the magic link
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
       setMagicLinkSent(true);
     } catch (err) {
       setError('Failed to send magic link. Please try again.');

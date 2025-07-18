@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '@visapi/frontend-data';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,14 +68,29 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      // TODO: Implement actual signup logic with Supabase
-      console.log('Signup data:', data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect to OTP verification page
-      router.push('/auth/verify-otp');
+      const { data: result, error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (!result.user) {
+        setError('Failed to create account. Please try again.');
+        return;
+      }
+
+      // Show success message - user needs to check email
+      router.push('/auth/login?method=magic-link&email=' + encodeURIComponent(data.email));
     } catch (err) {
       setError('Something went wrong. Please try again.');
       console.error('Signup error:', err);
