@@ -32,19 +32,11 @@ function AuthErrorContent() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
-            className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-xl shadow-red-500/25 dark:shadow-red-500/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/30"
+            className="mx-auto p-3 rounded-2xl bg-gradient-to-br from-red-500/10 to-red-600/5 dark:from-red-500/20 dark:to-red-600/10 backdrop-blur-sm"
           >
-            {/* Gradient background - red gradient for errors */}
-            <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-red-500" />
-            
-            {/* Subtle inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
-            
-            {/* Border that works in both themes */}
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 dark:ring-white/10" />
-            
-            {/* Icon with subtle shadow for depth */}
-            <AlertCircle className="h-8 w-8 text-white relative z-10 drop-shadow-lg" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/20">
+              <AlertCircle className="h-5 w-5 text-white" />
+            </div>
           </motion.div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold text-foreground">

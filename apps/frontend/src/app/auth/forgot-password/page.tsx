@@ -100,19 +100,11 @@ export default function ForgotPasswordPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
-              className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-xl shadow-visanet-green/25 dark:shadow-visanet-green/20"
+              className="mx-auto p-3 rounded-2xl bg-gradient-to-br from-visanet-green/10 to-emerald-500/5 dark:from-visanet-green/20 dark:to-emerald-500/10 backdrop-blur-sm"
             >
-              {/* Gradient background - green for success */}
-              <div className="absolute inset-0 bg-gradient-to-br from-visanet-green to-emerald-500" />
-              
-              {/* Subtle inner glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
-              
-              {/* Border that works in both themes */}
-              <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 dark:ring-white/10" />
-              
-              {/* Icon with subtle shadow for depth */}
-              <Mail className="h-8 w-8 text-white relative z-10 drop-shadow-lg" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-visanet-green to-emerald-500 flex items-center justify-center shadow-lg shadow-visanet-green/20">
+                <Mail className="h-5 w-5 text-white" />
+              </div>
             </motion.div>
             <div className="space-y-2">
               <CardTitle className="text-3xl font-bold text-foreground">
@@ -164,18 +156,10 @@ export default function ForgotPasswordPage() {
     >
       <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
         <CardHeader className="space-y-4 text-center pb-8">
-          <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-xl shadow-purple-500/25 dark:shadow-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30">
-            {/* Gradient background - purple to blue for recovery */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-visanet-blue" />
-            
-            {/* Subtle inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20" />
-            
-            {/* Border that works in both themes */}
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 dark:ring-white/10" />
-            
-            {/* Icon with subtle shadow for depth */}
-            <KeyRound className="h-8 w-8 text-white relative z-10 drop-shadow-lg" />
+          <div className="mx-auto p-3 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 dark:from-purple-500/20 dark:to-purple-600/10 backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <KeyRound className="h-5 w-5 text-white" />
+            </div>
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold text-foreground">
