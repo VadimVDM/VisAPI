@@ -38,7 +38,6 @@ const passwordSchema = z.object({
   password: z.string().min(1, {
     message: 'Password is required.',
   }),
-  rememberMe: z.boolean().optional(),
 });
 
 const magicLinkSchema = z.object({
@@ -69,7 +68,6 @@ function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
-      rememberMe: false,
     },
   });
 
@@ -401,21 +399,6 @@ function LoginForm() {
                               </FormItem>
                             )}
                           />
-
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="remember"
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              {...passwordForm.register('rememberMe')}
-                            />
-                            <label
-                              htmlFor="remember"
-                              className="text-sm text-muted-foreground"
-                            >
-                              Remember me for 30 days
-                            </label>
-                          </div>
 
                           {error && (
                             <motion.div
