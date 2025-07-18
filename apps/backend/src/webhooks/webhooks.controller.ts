@@ -24,7 +24,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('Webhooks')
-@Controller('api/v1/triggers')
+@Controller('v1/triggers')
 export class WebhooksController {
   private readonly MAX_PAYLOAD_SIZE = 512 * 1024; // 512KB
 

@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('Notifications')
-@Controller('api/v1/notifications/slack')
+@Controller('v1/notifications/slack')
 export class SlackController {
   constructor(
     @InjectPinoLogger(SlackController.name)

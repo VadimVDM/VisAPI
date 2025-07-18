@@ -11,7 +11,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('Queue')
-@Controller('api/v1/queue')
+@Controller('v1/queue')
 export class QueueController {
   constructor(private readonly queueService: QueueService) {}
 

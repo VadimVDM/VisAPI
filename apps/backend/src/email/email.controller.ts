@@ -18,7 +18,7 @@ interface WebhookHeaders {
   'webhook-signature'?: string;
 }
 
-@Controller('api/v1/email')
+@Controller('v1/email')
 export class EmailController {
   private readonly logger = new Logger(EmailController.name);
 

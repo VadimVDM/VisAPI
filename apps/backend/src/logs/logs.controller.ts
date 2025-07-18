@@ -15,7 +15,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('logs')
-@Controller('api/v1/logs')
+@Controller('v1/logs')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class LogsController {

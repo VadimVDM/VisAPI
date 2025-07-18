@@ -19,7 +19,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { WorkflowValidationInterceptor } from './interceptors/workflow-validation.interceptor';
 
 @ApiTags('workflows')
-@Controller('api/v1/workflows')
+@Controller('v1/workflows')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class WorkflowsController {
