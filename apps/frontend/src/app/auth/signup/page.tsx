@@ -418,7 +418,7 @@ export default function SignupPage() {
 
                           <div className="magic-link-notification border border-emerald-200 dark:border-emerald-800/30 rounded-lg p-3">
                             <p className="text-sm text-foreground flex items-center">
-                              <Sparkles className="h-4 w-4 mr-2 text-emerald-600" />
+                              <Sparkles className="h-5 w-5 mr-2 text-emerald-600" />
                               We'll send you a magic link to create your account
                               instantly
                             </p>
