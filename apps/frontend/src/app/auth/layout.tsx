@@ -1,5 +1,6 @@
 import { VisanetLogo } from '@/components/ui/visanet-logo';
 import Link from 'next/link';
+import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 
 export default function AuthLayout({
   children,
@@ -15,6 +16,7 @@ export default function AuthLayout({
             <Link href="/" className="flex items-center">
               <VisanetLogo width={140} height={40} />
             </Link>
+            <ThemeToggleAnimated />
           </div>
         </div>
       </nav>
