@@ -2,8 +2,8 @@
 
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import LogoLight from '../../../public/Visanet-Logo.svg';
-import LogoDark from '../../../public/Visanet-Logo-White.svg';
+import LogoLight from '../../assets/Visanet-Logo.svg';
+import LogoDark from '../../assets/Visanet-Logo-White.svg';
 
 interface VisanetLogoProps {
   width?: number;
