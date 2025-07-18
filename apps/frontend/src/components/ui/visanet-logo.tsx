@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
@@ -38,13 +37,13 @@ export function VisanetLogo({
   const logoSrc = currentTheme === 'dark' ? '/Visanet-Logo-White.svg' : '/Visanet-Logo.svg';
 
   return (
-    <Image
+    <img
       src={logoSrc}
       alt={alt}
       width={width}
       height={height}
       className={className}
-      priority
+      loading="eager"
     />
   );
 }
