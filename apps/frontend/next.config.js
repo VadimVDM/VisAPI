@@ -20,6 +20,13 @@ const nextConfig = {
   // Temporarily disable static page generation for error pages to work around Next.js 15 Html import issue
   trailingSlash: false,
   
+  // Image configuration for SVG support
+  images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+  
   // Skip problematic pages during CI builds
   ...(process.env.NODE_ENV === 'production' && process.env.CI === 'true' && {
     skipTrailingSlashRedirect: true,
