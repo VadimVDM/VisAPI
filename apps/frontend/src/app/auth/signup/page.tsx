@@ -12,6 +12,7 @@ import { supabase } from '@visapi/frontend-data';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import {
   Form,
   FormControl,
@@ -30,15 +31,22 @@ const signupSchema = z.object({
   email: z.string().email({
     message: 'Please enter a valid email address.',
   }),
-  password: z.string().min(8, {
-    message: 'Password must be at least 8 characters.',
-  }).regex(/[A-Z]/, {
-    message: 'Password must contain at least one uppercase letter.',
-  }).regex(/[a-z]/, {
-    message: 'Password must contain at least one lowercase letter.',
-  }).regex(/[0-9]/, {
-    message: 'Password must contain at least one number.',
-  }),
+  password: z.string()
+    .min(12, {
+      message: 'Password must be at least 12 characters.',
+    })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter.',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter.',
+    })
+    .regex(/[0-9]/, {
+      message: 'Password must contain at least one number.',
+    })
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/, {
+      message: 'Password must contain at least one symbol (!@#$%^&*...).',
+    }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -184,19 +192,21 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="password"
-                            placeholder="••••••••" 
-                            className="pl-10"
-                            disabled={isLoading}
-                            {...field} 
-                          />
-                        </div>
+                        <PasswordInput
+                          placeholder="••••••••••••"
+                          disabled={isLoading}
+                          showGenerator={true}
+                          showStrengthIndicator={true}
+                          generatorLength={14}
+                          onPasswordChange={(password) => {
+                            field.onChange(password);
+                            form.trigger('password');
+                          }}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Must be at least 8 characters with uppercase, lowercase, and numbers
+                        Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

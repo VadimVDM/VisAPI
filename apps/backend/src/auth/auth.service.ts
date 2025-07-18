@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
 import { ApiKeyRecord, User, RoleRecord, UserRoleRecord, InsertUser, InsertUserRole } from '@visapi/shared-types';
+import { validatePassword, DEFAULT_PASSWORD_REQUIREMENTS } from '@visapi/shared-utils';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AuthUser } from '@supabase/supabase-js';
@@ -155,6 +156,12 @@ export class AuthService {
       throw new BadRequestException('Email domain not allowed. Only @visanet.com emails are permitted.');
     }
 
+    // Validate password strength
+    const passwordValidation = validatePassword(password, DEFAULT_PASSWORD_REQUIREMENTS);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException(`Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`);
+    }
+
     const { data, error } = await this.supabase.client.auth.signUp({
       email,
       password,
@@ -223,6 +230,12 @@ export class AuthService {
   }
 
   async updatePassword(newPassword: string): Promise<{ error: any }> {
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword, DEFAULT_PASSWORD_REQUIREMENTS);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException(`Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`);
+    }
+
     const { error } = await this.supabase.client.auth.updateUser({
       password: newPassword,
     });
