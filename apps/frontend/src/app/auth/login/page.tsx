@@ -127,26 +127,31 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-xl border-0">
+        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <Image
-                src="/Visanet-Logo.svg"
-                alt="Visanet"
-                width={200}
-                height={60}
-                priority
-              />
+              <div className="p-3 rounded-xl bg-visanet-blue/5 border border-visanet-blue/10">
+                <Image
+                  src="/Visanet-Logo.svg"
+                  alt="Visanet"
+                  width={180}
+                  height={54}
+                  priority
+                  className="dark:invert"
+                />
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
+              Welcome back
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
               Sign in to your account to continue
             </CardDescription>
           </CardHeader>
@@ -154,13 +159,13 @@ function LoginForm() {
           <CardContent className="pb-4">
             {!magicLinkSent ? (
               <>
-                <div className="flex rounded-lg bg-muted p-1 mb-6">
+                <div className="flex rounded-lg bg-muted/50 p-1 mb-6 border border-visanet-blue/10">
                   <button
                     type="button"
-                    className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
                       authMethod === 'password'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-visanet-blue text-white shadow-md shadow-visanet-blue/25'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                     }`}
                     onClick={() => setAuthMethod('password')}
                   >
@@ -168,10 +173,10 @@ function LoginForm() {
                   </button>
                   <button
                     type="button"
-                    className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
                       authMethod === 'magic-link'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-visanet-blue text-white shadow-md shadow-visanet-blue/25'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                     }`}
                     onClick={() => setAuthMethod('magic-link')}
                   >
@@ -320,9 +325,9 @@ function LoginForm() {
                             )}
                           />
 
-                          <div className="bg-accent/10 border border-accent/20 rounded-lg p-3">
-                            <p className="text-sm text-accent-foreground flex items-center">
-                              <Sparkles className="h-4 w-4 mr-2 text-accent" />
+                          <div className="bg-visanet-green/10 border border-visanet-green/20 rounded-lg p-3">
+                            <p className="text-sm text-foreground flex items-center">
+                              <Sparkles className="h-4 w-4 mr-2 text-visanet-green" />
                               We'll send you a magic link to sign in instantly
                             </p>
                           </div>
@@ -368,8 +373,8 @@ function LoginForm() {
                 className="text-center py-8"
               >
                 <div className="mb-6">
-                  <div className="mx-auto w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center">
-                    <Mail className="h-8 w-8 text-accent" />
+                  <div className="mx-auto w-16 h-16 bg-visanet-green/20 rounded-full flex items-center justify-center border border-visanet-green/30">
+                    <Mail className="h-8 w-8 text-visanet-green" />
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Check your email</h3>
@@ -411,9 +416,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-visanet-blue" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>

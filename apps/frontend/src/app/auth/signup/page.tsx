@@ -100,25 +100,28 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-accent-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-xl border-0">
+        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-6">
-              <Image
-                src="/Visanet-Logo.svg"
-                alt="Visanet"
-                width={200}
-                height={60}
-                priority
-              />
+              <div className="p-3 rounded-xl bg-visanet-blue/5 border border-visanet-blue/10">
+                <Image
+                  src="/Visanet-Logo.svg"
+                  alt="Visanet"
+                  width={180}
+                  height={54}
+                  priority
+                  className="dark:invert"
+                />
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">Create an account</CardTitle>
             <CardDescription>
               Join Visanet to streamline your visa workflow automation
             </CardDescription>
