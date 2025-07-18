@@ -6,11 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { Loader2, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Sparkles, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
-import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,26 +136,26 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-      <ThemeToggleAnimated />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center pb-8">
-            <div className="flex justify-center mb-6">
-              <VisanetLogo height={48} width={128} className="h-12 w-auto" />
-            </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md"
+    >
+      <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-visanet-blue/20 to-visanet-green/20 rounded-2xl flex items-center justify-center shadow-lg shadow-visanet-blue/10">
+            <LogIn className="h-8 w-8 text-visanet-blue" />
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold">
               Welcome back
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Login to your account to continue
+            <CardDescription className="text-base">
+              Sign in to continue to VisAPI
             </CardDescription>
-          </CardHeader>
+          </div>
+        </CardHeader>
 
           <CardContent className="pb-4">
             {!magicLinkSent ? (
@@ -477,7 +476,6 @@ function LoginForm() {
           )}
         </Card>
       </motion.div>
-    </div>
   );
 }
 
@@ -485,7 +483,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5">
+        <div className="flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-visanet-blue" />
             <p className="text-muted-foreground">Loading...</p>

@@ -6,10 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
 import { supabase } from '@visapi/frontend-data';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
-import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,39 +88,34 @@ export default function ForgotPasswordPage() {
 
   if (isEmailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-        <ThemeToggleAnimated />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
-            <CardHeader className="space-y-1 text-center pb-8">
-              <div className="flex justify-center mb-6">
-                <VisanetLogo height={48} width={128} className="h-12 w-auto" />
-              </div>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
-                className="mb-6"
-              >
-                <div className="mx-auto w-16 h-16 bg-visanet-green/20 rounded-full flex items-center justify-center border border-visanet-green/30">
-                  <Mail className="h-8 w-8 text-visanet-green" />
-                </div>
-              </motion.div>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="space-y-4 text-center pb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
+              className="mx-auto w-16 h-16 bg-visanet-green/20 rounded-2xl flex items-center justify-center shadow-lg shadow-visanet-green/10"
+            >
+              <Mail className="h-8 w-8 text-visanet-green" />
+            </motion.div>
+            <div className="space-y-2">
+              <CardTitle className="text-3xl font-bold">
                 Check your email
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-base">
                 We've sent a password reset link to{' '}
                 <span className="font-medium text-foreground">
                   {form.getValues('email')}
                 </span>
               </CardDescription>
-            </CardHeader>
+            </div>
+          </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -150,31 +144,30 @@ export default function ForgotPasswordPage() {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-      <ThemeToggleAnimated />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center pb-8">
-            <div className="flex justify-center mb-6">
-              <VisanetLogo height={48} width={128} className="h-12 w-auto" />
-            </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-visanet-blue to-visanet-green bg-clip-text text-transparent">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md"
+    >
+      <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-visanet-blue/20 to-visanet-green/20 rounded-2xl flex items-center justify-center shadow-lg shadow-visanet-blue/10">
+            <KeyRound className="h-8 w-8 text-visanet-blue" />
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold">
               Forgot password?
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="text-base">
               No worries, we'll send you reset instructions
             </CardDescription>
-          </CardHeader>
+          </div>
+        </CardHeader>
           <CardContent className="pb-4">
             <Form {...form}>
               <form
@@ -249,6 +242,5 @@ export default function ForgotPasswordPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
   );
 }

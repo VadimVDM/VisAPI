@@ -3,5 +3,8 @@
 		"@svgr/webpack": "^8.1.0",
 		"@tailwindcss/forms": "^0.5.10",
 		"tailwindcss": "^4.1.11"
+	},
+	"dependencies": {
+		"lucide-react": "^0.525.0"
 	}
 }

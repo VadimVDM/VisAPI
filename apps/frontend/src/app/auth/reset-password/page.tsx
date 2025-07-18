@@ -8,10 +8,9 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, CheckCircle2, Loader2, AlertCircle, RefreshCcw } from 'lucide-react';
 import { supabase } from '@visapi/frontend-data';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
-import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -128,8 +127,6 @@ function ResetPasswordForm() {
   // Handle invalid token
   if (tokenValid === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-        <ThemeToggleAnimated />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,8 +181,6 @@ function ResetPasswordForm() {
   // Success state
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-        <ThemeToggleAnimated />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -236,8 +231,6 @@ function ResetPasswordForm() {
   // Loading state while checking token
   if (tokenValid === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-        <ThemeToggleAnimated />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -260,8 +253,6 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-      <ThemeToggleAnimated />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -378,7 +369,6 @@ function ResetPasswordForm() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
   );
 }
 
@@ -401,7 +391,6 @@ function ResetPasswordLoading() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
   );
 }
 

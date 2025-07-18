@@ -14,43 +14,37 @@ import {
 import { motion } from 'framer-motion';
 import { Suspense } from 'react';
 import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
-import { VisanetLogo } from '@/components/ui/visanet-logo';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error') || 'An authentication error occurred';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5 px-4 py-12">
-      <ThemeToggleAnimated />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center pb-8">
-            <div className="flex justify-center mb-6">
-              <VisanetLogo height={48} width={128} className="h-12 w-auto" />
-            </div>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
-              className="mb-6"
-            >
-              <div className="mx-auto w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center border border-destructive/30">
-                <AlertCircle className="h-8 w-8 text-destructive" />
-              </div>
-            </motion.div>
-            <CardTitle className="text-2xl font-bold text-destructive">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md"
+    >
+      <Card className="shadow-xl border border-visanet-blue/10 bg-card/50 backdrop-blur-sm">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
+            className="mx-auto w-16 h-16 bg-destructive/20 rounded-2xl flex items-center justify-center shadow-lg shadow-destructive/10"
+          >
+            <AlertCircle className="h-8 w-8 text-destructive" />
+          </motion.div>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold">
               Authentication Error
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="text-base">
               We encountered an issue with your authentication
             </CardDescription>
-          </CardHeader>
+          </div>
+        </CardHeader>
 
           <CardContent className="pb-8">
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
@@ -91,7 +85,6 @@ function AuthErrorContent() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
   );
 }
 
@@ -99,7 +92,7 @@ export default function AuthErrorPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-visanet-blue/5 via-background to-visanet-green/5">
+        <div className="flex items-center justify-center">
           <div className="text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-visanet-blue border-t-transparent mx-auto mb-4" />
             <p className="text-muted-foreground">Loading...</p>
