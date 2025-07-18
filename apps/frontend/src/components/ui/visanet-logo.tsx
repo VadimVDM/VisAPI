@@ -44,6 +44,8 @@ export function VisanetLogo({
       height={height}
       className={className}
       aria-label={alt}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ maxWidth: '100%', height: 'auto' }}
     />
   );
 }
