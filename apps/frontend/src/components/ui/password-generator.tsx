@@ -46,7 +46,7 @@ export function PasswordGenerator({
         <Button
           type="button"
           variant="outline"
-          size="xs"
+          size="sm"
           onClick={handleGeneratePassword}
           className="flex items-center space-x-1 h-7 px-2 text-xs"
         >
@@ -58,7 +58,7 @@ export function PasswordGenerator({
           <Button
             type="button"
             variant="outline"
-            size="xs"
+            size="sm"
             onClick={handleCopyPassword}
             className="flex items-center space-x-1 h-7 px-2 text-xs"
           >
