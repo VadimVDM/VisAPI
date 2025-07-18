@@ -85,7 +85,7 @@
     "@supabase/supabase-js": "^2.51.0",
     "@swc-node/register": "~1.9.2",
     "@swc/cli": "~0.6.0",
-    "@swc/core": "~1.5.29",
+    "@swc/core": "~1.12.14",
     "@swc/helpers": "~0.5.17",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
