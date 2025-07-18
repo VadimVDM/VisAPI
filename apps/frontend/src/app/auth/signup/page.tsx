@@ -177,6 +177,13 @@ export default function SignupPage() {
                   )}
                 />
 
+                <div className="bg-visanet-blue/10 border border-visanet-blue/20 rounded-lg p-3">
+                  <p className="text-sm text-foreground flex items-center">
+                    <Lock className="h-4 w-4 mr-2 text-visanet-blue" />
+                    Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
+                  </p>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="password"
@@ -201,13 +208,6 @@ export default function SignupPage() {
                     </FormItem>
                   )}
                 />
-
-                <div className="bg-visanet-blue/10 border border-visanet-blue/20 rounded-lg p-3">
-                  <p className="text-sm text-foreground flex items-center">
-                    <Lock className="h-4 w-4 mr-2 text-visanet-blue" />
-                    Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
-                  </p>
-                </div>
 
                 {error && (
                   <motion.div
