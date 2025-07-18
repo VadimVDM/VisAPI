@@ -627,9 +627,15 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete**
+**Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete, Email System Ready**
 
-VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved all major milestones with Week 1 authentication system, Week 2 dashboard UI, and Week 3 email integration fully completed and deployed. The system features real-time API integration, beautiful shadcn/ui components, comprehensive role-based access control, and enterprise-grade email system with 100% uptime.
+VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved all major milestones:
+- Week 1: Authentication system with magic links ✅
+- Week 2: Premium dashboard UI with real-time data ✅  
+- Week 3: Email integration with branded templates ✅ (99% - ready for testing)
+- Week 4: Comprehensive testing coverage (upcoming)
+
+The system is production-ready with all infrastructure deployed and operational.
 
 **Key Milestones Achieved:**
 
@@ -704,20 +710,20 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ### Common Fixes:
 
-1. **NestJS API Path Versioning**: Controllers must use `@Controller('api/v1/resource')` not `@Controller('resource')`
+1. **NestJS API Path Versioning**: Controllers must use `@Controller('v1/resource')` not `@Controller('api/v1/resource')` (app has global 'api' prefix)
 2. **Next.js 15 useSearchParams**: Must wrap components using `useSearchParams()` in `<Suspense>` boundaries
 3. **Test Mocks**: Ensure test mocks match actual controller implementation (e.g., `req.userRecord.id`)
 4. **Health Endpoints**: Ensure app.module.ts imports correct controller (`./app.controller` not `../app.controller`)
+5. **Email Domains**: Resend requires verified domains - use @visanet.app not @visapi.app
 
 ### Known Issues (Non-Critical):
 
 1. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining
 2. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility  
 3. **NX Peer Dependencies**: Minor @nx/linter version mismatch - non-blocking
-4. ~~**Render Deployments**: Occasional delays~~ ✅ **RESOLVED** - Health endpoints fixed, deployments stable
 
 ---
 
-**Last Updated:** July 17, 2025
+**Last Updated:** July 18, 2025
 **Version:** v1.0.0 - Production Ready
-**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (Frontend Auth + Dashboard + Email System) - Production stable
+**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (99% - email testing remaining) - Production stable
