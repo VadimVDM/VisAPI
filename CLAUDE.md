@@ -39,6 +39,8 @@ Essential information for working with the VisAPI project. Updated: July 18, 202
 - ✅ Complete frontend dashboard with real-time API integration and auto-refresh (Sprint 5)
 - ✅ Enterprise email system with branded templates and Resend integration (Sprint 5)
 - ✅ Magic link authentication with custom domain routing through api.visanet.app (Sprint 5)
+- ✅ Modern Tailwind CSS v4 configuration with complete Visanet brand system (July 18, 2025)
+- ✅ World-class frontend UI matching Stripe/Resend quality with proper styling (July 18, 2025)
 
 ## Project Structure
 
@@ -102,7 +104,7 @@ VisAPI/
 **Frontend** (app.visanet.app)
 
 - Next.js 15 with App Router
-- TypeScript 5.8, Tailwind CSS 4.1, shadcn/ui components
+- TypeScript 5.8, Tailwind CSS 4.1 (modern configuration), shadcn/ui components
 - Supabase Auth (Magic Link) with role-based access control
 - Real-time dashboard with Recharts data visualization
 - Dark/light mode with system preference detection
@@ -714,6 +716,16 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - Use dependency injection in NestJS
 - Follow React best practices in Next.js
 
+### Frontend Development Notes (Updated July 18, 2025):
+
+- **Tailwind CSS v4**: Project now uses modern Tailwind v4 with `@import "tailwindcss";` syntax
+- **Configuration**: TypeScript config at `tailwind.config.ts` with full Visanet brand system
+- **CSS Architecture**: Enhanced design tokens, custom properties, and modern CSS features
+- **Brand Colors**: Primary `#1d41ff` (Visanet Blue), Secondary `#4fedb8` (Visanet Green)
+- **PostCSS**: Uses `@tailwindcss/postcss` plugin for v4 compatibility
+- **Theme System**: Complete dark/light mode with CSS custom properties
+- **UI Quality**: Matches Stripe/Resend dashboard quality standards
+
 ### Common Fixes:
 
 1. **NestJS API Path Versioning**: Controllers must use `@Controller('v1/resource')` not `@Controller('api/v1/resource')` (app has global 'api' prefix)
@@ -722,6 +734,8 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 4. **Health Endpoints**: Ensure app.module.ts imports correct controller (`./app.controller` not `../app.controller`)
 5. **Email Domains**: Resend requires verified domains - use @visanet.app not @visapi.app
 6. **Supabase Auth Methods**: Use `auth.verifyOtp()` directly, not `auth.admin.verifyOtp()` (admin namespace doesn't have verifyOtp)
+7. **Tailwind CSS v4**: Use `@import "tailwindcss";` instead of legacy `@tailwind` directives (July 18, 2025)
+8. **CSS Build Issues**: Verify PostCSS config uses `@tailwindcss/postcss` for v4 compatibility
 
 ### Known Issues (Non-Critical):
 

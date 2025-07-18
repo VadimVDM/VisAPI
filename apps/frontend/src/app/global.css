@@ -1,72 +1,84 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
-    /* Visanet-themed Light Mode */
+    /* Visanet Brand Design System */
+    /* Light Mode Theme */
     --background: 0 0% 100%;
     --foreground: 0 0% 12%; /* #1e1e1e */
     
+    /* Neutral colors */
     --muted: 0 0% 66%; /* #a9a9a9 */
     --muted-foreground: 0 0% 40%;
     
+    /* Interactive surfaces */
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 12%;
-    
     --card: 0 0% 100%;
     --card-foreground: 0 0% 12%;
     
+    /* Form elements */
     --border: 220 30% 90%; /* Light border based on #e4ecf5 */
     --input: 220 30% 90%;
     
-    --primary: 229 100% 56%; /* #1d41ff */
+    /* Brand colors */
+    --primary: 229 100% 56%; /* Visanet Blue #1d41ff */
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 165 77% 61%; /* #4fedb8 */
+    --secondary: 165 77% 61%; /* Visanet Green #4fedb8 */
     --secondary-foreground: 0 0% 12%;
-    
     --accent: 165 77% 61%; /* #4fedb8 */
     --accent-foreground: 0 0% 12%;
     
+    /* Status colors */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     
+    /* Interactive elements */
     --ring: 229 100% 56%; /* Primary color for focus rings */
     
+    /* Design tokens */
     --radius: 0.5rem;
+    --shadow-color: 220 3% 15%;
+    --shadow-strength: 1%;
   }
   
   .dark {
-    /* Visanet-themed Dark Mode */
+    /* Visanet Dark Mode Theme */
     --background: 0 0% 12%; /* #1e1e1e */
     --foreground: 220 30% 94%; /* #e4ecf5 */
     
+    /* Neutral colors */
     --muted: 0 0% 15%; /* #252525 */
     --muted-foreground: 0 0% 66%; /* #a9a9a9 */
     
+    /* Interactive surfaces */
     --popover: 0 0% 15%; /* #252525 */
     --popover-foreground: 220 30% 94%;
-    
     --card: 0 0% 15%; /* #252525 */
     --card-foreground: 220 30% 94%;
     
+    /* Form elements */
     --border: 0 0% 20%;
     --input: 0 0% 20%;
     
+    /* Brand colors (consistent across themes) */
     --primary: 229 100% 56%; /* #1d41ff */
     --primary-foreground: 0 0% 100%;
-    
     --secondary: 165 77% 61%; /* #4fedb8 */
     --secondary-foreground: 0 0% 12%;
-    
     --accent: 165 77% 61%; /* #4fedb8 */
     --accent-foreground: 0 0% 12%;
     
+    /* Status colors */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     
+    /* Interactive elements */
     --ring: 229 100% 56%;
+    
+    /* Design tokens */
+    --shadow-color: 220 3% 9%;
+    --shadow-strength: 2%;
   }
 }
 
@@ -74,38 +86,62 @@
   * {
     border-color: hsl(var(--border));
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Improved focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Better selection colors */
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary-foreground));
   }
 }
 
-/* Custom animations for OTP and loading states */
-@keyframes pulse-scale {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
+@layer components {
+  /* Enhanced animation utilities */
+  .animate-pulse-scale {
+    animation: pulse-scale 2s ease-in-out infinite;
   }
-  50% {
-    transform: scale(0.95);
-    opacity: 0.7;
+  
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
   }
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(10px);
-    opacity: 0;
+  
+  .animate-slide-down {
+    animation: slide-down 0.3s ease-out;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+  
+  /* Glassmorphism utilities */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
   }
-}
-
-.animate-pulse-scale {
-  animation: pulse-scale 2s ease-in-out infinite;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+  
+  .glass-dark {
+    @apply backdrop-blur-md bg-black/10 border border-black/20;
+  }
+  
+  /* Enhanced shadows */
+  .shadow-visanet {
+    box-shadow: 
+      0 1px 3px hsl(var(--shadow-color) / var(--shadow-strength)),
+      0 4px 12px hsl(var(--shadow-color) / calc(var(--shadow-strength) * 0.6));
+  }
+  
+  .shadow-visanet-lg {
+    box-shadow: 
+      0 4px 6px hsl(var(--shadow-color) / var(--shadow-strength)),
+      0 20px 25px hsl(var(--shadow-color) / calc(var(--shadow-strength) * 0.8));
+  }
 }

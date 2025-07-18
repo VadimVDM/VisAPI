@@ -8,52 +8,19 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            backgroundColor: '#f9fafb',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          }}
-        >
-          <h1
-            style={{
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: '#dc2626',
-              marginBottom: '1rem',
-            }}
-          >
-            Something went wrong!
-          </h1>
-          <p
-            style={{
-              color: '#6b7280',
-              marginBottom: '2rem',
-            }}
-          >
-            A global error occurred.
-          </p>
-          <button
-            onClick={reset}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-            }}
-          >
-            Try again
-          </button>
-        </div>
-      </body>
-    </html>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-sans">
+      <h1 className="text-4xl font-bold text-red-600 mb-4">
+        Something went wrong!
+      </h1>
+      <p className="text-gray-600 mb-8">
+        A global error occurred.
+      </p>
+      <button
+        onClick={reset}
+        className="px-4 py-2 bg-blue-500 text-white border-none rounded-md cursor-pointer hover:bg-blue-600 transition-colors"
+      >
+        Try again
+      </button>
+    </div>
   );
 }
