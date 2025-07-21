@@ -73,13 +73,13 @@ jobs:
           ref: ${{ github.event.inputs.version || github.event.release.tag_name }}
 
       - name: Deploy API Gateway
-        uses: johnbeynon/render-deploy-action@v0.0.8
+        uses: johnbeynon/render-deploy-action@v0.0.9
         with:
           service-id: ${{ secrets.RENDER_GATEWAY_SERVICE_ID_PROD }}
           api-key: ${{ secrets.RENDER_API_KEY }}
 
       - name: Deploy Worker
-        uses: johnbeynon/render-deploy-action@v0.0.8
+        uses: johnbeynon/render-deploy-action@v0.0.9
         with:
           service-id: ${{ secrets.RENDER_WORKER_SERVICE_ID_PROD }}
           api-key: ${{ secrets.RENDER_API_KEY }}
