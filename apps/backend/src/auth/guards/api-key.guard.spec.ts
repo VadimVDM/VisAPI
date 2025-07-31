@@ -91,7 +91,7 @@ describe('ApiKeyGuard', () => {
       expect(authService.validateApiKey).toHaveBeenCalledWith(
         'vapi_validkey123',
       );
-      const request = context.switchToHttp().getRequest() as Request & { apiKey: ApiKeyRecord };
+      const request = context.switchToHttp().getRequest<{ apiKey: ApiKeyRecord }>();
       expect(request.apiKey).toEqual(mockApiKey);
     });
 
@@ -147,7 +147,7 @@ describe('ApiKeyGuard', () => {
 
       const requiredScopes = ['admin:write'];
       authService.validateApiKey.mockResolvedValue(mockApiKey);
-      authService.checkScopes.mockResolvedValue(false);
+      authService.checkScopes.mockReturnValue(false);
       reflector.getAllAndOverride.mockReturnValue(requiredScopes);
 
       await expect(guard.canActivate(context)).rejects.toThrow(
@@ -221,7 +221,7 @@ describe('ApiKeyGuard', () => {
 
       await guard.canActivate(context);
 
-      const request = context.switchToHttp().getRequest();
+      const request = context.switchToHttp().getRequest<{ apiKey: ApiKeyRecord }>();
       expect(request.apiKey).toEqual(mockApiKey);
     });
 

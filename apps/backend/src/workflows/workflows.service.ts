@@ -5,7 +5,10 @@ import {
   UpdateWorkflowDto,
   WorkflowResponseDto,
 } from './dto';
-import { WorkflowSchema } from '@visapi/shared-types';
+import { WorkflowSchema, Database } from '@visapi/shared-types';
+
+// Type for workflow database row
+type WorkflowRow = Database['public']['Tables']['workflows']['Row'];
 
 @Injectable()
 export class WorkflowsService {
@@ -31,7 +34,9 @@ export class WorkflowsService {
 
     const { data, error } = await this.supabase.client
       .from('workflows')
-      .insert(workflowData)
+      .insert(
+        workflowData as Database['public']['Tables']['workflows']['Insert'],
+      )
       .select()
       .single();
 
@@ -41,7 +46,7 @@ export class WorkflowsService {
     }
 
     this.logger.log(`Created workflow: ${data.id}`);
-    return this.mapToResponseDto(data as any);
+    return this.mapToResponseDto(data);
   }
 
   async findAll(): Promise<WorkflowResponseDto[]> {
@@ -55,7 +60,7 @@ export class WorkflowsService {
       throw new Error('Failed to fetch workflows');
     }
 
-    return data.map((workflow) => this.mapToResponseDto(workflow as any));
+    return data.map((workflow) => this.mapToResponseDto(workflow));
   }
 
   async findOne(id: string): Promise<WorkflowResponseDto> {
@@ -70,7 +75,7 @@ export class WorkflowsService {
       throw new NotFoundException(`Workflow with id ${id} not found`);
     }
 
-    return this.mapToResponseDto(data as any);
+    return this.mapToResponseDto(data);
   }
 
   async update(
@@ -105,7 +110,7 @@ export class WorkflowsService {
     }
 
     this.logger.log(`Updated workflow: ${id}`);
-    return this.mapToResponseDto(data as any);
+    return this.mapToResponseDto(data);
   }
 
   async remove(id: string): Promise<void> {
@@ -134,17 +139,18 @@ export class WorkflowsService {
       throw new Error('Failed to fetch enabled workflows');
     }
 
-    return data.map((workflow) => this.mapToResponseDto(workflow as any));
+    return data.map((workflow) => this.mapToResponseDto(workflow));
   }
 
-  private mapToResponseDto(workflow: any): WorkflowResponseDto {
+  private mapToResponseDto(workflow: WorkflowRow): WorkflowResponseDto {
+    const schema = workflow.schema as unknown as WorkflowSchema;
     return {
       id: workflow.id,
       name: workflow.name,
       description: workflow.description,
       enabled: workflow.enabled,
-      variables: workflow.schema?.variables || undefined,
-      schema: workflow.schema,
+      variables: schema?.variables || undefined,
+      schema: schema,
       created_at: workflow.created_at,
       updated_at: workflow.updated_at,
     };

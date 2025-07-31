@@ -32,7 +32,7 @@ export class WorkflowResponseDto {
     example: { timezone: 'UTC', defaultLanguage: 'en' },
     required: false,
   })
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
 
   @ApiProperty({
     description: 'Workflow definition as JSON object',

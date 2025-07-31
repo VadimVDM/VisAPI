@@ -8,7 +8,6 @@ import {
   WorkflowSchema,
   Workflow,
 } from '@visapi/shared-types';
-import { Job } from 'bullmq';
 
 interface CronDriftMetric {
   workflowId: string;
@@ -72,7 +71,17 @@ export class CronSeederService implements OnModuleInit {
     }
   }
 
-  private async getWorkflowsWithCronTriggers(): Promise<Workflow[]> {
+  private async getWorkflowsWithCronTriggers(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      enabled: boolean;
+      schema: WorkflowSchema;
+      created_at: string;
+      updated_at: string;
+    }>
+  > {
     const { data, error } = await this.supabase.serviceClient
       .from('workflows')
       .select('*')
@@ -82,13 +91,24 @@ export class CronSeederService implements OnModuleInit {
       throw new Error(`Failed to fetch workflows: ${error.message}`);
     }
 
-    // Filter workflows that have cron triggers
-    return (data || []).filter((workflow) => {
-      const schema = workflow.schema as unknown as WorkflowSchema;
-      return schema?.triggers?.some(
-        (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
-      );
-    });
+    // Filter workflows that have cron triggers and convert to Workflow type
+    const workflowRows = data || [];
+    return workflowRows
+      .filter((workflowRow) => {
+        const schema = workflowRow.schema as unknown as WorkflowSchema;
+        return schema?.triggers?.some(
+          (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
+        );
+      })
+      .map((workflowRow) => ({
+        id: workflowRow.id,
+        name: workflowRow.name,
+        description: workflowRow.description,
+        enabled: workflowRow.enabled,
+        schema: workflowRow.schema as unknown as WorkflowSchema,
+        created_at: workflowRow.created_at,
+        updated_at: workflowRow.updated_at,
+      }));
   }
 
   private async clearExistingCronJobs(): Promise<void> {
@@ -117,8 +137,16 @@ export class CronSeederService implements OnModuleInit {
     }
   }
 
-  private async scheduleWorkflow(workflow: Workflow): Promise<void> {
-    const schema = workflow.schema as unknown as WorkflowSchema;
+  private async scheduleWorkflow(workflow: {
+    id: string;
+    name: string;
+    description: string | null;
+    enabled: boolean;
+    schema: WorkflowSchema;
+    created_at: string;
+    updated_at: string;
+  }): Promise<void> {
+    const schema = workflow.schema;
     const cronTriggers = schema.triggers.filter(
       (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
     );
@@ -126,7 +154,10 @@ export class CronSeederService implements OnModuleInit {
     for (const trigger of cronTriggers) {
       try {
         const schedule = trigger.config.schedule;
-        const timezone = (trigger.config.timezone as string) || 'UTC';
+        const timezone =
+          typeof trigger.config.timezone === 'string'
+            ? trigger.config.timezone
+            : 'UTC';
 
         await this.queueService.addRepeatableJob(
           QUEUE_NAMES.DEFAULT,
@@ -201,7 +232,10 @@ export class CronSeederService implements OnModuleInit {
         );
 
         if (hasCronTrigger) {
-          await this.scheduleWorkflow(workflow);
+          await this.scheduleWorkflow({
+            ...workflow,
+            schema: schema,
+          });
         }
       }
     } catch (error: unknown) {
@@ -244,7 +278,8 @@ export class CronSeederService implements OnModuleInit {
 
       for (const job of repeatableJobs) {
         if (job.name === JOB_NAMES.PROCESS_WORKFLOW && job.next) {
-          const workflowId = (job as any).data.workflowId as string;
+          // Extract workflowId from job key or options
+          const workflowId = job.key.split(':').pop() || 'unknown';
           const nextRun = new Date(job.next);
           const now = new Date();
           const drift = nextRun.getTime() - now.getTime();

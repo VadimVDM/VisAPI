@@ -4,6 +4,8 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { ApiKeyRecord } from '@visapi/shared-types';
 import { ConfigService } from '@visapi/core-config';
 import { PinoLogger } from 'nestjs-pino';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@visapi/shared-types';
 import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt module properly
@@ -15,11 +17,17 @@ jest.mock('bcrypt', () => ({
 // Get the mocked functions after the module is mocked
 const mockedBcrypt = jest.mocked(bcrypt);
 
+// Type for Supabase mock responses
+type SupabaseResponse<T> = {
+  data: T | null;
+  error: { message: string } | null;
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
   // Mock factory for Supabase client to reduce boilerplate
-  const createMockSupabaseClient = () => {
+  const createMockSupabaseClient = (): Partial<SupabaseClient<Database>> => {
     const selectMock = jest.fn();
     const singleMock = jest.fn();
     const eqMock = jest.fn();
@@ -53,7 +61,7 @@ describe('AuthService', () => {
           }),
         }),
       }),
-    };
+    } as Partial<SupabaseClient<Database>>;
   };
 
   const mockSupabaseClient = createMockSupabaseClient();
@@ -125,7 +133,7 @@ describe('AuthService', () => {
       (selectResult.single as jest.Mock).mockResolvedValue({
         data: mockApiKey,
         error: null,
-      });
+      } as SupabaseResponse<ApiKeyRecord>);
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
@@ -144,7 +152,7 @@ describe('AuthService', () => {
       (selectResult.single as jest.Mock).mockResolvedValue({
         data: null,
         error: { message: 'No rows found' },
-      });
+      } as SupabaseResponse<ApiKeyRecord>);
 
       const result = await service.validateApiKey('invalid_testsecret');
 
@@ -172,7 +180,7 @@ describe('AuthService', () => {
       (selectResult.single as jest.Mock).mockResolvedValue({
         data: mockApiKey,
         error: null,
-      });
+      } as SupabaseResponse<ApiKeyRecord>);
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
@@ -186,7 +194,7 @@ describe('AuthService', () => {
       (selectResult.single as jest.Mock).mockResolvedValue({
         data: null,
         error: { message: 'Database error' },
-      });
+      } as SupabaseResponse<ApiKeyRecord>);
 
       const result = await service.validateApiKey('test_key');
 
@@ -217,7 +225,7 @@ describe('AuthService', () => {
       (selectResult.single as jest.Mock).mockResolvedValue({
         data: mockApiKey,
         error: null,
-      });
+      } as SupabaseResponse<ApiKeyRecord>);
 
       const result = await service.validateApiKey('vapi_wrongsecret');
 
@@ -248,7 +256,7 @@ describe('AuthService', () => {
   });
 
   describe('checkScopes', () => {
-    it('should return true when api key has required scope', async () => {
+    it('should return true when api key has required scope', () => {
       const apiKey = createMockApiKey({
         scopes: ['webhooks:trigger', 'workflows:read'],
       });
@@ -258,7 +266,7 @@ describe('AuthService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when api key does not have required scope', async () => {
+    it('should return false when api key does not have required scope', () => {
       const apiKey = createMockApiKey({
         scopes: ['webhooks:trigger'],
       });
@@ -268,7 +276,7 @@ describe('AuthService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true when no scopes are required', async () => {
+    it('should return true when no scopes are required', () => {
       const apiKey = createMockApiKey({
         scopes: [],
       });

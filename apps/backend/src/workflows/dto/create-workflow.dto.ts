@@ -4,12 +4,9 @@ import {
   IsOptional,
   IsObject,
   IsBoolean,
-  IsArray,
-  ValidateNested,
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateWorkflowDto {
@@ -50,7 +47,7 @@ export class CreateWorkflowDto {
   })
   @IsOptional()
   @IsObject()
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
 
   @ApiProperty({
     description: 'Workflow definition as JSON object',
@@ -81,12 +78,12 @@ export class CreateWorkflowDto {
   schema: {
     triggers: Array<{
       type: 'webhook' | 'cron' | 'manual';
-      config: Record<string, any>;
+      config: Record<string, unknown>;
     }>;
     steps: Array<{
       id: string;
       type: 'slack.send' | 'whatsapp.send' | 'pdf.generate' | 'email.send';
-      config: Record<string, any>;
+      config: Record<string, unknown>;
       retries?: number;
       timeout?: number;
     }>;

@@ -139,7 +139,7 @@ export class SlackController {
 
       // Validate webhook signature if present
       if (signature && timestamp) {
-        const isValid = await this.slackService.validateWebhookSignature(
+        const isValid = this.slackService.validateWebhookSignature(
           JSON.stringify(payload),
           timestamp,
           signature,
@@ -167,7 +167,7 @@ export class SlackController {
       };
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to process Grafana webhook', {
         error: errorMessage,
         ruleName: payload?.ruleName,
@@ -263,7 +263,7 @@ export class SlackController {
       };
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to send custom Slack alert', {
         error: errorMessage,
         message: body?.message,
@@ -309,7 +309,7 @@ export class SlackController {
       };
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to send test Slack message', {
         error: errorMessage,
       });

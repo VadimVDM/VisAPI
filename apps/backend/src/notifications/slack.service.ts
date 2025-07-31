@@ -56,7 +56,7 @@ export class SlackService {
       });
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to send Slack alert', {
         error: errorMessage,
         ruleName: payload.ruleName,
@@ -281,7 +281,7 @@ export class SlackService {
       });
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to send custom Slack alert', {
         error: errorMessage,
         severity,
@@ -320,7 +320,7 @@ export class SlackService {
       );
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('Failed to validate webhook signature', {
         error: errorMessage,
       });

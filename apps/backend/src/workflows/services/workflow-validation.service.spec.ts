@@ -307,7 +307,7 @@ describe('WorkflowValidationService', () => {
   });
 
   describe('validateCompleteWorkflow', () => {
-    it('should validate a complete valid workflow', async () => {
+    it('should validate a complete valid workflow', () => {
       const validWorkflow: WorkflowSchema = {
         id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Test Workflow',
@@ -335,12 +335,12 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(validWorkflow);
+      const result = service.validateCompleteWorkflow(validWorkflow);
 
       expect(result.valid).toBe(true);
     });
 
-    it('should reject workflow with duplicate step IDs', async () => {
+    it('should reject workflow with duplicate step IDs', () => {
       const invalidWorkflow = {
         name: 'Test Workflow',
         enabled: true,
@@ -372,7 +372,7 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(
+      const result = service.validateCompleteWorkflow(
         invalidWorkflow as unknown as WorkflowSchema,
       );
 
@@ -381,7 +381,7 @@ describe('WorkflowValidationService', () => {
       expect(result.errors[0]).toContain('Duplicate step IDs');
     });
 
-    it('should reject workflow with invalid cron schedule', async () => {
+    it('should reject workflow with invalid cron schedule', () => {
       const invalidWorkflow = {
         name: 'Test Workflow',
         enabled: true,
@@ -405,7 +405,7 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(
+      const result = service.validateCompleteWorkflow(
         invalidWorkflow as unknown as WorkflowSchema,
       );
 
@@ -414,7 +414,7 @@ describe('WorkflowValidationService', () => {
       expect(result.errors[0]).toContain('Cron trigger');
     });
 
-    it('should reject workflow with invalid step configuration', async () => {
+    it('should reject workflow with invalid step configuration', () => {
       const invalidWorkflow = {
         name: 'Test Workflow',
         enabled: true,
@@ -438,7 +438,7 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(
+      const result = service.validateCompleteWorkflow(
         invalidWorkflow as unknown as WorkflowSchema,
       );
 

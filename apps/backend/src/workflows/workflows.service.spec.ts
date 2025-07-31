@@ -60,7 +60,7 @@ describe('WorkflowsService', () => {
     }).compile();
 
     service = module.get<WorkflowsService>(WorkflowsService);
-    supabaseService = module.get(SupabaseService);
+    supabaseService = module.get<jest.Mocked<SupabaseService>>(SupabaseService);
   });
 
   afterEach(() => {

@@ -124,7 +124,7 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
         'Failed to push metrics to Grafana Cloud',
         errorMessage,

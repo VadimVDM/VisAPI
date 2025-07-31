@@ -6,7 +6,7 @@ import { ApiKeyRecord } from '@visapi/shared-types';
 
 @Injectable()
 export class ApiKeyStrategy extends PassportStrategy(
-  HeaderAPIKeyStrategy as any,
+  HeaderAPIKeyStrategy as unknown as new (...args: unknown[]) => HeaderAPIKeyStrategy,
   'api-key',
 ) {
   constructor(private readonly authService: AuthService) {

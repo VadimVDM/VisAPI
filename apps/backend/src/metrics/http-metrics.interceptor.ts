@@ -24,7 +24,7 @@ export class HttpMetricsInterceptor implements NestInterceptor {
     this.metricsService.incrementActiveConnections();
 
     // Extract route pattern (e.g., /api/v1/users/:id instead of /api/v1/users/123)
-    const route = request.route?.path || request.url;
+    const route = (request.route as { path?: string })?.path || request.url;
     const method = request.method;
 
     return next.handle().pipe(

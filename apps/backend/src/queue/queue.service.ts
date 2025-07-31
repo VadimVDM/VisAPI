@@ -87,7 +87,13 @@ export class QueueService {
 
       metrics.push({
         name,
-        counts: counts as QueueMetrics['counts'],
+        counts: {
+          waiting: counts.waiting || 0,
+          active: counts.active || 0,
+          completed: counts.completed || 0,
+          failed: counts.failed || 0,
+          delayed: counts.delayed || 0,
+        },
         isPaused,
       });
     }
@@ -180,7 +186,9 @@ export class QueueService {
     }
   }
 
-  async getRepeatableJobs(queueName: string): Promise<RepeatableJob[]> {
+  async getRepeatableJobs(
+    queueName: string = QUEUE_NAMES.DEFAULT,
+  ): Promise<RepeatableJob[]> {
     const queue = this.getQueue(queueName);
     return queue.getRepeatableJobs();
   }

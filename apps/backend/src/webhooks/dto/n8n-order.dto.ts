@@ -205,7 +205,7 @@ export class N8nFormDto {
   updated_at: string;
   urgency: string;
   business?: N8nBusinessDto; // Optional for business visas
-  children?: any[]; // For Korean visas
+  children?: unknown[]; // For Korean visas
   stayAddress?: string; // For Korean visas
 }
 

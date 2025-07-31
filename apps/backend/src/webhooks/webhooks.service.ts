@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
-import { N8nWebhookDto, N8nBusinessDto } from './dto/n8n-order.dto';
+import { N8nWebhookDto } from './dto/n8n-order.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import type { Json } from '@visapi/shared-types';
+import type { Json, Database } from '@visapi/shared-types';
 
 @Injectable()
 export class WebhooksService {
@@ -217,7 +217,9 @@ export class WebhooksService {
 
     const { error } = await this.supabaseService.client
       .from('applicants')
-      .insert(applicantRecords as any);
+      .insert(
+        applicantRecords as unknown as Database['public']['Tables']['applicants']['Insert'][],
+      );
 
     if (error) {
       throw new Error(`Failed to create applicants: ${error.message}`);
@@ -275,7 +277,7 @@ export class WebhooksService {
     endpoint: string,
     method: string,
     headers: Record<string, string>,
-    body: any,
+    body: unknown,
     startTime: number,
   ) {
     const processingTime = Date.now() - startTime;
@@ -284,8 +286,9 @@ export class WebhooksService {
       source,
       endpoint,
       method,
-      headers,
-      body,
+      headers:
+        headers as Database['public']['Tables']['webhook_logs']['Insert']['headers'],
+      body: body as Database['public']['Tables']['webhook_logs']['Insert']['body'],
       status_code: 200,
       processing_time_ms: processingTime,
     });
@@ -296,7 +299,7 @@ export class WebhooksService {
     endpoint: string,
     method: string,
     headers: Record<string, string>,
-    body: any,
+    body: unknown,
     error: string,
     startTime: number,
   ) {
@@ -306,8 +309,9 @@ export class WebhooksService {
       source,
       endpoint,
       method,
-      headers,
-      body,
+      headers:
+        headers as Database['public']['Tables']['webhook_logs']['Insert']['headers'],
+      body: body as Database['public']['Tables']['webhook_logs']['Insert']['body'],
       status_code: 500,
       error,
       processing_time_ms: processingTime,

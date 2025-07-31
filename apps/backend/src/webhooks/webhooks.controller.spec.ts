@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -75,7 +75,7 @@ describe('WebhooksController', () => {
     beforeEach(() => {
       (queueService.addJob as jest.Mock).mockResolvedValue(mockJob);
       (idempotencyService.checkAndExecute as jest.Mock).mockImplementation(
-        async (key, fn) => await fn(),
+        async (_key: string, fn: () => Promise<unknown>) => await fn(),
       );
     });
 

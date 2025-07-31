@@ -147,12 +147,16 @@ describe('PiiRedactionService', () => {
 
       const result = service.redactPiiFromObject(obj);
 
-      const redactedObj = result.obj as Record<string, any>;
+      const redactedObj = result.obj as Record<string, unknown>;
+      expect((redactedObj.metadata as Record<string, unknown>).ip).toBe(
+        '[IP_REDACTED]',
+      );
+      expect((redactedObj.metadata as Record<string, unknown>).notes).toBe(
+        'Contact at [EMAIL_REDACTED]',
+      );
       expect(redactedObj.name).toBe('John Doe');
       expect(redactedObj.email).toBe('[EMAIL_REDACTED]');
       expect(redactedObj.phone).toBe('[PHONE_REDACTED]');
-      expect(redactedObj.metadata.ip).toBe('[IP_REDACTED]');
-      expect(redactedObj.metadata.notes).toBe('Contact at [EMAIL_REDACTED]');
       expect(result.piiFound).toBe(true);
       expect(result.redactedFields).toContain('email');
       expect(result.redactedFields).toContain('phone_number');
@@ -184,8 +188,11 @@ describe('PiiRedactionService', () => {
 
       const result = service.redactPiiFromObject(obj);
 
-      const redactedObj = result.obj as Record<string, any>;
-      expect(redactedObj.level1.level2.level3.email).toBe('[EMAIL_REDACTED]');
+      const redactedObj = result.obj as Record<string, unknown>;
+      const level1 = redactedObj.level1 as Record<string, unknown>;
+      const level2 = level1.level2 as Record<string, unknown>;
+      const level3 = level2.level3 as Record<string, unknown>;
+      expect(level3.email).toBe('[EMAIL_REDACTED]');
       expect(result.piiFound).toBe(true);
     });
 

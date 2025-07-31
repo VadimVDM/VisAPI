@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
+import Ajv, { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { WorkflowSchema } from '@visapi/shared-types';
 import { readFileSync } from 'fs';
@@ -14,7 +14,7 @@ export interface ValidationResult {
 export class WorkflowValidationService implements OnModuleInit {
   private readonly logger = new Logger(WorkflowValidationService.name);
   private ajv: Ajv;
-  private validateWorkflow: ValidateFunction<WorkflowSchema>;
+  private validateWorkflow: ValidateFunction<unknown>;
 
   onModuleInit() {
     this.initializeAjv();
@@ -35,9 +35,7 @@ export class WorkflowValidationService implements OnModuleInit {
     try {
       const workflowSchema = this.getWorkflowSchema();
 
-      this.validateWorkflow = this.ajv.compile(
-        workflowSchema as JSONSchemaType<WorkflowSchema>,
-      );
+      this.validateWorkflow = this.ajv.compile(workflowSchema);
       this.logger.log('Workflow schema compiled successfully');
     } catch (error) {
       this.logger.error('Failed to compile workflow schema:', error);
@@ -45,7 +43,7 @@ export class WorkflowValidationService implements OnModuleInit {
     }
   }
 
-  private getWorkflowSchema(): any {
+  private getWorkflowSchema(): Record<string, unknown> {
     // Try to read from file system first
     const possiblePaths = [
       join(__dirname, '../schemas/workflow.schema.json'),
@@ -59,8 +57,8 @@ export class WorkflowValidationService implements OnModuleInit {
     for (const schemaPath of possiblePaths) {
       try {
         const schemaContent = readFileSync(schemaPath, 'utf8');
-        return JSON.parse(schemaContent);
-      } catch (error) {
+        return JSON.parse(schemaContent) as Record<string, unknown>;
+      } catch {
         // Continue to next path
       }
     }
@@ -251,8 +249,14 @@ export class WorkflowValidationService implements OnModuleInit {
       const message = error.message || 'Unknown error';
 
       // Include the data value in the error message for enum validation errors
-      if (error.keyword === 'enum' && error.data) {
-        return `${path}: ${message} (received: ${error.data})`;
+      if (error.keyword === 'enum' && error.data !== undefined) {
+        const dataStr =
+          typeof error.data === 'string'
+            ? error.data
+            : typeof error.data === 'number'
+              ? error.data.toString()
+              : JSON.stringify(error.data);
+        return `${path}: ${message} (received: ${dataStr})`;
       }
 
       // Include keyword in the error message for better test compatibility
@@ -276,7 +280,7 @@ export class WorkflowValidationService implements OnModuleInit {
    */
   validateStepConfig(
     stepType: string,
-    config: Record<string, any>,
+    config: Record<string, unknown>,
   ): ValidationResult {
     // Basic validation for required fields based on step type
     const requiredFields: Record<string, string[]> = {
@@ -305,7 +309,8 @@ export class WorkflowValidationService implements OnModuleInit {
     // Validate specific field formats
     if (stepType === 'whatsapp.send' && config.contact) {
       const phoneRegex = /^\+[1-9]\d{1,14}$/;
-      if (!phoneRegex.test(config.contact)) {
+      const contact = config.contact as string;
+      if (!phoneRegex.test(contact)) {
         return {
           valid: false,
           errors: [
@@ -317,7 +322,8 @@ export class WorkflowValidationService implements OnModuleInit {
 
     if (stepType === 'email.send' && config.recipient) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(config.recipient)) {
+      const recipient = config.recipient as string;
+      if (!emailRegex.test(recipient)) {
         return {
           valid: false,
           errors: ['Invalid email format'],
@@ -419,7 +425,7 @@ export class WorkflowValidationService implements OnModuleInit {
   /**
    * Comprehensive workflow validation combining all checks
    */
-  async validateCompleteWorkflow(workflow: unknown): Promise<ValidationResult> {
+  validateCompleteWorkflow(workflow: unknown): ValidationResult {
     // First validate against JSON schema
     const schemaResult = this.validateWorkflowDefinition(workflow);
     if (!schemaResult.valid) {

@@ -24,6 +24,7 @@ describe('QueueService', () => {
       remove: jest.fn(),
       getRepeatableJobs: jest.fn(),
       removeRepeatableByKey: jest.fn(),
+      isPaused: jest.fn(),
     }) as unknown as jest.Mocked<Queue>;
 
   beforeEach(async () => {
@@ -155,12 +156,22 @@ describe('QueueService', () => {
       defaultQueue.getJobCounts.mockResolvedValue(mockCounts);
       bulkQueue.getJobCounts.mockResolvedValue(mockCounts);
 
+      criticalQueue.isPaused.mockResolvedValue(false);
+      defaultQueue.isPaused.mockResolvedValue(false);
+      bulkQueue.isPaused.mockResolvedValue(false);
+
       const result = await service.getQueueMetrics();
 
       expect(result).toHaveLength(3);
       expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.CRITICAL,
-        counts: mockCounts,
+        counts: {
+          waiting: 5,
+          active: 2,
+          completed: 100,
+          failed: 3,
+          delayed: 1,
+        },
         isPaused: false,
       });
     });
@@ -176,13 +187,20 @@ describe('QueueService', () => {
       };
 
       defaultQueue.getJobCounts.mockResolvedValue(mockCounts);
+      defaultQueue.isPaused.mockResolvedValue(false);
 
       const result = await service.getQueueMetrics(QUEUE_NAMES.DEFAULT);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.DEFAULT,
-        counts: mockCounts,
+        counts: {
+          waiting: 5,
+          active: 2,
+          completed: 100,
+          failed: 3,
+          delayed: 1,
+        },
         isPaused: false,
       });
     });
@@ -216,7 +234,7 @@ describe('QueueService', () => {
     it('should clean the specified queue', async () => {
       await service.cleanQueue(QUEUE_NAMES.DEFAULT, 5000, 'completed');
 
-      expect(defaultQueue.clean).toHaveBeenCalledWith(5000, 'completed');
+      expect(defaultQueue.clean).toHaveBeenCalledWith(5000, 0, 'completed');
     });
   });
 });

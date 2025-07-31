@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { configuration } from '@visapi/core-config';
@@ -51,7 +50,7 @@ jest.mock('ioredis', () => {
 export const createTestModule = (
   providers: Provider[] = [],
   imports: (
-    | Type<any>
+    | Type<unknown>
     | DynamicModule
     | Promise<DynamicModule>
     | ForwardReference

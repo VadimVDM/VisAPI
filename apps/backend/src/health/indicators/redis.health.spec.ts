@@ -46,6 +46,7 @@ describe('RedisHealthIndicator', () => {
           message: 'Redis is accessible and responsive',
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(redisService.checkConnection).toHaveBeenCalledTimes(1);
     });
 
@@ -55,6 +56,7 @@ describe('RedisHealthIndicator', () => {
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
         HealthCheckError,
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(redisService.checkConnection).toHaveBeenCalledTimes(1);
     });
 

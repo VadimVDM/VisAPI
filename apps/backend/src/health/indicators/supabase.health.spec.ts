@@ -45,6 +45,7 @@ describe('SupabaseHealthIndicator', () => {
           status: 'up',
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(supabaseService.checkConnection).toHaveBeenCalledTimes(1);
     });
 
@@ -54,6 +55,7 @@ describe('SupabaseHealthIndicator', () => {
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
         HealthCheckError,
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(supabaseService.checkConnection).toHaveBeenCalledTimes(1);
     });
 

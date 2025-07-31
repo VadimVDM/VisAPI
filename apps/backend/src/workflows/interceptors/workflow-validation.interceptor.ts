@@ -13,18 +13,20 @@ import { CreateWorkflowDto, UpdateWorkflowDto } from '../dto';
 export class WorkflowValidationInterceptor implements NestInterceptor {
   constructor(private readonly validationService: WorkflowValidationService) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
-    const request = context.switchToHttp().getRequest();
-    const { body } = request;
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const httpContext = context.switchToHttp();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const request = httpContext.getRequest();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const body: unknown = request.body;
 
     // Only validate if we have a workflow schema in the body
-    if (body && body.schema) {
-      const workflowData = this.buildWorkflowForValidation(body);
+    if (body && typeof body === 'object' && body !== null && 'schema' in body) {
+      const workflowData = this.buildWorkflowForValidation(
+        body as CreateWorkflowDto | UpdateWorkflowDto,
+      );
       const result =
-        await this.validationService.validateCompleteWorkflow(workflowData);
+        this.validationService.validateCompleteWorkflow(workflowData);
 
       if (!result.valid) {
         throw new BadRequestException({
@@ -39,7 +41,7 @@ export class WorkflowValidationInterceptor implements NestInterceptor {
 
   private buildWorkflowForValidation(
     body: CreateWorkflowDto | UpdateWorkflowDto,
-  ): any {
+  ): Record<string, unknown> {
     return {
       id: body.name ? this.generateIdFromName(body.name) : undefined,
       name: body.name,

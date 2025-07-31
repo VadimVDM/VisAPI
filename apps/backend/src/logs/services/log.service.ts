@@ -6,7 +6,11 @@ import {
   LogRecord,
   LogFilters,
   PaginatedLogs,
+  Database,
 } from '@visapi/shared-types';
+
+// Type for log insert data
+type LogInsert = Database['public']['Tables']['logs']['Insert'];
 
 @Injectable()
 export class LogService {
@@ -20,7 +24,9 @@ export class LogService {
   /**
    * Create a new log entry with PII redaction
    */
-  async createLog(logEntry: Omit<LogEntry, 'id' | 'created_at' | 'pii_redacted'>): Promise<void> {
+  async createLog(
+    logEntry: Omit<LogEntry, 'id' | 'created_at' | 'pii_redacted'>,
+  ): Promise<void> {
     try {
       // Redact PII from message
       const messageResult = this.piiRedactionService.redactPii(
@@ -36,10 +42,11 @@ export class LogService {
       const piiFound = messageResult.piiFound || metadataResult.piiFound;
 
       // Prepare log data for database
-      const logData = {
+      const logData: LogInsert = {
         level: logEntry.level,
         message: messageResult.text,
-        metadata: metadataResult.obj,
+        metadata:
+          metadataResult.obj as Database['public']['Tables']['logs']['Insert']['metadata'],
         workflow_id: logEntry.workflow_id || null,
         job_id: logEntry.job_id || null,
         pii_redacted: piiFound,
@@ -49,7 +56,7 @@ export class LogService {
       // Store in database using client property
       const { error } = await this.supabase.serviceClient
         .from('logs')
-        .insert(logData as any);
+        .insert(logData);
 
       if (error) {
         this.logger.error('Failed to store log entry:', error);
@@ -128,7 +135,20 @@ export class LogService {
     }
 
     return {
-      data: (data as LogRecord[]) || [],
+      data:
+        data?.map(
+          (row) =>
+            ({
+              id: row.id,
+              level: row.level,
+              message: row.message,
+              metadata: row.metadata,
+              workflow_id: row.workflow_id,
+              job_id: row.job_id,
+              pii_redacted: row.pii_redacted,
+              created_at: row.created_at,
+            }) as LogRecord,
+        ) || [],
       pagination: {
         page: offset,
         limit,
@@ -153,7 +173,21 @@ export class LogService {
       throw new Error('Failed to fetch workflow logs');
     }
 
-    return (data as LogRecord[]) || [];
+    return (
+      data?.map(
+        (row) =>
+          ({
+            id: row.id,
+            level: row.level,
+            message: row.message,
+            metadata: row.metadata,
+            workflow_id: row.workflow_id,
+            job_id: row.job_id,
+            pii_redacted: row.pii_redacted,
+            created_at: row.created_at,
+          }) as LogRecord,
+      ) || []
+    );
   }
 
   /**
@@ -171,7 +205,21 @@ export class LogService {
       throw new Error('Failed to fetch job logs');
     }
 
-    return (data as LogRecord[]) || [];
+    return (
+      data?.map(
+        (row) =>
+          ({
+            id: row.id,
+            level: row.level,
+            message: row.message,
+            metadata: row.metadata,
+            workflow_id: row.workflow_id,
+            job_id: row.job_id,
+            pii_redacted: row.pii_redacted,
+            created_at: row.created_at,
+          }) as LogRecord,
+      ) || []
+    );
   }
 
   /**
@@ -197,7 +245,7 @@ export class LogService {
     const byLevel: Record<string, number> = {};
     let withPii = 0;
 
-    totalData?.forEach((log: { level: string; pii_redacted: boolean }) => {
+    totalData?.forEach((log) => {
       byLevel[log.level] = (byLevel[log.level] || 0) + 1;
       if (log.pii_redacted) {
         withPii++;
