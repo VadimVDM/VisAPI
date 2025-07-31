@@ -38,7 +38,7 @@ export class ViziWebhooksController {
 
   @Post('orders')
   @UseGuards(ApiKeyGuard)
-  @Scopes('webhook:vizi', 'orders:write')
+  @Scopes('webhook:vizi', 'logs:write')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Receive order data from Vizi app',
