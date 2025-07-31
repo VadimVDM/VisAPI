@@ -579,11 +579,10 @@ export class OrderDto implements Order {
   status!: (typeof ORDER_STATUSES)[number];
 }
 
-// Main Vizi Webhook DTO
+// Main Vizi Webhook DTO - More permissive for real webhook data
 export class ViziWebhookDto {
-  @ValidateNested()
-  @Type(() => Object) // Will be replaced with specific form DTO based on country
-  form!: VisaForm; // Properly typed form data
+  @IsObject()
+  form!: Record<string, any>; // Accept any form structure from Visanet
 
   @ValidateNested()
   @Type(() => OrderDto)
