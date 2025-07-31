@@ -54,8 +54,16 @@ export class N8nPastVisitDto {
   @IsBoolean()
   visited: boolean;
 
+  @IsOptional()
   @IsString()
-  year: string;
+  year?: string;
+
+  @IsOptional()
+  @IsObject()
+  pastVisa?: {
+    number: string;
+    dateOfIssue: string;
+  };
 }
 
 export class N8nAddressDto {
@@ -108,33 +116,43 @@ export class N8nExtraNationalityDto {
   status: string;
 }
 
+export class N8nFamilyParentDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  countryOfBirth: string;
+}
+
+export class N8nFamilySpouseDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  countryOfBirth: string;
+}
+
+export class N8nFamilyMaritalDto {
+  @IsString()
+  status: string;
+
+  @ValidateNested()
+  @Type(() => N8nFamilySpouseDto)
+  spouse: N8nFamilySpouseDto;
+}
+
 export class N8nFamilyDto {
   @ValidateNested()
-  @Type(() => Object)
-  @IsObject()
-  father: {
-    name: string;
-    countryOfBirth: string;
-  };
+  @Type(() => N8nFamilyParentDto)
+  father: N8nFamilyParentDto;
 
   @ValidateNested()
-  @Type(() => Object)
-  @IsObject()
-  mother: {
-    name: string;
-    countryOfBirth: string;
-  };
+  @Type(() => N8nFamilyParentDto)
+  mother: N8nFamilyParentDto;
 
   @ValidateNested()
-  @Type(() => Object)
-  @IsObject()
-  marital: {
-    status: string;
-    spouse: {
-      name: string;
-      countryOfBirth: string;
-    };
-  };
+  @Type(() => N8nFamilyMaritalDto)
+  marital: N8nFamilyMaritalDto;
 }
 
 export class N8nFilesDto {
@@ -321,7 +339,6 @@ export class N8nEntryDto {
   @IsString()
   date: string;
 
-  @IsString()
   port: string | null;
 }
 
@@ -502,7 +519,6 @@ export class N8nFormDto {
   @Type(() => N8nMetaDto)
   meta: N8nMetaDto;
 
-  @IsString()
   orderId: string | null;
 
   @ValidateNested()
@@ -554,7 +570,6 @@ export class N8nOrderDto {
   @IsString()
   currency: string;
 
-  @IsString()
   coupon: string | null;
 
   @IsString()
