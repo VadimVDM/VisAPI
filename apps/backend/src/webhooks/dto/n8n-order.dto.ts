@@ -211,12 +211,21 @@ export class N8nPastTravelsDto {
   rejection?: string;
 
   @IsOptional()
-  @IsObject()
-  SAARC?: {
-    visited: boolean;
-    countries: string[];
-    year: number;
-  };
+  @ValidateNested()
+  @Type(() => SaarcVisitDto)
+  SAARC?: SaarcVisitDto;
+}
+
+export class SaarcVisitDto {
+  @IsBoolean()
+  visited: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  countries: string[];
+
+  @IsNumber()
+  year: number;
 }
 
 export class N8nLastTravelDto {
