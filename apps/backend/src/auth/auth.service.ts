@@ -140,14 +140,15 @@ export class AuthService {
   }
 
   private splitApiKey(apiKey: string): { prefix: string; secret: string } {
-    const prefixPattern = this.config.apiKeyPrefix ?? 'vapi_';
-
-    if (!apiKey.startsWith(prefixPattern)) {
+    // Split by the last dot to handle prefixes like "n8n_xxxx.secret"
+    const lastDotIndex = apiKey.lastIndexOf('.');
+    
+    if (lastDotIndex === -1) {
       return { prefix: '', secret: '' };
     }
 
-    const prefix = prefixPattern;
-    const secret = apiKey.slice(prefix.length);
+    const prefix = apiKey.substring(0, lastDotIndex);
+    const secret = apiKey.substring(lastDotIndex + 1);
 
     return { prefix, secret };
   }

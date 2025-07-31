@@ -25,18 +25,21 @@ async function generateApiKeyValues() {
   console.log(`   ${fullKey}`);
   console.log('\n2. SQL Values for manual insertion:');
   console.log(`   prefix: '${prefix}'`);
+  console.log(`   hashed_key: '${hashedSecret}'`);
   console.log(`   hashed_secret: '${hashedSecret}'`);
   console.log('\n3. SQL Insert Statement:');
   console.log(`
 INSERT INTO api_keys (
   name,
   prefix,
+  hashed_key,
   hashed_secret,
   scopes,
   expires_at
 ) VALUES (
   'n8n Webhook Key',
   '${prefix}',
+  '${hashedSecret}',
   '${hashedSecret}',
   ARRAY['webhook:n8n', 'orders:write'],
   NOW() + INTERVAL '1 year'
