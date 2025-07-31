@@ -35,7 +35,7 @@ export class PdfGeneratorService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly templateService: PdfTemplateService,
-    private readonly storageService: StorageService
+    private readonly storageService: StorageService,
   ) {
     this.logger.setContext(PdfGeneratorService.name);
   }
@@ -46,14 +46,14 @@ export class PdfGeneratorService {
   private async getBrowser(): Promise<puppeteer.Browser> {
     if (!this.browser) {
       this.logger.info('Launching Puppeteer browser');
-      
+
       // Use Chrome/Chromium executable path based on environment
-      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || 
-        process.platform === 'darwin' 
+      const executablePath =
+        process.env.PUPPETEER_EXECUTABLE_PATH || process.platform === 'darwin'
           ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
           : process.platform === 'win32'
-          ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-          : '/usr/bin/google-chrome-stable'; // Linux
+            ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+            : '/usr/bin/google-chrome-stable'; // Linux
 
       this.browser = await puppeteer.launch({
         headless: true,
@@ -76,33 +76,40 @@ export class PdfGeneratorService {
    */
   async generateFromTemplate(
     templateName: string,
-    data: any,
-    options: PdfGenerationOptions = {}
+    data: Record<string, unknown>,
+    options: PdfGenerationOptions = {},
   ): Promise<PdfGenerationResult> {
     const jobId = uuidv4();
     const startTime = Date.now();
 
     try {
       // Render HTML from template
-      const html = await this.templateService.renderTemplate(templateName, data);
+      const html = await this.templateService.renderTemplate(
+        templateName,
+        data,
+      );
 
       // Generate PDF
       const pdfBuffer = await this.generatePdfFromHtml(html, options);
 
       // Upload to storage
       const filename = `${templateName}-${Date.now()}.pdf`;
-      const storagePath = `${data.workflowId || 'general'}/${jobId}/${filename}`;
-      
-      const uploadResult = await this.storageService.uploadFile(storagePath, pdfBuffer, {
-        contentType: 'application/pdf',
-        cacheControl: '86400', // 24 hours
-      });
+      const storagePath = `${(data.workflowId as string) || 'general'}/${jobId}/${filename}`;
+
+      const uploadResult = await this.storageService.uploadFile(
+        storagePath,
+        pdfBuffer,
+        {
+          contentType: 'application/pdf',
+          cacheControl: '86400', // 24 hours
+        },
+      );
 
       const result: PdfGenerationResult = {
         jobId,
         filename,
         publicUrl: uploadResult.publicUrl,
-        signedUrl: uploadResult.signedUrl!,
+        signedUrl: uploadResult.signedUrl,
         size: pdfBuffer.length,
       };
 
@@ -113,12 +120,15 @@ export class PdfGeneratorService {
           size: pdfBuffer.length,
           duration: Date.now() - startTime,
         },
-        'PDF generated successfully'
+        'PDF generated successfully',
       );
 
       return result;
-    } catch (error) {
-      this.logger.error({ error, jobId, templateName }, 'Failed to generate PDF');
+    } catch (error: unknown) {
+      this.logger.error(
+        { error, jobId, templateName },
+        'Failed to generate PDF',
+      );
       throw error;
     }
   }
@@ -128,7 +138,7 @@ export class PdfGeneratorService {
    */
   async generatePdfFromHtml(
     html: string,
-    options: PdfGenerationOptions = {}
+    options: PdfGenerationOptions = {},
   ): Promise<Buffer> {
     const browser = await this.getBrowser();
     const page = await browser.newPage();
@@ -169,7 +179,7 @@ export class PdfGeneratorService {
    */
   async generateFromUrl(
     url: string,
-    options: PdfGenerationOptions = {}
+    options: PdfGenerationOptions = {},
   ): Promise<PdfGenerationResult> {
     const jobId = uuidv4();
     const startTime = Date.now();
@@ -206,17 +216,21 @@ export class PdfGeneratorService {
         // Upload to storage
         const filename = `web-${Date.now()}.pdf`;
         const storagePath = `web/${jobId}/${filename}`;
-        
-        const uploadResult = await this.storageService.uploadFile(storagePath, Buffer.from(pdfBuffer), {
-          contentType: 'application/pdf',
-          cacheControl: '86400', // 24 hours
-        });
+
+        const uploadResult = await this.storageService.uploadFile(
+          storagePath,
+          Buffer.from(pdfBuffer),
+          {
+            contentType: 'application/pdf',
+            cacheControl: '86400', // 24 hours
+          },
+        );
 
         const result: PdfGenerationResult = {
           jobId,
           filename,
           publicUrl: uploadResult.publicUrl,
-          signedUrl: uploadResult.signedUrl!,
+          signedUrl: uploadResult.signedUrl,
           size: pdfBuffer.length,
         };
 
@@ -227,15 +241,18 @@ export class PdfGeneratorService {
             size: pdfBuffer.length,
             duration: Date.now() - startTime,
           },
-          'PDF generated from URL successfully'
+          'PDF generated from URL successfully',
         );
 
         return result;
       } finally {
         await page.close();
       }
-    } catch (error) {
-      this.logger.error({ error, jobId, url }, 'Failed to generate PDF from URL');
+    } catch (error: unknown) {
+      this.logger.error(
+        { error, jobId, url },
+        'Failed to generate PDF from URL',
+      );
       throw error;
     }
   }

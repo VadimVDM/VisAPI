@@ -28,7 +28,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-    })
+    }),
   );
 
   // Swagger documentation
@@ -42,7 +42,7 @@ async function bootstrap() {
         name: 'X-API-Key',
         in: 'header',
       },
-      'api-key'
+      'api-key',
     )
     .build();
 
@@ -56,27 +56,33 @@ async function bootstrap() {
     // Bind to 0.0.0.0 to accept external connections
     await app.listen(port, '0.0.0.0');
     Logger.log(
-      `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`
+      `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`,
     );
     Logger.log(
-      `📚 API Documentation: http://0.0.0.0:${port}/${globalPrefix}/docs`
+      `📚 API Documentation: http://0.0.0.0:${port}/${globalPrefix}/docs`,
     );
 
     // Log environment info for debugging
     Logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     Logger.log(
-      `REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`
+      `REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`,
     );
     Logger.log(
-      `DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`
+      `DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`,
     );
   } catch (error) {
-    Logger.error(`Failed to start server: ${(error as Error).message}`, (error as Error).stack);
+    Logger.error(
+      `Failed to start server: ${(error as Error).message}`,
+      (error as Error).stack,
+    );
     process.exit(1);
   }
 }
 
 bootstrap().catch((error) => {
-  Logger.error(`Bootstrap failed: ${(error as Error).message}`, (error as Error).stack);
+  Logger.error(
+    `Bootstrap failed: ${(error as Error).message}`,
+    (error as Error).stack,
+  );
   process.exit(1);
 });

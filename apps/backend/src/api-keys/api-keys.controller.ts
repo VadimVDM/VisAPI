@@ -9,22 +9,16 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
-import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Scopes } from '../auth/decorators/scopes.decorator';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import {
   ApiKeyResponseDto,
   ApiKeyWithSecretResponseDto,
 } from './dto/api-key-response.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiSecurity,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { User } from '@visapi/shared-types';
 
 @ApiTags('API Keys')
 @Controller('v1/api-keys')
@@ -42,7 +36,7 @@ export class ApiKeysController {
   })
   async listApiKeys(): Promise<ApiKeyResponseDto[]> {
     const keys = await this.authService.listApiKeys();
-    return keys.map(ApiKeyResponseDto.fromRecord);
+    return keys.map((key) => ApiKeyResponseDto.fromRecord(key));
   }
 
   @Post()
@@ -56,12 +50,12 @@ export class ApiKeysController {
   })
   async createApiKey(
     @Body() dto: CreateApiKeyDto,
-    @Request() req: any
+    @Request() req: { userRecord?: User },
   ): Promise<ApiKeyWithSecretResponseDto> {
     const { key, apiKey } = await this.authService.createApiKey(
       dto.name,
       dto.scopes,
-      req.userRecord?.id || 'system'
+      req.userRecord?.id ?? 'system',
     );
 
     return ApiKeyWithSecretResponseDto.fromRecordWithKey(apiKey, key);

@@ -25,7 +25,7 @@ describe('SupabaseHealthIndicator', () => {
     }).compile();
 
     indicator = module.get<SupabaseHealthIndicator>(SupabaseHealthIndicator);
-    supabaseService = module.get(SupabaseService) as jest.Mocked<SupabaseService>;
+    supabaseService = module.get(SupabaseService);
   });
 
   it('should be defined', () => {
@@ -52,7 +52,7 @@ describe('SupabaseHealthIndicator', () => {
       supabaseService.checkConnection.mockResolvedValue(false);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
       expect(supabaseService.checkConnection).toHaveBeenCalledTimes(1);
     });
@@ -62,12 +62,13 @@ describe('SupabaseHealthIndicator', () => {
       supabaseService.checkConnection.mockRejectedValue(error);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
 
       try {
         await indicator.isHealthy(healthKey);
-      } catch (err) {
+      } catch (e: unknown) {
+        const err = e as HealthCheckError;
         expect(err).toBeInstanceOf(HealthCheckError);
         expect(err.message).toBe('Supabase connection failed');
         expect(err.causes).toEqual({
@@ -95,7 +96,8 @@ describe('SupabaseHealthIndicator', () => {
 
       try {
         await indicator.isHealthy(healthKey);
-      } catch (err) {
+      } catch (e: unknown) {
+        const err = e as HealthCheckError;
         expect(err).toBeInstanceOf(HealthCheckError);
         expect(err.message).toBe('Supabase connection failed');
         expect(err.causes).toEqual({

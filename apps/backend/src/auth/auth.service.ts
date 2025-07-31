@@ -1,26 +1,40 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
-import { ApiKeyRecord, User, RoleRecord, UserRoleRecord, InsertUser, InsertUserRole } from '@visapi/shared-types';
-import { validatePassword, DEFAULT_PASSWORD_REQUIREMENTS } from '@visapi/shared-utils';
+import {
+  ApiKeyRecord,
+  User,
+  RoleRecord,
+  UserRoleRecord,
+  InsertUser,
+  InsertUserRole,
+} from '@visapi/shared-types';
+import {
+  validatePassword,
+  DEFAULT_PASSWORD_REQUIREMENTS,
+} from '@visapi/shared-utils';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { AuthUser } from '@supabase/supabase-js';
+import { AuthUser, Session } from '@supabase/supabase-js';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
   ) {}
 
   async createApiKey(
     name: string,
     scopes: string[],
-    createdBy: string
+    createdBy: string,
   ): Promise<{ key: string; apiKey: ApiKeyRecord }> {
     // Generate prefix and secret
-    const prefix = this.config.apiKeyPrefix || 'vapi_';
+    const prefix = this.config.apiKeyPrefix ?? 'vapi_';
     const secret = randomBytes(32).toString('hex');
     const fullKey = `${prefix}${secret}`;
 
@@ -30,7 +44,7 @@ export class AuthService {
     // Calculate expiry date
     const expiresAt = new Date();
     expiresAt.setDate(
-      expiresAt.getDate() + (this.config.apiKeyExpiryDays || 90)
+      expiresAt.getDate() + (this.config.apiKeyExpiryDays ?? 90),
     );
 
     // Store in database
@@ -39,6 +53,7 @@ export class AuthService {
       .insert({
         name,
         prefix,
+        hashed_key: hashedSecret, // This was missing
         hashed_secret: hashedSecret,
         scopes,
         expires_at: expiresAt.toISOString(),
@@ -53,7 +68,7 @@ export class AuthService {
 
     return {
       key: fullKey,
-      apiKey: data,
+      apiKey: data as ApiKeyRecord,
     };
   }
 
@@ -68,7 +83,7 @@ export class AuthService {
       .from('api_keys')
       .select('*')
       .eq('prefix', prefix)
-      .single();
+      .single<ApiKeyRecord>();
 
     if (error || !data) {
       return null;
@@ -110,7 +125,7 @@ export class AuthService {
       throw new Error(`Failed to list API keys: ${error.message}`);
     }
 
-    return data || [];
+    return (data as ApiKeyRecord[]) || [];
   }
 
   async revokeApiKey(keyId: string): Promise<void> {
@@ -125,7 +140,7 @@ export class AuthService {
   }
 
   private splitApiKey(apiKey: string): { prefix: string; secret: string } {
-    const prefixPattern = this.config.apiKeyPrefix || 'vapi_';
+    const prefixPattern = this.config.apiKeyPrefix ?? 'vapi_';
 
     if (!apiKey.startsWith(prefixPattern)) {
       return { prefix: '', secret: '' };
@@ -137,10 +152,7 @@ export class AuthService {
     return { prefix, secret };
   }
 
-  async checkScopes(
-    apiKey: ApiKeyRecord,
-    requiredScopes: string[]
-  ): Promise<boolean> {
+  checkScopes(apiKey: ApiKeyRecord, requiredScopes: string[]): boolean {
     if (!requiredScopes.length) {
       return true;
     }
@@ -150,16 +162,26 @@ export class AuthService {
 
   // Supabase Auth Methods
 
-  async signUpWithEmail(email: string, password: string): Promise<{ user: AuthUser | null, error: any }> {
+  async signUpWithEmail(
+    email: string,
+    password: string,
+  ): Promise<{ user: AuthUser | null; error: Error | null }> {
     // Validate email domain
     if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException('Email domain not allowed. Only @visanet.com emails are permitted.');
+      throw new BadRequestException(
+        'Email domain not allowed. Only @visanet.com emails are permitted.',
+      );
     }
 
     // Validate password strength
-    const passwordValidation = validatePassword(password, DEFAULT_PASSWORD_REQUIREMENTS);
+    const passwordValidation = validatePassword(
+      password,
+      DEFAULT_PASSWORD_REQUIREMENTS,
+    );
     if (!passwordValidation.isValid) {
-      throw new BadRequestException(`Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`);
+      throw new BadRequestException(
+        `Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`,
+      );
     }
 
     const { data, error } = await this.supabase.client.auth.signUp({
@@ -176,10 +198,17 @@ export class AuthService {
       await this.createUserRecord(data.user);
     }
 
-    return { user: data.user, error };
+    return { user: data.user, error: error as Error | null };
   }
 
-  async signInWithEmail(email: string, password: string): Promise<{ user: AuthUser | null, session: any, error: any }> {
+  async signInWithEmail(
+    email: string,
+    password: string,
+  ): Promise<{
+    user: AuthUser | null;
+    session: Session | null;
+    error: Error | null;
+  }> {
     const { data, error } = await this.supabase.client.auth.signInWithPassword({
       email,
       password,
@@ -189,13 +218,19 @@ export class AuthService {
       throw new UnauthorizedException(`Login failed: ${error.message}`);
     }
 
-    return { user: data.user, session: data.session, error };
+    return {
+      user: data.user,
+      session: data.session,
+      error: error as Error | null,
+    };
   }
 
-  async signInWithMagicLink(email: string): Promise<{ error: any }> {
+  async signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
     // Validate email domain
     if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException('Email domain not allowed. Only @visanet.com emails are permitted.');
+      throw new BadRequestException(
+        'Email domain not allowed. Only @visanet.com emails are permitted.',
+      );
     }
 
     const { error } = await this.supabase.client.auth.signInWithOtp({
@@ -209,31 +244,41 @@ export class AuthService {
       throw new BadRequestException(`Magic link failed: ${error.message}`);
     }
 
-    return { error };
+    return { error: error as Error | null };
   }
 
-  async resetPassword(email: string): Promise<{ error: any }> {
+  async resetPassword(email: string): Promise<{ error: Error | null }> {
     // Validate email domain
     if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException('Email domain not allowed. Only @visanet.com emails are permitted.');
+      throw new BadRequestException(
+        'Email domain not allowed. Only @visanet.com emails are permitted.',
+      );
     }
 
-    const { error } = await this.supabase.client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${this.config.frontendUrl}/auth/reset-password`,
-    });
+    const { error } = await this.supabase.client.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${this.config.frontendUrl}/auth/reset-password`,
+      },
+    );
 
     if (error) {
       throw new BadRequestException(`Password reset failed: ${error.message}`);
     }
 
-    return { error };
+    return { error: error as Error | null };
   }
 
-  async updatePassword(newPassword: string): Promise<{ error: any }> {
+  async updatePassword(newPassword: string): Promise<{ error: Error | null }> {
     // Validate password strength
-    const passwordValidation = validatePassword(newPassword, DEFAULT_PASSWORD_REQUIREMENTS);
+    const passwordValidation = validatePassword(
+      newPassword,
+      DEFAULT_PASSWORD_REQUIREMENTS,
+    );
     if (!passwordValidation.isValid) {
-      throw new BadRequestException(`Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`);
+      throw new BadRequestException(
+        `Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`,
+      );
     }
 
     const { error } = await this.supabase.client.auth.updateUser({
@@ -244,34 +289,36 @@ export class AuthService {
       throw new BadRequestException(`Password update failed: ${error.message}`);
     }
 
-    return { error };
+    return { error: error as Error | null };
   }
 
-  async verifyJWT(token: string): Promise<{ user: AuthUser | null, error: any }> {
+  async verifyJWT(
+    token: string,
+  ): Promise<{ user: AuthUser | null; error: Error | null }> {
     const { data, error } = await this.supabase.client.auth.getUser(token);
 
     if (error) {
-      return { user: null, error };
+      return { user: null, error: error as Error | null };
     }
 
     return { user: data.user, error: null };
   }
 
-  async signOut(): Promise<{ error: any }> {
+  async signOut(): Promise<{ error: Error | null }> {
     const { error } = await this.supabase.client.auth.signOut();
 
     if (error) {
       throw new BadRequestException(`Sign out failed: ${error.message}`);
     }
 
-    return { error };
+    return { error: error as Error | null };
   }
 
   // User Management Methods
 
   async createUserRecord(authUser: AuthUser): Promise<User> {
     const userData: InsertUser = {
-      email: authUser.email!,
+      email: authUser.email,
       auth_user_id: authUser.id,
       role: 'viewer', // Default role
     };
@@ -280,7 +327,7 @@ export class AuthService {
       .from('users')
       .insert(userData)
       .select()
-      .single();
+      .single<User>();
 
     if (error) {
       throw new Error(`Failed to create user record: ${error.message}`);
@@ -297,7 +344,7 @@ export class AuthService {
       .from('users')
       .select('*')
       .eq('auth_user_id', authUserId)
-      .single();
+      .single<User>();
 
     if (error) {
       return null;
@@ -306,28 +353,38 @@ export class AuthService {
     return data;
   }
 
-  async getUserWithRoles(userId: string): Promise<User & { roles: RoleRecord[] } | null> {
+  async getUserWithRoles(
+    userId: string,
+  ): Promise<(User & { roles: RoleRecord[] }) | null> {
     const { data, error } = await this.supabase.serviceClient
       .from('users')
-      .select(`
+      .select(
+        `
         *,
         user_roles!inner(
           roles(*)
         )
-      `)
+      `,
+      )
       .eq('id', userId)
-      .single();
+      .single<{ user_roles: { roles: RoleRecord }[] } & User>();
 
     if (error) {
       return null;
     }
 
     // Transform the nested structure
-    const roles = data.user_roles.map((ur: any) => ur.roles);
-    return { ...data, roles };
+    const roles = data.user_roles.map((ur) => ur.roles);
+    const userWithRoles = { ...data, roles };
+
+    return userWithRoles;
   }
 
-  async assignRole(userId: string, roleId: string, assignedBy: string): Promise<UserRoleRecord> {
+  async assignRole(
+    userId: string,
+    roleId: string,
+    assignedBy: string,
+  ): Promise<UserRoleRecord> {
     const userRoleData: InsertUserRole = {
       user_id: userId,
       role_id: roleId,
@@ -338,7 +395,7 @@ export class AuthService {
       .from('user_roles')
       .insert(userRoleData)
       .select()
-      .single();
+      .single<UserRoleRecord>();
 
     if (error) {
       throw new Error(`Failed to assign role: ${error.message}`);
@@ -365,17 +422,17 @@ export class AuthService {
       return false;
     }
 
-    return userWithRoles.roles.some(role => 
-      role.permissions[permission] === true
+    return userWithRoles.roles.some(
+      (role) => role.permissions[permission] === true,
     );
   }
 
   // Helper Methods
 
   private isValidEmailDomain(email: string): boolean {
-    const allowedDomains = this.config.allowedEmailDomains || ['visanet.com'];
+    const allowedDomains = this.config.allowedEmailDomains ?? ['visanet.com'];
     const emailDomain = email.split('@')[1]?.toLowerCase();
-    return allowedDomains.includes(emailDomain);
+    return !!emailDomain && allowedDomains.includes(emailDomain);
   }
 
   private async assignDefaultRole(userId: string): Promise<void> {
@@ -384,7 +441,7 @@ export class AuthService {
       .from('roles')
       .select('id')
       .eq('name', 'support')
-      .single();
+      .single<{ id: string }>();
 
     if (role) {
       await this.assignRole(userId, role.id, 'system');

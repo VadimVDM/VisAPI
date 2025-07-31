@@ -14,47 +14,49 @@ export class PiiRedactionService {
     creditCard: {
       regex: /\b(?:\d{4}[-.\s]?){3}\d{4}\b/g,
       replacement: '[CARD_REDACTED]',
-      name: 'credit_card'
+      name: 'credit_card',
     },
     // Process phone numbers after credit cards (less specific)
     phone: {
       regex: /(\s|^)(\+?1?[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
       replacement: '$1[PHONE_REDACTED]',
-      name: 'phone_number'
+      name: 'phone_number',
     },
     email: {
       regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
       replacement: '[EMAIL_REDACTED]',
-      name: 'email'
+      name: 'email',
     },
     ssn: {
       regex: /\b\d{3}-?\d{2}-?\d{4}\b/g,
       replacement: '[SSN_REDACTED]',
-      name: 'ssn'
+      name: 'ssn',
     },
     ipAddress: {
       regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
       replacement: '[IP_REDACTED]',
-      name: 'ip_address'
+      name: 'ip_address',
     },
     // Generic patterns for common PII keywords
     address: {
-      regex: /\b\d+\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|court|ct|place|pl)\b/gi,
+      regex:
+        /\b\d+\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|court|ct|place|pl)\b/gi,
       replacement: '[ADDRESS_REDACTED]',
-      name: 'address'
+      name: 'address',
     },
     // API keys and tokens
     apiKey: {
       regex: /\b[A-Za-z0-9]{32,}\b/g,
       replacement: '[API_KEY_REDACTED]',
-      name: 'api_key'
+      name: 'api_key',
     },
     // UUIDs (potential sensitive identifiers)
     uuid: {
-      regex: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      regex:
+        /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
       replacement: '[UUID_REDACTED]',
-      name: 'uuid'
-    }
+      name: 'uuid',
+    },
   };
 
   /**
@@ -65,7 +67,7 @@ export class PiiRedactionService {
       return {
         text: '',
         piiFound: false,
-        redactedFields: []
+        redactedFields: [],
       };
     }
 
@@ -73,7 +75,7 @@ export class PiiRedactionService {
     const redactedFields: string[] = [];
 
     // Apply each pattern
-    for (const [key, pattern] of Object.entries(this.patterns)) {
+    for (const pattern of Object.values(this.patterns)) {
       const matches = redactedText.match(pattern.regex);
       if (matches && matches.length > 0) {
         redactedText = redactedText.replace(pattern.regex, pattern.replacement);
@@ -84,50 +86,59 @@ export class PiiRedactionService {
     return {
       text: redactedText,
       piiFound: redactedFields.length > 0,
-      redactedFields
+      redactedFields,
     };
   }
 
   /**
    * Redact PII from an object (recursively)
    */
-  redactPiiFromObject(obj: any): { obj: any; piiFound: boolean; redactedFields: string[] } {
-    if (!obj || typeof obj !== 'object') {
-      if (typeof obj === 'string') {
-        const result = this.redactPii(obj);
-        return { obj: result.text, piiFound: result.piiFound, redactedFields: result.redactedFields };
-      }
+  redactPiiFromObject(obj: unknown): {
+    obj: unknown;
+    piiFound: boolean;
+    redactedFields: string[];
+  } {
+    if (obj === null || obj === undefined) {
       return { obj, piiFound: false, redactedFields: [] };
     }
 
-    const redactedObj = Array.isArray(obj) ? [] : {};
+    if (typeof obj === 'string') {
+      const result = this.redactPii(obj);
+      return {
+        obj: result.text,
+        piiFound: result.piiFound,
+        redactedFields: result.redactedFields,
+      };
+    }
+
+    if (typeof obj !== 'object') {
+      return { obj, piiFound: false, redactedFields: [] };
+    }
+
+    const redactedObj: Record<string, unknown> | unknown[] = Array.isArray(obj)
+      ? []
+      : {};
     let globalPiiFound = false;
     const globalRedactedFields: string[] = [];
 
     for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === 'string') {
-        const result = this.redactPii(value);
-        redactedObj[key] = result.text;
-        if (result.piiFound) {
-          globalPiiFound = true;
-          globalRedactedFields.push(...result.redactedFields);
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        const result = this.redactPiiFromObject(value);
-        redactedObj[key] = result.obj;
-        if (result.piiFound) {
-          globalPiiFound = true;
-          globalRedactedFields.push(...result.redactedFields);
-        }
+      const result = this.redactPiiFromObject(value);
+      if (Array.isArray(redactedObj)) {
+        redactedObj.push(result.obj);
       } else {
-        redactedObj[key] = value;
+        redactedObj[key] = result.obj;
+      }
+
+      if (result.piiFound) {
+        globalPiiFound = true;
+        globalRedactedFields.push(...result.redactedFields);
       }
     }
 
     return {
       obj: redactedObj,
       piiFound: globalPiiFound,
-      redactedFields: [...new Set(globalRedactedFields)]
+      redactedFields: [...new Set(globalRedactedFields)],
     };
   }
 
@@ -139,8 +150,8 @@ export class PiiRedactionService {
       return false;
     }
 
-    return Object.values(this.patterns).some(pattern => 
-      pattern.regex.test(text)
+    return Object.values(this.patterns).some((pattern) =>
+      pattern.regex.test(text),
     );
   }
 
@@ -150,7 +161,7 @@ export class PiiRedactionService {
   getPiiStats(text: string): Record<string, number> {
     const stats: Record<string, number> = {};
 
-    for (const [key, pattern] of Object.entries(this.patterns)) {
+    for (const pattern of Object.values(this.patterns)) {
       const matches = text.match(pattern.regex);
       stats[pattern.name] = matches ? matches.length : 0;
     }
@@ -165,21 +176,24 @@ export class PiiRedactionService {
     this.patterns[name] = {
       regex,
       replacement,
-      name
+      name,
     };
   }
 
   /**
    * Remove PII pattern
    */
-  removePattern(name: string): void {
+  removePattern(name: keyof PiiRedactionService['patterns']): void {
     delete this.patterns[name];
   }
 
   /**
    * Get all configured patterns
    */
-  getPatterns(): Record<string, { regex: RegExp; replacement: string; name: string }> {
+  getPatterns(): Record<
+    string,
+    { regex: RegExp; replacement: string; name: string }
+  > {
     return { ...this.patterns };
   }
 }

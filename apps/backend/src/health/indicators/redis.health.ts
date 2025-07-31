@@ -26,15 +26,16 @@ export class RedisHealthIndicator extends HealthIndicator {
         'Redis connection failed',
         this.getStatus(key, false, {
           message: 'Redis ping exceeded timeout (1s)',
-        })
+        }),
       );
-    } catch (error) {
+    } catch (e: unknown) {
+      const error = e as Error;
       throw new HealthCheckError(
         'Redis connection failed',
         this.getStatus(key, false, {
           message: 'Unable to connect to Redis',
           error: error.message,
-        })
+        }),
       );
     }
   }

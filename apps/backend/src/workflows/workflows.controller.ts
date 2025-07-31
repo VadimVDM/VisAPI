@@ -10,9 +10,18 @@ import {
   UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { WorkflowsService } from './workflows.service';
-import { CreateWorkflowDto, UpdateWorkflowDto, WorkflowResponseDto } from './dto';
+import {
+  CreateWorkflowDto,
+  UpdateWorkflowDto,
+  WorkflowResponseDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -46,7 +55,9 @@ export class WorkflowsController {
     status: 403,
     description: 'Forbidden - insufficient permissions.',
   })
-  async create(@Body() createWorkflowDto: CreateWorkflowDto): Promise<WorkflowResponseDto> {
+  async create(
+    @Body() createWorkflowDto: CreateWorkflowDto,
+  ): Promise<WorkflowResponseDto> {
     return this.workflowsService.create(createWorkflowDto);
   }
 
@@ -110,7 +121,9 @@ export class WorkflowsController {
     status: 403,
     description: 'Forbidden - insufficient permissions.',
   })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<WorkflowResponseDto> {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<WorkflowResponseDto> {
     return this.workflowsService.findOne(id);
   }
 

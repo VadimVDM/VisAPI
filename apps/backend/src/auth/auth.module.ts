@@ -13,7 +13,13 @@ import { MetricsModule } from '../metrics/metrics.module';
 @Module({
   imports: [SupabaseModule, ConfigModule, MetricsModule],
   controllers: [AuthController, AuthConfirmController],
-  providers: [AuthService, ApiKeyStrategy, ApiKeyGuard, JwtAuthGuard, PermissionsGuard],
+  providers: [
+    AuthService,
+    ApiKeyStrategy,
+    ApiKeyGuard,
+    JwtAuthGuard,
+    PermissionsGuard,
+  ],
   exports: [AuthService, ApiKeyGuard, JwtAuthGuard, PermissionsGuard],
 })
 export class AuthModule {}

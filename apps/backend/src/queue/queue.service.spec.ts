@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { QueueService } from './queue.service';
 import { ConfigService } from '@visapi/core-config';
-import { QUEUE_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES, QueueMetrics } from '@visapi/shared-types';
 import { Queue, Job } from 'bullmq';
 
 describe('QueueService', () => {
@@ -11,16 +11,19 @@ describe('QueueService', () => {
   let defaultQueue: jest.Mocked<Queue>;
   let bulkQueue: jest.Mocked<Queue>;
 
-  const createMockQueue = () => ({
-    add: jest.fn(),
-    getJob: jest.fn(),
-    getJobCounts: jest.fn(),
-    clean: jest.fn(),
-    pause: jest.fn(),
-    resume: jest.fn(),
-    drain: jest.fn(),
-    remove: jest.fn(),
-  });
+  const createMockQueue = (): jest.Mocked<Queue> =>
+    ({
+      add: jest.fn(),
+      getJob: jest.fn(),
+      getJobCounts: jest.fn(),
+      clean: jest.fn(),
+      pause: jest.fn(),
+      resume: jest.fn(),
+      drain: jest.fn(),
+      remove: jest.fn(),
+      getRepeatableJobs: jest.fn(),
+      removeRepeatableByKey: jest.fn(),
+    }) as unknown as jest.Mocked<Queue>;
 
   beforeEach(async () => {
     const mockCriticalQueue = createMockQueue();
@@ -74,7 +77,11 @@ describe('QueueService', () => {
       const mockJob = { id: 'job-123' } as Job;
       defaultQueue.add.mockResolvedValue(mockJob);
 
-      const result = await service.addJob(QUEUE_NAMES.DEFAULT, 'slack.send', jobData);
+      const result = await service.addJob(
+        QUEUE_NAMES.DEFAULT,
+        'slack.send',
+        jobData,
+      );
 
       expect(result).toBe(mockJob);
       expect(defaultQueue.add).toHaveBeenCalledWith(
@@ -88,7 +95,7 @@ describe('QueueService', () => {
           },
           removeOnComplete: true,
           removeOnFail: false,
-        })
+        }),
       );
     });
 
@@ -97,13 +104,17 @@ describe('QueueService', () => {
       const mockJob = { id: 'job-456' } as Job;
       criticalQueue.add.mockResolvedValue(mockJob);
 
-      const result = await service.addJob(QUEUE_NAMES.CRITICAL, 'notification.send', jobData);
+      const result = await service.addJob(
+        QUEUE_NAMES.CRITICAL,
+        'notification.send',
+        jobData,
+      );
 
       expect(result).toBe(mockJob);
       expect(criticalQueue.add).toHaveBeenCalledWith(
         'notification.send',
         jobData,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -128,8 +139,6 @@ describe('QueueService', () => {
     });
   });
 
-  // checkHealth method was removed as it's replaced by dedicated health indicators
-
   describe('getQueueMetrics', () => {
     it('should return metrics for all queues', async () => {
       const mockCounts = {
@@ -138,6 +147,7 @@ describe('QueueService', () => {
         completed: 100,
         failed: 3,
         delayed: 1,
+        paused: 0,
       };
 
       criticalQueue.getJobCounts.mockResolvedValue(mockCounts);
@@ -147,13 +157,10 @@ describe('QueueService', () => {
       const result = await service.getQueueMetrics();
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({
+      expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.CRITICAL,
-        waiting: 5,
-        active: 2,
-        completed: 100,
-        failed: 3,
-        delayed: 1,
+        counts: mockCounts,
+        isPaused: false,
       });
     });
 
@@ -164,6 +171,7 @@ describe('QueueService', () => {
         completed: 100,
         failed: 3,
         delayed: 1,
+        paused: 0,
       };
 
       defaultQueue.getJobCounts.mockResolvedValue(mockCounts);
@@ -171,13 +179,10 @@ describe('QueueService', () => {
       const result = await service.getQueueMetrics(QUEUE_NAMES.DEFAULT);
 
       expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
+      expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.DEFAULT,
-        waiting: 5,
-        active: 2,
-        completed: 100,
-        failed: 3,
-        delayed: 1,
+        counts: mockCounts,
+        isPaused: false,
       });
     });
   });
@@ -208,13 +213,9 @@ describe('QueueService', () => {
 
   describe('cleanQueue', () => {
     it('should clean the specified queue', async () => {
-      const mockResult = ['job-1', 'job-2'];
-      defaultQueue.clean.mockResolvedValue(mockResult);
+      await service.cleanQueue(QUEUE_NAMES.DEFAULT, 5000, 'completed');
 
-      const result = await service.cleanQueue(QUEUE_NAMES.DEFAULT, 5000, 10, 'completed');
-
-      expect(result).toBe(mockResult);
-      expect(defaultQueue.clean).toHaveBeenCalledWith(5000, 10, 'completed');
+      expect(defaultQueue.clean).toHaveBeenCalledWith(5000, 'completed');
     });
   });
 });

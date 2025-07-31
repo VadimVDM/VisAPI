@@ -25,7 +25,7 @@ export class SlackController {
   constructor(
     @InjectPinoLogger(SlackController.name)
     private readonly logger: PinoLogger,
-    private readonly slackService: SlackService
+    private readonly slackService: SlackService,
   ) {}
 
   @Post('grafana-webhook')
@@ -127,13 +127,13 @@ export class SlackController {
   async handleGrafanaWebhook(
     @Body() payload: GrafanaWebhookPayload,
     @Headers('x-slack-signature') signature?: string,
-    @Headers('x-slack-request-timestamp') timestamp?: string
-  ) {
+    @Headers('x-slack-request-timestamp') timestamp?: string,
+  ): Promise<Record<string, unknown>> {
     try {
       // Validate required fields
       if (!payload.state || !payload.ruleName) {
         throw new BadRequestException(
-          'Missing required fields: state, ruleName'
+          'Missing required fields: state, ruleName',
         );
       }
 
@@ -142,7 +142,7 @@ export class SlackController {
         const isValid = await this.slackService.validateWebhookSignature(
           JSON.stringify(payload),
           timestamp,
-          signature
+          signature,
         );
 
         if (!isValid) {
@@ -165,9 +165,11 @@ export class SlackController {
         message: 'Alert processed and sent to Slack',
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to process Grafana webhook', {
-        error: error.message,
+        error: errorMessage,
         ruleName: payload?.ruleName,
         state: payload?.state,
       });
@@ -184,7 +186,7 @@ export class SlackController {
       return {
         status: 'error',
         message: 'Failed to process alert',
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString(),
       };
     }
@@ -235,8 +237,8 @@ export class SlackController {
       message: string;
       severity?: 'info' | 'warning' | 'error';
       channel?: string;
-    }
-  ) {
+    },
+  ): Promise<Record<string, unknown>> {
     try {
       if (!body.message) {
         throw new BadRequestException('Message is required');
@@ -251,7 +253,7 @@ export class SlackController {
       await this.slackService.sendCustomAlert(
         body.message,
         body.severity || 'info',
-        body.channel
+        body.channel,
       );
 
       return {
@@ -259,9 +261,11 @@ export class SlackController {
         message: 'Custom alert sent to Slack',
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to send custom Slack alert', {
-        error: error.message,
+        error: errorMessage,
         message: body?.message,
         severity: body?.severity,
       });
@@ -273,7 +277,7 @@ export class SlackController {
       return {
         status: 'error',
         message: 'Failed to send custom alert',
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString(),
       };
     }
@@ -289,7 +293,7 @@ export class SlackController {
     status: 200,
     description: 'Test message sent successfully',
   })
-  async testSlackIntegration() {
+  async testSlackIntegration(): Promise<Record<string, unknown>> {
     try {
       const testMessage =
         'This is a test message from VisAPI Slack integration';
@@ -303,15 +307,17 @@ export class SlackController {
         message: 'Test message sent to Slack',
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to send test Slack message', {
-        error: error.message,
+        error: errorMessage,
       });
 
       return {
         status: 'error',
         message: 'Failed to send test message',
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString(),
       };
     }

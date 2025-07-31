@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt.guard';
+import { User } from '@visapi/shared-types';
 
 export class SignUpDto {
   email: string;
@@ -44,19 +45,22 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async signUp(@Body() signUpDto: SignUpDto) {
     const { email, password } = signUpDto;
-    
+
     if (!email || !password) {
       throw new BadRequestException('Email and password are required');
     }
 
     if (password.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters long');
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      );
     }
 
     const result = await this.authService.signUpWithEmail(email, password);
-    
+
     return {
-      message: 'Registration successful. Please check your email for confirmation.',
+      message:
+        'Registration successful. Please check your email for confirmation.',
       user: result.user,
     };
   }
@@ -65,13 +69,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() signInDto: SignInDto) {
     const { email, password } = signInDto;
-    
+
     if (!email || !password) {
       throw new BadRequestException('Email and password are required');
     }
 
     const result = await this.authService.signInWithEmail(email, password);
-    
+
     return {
       message: 'Login successful',
       user: result.user,
@@ -83,13 +87,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async sendMagicLink(@Body() magicLinkDto: MagicLinkDto) {
     const { email } = magicLinkDto;
-    
+
     if (!email) {
       throw new BadRequestException('Email is required');
     }
 
     await this.authService.signInWithMagicLink(email);
-    
+
     return {
       message: 'Magic link sent to your email address',
     };
@@ -99,13 +103,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     const { email } = resetPasswordDto;
-    
+
     if (!email) {
       throw new BadRequestException('Email is required');
     }
 
     await this.authService.resetPassword(email);
-    
+
     return {
       message: 'Password reset email sent',
     };
@@ -114,17 +118,17 @@ export class AuthController {
   @Put('password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async updatePassword(
-    @Body() updatePasswordDto: UpdatePasswordDto,
-  ) {
+  async updatePassword(@Body() updatePasswordDto: UpdatePasswordDto) {
     const { newPassword } = updatePasswordDto;
-    
+
     if (!newPassword || newPassword.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters long');
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      );
     }
 
     await this.authService.updatePassword(newPassword);
-    
+
     return {
       message: 'Password updated successfully',
     };
@@ -132,10 +136,12 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: { user: User; userRecord: User }) {
     const userRecord = req.userRecord;
-    const userWithRoles = await this.authService.getUserWithRoles(userRecord.id);
-    
+    const userWithRoles = await this.authService.getUserWithRoles(
+      userRecord.id,
+    );
+
     return {
       user: req.user,
       profile: userWithRoles,
@@ -147,7 +153,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async signOut() {
     await this.authService.signOut();
-    
+
     return {
       message: 'Signed out successfully',
     };
@@ -162,9 +168,9 @@ export class AuthController {
 
     const token = authHeader.replace('Bearer ', '');
     const { user, error } = await this.authService.verifyJWT(token);
-    
+
     if (error || !user) {
-      throw new BadRequestException('Invalid token');
+      throw new BadRequestException(error.message || 'Invalid token');
     }
 
     return {

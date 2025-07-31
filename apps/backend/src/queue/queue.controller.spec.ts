@@ -3,6 +3,7 @@ import { QueueController } from './queue.controller';
 import { QueueService } from './queue.service';
 import { AuthService } from '../auth/auth.service';
 import { Reflector } from '@nestjs/core';
+import { QueueMetrics } from '@visapi/shared-types';
 
 describe('QueueController', () => {
   let controller: QueueController;
@@ -44,10 +45,43 @@ describe('QueueController', () => {
 
   describe('getMetrics', () => {
     it('should return queue metrics', async () => {
-      const mockMetrics = [
-        { name: 'critical', waiting: 5, active: 2, completed: 100, failed: 3, delayed: 1 },
-        { name: 'default', waiting: 2, active: 1, completed: 50, failed: 1, delayed: 0 },
-        { name: 'bulk', waiting: 1, active: 0, completed: 25, failed: 0, delayed: 0 },
+      const mockMetrics: QueueMetrics[] = [
+        {
+          name: 'critical',
+          counts: {
+            waiting: 5,
+            active: 2,
+            completed: 100,
+            failed: 3,
+            delayed: 1,
+            paused: 0,
+          },
+          isPaused: false,
+        },
+        {
+          name: 'default',
+          counts: {
+            waiting: 2,
+            active: 1,
+            completed: 50,
+            failed: 1,
+            delayed: 0,
+            paused: 0,
+          },
+          isPaused: false,
+        },
+        {
+          name: 'bulk',
+          counts: {
+            waiting: 1,
+            active: 0,
+            completed: 25,
+            failed: 0,
+            delayed: 0,
+            paused: 0,
+          },
+          isPaused: false,
+        },
       ];
 
       queueService.getQueueMetrics.mockResolvedValue(mockMetrics);
@@ -60,11 +94,11 @@ describe('QueueController', () => {
 
     it('should handle service errors', async () => {
       queueService.getQueueMetrics.mockRejectedValue(
-        new Error('Redis unavailable')
+        new Error('Redis unavailable'),
       );
 
       await expect(controller.getMetrics()).rejects.toThrow(
-        'Redis unavailable'
+        'Redis unavailable',
       );
     });
   });

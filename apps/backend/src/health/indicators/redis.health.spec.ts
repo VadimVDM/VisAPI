@@ -25,7 +25,7 @@ describe('RedisHealthIndicator', () => {
     }).compile();
 
     indicator = module.get<RedisHealthIndicator>(RedisHealthIndicator);
-    redisService = module.get(RedisService) as jest.Mocked<RedisService>;
+    redisService = module.get(RedisService);
   });
 
   it('should be defined', () => {
@@ -53,7 +53,7 @@ describe('RedisHealthIndicator', () => {
       redisService.checkConnection.mockResolvedValue(false);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
       expect(redisService.checkConnection).toHaveBeenCalledTimes(1);
     });
@@ -63,12 +63,13 @@ describe('RedisHealthIndicator', () => {
       redisService.checkConnection.mockRejectedValue(error);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
 
       try {
         await indicator.isHealthy(healthKey);
-      } catch (err) {
+      } catch (e: unknown) {
+        const err = e as HealthCheckError;
         expect(err).toBeInstanceOf(HealthCheckError);
         expect(err.message).toBe('Redis connection failed');
         expect(err.causes).toEqual({
@@ -98,12 +99,13 @@ describe('RedisHealthIndicator', () => {
       redisService.checkConnection.mockResolvedValue(false);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
 
       try {
         await indicator.isHealthy(healthKey);
-      } catch (err) {
+      } catch (e: unknown) {
+        const err = e as HealthCheckError;
         expect(err).toBeInstanceOf(HealthCheckError);
         expect(err.message).toBe('Redis connection failed');
         expect(err.causes).toEqual({
@@ -121,12 +123,13 @@ describe('RedisHealthIndicator', () => {
       redisService.checkConnection.mockRejectedValue(error);
 
       await expect(indicator.isHealthy(healthKey)).rejects.toThrow(
-        HealthCheckError
+        HealthCheckError,
       );
 
       try {
         await indicator.isHealthy(healthKey);
-      } catch (err) {
+      } catch (e: unknown) {
+        const err = e as HealthCheckError;
         expect(err).toBeInstanceOf(HealthCheckError);
         expect(err.message).toBe('Redis connection failed');
         expect(err.causes).toEqual({

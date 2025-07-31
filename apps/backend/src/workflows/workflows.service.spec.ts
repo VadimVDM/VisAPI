@@ -160,7 +160,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.create(createDto)).rejects.toThrow(
-        'Failed to create workflow'
+        'Failed to create workflow',
       );
     });
   });
@@ -200,7 +200,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.findAll()).rejects.toThrow(
-        'Failed to fetch workflows'
+        'Failed to fetch workflows',
       );
     });
   });
@@ -239,7 +239,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.findOne('nonexistent-id')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -299,7 +299,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.update('nonexistent-id', updateDto)).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -333,7 +333,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.remove('nonexistent-id')).rejects.toThrow(
-        NotFoundException
+        NotFoundException,
       );
     });
   });
@@ -376,7 +376,7 @@ describe('WorkflowsService', () => {
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
       await expect(service.findEnabled()).rejects.toThrow(
-        'Failed to fetch enabled workflows'
+        'Failed to fetch enabled workflows',
       );
     });
   });

@@ -7,6 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { MetricsService } from './metrics.service';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class HttpMetricsInterceptor implements NestInterceptor {
@@ -14,8 +15,8 @@ export class HttpMetricsInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
-    const request = ctx.getRequest() as { route?: { path: string }; url: string; method: string };
-    const response = ctx.getResponse() as { statusCode: number };
+    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<Response>();
 
     const startTime = Date.now();
 
@@ -36,11 +37,11 @@ export class HttpMetricsInterceptor implements NestInterceptor {
             method,
             route,
             statusCode,
-            duration
+            duration,
           );
           this.metricsService.decrementActiveConnections();
         },
-        error: (error: { status?: number }) => {
+        error: (error: Error & { status?: number }) => {
           const duration = Date.now() - startTime;
           const statusCode = error.status || 500;
 
@@ -48,11 +49,11 @@ export class HttpMetricsInterceptor implements NestInterceptor {
             method,
             route,
             statusCode,
-            duration
+            duration,
           );
           this.metricsService.decrementActiveConnections();
         },
-      })
+      }),
     );
   }
 }

@@ -10,6 +10,8 @@ import {
 import { Response } from 'express';
 import { SupabaseService } from '@visapi/core-supabase';
 
+import { EmailOtpType } from '@supabase/supabase-js';
+
 @Controller('v1/auth')
 export class AuthConfirmController {
   private readonly logger = new Logger(AuthConfirmController.name);
@@ -23,12 +25,14 @@ export class AuthConfirmController {
   @Get('confirm')
   async confirmEmail(
     @Query('token_hash') tokenHash: string,
-    @Query('type') type: string,
+    @Query('type') type: EmailOtpType,
     @Query('redirect_to') redirectTo: string,
     @Res() res: Response,
-  ) {
+  ): Promise<void> {
     try {
-      this.logger.log(`Processing auth confirmation: type=${type}, has_token=${!!tokenHash}`);
+      this.logger.log(
+        `Processing auth confirmation: type=${type}, has_token=${!!tokenHash}`,
+      );
 
       // Validate required parameters
       if (!tokenHash || !type) {
@@ -43,36 +47,49 @@ export class AuthConfirmController {
       const finalRedirectUrl = redirectTo || defaultRedirectUrl;
 
       // Exchange token for session using Supabase Auth API
-      const { data, error } = await this.supabaseService.serviceClient.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: type as any, // Type can be: email, recovery, invite, etc.
-      });
+      const { data, error } =
+        await this.supabaseService.serviceClient.auth.verifyOtp({
+          token_hash: tokenHash,
+          type,
+        });
 
       if (error) {
         this.logger.error(`Token verification failed: ${error.message}`);
-        
+
         // Redirect to error page with error message
         const errorUrl = new URL(`${defaultRedirectUrl}/auth/error`);
         errorUrl.searchParams.append('error', error.message);
-        return res.redirect(errorUrl.toString());
+        res.redirect(errorUrl.toString());
+        return;
       }
 
       if (!data.user || !data.session) {
-        this.logger.error('Token verification succeeded but no user/session returned');
-        
+        this.logger.error(
+          'Token verification succeeded but no user/session returned',
+        );
+
         // Redirect to error page
         const errorUrl = new URL(`${defaultRedirectUrl}/auth/error`);
         errorUrl.searchParams.append('error', 'Invalid session data');
-        return res.redirect(errorUrl.toString());
+        res.redirect(errorUrl.toString());
+        return;
       }
 
-      this.logger.log(`Token verified successfully for user: ${data.user.email}`);
+      this.logger.log(
+        `Token verified successfully for user: ${data.user.email}`,
+      );
 
       // Create callback URL with session tokens
       const callbackUrl = new URL(`${finalRedirectUrl}/auth/callback`);
-      callbackUrl.searchParams.append('access_token', data.session.access_token);
-      callbackUrl.searchParams.append('refresh_token', data.session.refresh_token);
-      
+      callbackUrl.searchParams.append(
+        'access_token',
+        data.session.access_token,
+      );
+      callbackUrl.searchParams.append(
+        'refresh_token',
+        data.session.refresh_token,
+      );
+
       // Add type for the frontend to know what action was performed
       callbackUrl.searchParams.append('type', type);
 
@@ -81,16 +98,21 @@ export class AuthConfirmController {
         // Redirect to password reset page instead
         const resetUrl = new URL(`${finalRedirectUrl}/auth/reset-password`);
         resetUrl.searchParams.append('access_token', data.session.access_token);
-        resetUrl.searchParams.append('refresh_token', data.session.refresh_token);
-        return res.redirect(resetUrl.toString());
+        resetUrl.searchParams.append(
+          'refresh_token',
+          data.session.refresh_token,
+        );
+        res.redirect(resetUrl.toString());
+        return;
       }
 
       // Redirect to callback URL
-      return res.redirect(callbackUrl.toString());
+      res.redirect(callbackUrl.toString());
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Auth confirmation failed: ${message}`, stack);
 
-    } catch (error) {
-      this.logger.error(`Auth confirmation failed: ${error.message}`, error.stack);
-      
       if (error instanceof HttpException) {
         throw error;
       }
@@ -99,7 +121,7 @@ export class AuthConfirmController {
       const defaultRedirectUrl = 'https://app.visanet.app';
       const errorUrl = new URL(`${defaultRedirectUrl}/auth/error`);
       errorUrl.searchParams.append('error', 'Authentication failed');
-      return res.redirect(errorUrl.toString());
+      res.redirect(errorUrl.toString());
     }
   }
 
@@ -107,7 +129,7 @@ export class AuthConfirmController {
    * Health check for auth confirmation service
    */
   @Get('confirm/health')
-  async healthCheck() {
+  healthCheck(): Record<string, string> {
     return {
       status: 'healthy',
       service: 'auth-confirm',

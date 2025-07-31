@@ -21,7 +21,7 @@ describe('RemoteWriteService', () => {
     jest
       .spyOn(globalRegistry, 'metrics')
       .mockResolvedValue(
-        '# HELP visapi_test_metric Test metric\n# TYPE visapi_test_metric counter\nvisapi_test_metric 1'
+        '# HELP visapi_test_metric Test metric\n# TYPE visapi_test_metric counter\nvisapi_test_metric 1',
       );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -30,8 +30,8 @@ describe('RemoteWriteService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config = {
+            get: jest.fn((key: string, defaultValue: unknown = undefined) => {
+              const config: Record<string, unknown> = {
                 GRAFANA_REMOTE_WRITE_ENABLED: true,
                 GRAFANA_PROMETHEUS_URL:
                   'https://prometheus.grafana.net/api/prom/push',
@@ -65,7 +65,7 @@ describe('RemoteWriteService', () => {
   it('should not start pushing when disabled', () => {
     jest
       .spyOn(configService, 'get')
-      .mockImplementation((key: string, defaultValue?: any) => {
+      .mockImplementation((key: string, defaultValue?: unknown) => {
         if (key === 'GRAFANA_REMOTE_WRITE_ENABLED') return false;
         return defaultValue;
       });
@@ -79,7 +79,7 @@ describe('RemoteWriteService', () => {
   it('should not start pushing when credentials are missing', () => {
     jest
       .spyOn(configService, 'get')
-      .mockImplementation((key: string, defaultValue?: any) => {
+      .mockImplementation((key: string, defaultValue?: unknown) => {
         if (key === 'GRAFANA_REMOTE_WRITE_ENABLED') return true;
         if (key === 'GRAFANA_PROMETHEUS_URL') return undefined;
         return defaultValue;
@@ -113,19 +113,20 @@ describe('RemoteWriteService', () => {
         headers: {
           'User-Agent': 'visapi-remote-write/1.0',
         },
-      })
+      }),
     );
   });
 
   it('should handle push errors gracefully', async () => {
-    mockPushTimeseries.mockRejectedValueOnce(new Error('Network error'));
+    const error = new Error('Network error');
+    mockPushTimeseries.mockRejectedValueOnce(error);
     const loggerSpy = jest.spyOn(service['logger'], 'error');
 
     await service['pushMetrics']();
 
     expect(loggerSpy).toHaveBeenCalledWith(
       'Failed to push metrics to Grafana Cloud',
-      'Network error'
+      error,
     );
   });
 

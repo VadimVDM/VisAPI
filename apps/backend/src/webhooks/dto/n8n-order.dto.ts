@@ -173,7 +173,8 @@ export class N8nProductDto {
   photo_types: string[];
   calendar_stay_limit?: number; // For Indian visas
   variations?: N8nProductVariationDto[]; // For Korean visas
-  replacement?: { // For Saudi visas
+  replacement?: {
+    // For Saudi visas
     active: boolean;
   };
   days_to_use?: number; // For UK ETA

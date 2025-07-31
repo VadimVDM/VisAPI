@@ -1,14 +1,18 @@
-import { Controller, Req, Res, All } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Controller, Req, Res, All, Next } from '@nestjs/common';
+import { Request, Response, NextFunction } from 'express';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @All('queues/*path')
-  getQueues(@Req() req: Request, @Res() res: Response): void {
+  @All('queues/*')
+  getQueues(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ): void {
     const router = this.adminService.getRouter();
-    router(req, res, () => {});
+    router(req, res, next);
   }
 }

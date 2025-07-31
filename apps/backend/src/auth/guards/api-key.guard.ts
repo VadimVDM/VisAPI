@@ -9,17 +9,19 @@ import { Reflector } from '@nestjs/core';
 import { AuthService } from '../auth.service';
 import { SCOPES_KEY } from '../decorators/scopes.decorator';
 import { MetricsService } from '../../metrics/metrics.service';
+import { ApiKeyRecord } from '@visapi/shared-types';
+import { Request } from 'express';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
-    @Optional() private readonly metricsService?: MetricsService
+    @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request & { apiKey?: ApiKeyRecord }>();
     const apiKey = this.extractApiKey(request);
 
     if (!apiKey) {
@@ -45,16 +47,16 @@ export class ApiKeyGuard implements CanActivate {
         ]) || [];
 
       if (requiredScopes.length > 0) {
-        const hasScopes = await this.authService.checkScopes(
+        const hasScopes = this.authService.checkScopes(
           validatedKey,
-          requiredScopes
+          requiredScopes,
         );
 
         if (!hasScopes) {
           throw new UnauthorizedException(
             `Insufficient permissions. Required scopes: ${requiredScopes.join(
-              ', '
-            )}`
+              ', ',
+            )}`,
           );
         }
       }
@@ -72,10 +74,10 @@ export class ApiKeyGuard implements CanActivate {
     }
   }
 
-  private extractApiKey(request: any): string | null {
+  private extractApiKey(request: Request): string | null {
     // Check X-API-Key header
     const apiKey = request.headers['x-api-key'];
-    if (apiKey) {
+    if (typeof apiKey === 'string') {
       return apiKey;
     }
 

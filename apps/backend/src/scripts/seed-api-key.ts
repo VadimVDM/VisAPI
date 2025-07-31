@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app/app.module';
 import { AuthService } from '../auth/auth.service';
 import { SupabaseService } from '@visapi/core-supabase';
+import { User } from '@visapi/shared-types';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -18,7 +19,7 @@ async function bootstrap() {
         role: 'admin',
       })
       .select()
-      .single();
+      .single<User>();
 
     if (userError && !userError.message.includes('duplicate')) {
       throw userError;
@@ -32,9 +33,15 @@ async function bootstrap() {
         .from('users')
         .select('id')
         .eq('email', 'admin@visanet.app')
-        .single();
+        .single<{ id: string }>();
 
-      userId = existingUser?.id;
+      if (existingUser) {
+        userId = existingUser.id;
+      }
+    }
+
+    if (!userId) {
+      throw new Error('Could not create or find user');
     }
 
     // Create an API key with all scopes
@@ -49,7 +56,7 @@ async function bootstrap() {
         'keys:delete',
         'triggers:create',
       ],
-      userId
+      userId,
     );
 
     console.log('✅ API Key created successfully!');
@@ -57,9 +64,6 @@ async function bootstrap() {
     console.log('Save this key securely, it will not be shown again:');
     console.log('');
     console.log(`API Key: ${key}`);
-    console.log('');
-    console.log('To use this key, add it to your request headers:');
-    console.log('X-API-Key: ' + key);
     console.log('');
     console.log('Key ID:', apiKey.id);
     console.log('Scopes:', apiKey.scopes.join(', '));
@@ -71,4 +75,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+void bootstrap();

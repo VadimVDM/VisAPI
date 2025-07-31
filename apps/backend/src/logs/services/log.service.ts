@@ -1,44 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { PiiRedactionService } from './pii-redaction.service';
-
-export interface LogEntry {
-  level: 'debug' | 'info' | 'warn' | 'error';
-  message: string;
-  metadata?: Record<string, any>;
-  workflow_id?: string;
-  job_id?: string;
-  correlation_id?: string;
-}
-
-export interface LogRecord {
-  id: number;
-  level: string;
-  message: string;
-  metadata: any;
-  workflow_id: string | null;
-  job_id: string | null;
-  pii_redacted: boolean;
-  created_at: string;
-}
-
-export interface LogFilters {
-  level?: string;
-  workflow_id?: string;
-  job_id?: string;
-  start_date?: string;
-  end_date?: string;
-  message_contains?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface PaginatedLogs {
-  logs: LogRecord[];
-  total: number;
-  offset: number;
-  limit: number;
-}
+import {
+  LogEntry,
+  LogRecord,
+  LogFilters,
+  PaginatedLogs,
+} from '@visapi/shared-types';
 
 @Injectable()
 export class LogService {
@@ -46,19 +14,21 @@ export class LogService {
 
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly piiRedactionService: PiiRedactionService
+    private readonly piiRedactionService: PiiRedactionService,
   ) {}
 
   /**
    * Create a new log entry with PII redaction
    */
-  async createLog(logEntry: LogEntry): Promise<void> {
+  async createLog(logEntry: Omit<LogEntry, 'id' | 'created_at' | 'pii_redacted'>): Promise<void> {
     try {
       // Redact PII from message
-      const messageResult = this.piiRedactionService.redactPii(logEntry.message);
-      
+      const messageResult = this.piiRedactionService.redactPii(
+        logEntry.message,
+      );
+
       // Redact PII from metadata
-      const metadataResult = logEntry.metadata 
+      const metadataResult = logEntry.metadata
         ? this.piiRedactionService.redactPiiFromObject(logEntry.metadata)
         : { obj: null, piiFound: false, redactedFields: [] };
 
@@ -77,10 +47,9 @@ export class LogService {
       };
 
       // Store in database using client property
-      const { error } = await this.supabase
-        .client
+      const { error } = await this.supabase.serviceClient
         .from('logs')
-        .insert(logData);
+        .insert(logData as any);
 
       if (error) {
         this.logger.error('Failed to store log entry:', error);
@@ -96,7 +65,6 @@ export class LogService {
           jobId: logEntry.job_id,
         });
       }
-
     } catch (error) {
       this.logger.error('Error creating log entry:', error);
       // Don't throw - we don't want logging failures to break the application
@@ -113,13 +81,12 @@ export class LogService {
       job_id,
       start_date,
       end_date,
-      message_contains,
+      search,
       limit = 50,
       offset = 0,
     } = filters;
 
-    let query = this.supabase
-      .client
+    let query = this.supabase.serviceClient
       .from('logs')
       .select('*', { count: 'exact' });
 
@@ -144,8 +111,8 @@ export class LogService {
       query = query.lte('created_at', end_date);
     }
 
-    if (message_contains) {
-      query = query.ilike('message', `%${message_contains}%`);
+    if (search) {
+      query = query.ilike('message', `%${search}%`);
     }
 
     // Apply pagination and ordering
@@ -161,10 +128,13 @@ export class LogService {
     }
 
     return {
-      logs: data || [],
-      total: count || 0,
-      offset,
-      limit,
+      data: (data as LogRecord[]) || [],
+      pagination: {
+        page: offset,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
+      },
     };
   }
 
@@ -172,8 +142,7 @@ export class LogService {
    * Get logs by workflow ID
    */
   async getLogsByWorkflow(workflowId: string): Promise<LogRecord[]> {
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .select('*')
       .eq('workflow_id', workflowId)
@@ -184,15 +153,14 @@ export class LogService {
       throw new Error('Failed to fetch workflow logs');
     }
 
-    return data || [];
+    return (data as LogRecord[]) || [];
   }
 
   /**
    * Get logs by job ID
    */
   async getLogsByJob(jobId: string): Promise<LogRecord[]> {
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .select('*')
       .eq('job_id', jobId)
@@ -203,7 +171,7 @@ export class LogService {
       throw new Error('Failed to fetch job logs');
     }
 
-    return data || [];
+    return (data as LogRecord[]) || [];
   }
 
   /**
@@ -215,10 +183,10 @@ export class LogService {
     withPii: number;
     recentCount: number;
   }> {
-    const { data: totalData, error: totalError } = await this.supabase
-      .client
-      .from('logs')
-      .select('level, pii_redacted', { count: 'exact' });
+    const { data: totalData, error: totalError } =
+      await this.supabase.serviceClient
+        .from('logs')
+        .select('level, pii_redacted');
 
     if (totalError) {
       this.logger.error('Failed to fetch log stats:', totalError);
@@ -229,7 +197,7 @@ export class LogService {
     const byLevel: Record<string, number> = {};
     let withPii = 0;
 
-    totalData?.forEach(log => {
+    totalData?.forEach((log: { level: string; pii_redacted: boolean }) => {
       byLevel[log.level] = (byLevel[log.level] || 0) + 1;
       if (log.pii_redacted) {
         withPii++;
@@ -240,11 +208,11 @@ export class LogService {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const { data: recentData, error: recentError } = await this.supabase
-      .client
-      .from('logs')
-      .select('id', { count: 'exact' })
-      .gte('created_at', yesterday.toISOString());
+    const { data: recentData, error: recentError } =
+      await this.supabase.serviceClient
+        .from('logs')
+        .select('id', { count: 'exact' })
+        .gte('created_at', yesterday.toISOString());
 
     if (recentError) {
       this.logger.warn('Failed to fetch recent logs count:', recentError);
@@ -261,25 +229,27 @@ export class LogService {
   /**
    * Delete logs older than specified days
    */
-  async pruneOldLogs(olderThanDays: number = 90): Promise<{ deleted: number }> {
+  async pruneOldLogs(olderThanDays = 90): Promise<{ deleted: number }> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .delete()
-      .lt('created_at', cutoffDate.toISOString());
+      .lt('created_at', cutoffDate.toISOString())
+      .select('id');
 
     if (error) {
       this.logger.error('Failed to prune old logs:', error);
       throw new Error('Failed to prune old logs');
     }
 
-    const deletedCount = data ? (Array.isArray(data) ? (data as any[]).length : 0) : 0;
-    
-    this.logger.log(`Pruned ${deletedCount} logs older than ${olderThanDays} days`);
-    
+    const deletedCount = data?.length || 0;
+
+    this.logger.log(
+      `Pruned ${deletedCount} logs older than ${olderThanDays} days`,
+    );
+
     return { deleted: deletedCount };
   }
 
@@ -293,8 +263,8 @@ export class LogService {
       workflow_id?: string;
       job_id?: string;
       correlation_id?: string;
-      metadata?: Record<string, any>;
-    }
+      metadata?: Record<string, unknown>;
+    },
   ): Promise<void> {
     await this.createLog({
       level,
@@ -302,26 +272,37 @@ export class LogService {
       metadata: context?.metadata,
       workflow_id: context?.workflow_id,
       job_id: context?.job_id,
-      correlation_id: context?.correlation_id,
     });
   }
 
   /**
    * Convenience methods for different log levels
    */
-  async debug(message: string, context?: any): Promise<void> {
+  async debug(
+    message: string,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.logWithContext('debug', message, context);
   }
 
-  async info(message: string, context?: any): Promise<void> {
+  async info(
+    message: string,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.logWithContext('info', message, context);
   }
 
-  async warn(message: string, context?: any): Promise<void> {
+  async warn(
+    message: string,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.logWithContext('warn', message, context);
   }
 
-  async error(message: string, context?: any): Promise<void> {
+  async error(
+    message: string,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.logWithContext('error', message, context);
   }
 }

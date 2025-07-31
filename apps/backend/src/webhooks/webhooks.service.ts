@@ -3,6 +3,7 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { N8nWebhookDto, N8nBusinessDto } from './dto/n8n-order.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import type { Json } from '@visapi/shared-types';
 
 @Injectable()
 export class WebhooksService {
@@ -13,20 +14,30 @@ export class WebhooksService {
     @InjectQueue('workflows') private readonly workflowQueue: Queue,
   ) {}
 
-  async processN8nWebhook(data: N8nWebhookDto, headers: Record<string, string>): Promise<void> {
+  async processN8nWebhook(
+    data: N8nWebhookDto,
+    headers: Record<string, string>,
+  ): Promise<void> {
     const startTime = Date.now();
     const { form, order } = data;
 
     try {
       // Log the webhook receipt
-      await this.logWebhook('n8n.visanet.app', '/api/v1/webhooks/n8n/orders', 'POST', headers, data, startTime);
+      await this.logWebhook(
+        'n8n.visanet.app',
+        '/api/v1/webhooks/n8n/orders',
+        'POST',
+        headers,
+        data,
+        startTime,
+      );
 
       // Start a transaction by inserting the order first
       const orderRecord = await this.createOrder(order, data);
-      
+
       // Create form metadata
       await this.createFormMetadata(orderRecord.id, form);
-      
+
       // Create applicants
       await this.createApplicants(orderRecord.id, form.applicants);
 
@@ -38,16 +49,33 @@ export class WebhooksService {
       // Queue any additional processing (e.g., send notifications, generate PDFs)
       await this.queuePostProcessing(orderRecord.id, order.id);
 
-      this.logger.log(`Successfully processed n8n webhook for order ${order.id} with ${form.applicants.length} applicants`);
-    } catch (error) {
-      this.logger.error(`Failed to process n8n webhook for order ${order?.id}:`, error);
+      this.logger.log(
+        `Successfully processed n8n webhook for order ${order.id} with ${form.applicants.length} applicants`,
+      );
+    } catch (e: unknown) {
+      const error = e as Error;
+      this.logger.error(
+        `Failed to process n8n webhook for order ${order?.id}:`,
+        error,
+      );
       // Log the error in webhook logs
-      await this.logWebhookError('n8n.visanet.app', '/api/v1/webhooks/n8n/orders', 'POST', headers, data, error.message, startTime);
+      await this.logWebhookError(
+        'n8n.visanet.app',
+        '/api/v1/webhooks/n8n/orders',
+        'POST',
+        headers,
+        data,
+        error.message,
+        startTime,
+      );
       throw error;
     }
   }
 
-  private async createOrder(orderData: N8nWebhookDto['order'], fullData: N8nWebhookDto) {
+  private async createOrder(
+    orderData: N8nWebhookDto['order'],
+    fullData: N8nWebhookDto,
+  ) {
     const { data, error } = await this.supabaseService.client
       .from('orders')
       .insert({
@@ -61,7 +89,7 @@ export class WebhooksService {
         status: orderData.status,
         branch: orderData.branch,
         domain: orderData.domain,
-        raw_data: fullData,
+        raw_data: fullData as unknown as Json,
       })
       .select()
       .single();
@@ -73,7 +101,10 @@ export class WebhooksService {
     return data;
   }
 
-  private async createFormMetadata(orderId: string, formData: N8nWebhookDto['form']) {
+  private async createFormMetadata(
+    orderId: string,
+    formData: N8nWebhookDto['form'],
+  ) {
     const { error } = await this.supabaseService.client
       .from('form_metadata')
       .insert({
@@ -82,12 +113,12 @@ export class WebhooksService {
         country: formData.country,
         entry_date: formData.entry.date,
         entry_port: formData.entry.port,
-        product: formData.product,
+        product: formData.product as unknown as Json,
         quantity: formData.quantity,
         urgency: formData.urgency,
-        client: formData.client,
-        meta: formData.meta,
-        children: formData.children || [],
+        client: formData.client as unknown as Json,
+        meta: formData.meta as unknown as Json,
+        children: (formData.children || []) as unknown as Json,
         stay_address: formData.stayAddress || null,
       });
 
@@ -96,11 +127,14 @@ export class WebhooksService {
     }
   }
 
-  private async createApplicants(orderId: string, applicants: N8nWebhookDto['form']['applicants']) {
-    const applicantRecords = applicants.map(applicant => ({
+  private async createApplicants(
+    orderId: string,
+    applicants: N8nWebhookDto['form']['applicants'],
+  ) {
+    const applicantRecords = applicants.map((applicant) => ({
       order_id: orderId,
       applicant_id: applicant.id,
-      
+
       // Passport information (handle UK ETA minimal data)
       passport_nationality: applicant.passport.nationality || null,
       passport_first_name: applicant.passport.firstName,
@@ -112,46 +146,70 @@ export class WebhooksService {
       passport_date_of_issue: applicant.passport.dateOfIssue || null,
       passport_date_of_expiry: applicant.passport.dateOfExpiry || null,
       passport_place_of_issue: applicant.passport.placeOfIssue || null,
-      
+
       // Past visit information (handle both old and new format)
-      past_visit_visited: applicant.pastVisit?.visited || applicant.pastTravels?.pastVisit?.visited || false,
-      past_visit_year: applicant.pastVisit?.year || applicant.pastTravels?.pastVisit?.year || null,
-      
+      past_visit_visited:
+        applicant.pastVisit?.visited ||
+        applicant.pastTravels?.pastVisit?.visited ||
+        false,
+      past_visit_year:
+        applicant.pastVisit?.year ||
+        applicant.pastTravels?.pastVisit?.year ||
+        null,
+
       // Address information (optional for Morocco visas)
       address_line: applicant.address?.line || null,
       address_city: applicant.address?.city || null,
       address_country: applicant.address?.country || null,
       address_set_by: applicant.address?.setBy || null,
-      
+
       // Occupation information (handle both object and string format)
-      occupation_education: typeof applicant.occupation === 'object' ? applicant.occupation.education : null,
-      occupation_status: typeof applicant.occupation === 'object' ? applicant.occupation.status : applicant.occupation,
-      occupation_name: typeof applicant.occupation === 'object' ? applicant.occupation.name : null,
-      occupation_seniority: typeof applicant.occupation === 'object' ? applicant.occupation.seniority : null,
-      occupation_phone: typeof applicant.occupation === 'object' ? applicant.occupation.phone : null,
-      occupation_address: typeof applicant.occupation === 'object' ? applicant.occupation.address : null,
-      
+      occupation_education:
+        typeof applicant.occupation === 'object'
+          ? applicant.occupation.education
+          : null,
+      occupation_status:
+        typeof applicant.occupation === 'object'
+          ? applicant.occupation.status
+          : applicant.occupation,
+      occupation_name:
+        typeof applicant.occupation === 'object'
+          ? applicant.occupation.name
+          : null,
+      occupation_seniority:
+        typeof applicant.occupation === 'object'
+          ? applicant.occupation.seniority
+          : null,
+      occupation_phone:
+        typeof applicant.occupation === 'object'
+          ? (applicant.occupation.phone as unknown as Json)
+          : null,
+      occupation_address:
+        typeof applicant.occupation === 'object'
+          ? (applicant.occupation.address as unknown as Json)
+          : null,
+
       // Extra nationality (optional for Saudi visas)
       extra_nationality_status: applicant.extraNationality?.status || null,
-      
+
       // Family information
-      family_data: applicant.family || null,
-      
+      family_data: (applicant.family || null) as unknown as Json,
+
       // File URLs
-      files: applicant.files,
-      
+      files: applicant.files as unknown as Json,
+
       // Additional fields
       id_number: applicant.idNumber || null,
       crime: applicant.crime || null,
       religion: applicant.religion || null,
-      military: applicant.military || null,
-      past_travels: applicant.pastTravels || null,
-      
+      military: (applicant.military || null) as unknown as Json,
+      past_travels: (applicant.pastTravels || null) as unknown as Json,
+
       // Korean visa specific fields
       visited: applicant.visited || false,
       city_of_birth: applicant.cityOfBirth || null,
-      last_travel: applicant.lastTravel || null,
-      
+      last_travel: (applicant.lastTravel || null) as unknown as Json,
+
       // Saudi visa specific fields
       marital_status: applicant.maritalStatus || null,
       guardian_passport: applicant.guardianPassport || null,
@@ -159,14 +217,17 @@ export class WebhooksService {
 
     const { error } = await this.supabaseService.client
       .from('applicants')
-      .insert(applicantRecords);
+      .insert(applicantRecords as any);
 
     if (error) {
       throw new Error(`Failed to create applicants: ${error.message}`);
     }
   }
 
-  private async createBusinessInfo(orderId: string, business: N8nWebhookDto['form']['business']) {
+  private async createBusinessInfo(
+    orderId: string,
+    business: N8nWebhookDto['form']['business'],
+  ) {
     if (!business || !business.name) {
       return; // Skip if no business info
     }
@@ -181,7 +242,7 @@ export class WebhooksService {
         address_line: business.address?.line || null,
         address_city: business.address?.city || null,
         address_country: business.address?.country || null,
-        phone: business.phone || null,
+        phone: (business.phone || null) as unknown as Json,
       });
 
     if (error) {
@@ -205,7 +266,7 @@ export class WebhooksService {
           type: 'exponential',
           delay: 2000,
         },
-      }
+      },
     );
   }
 
@@ -215,21 +276,19 @@ export class WebhooksService {
     method: string,
     headers: Record<string, string>,
     body: any,
-    startTime: number
+    startTime: number,
   ) {
     const processingTime = Date.now() - startTime;
-    
-    await this.supabaseService.client
-      .from('webhook_logs')
-      .insert({
-        source,
-        endpoint,
-        method,
-        headers,
-        body,
-        status_code: 200,
-        processing_time_ms: processingTime,
-      });
+
+    await this.supabaseService.client.from('webhook_logs').insert({
+      source,
+      endpoint,
+      method,
+      headers,
+      body,
+      status_code: 200,
+      processing_time_ms: processingTime,
+    });
   }
 
   private async logWebhookError(
@@ -239,21 +298,19 @@ export class WebhooksService {
     headers: Record<string, string>,
     body: any,
     error: string,
-    startTime: number
+    startTime: number,
   ) {
     const processingTime = Date.now() - startTime;
-    
-    await this.supabaseService.client
-      .from('webhook_logs')
-      .insert({
-        source,
-        endpoint,
-        method,
-        headers,
-        body,
-        status_code: 500,
-        error,
-        processing_time_ms: processingTime,
-      });
+
+    await this.supabaseService.client.from('webhook_logs').insert({
+      source,
+      endpoint,
+      method,
+      headers,
+      body,
+      status_code: 500,
+      error,
+      processing_time_ms: processingTime,
+    });
   }
 }

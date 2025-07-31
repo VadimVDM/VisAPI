@@ -1,6 +1,12 @@
-import { Test } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { configuration } from '@visapi/core-config';
+import {
+  DynamicModule,
+  ForwardReference,
+  Provider,
+  Type,
+} from '@nestjs/common';
 
 // Set test environment
 process.env.NODE_ENV = 'test';
@@ -15,16 +21,16 @@ beforeAll(() => {
     console.log = jest.fn();
     console.error = jest.fn();
   }
-  
+
   // Set shorter timeouts for test environment
   jest.setTimeout(10000);
 });
 
-afterAll(async () => {
+afterAll(() => {
   // Restore console
   console.log = originalConsoleLog;
   console.error = originalConsoleError;
-  
+
   // Force garbage collection if available
   if (global.gc) {
     global.gc();
@@ -42,9 +48,14 @@ jest.mock('ioredis', () => {
 
 // Helper function to create test module
 export const createTestModule = (
-  providers: any[] = [],
-  imports: any[] = []
-) => {
+  providers: Provider[] = [],
+  imports: (
+    | Type<any>
+    | DynamicModule
+    | Promise<DynamicModule>
+    | ForwardReference
+  )[] = [],
+): TestingModuleBuilder => {
   return Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({

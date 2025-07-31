@@ -19,7 +19,7 @@ Sentry.init({
   sendDefaultPii: process.env.NODE_ENV !== 'production',
 
   // Filter out sensitive data
-  beforeSend(event, hint) {
+  beforeSend(event) {
     // Filter out sensitive headers
     if (event.request?.headers) {
       delete event.request.headers['authorization'];

@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue, Job } from 'bullmq';
-import { QUEUE_NAMES, QUEUE_PRIORITIES } from '@visapi/shared-types';
+import { Queue, Job, RepeatableJob } from 'bullmq';
+import {
+  QUEUE_NAMES,
+  QUEUE_PRIORITIES,
+  QueueMetrics,
+} from '@visapi/shared-types';
 import { ConfigService } from '@visapi/core-config';
-
-interface QueueMetrics {
-  name: string;
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-}
 
 @Injectable()
 export class QueueService {
@@ -19,7 +14,7 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.CRITICAL) private criticalQueue: Queue,
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
     @InjectQueue(QUEUE_NAMES.BULK) private bulkQueue: Queue,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
   ) {}
 
   private getQueue(queueName: string): Queue {
@@ -34,18 +29,18 @@ export class QueueService {
     }
   }
 
-  async addJob(
+  async addJob<T>(
     queueName: string,
     jobName: string,
-    data: unknown,
+    data: T,
     options?: {
       delay?: number;
       attempts?: number;
       priority?: number;
       removeOnComplete?: boolean;
       removeOnFail?: boolean;
-    }
-  ): Promise<Job> {
+    },
+  ): Promise<Job<T>> {
     const queue = this.getQueue(queueName);
 
     const defaultOptions = {
@@ -65,7 +60,10 @@ export class QueueService {
     });
   }
 
-  async getJob(queueName: string, jobId: string): Promise<Job | undefined> {
+  async getJob<T>(
+    queueName: string,
+    jobId: string,
+  ): Promise<Job<T> | undefined> {
     const queue = this.getQueue(queueName);
     return queue.getJob(jobId);
   }
@@ -82,20 +80,20 @@ export class QueueService {
     const metrics: QueueMetrics[] = [];
 
     for (const { name, queue } of queues) {
-      const counts = await queue.getJobCounts();
+      const [counts, isPaused] = await Promise.all([
+        queue.getJobCounts(),
+        queue.isPaused(),
+      ]);
+
       metrics.push({
         name,
-        waiting: counts.waiting || 0,
-        active: counts.active || 0,
-        completed: counts.completed || 0,
-        failed: counts.failed || 0,
-        delayed: counts.delayed || 0,
+        counts: counts as QueueMetrics['counts'],
+        isPaused,
       });
     }
 
     return metrics;
   }
-
 
   private getDefaultPriority(queueName: string): number {
     switch (queueName) {
@@ -127,26 +125,27 @@ export class QueueService {
   async cleanQueue(
     queueName: string,
     grace: number,
-    limit: number,
-    status: 'completed' | 'wait' | 'active' | 'delayed' | 'failed'
-  ): Promise<string[]> {
+    status: 'completed' | 'wait' | 'active' | 'delayed' | 'failed',
+  ): Promise<void> {
     const queue = this.getQueue(queueName);
-    return queue.clean(grace, limit, status);
+    await queue.clean(grace, 0, status);
   }
 
-  async addRepeatableJob(
+  async addRepeatableJob<T extends Record<string, unknown>>(
     queueName: string,
     jobName: string,
-    data: any,
+    data: T,
     repeatOptions: {
       pattern: string; // Cron expression
       tz?: string; // Timezone
-    }
-  ): Promise<Job> {
+    },
+  ): Promise<Job<T>> {
     const queue = this.getQueue(queueName);
 
     // Create a unique job ID based on workflow ID to prevent duplicates
-    const jobId = data.workflowId ? `cron-${data.workflowId}` : undefined;
+    const jobId = data.workflowId
+      ? `cron-${data.workflowId as string}`
+      : undefined;
 
     return queue.add(jobName, data, {
       jobId,
@@ -167,13 +166,13 @@ export class QueueService {
 
   async removeRepeatableJob(
     queueName: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<void> {
     const queue = this.getQueue(queueName);
     const repeatableJobs = await queue.getRepeatableJobs();
-    
+
     const jobToRemove = repeatableJobs.find(
-      (job) => job.id === `cron-${workflowId}`
+      (job) => job.id === `cron-${workflowId}`,
     );
 
     if (jobToRemove) {
@@ -181,7 +180,7 @@ export class QueueService {
     }
   }
 
-  async getRepeatableJobs(queueName: string): Promise<any[]> {
+  async getRepeatableJobs(queueName: string): Promise<RepeatableJob[]> {
     const queue = this.getQueue(queueName);
     return queue.getRepeatableJobs();
   }

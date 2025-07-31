@@ -3,6 +3,7 @@ import { HealthController } from './health.controller';
 import {
   TerminusModule,
   HealthCheckService,
+  HealthCheckResult,
 } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { SupabaseHealthIndicator } from './indicators/supabase.health';
@@ -10,8 +11,6 @@ import { SupabaseHealthIndicator } from './indicators/supabase.health';
 describe('HealthController', () => {
   let controller: HealthController;
   let healthCheckService: jest.Mocked<HealthCheckService>;
-  let redisHealth: jest.Mocked<RedisHealthIndicator>;
-  let supabaseHealth: jest.Mocked<SupabaseHealthIndicator>;
 
   const mockHealthCheckService = {
     check: jest.fn(),
@@ -42,9 +41,9 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    healthCheckService = module.get(HealthCheckService) as jest.Mocked<HealthCheckService>;
-    redisHealth = module.get(RedisHealthIndicator);
-    supabaseHealth = module.get(SupabaseHealthIndicator);
+    healthCheckService = module.get(HealthCheckService);
+    module.get<RedisHealthIndicator>(RedisHealthIndicator);
+    module.get<SupabaseHealthIndicator>(SupabaseHealthIndicator);
   });
 
   afterEach(() => {
@@ -57,23 +56,23 @@ describe('HealthController', () => {
 
   describe('check', () => {
     it('should return healthy status when all services are up', async () => {
-      const mockHealthResult = {
-        status: 'ok' as const,
+      const mockHealthResult: HealthCheckResult = {
+        status: 'ok',
         info: {
           redis: {
-            status: 'up' as const,
+            status: 'up',
           },
           database: {
-            status: 'up' as const,
+            status: 'up',
           },
         },
         error: {},
         details: {
           redis: {
-            status: 'up' as const,
+            status: 'up',
           },
           database: {
-            status: 'up' as const,
+            status: 'up',
           },
         },
       };
@@ -90,38 +89,33 @@ describe('HealthController', () => {
     });
 
     it('should return error status when services are down', async () => {
-      const mockHealthResult = {
-        status: 'error' as const,
+      const mockHealthResult: HealthCheckResult = {
+        status: 'error',
         info: {},
         error: {
           redis: {
-            status: 'down' as const,
-            message: 'Connection refused',
+            status: 'down',
           },
           database: {
-            status: 'down' as const,
-            message: 'Timeout',
+            status: 'down',
           },
         },
         details: {
           redis: {
-            status: 'down' as const,
-            message: 'Connection refused',
+            status: 'down',
           },
           database: {
-            status: 'down' as const,
-            message: 'Timeout',
+            status: 'down',
           },
         },
       };
 
-      mockHealthCheckService.check.mockRejectedValue({
-        response: mockHealthResult,
-      });
+      const error = new Error('Service Unavailable');
+      (error as any).response = mockHealthResult;
 
-      await expect(controller.check()).rejects.toMatchObject({
-        response: mockHealthResult,
-      });
+      mockHealthCheckService.check.mockRejectedValue(error);
+
+      await expect(controller.check()).rejects.toThrow(error);
     });
   });
 

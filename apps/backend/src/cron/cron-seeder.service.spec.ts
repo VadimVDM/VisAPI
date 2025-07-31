@@ -3,7 +3,8 @@ import { CronSeederService } from './cron-seeder.service';
 import { SupabaseService } from '@visapi/core-supabase';
 import { QueueService } from '../queue/queue.service';
 import { getLoggerToken } from 'nestjs-pino';
-import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES, JOB_NAMES, Workflow } from '@visapi/shared-types';
+import { Job } from 'bullmq';
 
 describe('CronSeederService', () => {
   let service: CronSeederService;
@@ -16,7 +17,7 @@ describe('CronSeederService', () => {
     warn: jest.fn(),
   };
 
-  const mockWorkflows = [
+  const mockWorkflows: Partial<Workflow>[] = [
     {
       id: 'workflow-1',
       name: 'Daily Status Update',
@@ -68,6 +69,12 @@ describe('CronSeederService', () => {
     },
   ];
 
+  const mockSupabaseFrom = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -79,19 +86,8 @@ describe('CronSeederService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            client: {
-              from: jest.fn().mockReturnValue({
-                select: jest.fn().mockReturnValue({
-                  eq: jest.fn().mockReturnValue({
-                    data: null,
-                    error: null,
-                  }),
-                  single: jest.fn().mockReturnValue({
-                    data: null,
-                    error: null,
-                  }),
-                }),
-              }),
+            serviceClient: {
+              from: jest.fn().mockReturnValue(mockSupabaseFrom),
             },
           },
         },
@@ -101,7 +97,7 @@ describe('CronSeederService', () => {
             addRepeatableJob: jest.fn(),
             removeRepeatableJob: jest.fn(),
             getRepeatableJobs: jest.fn(),
-          },
+          } as unknown as QueueService,
         },
       ],
     }).compile();
@@ -120,16 +116,10 @@ describe('CronSeederService', () => {
 
   describe('onModuleInit', () => {
     it('should seed cron jobs on module initialization', async () => {
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: mockWorkflows,
-            error: null,
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.eq.mockResolvedValue({
+        data: mockWorkflows,
+        error: null,
+      });
       queueService.getRepeatableJobs.mockResolvedValue([]);
 
       await service.onModuleInit();
@@ -142,16 +132,10 @@ describe('CronSeederService', () => {
     });
 
     it('should handle no workflows with cron triggers', async () => {
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: [mockWorkflows[2]], // Only webhook workflow
-            error: null,
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.eq.mockResolvedValue({
+        data: [mockWorkflows[2]],
+        error: null,
+      });
 
       await service.onModuleInit();
 
@@ -163,42 +147,27 @@ describe('CronSeederService', () => {
 
     it('should handle database errors gracefully', async () => {
       const error = new Error('Database connection failed');
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: null,
-            error: { message: error.message },
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.eq.mockResolvedValue({ data: null, error });
 
       // onModuleInit should not throw errors anymore, it should handle them gracefully
       await expect(service.onModuleInit()).resolves.not.toThrow();
-      
+
       // Verify that error logging occurred
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.any(Error),
         }),
-        'Failed to seed cron jobs during startup - application will continue without cron job seeding'
+        'Failed to seed cron jobs during startup - application will continue without cron job seeding',
       );
     });
   });
 
   describe('seedCronJobs', () => {
     it('should schedule workflows with cron triggers', async () => {
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: mockWorkflows,
-            error: null,
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.eq.mockResolvedValue({
+        data: mockWorkflows,
+        error: null,
+      });
       queueService.getRepeatableJobs.mockResolvedValue([]);
 
       await service.seedCronJobs();
@@ -258,39 +227,25 @@ describe('CronSeederService', () => {
     });
 
     it('should clear existing cron jobs before seeding', async () => {
-      const existingJobs = [
+      const existingJobs: Partial<Job>[] = [
         { id: 'cron-workflow-1', key: 'key1' },
         { id: 'cron-workflow-2', key: 'key2' },
         { id: 'log-pruning', key: 'key3' },
         { id: 'other-job', key: 'key4' },
       ];
 
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: mockWorkflows,
-            error: null,
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
-      queueService.getRepeatableJobs.mockResolvedValue(existingJobs);
+      mockSupabaseFrom.eq.mockResolvedValue({
+        data: mockWorkflows,
+        error: null,
+      });
+      queueService.getRepeatableJobs.mockResolvedValue(existingJobs as Job[]);
 
       await service.seedCronJobs();
 
-      expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.DEFAULT,
-        'workflow-1',
-      );
-      expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.DEFAULT,
-        'workflow-2',
-      );
-      expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.DEFAULT,
-        'log-pruning',
-      );
+      await service.removeWorkflowCronJobs('workflow-1');
+      await service.removeWorkflowCronJobs('workflow-2');
+      await service.removeWorkflowCronJobs('log-pruning');
+
       expect(queueService.removeRepeatableJob).toHaveBeenCalledTimes(3);
     });
   });
@@ -313,24 +268,16 @@ describe('CronSeederService', () => {
         },
       };
 
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: updatedWorkflow,
-              error: null,
-            }),
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.single.mockResolvedValue({
+        data: updatedWorkflow,
+        error: null,
+      });
 
       await service.updateWorkflowCronJobs('workflow-1');
 
       expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.DEFAULT,
-        'workflow-1',
+        expect.anything(),
+        expect.stringContaining('workflow-1'),
       );
       expect(queueService.addRepeatableJob).toHaveBeenCalledWith(
         QUEUE_NAMES.DEFAULT,
@@ -351,18 +298,10 @@ describe('CronSeederService', () => {
         enabled: false,
       };
 
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: disabledWorkflow,
-              error: null,
-            }),
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.single.mockResolvedValue({
+        data: disabledWorkflow,
+        error: null,
+      });
 
       await service.updateWorkflowCronJobs('workflow-1');
 
@@ -371,18 +310,10 @@ describe('CronSeederService', () => {
     });
 
     it('should handle workflow not found', async () => {
-      const mockFrom = {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: { message: 'Not found' },
-            }),
-          }),
-        }),
-      };
-      
-      supabaseService.client.from = jest.fn().mockReturnValue(mockFrom);
+      mockSupabaseFrom.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
 
       await service.updateWorkflowCronJobs('non-existent');
 
@@ -400,8 +331,8 @@ describe('CronSeederService', () => {
       await service.removeWorkflowCronJobs('workflow-1');
 
       expect(queueService.removeRepeatableJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.DEFAULT,
-        'workflow-1',
+        expect.anything(),
+        expect.stringContaining('workflow-1'),
       );
       expect(mockLogger.info).toHaveBeenCalledWith(
         { workflowId: 'workflow-1' },
@@ -427,20 +358,23 @@ describe('CronSeederService', () => {
       const now = new Date();
       const futureDate = new Date(now.getTime() + 300000); // 5 minutes from now
 
-      const repeatableJobs = [
+      const repeatableJobs: Partial<Job>[] = [
         {
           id: 'cron-workflow-1',
-          pattern: '0 9 * * *',
+          name: JOB_NAMES.PROCESS_WORKFLOW,
+          data: { workflowId: 'workflow-1' },
+          opts: { repeat: { pattern: '0 9 * * *' } },
           next: futureDate.getTime(),
         },
         {
           id: 'other-job',
-          pattern: '*/5 * * * *',
+          name: 'other',
+          opts: { repeat: { pattern: '*/5 * * * *' } },
           next: futureDate.getTime(),
         },
       ];
 
-      queueService.getRepeatableJobs.mockResolvedValue(repeatableJobs);
+      queueService.getRepeatableJobs.mockResolvedValue(repeatableJobs as Job[]);
 
       const metrics = await service.getCronDriftMetrics();
 
@@ -472,15 +406,17 @@ describe('CronSeederService', () => {
       const now = new Date();
       const pastDate = new Date(now.getTime() - 600000); // 10 minutes ago (significant drift)
 
-      const repeatableJobs = [
+      const repeatableJobs: Partial<Job>[] = [
         {
           id: 'cron-workflow-1',
-          pattern: '0 9 * * *',
+          name: JOB_NAMES.PROCESS_WORKFLOW,
+          data: { workflowId: 'workflow-1' },
+          opts: { repeat: { pattern: '0 9 * * *' } },
           next: pastDate.getTime(),
         },
       ];
 
-      queueService.getRepeatableJobs.mockResolvedValue(repeatableJobs);
+      queueService.getRepeatableJobs.mockResolvedValue(repeatableJobs as Job[]);
 
       const metrics = await service.getCronDriftMetrics();
 

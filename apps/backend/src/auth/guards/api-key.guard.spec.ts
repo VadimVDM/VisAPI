@@ -26,8 +26,10 @@ describe('ApiKeyGuard', () => {
     updated_at: new Date().toISOString(),
   };
 
-  const createMockExecutionContext = (headers: any = {}): ExecutionContext => {
-    const mockRequest = { headers, apiKey: null };
+  const createMockExecutionContext = (
+    headers: Record<string, string> = {},
+  ): ExecutionContext => {
+    const mockRequest = { headers, apiKey: null }; // Initial state
     return {
       switchToHttp: jest.fn(() => ({
         getRequest: jest.fn(() => mockRequest),
@@ -86,20 +88,22 @@ describe('ApiKeyGuard', () => {
 
       expect(result).toBe(true);
       expect(authService.validateApiKey).toHaveBeenCalledWith(
-        'vapi_validkey123'
+        'vapi_validkey123',
       );
-      expect(context.switchToHttp().getRequest().apiKey).toEqual(mockApiKey);
+      expect(
+        (context.switchToHttp().getRequest()).apiKey,
+      ).toEqual(mockApiKey);
     });
 
     it('should throw UnauthorizedException when API key is missing', async () => {
       const context = createMockExecutionContext({}); // No API key header
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
-      expect(() => {
-        throw new UnauthorizedException('API key is required');
-      }).toThrow('API key is required');
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'API key is required',
+      );
     });
 
     it('should throw UnauthorizedException when API key is invalid', async () => {
@@ -110,11 +114,11 @@ describe('ApiKeyGuard', () => {
       authService.validateApiKey.mockResolvedValue(null);
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
-      expect(() => {
-        throw new UnauthorizedException('Invalid or expired API key');
-      }).toThrow('Invalid or expired API key');
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'Invalid or expired API key',
+      );
     });
 
     it('should check required scopes when specified', async () => {
@@ -132,7 +136,7 @@ describe('ApiKeyGuard', () => {
       expect(result).toBe(true);
       expect(authService.checkScopes).toHaveBeenCalledWith(
         mockApiKey,
-        requiredScopes
+        requiredScopes,
       );
     });
 
@@ -147,12 +151,12 @@ describe('ApiKeyGuard', () => {
       reflector.getAllAndOverride.mockReturnValue(requiredScopes);
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
 
       expect(authService.checkScopes).toHaveBeenCalledWith(
         mockApiKey,
-        requiredScopes
+        requiredScopes,
       );
     });
 
@@ -168,7 +172,7 @@ describe('ApiKeyGuard', () => {
 
       expect(result).toBe(true);
       expect(authService.validateApiKey).toHaveBeenCalledWith(
-        'vapi_bearerkey123'
+        'vapi_bearerkey123',
       );
     });
 
@@ -184,7 +188,7 @@ describe('ApiKeyGuard', () => {
 
       expect(result).toBe(true);
       expect(authService.validateApiKey).toHaveBeenCalledWith(
-        'vapi_xapikeyheader123'
+        'vapi_xapikeyheader123',
       );
     });
 
@@ -203,7 +207,7 @@ describe('ApiKeyGuard', () => {
       expect(result).toBe(true);
       expect(authService.checkScopes).toHaveBeenCalledWith(
         mockApiKey,
-        requiredScopes
+        requiredScopes,
       );
     });
 
@@ -233,7 +237,7 @@ describe('ApiKeyGuard', () => {
 
       expect(metricsService.recordApiKeyValidation).toHaveBeenCalledWith(
         expect.any(Number),
-        true
+        true,
       );
     });
 
@@ -245,12 +249,12 @@ describe('ApiKeyGuard', () => {
       authService.validateApiKey.mockResolvedValue(null);
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
 
       expect(metricsService.recordApiKeyValidation).toHaveBeenCalledWith(
         expect.any(Number),
-        false
+        false,
       );
     });
 
@@ -258,7 +262,7 @@ describe('ApiKeyGuard', () => {
       const context = createMockExecutionContext({});
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        UnauthorizedException
+        UnauthorizedException,
       );
 
       // Metrics should not be recorded when API key is missing (no validation occurred)

@@ -1,6 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
-import { CreateWorkflowDto, UpdateWorkflowDto, WorkflowResponseDto } from './dto';
+import {
+  CreateWorkflowDto,
+  UpdateWorkflowDto,
+  WorkflowResponseDto,
+} from './dto';
 import { WorkflowSchema } from '@visapi/shared-types';
 
 @Injectable()
@@ -9,7 +13,9 @@ export class WorkflowsService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  async create(createWorkflowDto: CreateWorkflowDto): Promise<WorkflowResponseDto> {
+  async create(
+    createWorkflowDto: CreateWorkflowDto,
+  ): Promise<WorkflowResponseDto> {
     const { name, description, enabled, variables, schema } = createWorkflowDto;
 
     // Combine the base fields with the schema for storage
@@ -23,8 +29,7 @@ export class WorkflowsService {
       },
     };
 
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.client
       .from('workflows')
       .insert(workflowData)
       .select()
@@ -40,8 +45,7 @@ export class WorkflowsService {
   }
 
   async findAll(): Promise<WorkflowResponseDto[]> {
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.client
       .from('workflows')
       .select('*')
       .order('created_at', { ascending: false });
@@ -51,12 +55,11 @@ export class WorkflowsService {
       throw new Error('Failed to fetch workflows');
     }
 
-    return data.map(workflow => this.mapToResponseDto(workflow));
+    return data.map((workflow) => this.mapToResponseDto(workflow));
   }
 
   async findOne(id: string): Promise<WorkflowResponseDto> {
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.client
       .from('workflows')
       .select('*')
       .eq('id', id)
@@ -70,7 +73,10 @@ export class WorkflowsService {
     return this.mapToResponseDto(data);
   }
 
-  async update(id: string, updateWorkflowDto: UpdateWorkflowDto): Promise<WorkflowResponseDto> {
+  async update(
+    id: string,
+    updateWorkflowDto: UpdateWorkflowDto,
+  ): Promise<WorkflowResponseDto> {
     const { name, description, enabled, variables, schema } = updateWorkflowDto;
 
     // Build update data, only including fields that are provided
@@ -78,7 +84,7 @@ export class WorkflowsService {
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (enabled !== undefined) updateData.enabled = enabled;
-    
+
     if (schema !== undefined) {
       updateData.schema = {
         ...schema,
@@ -86,8 +92,7 @@ export class WorkflowsService {
       };
     }
 
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.client
       .from('workflows')
       .update(updateData)
       .eq('id', id)
@@ -104,8 +109,7 @@ export class WorkflowsService {
   }
 
   async remove(id: string): Promise<void> {
-    const { error } = await this.supabase
-      .client
+    const { error } = await this.supabase.client
       .from('workflows')
       .delete()
       .eq('id', id);
@@ -119,8 +123,7 @@ export class WorkflowsService {
   }
 
   async findEnabled(): Promise<WorkflowResponseDto[]> {
-    const { data, error } = await this.supabase
-      .client
+    const { data, error } = await this.supabase.client
       .from('workflows')
       .select('*')
       .eq('enabled', true)
@@ -131,7 +134,7 @@ export class WorkflowsService {
       throw new Error('Failed to fetch enabled workflows');
     }
 
-    return data.map(workflow => this.mapToResponseDto(workflow));
+    return data.map((workflow) => this.mapToResponseDto(workflow));
   }
 
   private mapToResponseDto(workflow: any): WorkflowResponseDto {

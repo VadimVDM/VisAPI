@@ -7,7 +7,12 @@ import {
   ParseUUIDPipe,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { LogService } from './services/log.service';
 import { LogFiltersDto, PaginatedLogsDto, LogStatsDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
@@ -41,13 +46,18 @@ export class LogsController {
     @Query(new ValidationPipe({ transform: true })) filters: LogFiltersDto,
   ): Promise<PaginatedLogsDto> {
     const result = await this.logService.getLogs(filters);
-    
+
     return {
-      logs: result.logs,
-      total: result.total,
-      offset: result.offset,
-      limit: result.limit,
-      has_more: result.offset + result.limit < result.total,
+      logs: result.data.map(log => ({
+        ...log,
+        metadata: log.metadata as Record<string, unknown>
+      })),
+      total: result.pagination.total,
+      offset: result.pagination.page,
+      limit: result.pagination.limit,
+      has_more:
+        result.pagination.page * result.pagination.limit <
+        result.pagination.total,
     };
   }
 
@@ -69,7 +79,7 @@ export class LogsController {
   })
   async getLogStats(): Promise<LogStatsDto> {
     const stats = await this.logService.getLogStats();
-    
+
     return {
       total: stats.total,
       by_level: stats.byLevel,

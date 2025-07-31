@@ -22,12 +22,12 @@ export class SupabaseHealthIndicator extends HealthIndicator {
 
       throw new HealthCheckError(
         'Supabase connection failed',
-        this.getStatus(key, false)
+        this.getStatus(key, false),
       );
-    } catch (error) {
+    } catch {
       throw new HealthCheckError(
         'Supabase connection failed',
-        this.getStatus(key, false)
+        this.getStatus(key, false),
       );
     }
   }

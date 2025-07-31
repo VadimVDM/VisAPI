@@ -17,9 +17,6 @@ const mockedBcrypt = jest.mocked(bcrypt);
 
 describe('AuthService', () => {
   let service: AuthService;
-  let supabaseService: jest.Mocked<SupabaseService>;
-  let configService: jest.Mocked<ConfigService>;
-  let logger: jest.Mocked<PinoLogger>;
 
   // Mock factory for Supabase client to reduce boilerplate
   const createMockSupabaseClient = () => ({
@@ -88,9 +85,9 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    supabaseService = module.get(SupabaseService);
-    configService = module.get(ConfigService);
-    logger = module.get(PinoLogger);
+    module.get<SupabaseService>(SupabaseService);
+    module.get<ConfigService>(ConfigService);
+    module.get<PinoLogger>(PinoLogger);
   });
 
   it('should be defined', () => {
@@ -115,28 +112,27 @@ describe('AuthService', () => {
 
       // Mock bcrypt.compare to return true for valid secret
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
-      
+
       // Configure the final single() method to return the api key
-      const singleMock = mockSupabaseClient.from().select().eq().single;
-      singleMock.mockResolvedValue({
-        data: mockApiKey,
-        error: null,
-      });
+      jest
+        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
+        .mockResolvedValue({ data: mockApiKey, error: null });
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
       expect(result).toEqual(mockApiKey);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_keys');
-      expect(mockedBcrypt.compare).toHaveBeenCalledWith('testsecret123', 'hashed-value');
+      expect(mockedBcrypt.compare).toHaveBeenCalledWith(
+        'testsecret123',
+        'hashed-value',
+      );
     });
 
     it('should return null when key is not found', async () => {
       // Configure the final single() method to return no data
-      const singleMock = mockSupabaseClient.from().select().eq().single;
-      singleMock.mockResolvedValue({
-        data: null,
-        error: { message: 'No rows found' },
-      });
+      jest
+        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
+        .mockResolvedValue({ data: null, error: { message: 'No rows found' } });
 
       const result = await service.validateApiKey('invalid_testsecret');
 
@@ -159,11 +155,9 @@ describe('AuthService', () => {
       };
 
       // Configure the final single() method to return expired key
-      const singleMock = mockSupabaseClient.from().select().eq().single;
-      singleMock.mockResolvedValue({
-        data: mockApiKey,
-        error: null,
-      });
+      jest
+        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
+        .mockResolvedValue({ data: mockApiKey, error: null });
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
@@ -172,11 +166,12 @@ describe('AuthService', () => {
 
     it('should handle database errors gracefully', async () => {
       // Configure the final single() method to return database error
-      const singleMock = mockSupabaseClient.from().select().eq().single;
-      singleMock.mockResolvedValue({
-        data: null,
-        error: { message: 'Database error' },
-      });
+      jest
+        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
+        .mockResolvedValue({
+          data: null,
+          error: { message: 'Database error' },
+        });
 
       const result = await service.validateApiKey('test_key');
 
@@ -200,23 +195,26 @@ describe('AuthService', () => {
 
       // Mock bcrypt.compare to return false for invalid secret
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
-      
+
       // Configure the final single() method to return the api key (but bcrypt will fail)
-      const singleMock = mockSupabaseClient.from().select().eq().single;
-      singleMock.mockResolvedValue({
-        data: mockApiKey,
-        error: null,
-      });
+      jest
+        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
+        .mockResolvedValue({ data: mockApiKey, error: null });
 
       const result = await service.validateApiKey('vapi_wrongsecret');
 
       expect(result).toBeNull();
-      expect(mockedBcrypt.compare).toHaveBeenCalledWith('wrongsecret', 'hashed-value');
+      expect(mockedBcrypt.compare).toHaveBeenCalledWith(
+        'wrongsecret',
+        'hashed-value',
+      );
     });
   });
 
   // Helper function to create mock ApiKeyRecord
-  const createMockApiKey = (overrides: Partial<ApiKeyRecord> = {}): ApiKeyRecord => ({
+  const createMockApiKey = (
+    overrides: Partial<ApiKeyRecord> = {},
+  ): ApiKeyRecord => ({
     id: '123',
     name: 'test-key',
     hashed_key: '', // Legacy field

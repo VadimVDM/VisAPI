@@ -80,12 +80,15 @@ export interface TriggerResponse {
 
 // Queue metrics
 export interface QueueMetrics {
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-  paused: boolean;
+  name: string;
+  counts: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+  };
+  isPaused: boolean;
 }
 
 // Log entry types
@@ -107,6 +110,8 @@ export interface LogFilters {
   start_date?: string;
   end_date?: string;
   search?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface LogStats {

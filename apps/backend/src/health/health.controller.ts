@@ -12,7 +12,7 @@ export class HealthController {
   constructor(
     private health: HealthCheckService,
     private supabaseHealth: SupabaseHealthIndicator,
-    private redisHealth: RedisHealthIndicator
+    private redisHealth: RedisHealthIndicator,
   ) {}
 
   @Get()

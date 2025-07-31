@@ -25,7 +25,7 @@ export class LogEntryDto {
     example: { duration: 1250, steps: 3 },
     required: false,
   })
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 
   @ApiProperty({
     description: 'Associated workflow ID',

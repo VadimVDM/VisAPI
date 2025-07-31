@@ -14,7 +14,7 @@ import { AuthModule } from '../auth/auth.module';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.redisUrl;
-        
+
         if (!redisUrl || redisUrl === 'h') {
           // Return a config that will fail gracefully
           return {
@@ -27,7 +27,7 @@ import { AuthModule } from '../auth/auth.module';
             },
           };
         }
-        
+
         return {
           connection: {
             url: redisUrl,
@@ -43,7 +43,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: QUEUE_NAMES.SLACK },
       { name: QUEUE_NAMES.WHATSAPP },
       { name: QUEUE_NAMES.PDF },
-      { name: QUEUE_NAMES.DLQ }
+      { name: QUEUE_NAMES.DLQ },
     ),
   ],
   controllers: [QueueController],

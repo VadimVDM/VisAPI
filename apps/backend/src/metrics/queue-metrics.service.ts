@@ -10,7 +10,7 @@ export class QueueMetricsService implements OnModuleInit {
     @InjectQueue('critical') private readonly criticalQueue: Queue,
     @InjectQueue('default') private readonly defaultQueue: Queue,
     @InjectQueue('bulk') private readonly bulkQueue: Queue,
-    private readonly metricsService: MetricsService
+    private readonly metricsService: MetricsService,
   ) {}
 
   async onModuleInit() {
@@ -35,7 +35,7 @@ export class QueueMetricsService implements OnModuleInit {
             queue.getCompletedCount(),
             queue.getFailedCount(),
             queue.getDelayedCount(),
-          ]
+          ],
         );
 
         // Set queue depth metrics
@@ -56,7 +56,7 @@ export class QueueMetricsService implements OnModuleInit {
     jobName: string,
     queue: string,
     success: boolean,
-    duration: number
+    duration: number,
   ): void {
     this.metricsService.recordJobExecution(jobName, queue, success, duration);
   }

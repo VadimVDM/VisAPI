@@ -5,11 +5,12 @@ import { SlackService } from './slack.service';
 import { GrafanaWebhookPayload } from '@visapi/shared-types';
 import { of, throwError } from 'rxjs';
 import { PinoLogger } from 'nestjs-pino';
+import * as crypto from 'crypto';
 
 describe('SlackService', () => {
   let service: SlackService;
-  let httpService: HttpService;
-  let configService: ConfigService;
+  let httpService: jest.Mocked<HttpService>;
+  let configService: jest.Mocked<ConfigService>;
 
   const mockPayload: GrafanaWebhookPayload = {
     dashboardId: 1,
@@ -63,8 +64,8 @@ describe('SlackService', () => {
     }).compile();
 
     service = module.get<SlackService>(SlackService);
-    httpService = module.get<HttpService>(HttpService);
-    configService = module.get<ConfigService>(ConfigService);
+    httpService = module.get(HttpService);
+    configService = module.get(ConfigService);
   });
 
   afterEach(() => {
@@ -100,13 +101,12 @@ describe('SlackService', () => {
             'Content-Type': 'application/json',
           },
           timeout: 10000,
-        })
+        }),
       );
     });
 
     it('should skip alert when Slack is disabled', async () => {
-      // Mock disabled
-      configService.slackEnabled = false;
+      (configService as any).slackEnabled = false;
 
       await service.sendGrafanaAlert(mockPayload);
 
@@ -114,8 +114,7 @@ describe('SlackService', () => {
     });
 
     it('should handle missing webhook URL', async () => {
-      // Mock empty webhook URL
-      configService.slackWebhookUrl = '';
+      (configService as any).slackWebhookUrl = '';
 
       await service.sendGrafanaAlert(mockPayload);
 
@@ -124,10 +123,10 @@ describe('SlackService', () => {
 
     it('should handle HTTP errors', async () => {
       const error = new Error('Network error');
-      (httpService.post as jest.Mock).mockReturnValue(throwError(error));
+      httpService.post.mockReturnValue(throwError(() => error));
 
       await expect(service.sendGrafanaAlert(mockPayload)).rejects.toThrow(
-        'Network error'
+        'Network error',
       );
     });
 
@@ -151,7 +150,7 @@ describe('SlackService', () => {
             }),
           ]),
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -179,7 +178,7 @@ describe('SlackService', () => {
             'Content-Type': 'application/json',
           },
           timeout: 10000,
-        })
+        }),
       );
     });
 
@@ -191,16 +190,16 @@ describe('SlackService', () => {
         expect.objectContaining({
           channel: '#alerts',
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Network error');
-      (httpService.post as jest.Mock).mockReturnValue(throwError(error));
+      httpService.post.mockReturnValue(throwError(() => error));
 
       await expect(service.sendCustomAlert('Test message')).rejects.toThrow(
-        'Network error'
+        'Network error',
       );
     });
   });
@@ -209,7 +208,6 @@ describe('SlackService', () => {
     it('should return true for valid signature', async () => {
       const payload = '{"test": "data"}';
       const timestamp = '1234567890';
-      const crypto = require('crypto');
       const signature =
         'v0=' +
         crypto
@@ -220,7 +218,7 @@ describe('SlackService', () => {
       const result = await service.validateWebhookSignature(
         payload,
         timestamp,
-        signature
+        signature,
       );
 
       expect(result).toBe(true);
@@ -234,19 +232,19 @@ describe('SlackService', () => {
       const result = await service.validateWebhookSignature(
         payload,
         timestamp,
-        signature
+        signature,
       );
 
       expect(result).toBe(false);
     });
 
     it('should return true when no signing secret is configured', async () => {
-      configService.slackSigningSecret = '';
+      (configService as any).slackSigningSecret = '';
 
       const result = await service.validateWebhookSignature(
         'payload',
         '123',
-        'sig'
+        'sig',
       );
 
       expect(result).toBe(true);

@@ -2,22 +2,31 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LogService } from './log.service';
 import { PiiRedactionService } from './pii-redaction.service';
 import { SupabaseService } from '@visapi/core-supabase';
+import { LogEntry, LogResponse, LogFilters } from '@visapi/shared-types';
+import { PinoLogger } from 'nestjs-pino';
 
 describe('LogService', () => {
   let service: LogService;
-  let supabaseService: jest.Mocked<SupabaseService>;
   let piiRedactionService: jest.Mocked<PiiRedactionService>;
 
   const mockSupabaseClient = {
     from: jest.fn(),
   };
 
-  beforeEach(async () => {
-    const mockSupabaseService = {
-      client: mockSupabaseClient,
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-    };
+  const mockQuery = {
+    insert: jest.fn().mockResolvedValue({ error: null }),
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    gte: jest.fn().mockReturnThis(),
+    lte: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    range: jest.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+    delete: jest.fn().mockReturnThis(),
+    lt: jest.fn().mockResolvedValue({ data: [], error: null }),
+  };
 
+  beforeEach(async () => {
     const mockPiiRedactionService = {
       redactPii: jest.fn(),
       redactPiiFromObject: jest.fn(),
@@ -28,7 +37,9 @@ describe('LogService', () => {
         LogService,
         {
           provide: SupabaseService,
-          useValue: mockSupabaseService,
+          useValue: {
+            serviceClient: mockSupabaseClient,
+          },
         },
         {
           provide: PiiRedactionService,
@@ -38,7 +49,6 @@ describe('LogService', () => {
     }).compile();
 
     service = module.get<LogService>(LogService);
-    supabaseService = module.get(SupabaseService);
     piiRedactionService = module.get(PiiRedactionService);
 
     // Mock the logger completely
@@ -49,9 +59,12 @@ describe('LogService', () => {
       warn: jest.fn(),
       log: jest.fn(),
       verbose: jest.fn(),
-    };
+    } as unknown as PinoLogger;
 
-    service['logger'] = mockLogger as any;
+    service['logger'] = mockLogger;
+
+    // Setup default mock implementations
+    mockSupabaseClient.from.mockReturnValue(mockQuery as any);
   });
 
   afterEach(() => {
@@ -60,8 +73,8 @@ describe('LogService', () => {
 
   describe('createLog', () => {
     it('should create a log entry with PII redaction', async () => {
-      const logEntry = {
-        level: 'info' as const,
+      const logEntry: LogEntry = {
+        level: 'info',
         message: 'User contacted at john@example.com',
         metadata: { phone: '+1234567890' },
         workflow_id: 'workflow-123',
@@ -80,12 +93,6 @@ describe('LogService', () => {
         redactedFields: ['phone_number'],
       });
 
-      const mockQuery = {
-        insert: jest.fn().mockResolvedValue({ error: null }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
-
       await service.createLog(logEntry);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('logs');
@@ -101,8 +108,8 @@ describe('LogService', () => {
     });
 
     it('should handle log creation without PII', async () => {
-      const logEntry = {
-        level: 'info' as const,
+      const logEntry: LogEntry = {
+        level: 'info',
         message: 'Operation completed successfully',
         metadata: { duration: 1000 },
       };
@@ -119,12 +126,6 @@ describe('LogService', () => {
         redactedFields: [],
       });
 
-      const mockQuery = {
-        insert: jest.fn().mockResolvedValue({ error: null }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
-
       await service.createLog(logEntry);
 
       expect(mockQuery.insert).toHaveBeenCalledWith({
@@ -139,8 +140,8 @@ describe('LogService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      const logEntry = {
-        level: 'error' as const,
+      const logEntry: LogEntry = {
+        level: 'error',
         message: 'Test error',
       };
 
@@ -156,13 +157,9 @@ describe('LogService', () => {
         redactedFields: [],
       });
 
-      const mockQuery = {
-        insert: jest
-          .fn()
-          .mockResolvedValue({ error: { message: 'Database error' } }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.insert.mockResolvedValue({
+        error: { message: 'Database error' },
+      });
 
       // Should not throw - logging failures should be handled gracefully
       await expect(service.createLog(logEntry)).resolves.not.toThrow();
@@ -184,23 +181,13 @@ describe('LogService', () => {
         },
       ];
 
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        gte: jest.fn().mockReturnThis(),
-        lte: jest.fn().mockReturnThis(),
-        ilike: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
-          data: mockLogs,
-          error: null,
-          count: 1,
-        }),
-      };
+      mockQuery.range.mockResolvedValue({
+        data: mockLogs,
+        error: null,
+        count: 1,
+      });
 
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
-
-      const filters = {
+      const filters: LogFilters = {
         level: 'info',
         workflow_id: 'workflow-123',
         start_date: '2025-07-15T00:00:00Z',
@@ -210,7 +197,7 @@ describe('LogService', () => {
         offset: 0,
       };
 
-      const result = await service.getLogs(filters);
+      const result: LogResponse = await service.getLogs(filters);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('logs');
       expect(mockQuery.select).toHaveBeenCalledWith('*', { count: 'exact' });
@@ -218,11 +205,11 @@ describe('LogService', () => {
       expect(mockQuery.eq).toHaveBeenCalledWith('workflow_id', 'workflow-123');
       expect(mockQuery.gte).toHaveBeenCalledWith(
         'created_at',
-        '2025-07-15T00:00:00Z'
+        '2025-07-15T00:00:00Z',
       );
       expect(mockQuery.lte).toHaveBeenCalledWith(
         'created_at',
-        '2025-07-15T23:59:59Z'
+        '2025-07-15T23:59:59Z',
       );
       expect(mockQuery.ilike).toHaveBeenCalledWith('message', '%test%');
       expect(mockQuery.order).toHaveBeenCalledWith('created_at', {
@@ -239,17 +226,7 @@ describe('LogService', () => {
     });
 
     it('should handle empty filters', async () => {
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-          count: 0,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.range.mockResolvedValue({ data: [], error: null, count: 0 });
 
       const result = await service.getLogs({});
 
@@ -263,17 +240,11 @@ describe('LogService', () => {
     });
 
     it('should handle database errors', async () => {
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-          count: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.range.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+        count: null,
+      });
 
       await expect(service.getLogs({})).rejects.toThrow('Failed to fetch logs');
     });
@@ -295,16 +266,7 @@ describe('LogService', () => {
         },
       ];
 
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
-          data: mockLogs,
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.order.mockResolvedValue({ data: mockLogs, error: null });
 
       const result = await service.getLogsByWorkflow(workflowId);
 
@@ -314,19 +276,13 @@ describe('LogService', () => {
     });
 
     it('should handle database errors', async () => {
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.order.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
 
       await expect(service.getLogsByWorkflow('workflow-123')).rejects.toThrow(
-        'Failed to fetch workflow logs'
+        'Failed to fetch workflow logs',
       );
     });
   });
@@ -347,16 +303,7 @@ describe('LogService', () => {
         },
       ];
 
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
-          data: mockLogs,
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.order.mockResolvedValue({ data: mockLogs, error: null });
 
       const result = await service.getLogsByJob(jobId);
 
@@ -377,26 +324,9 @@ describe('LogService', () => {
 
       const mockRecentData = [{ id: 1 }, { id: 2 }];
 
-      // Mock the first call for total stats
-      const mockTotalQuery = {
-        select: jest.fn().mockResolvedValue({
-          data: mockLogData,
-          error: null,
-        }),
-      };
-
-      // Mock the second call for recent stats
-      const mockRecentQuery = {
-        select: jest.fn().mockReturnThis(),
-        gte: jest.fn().mockResolvedValue({
-          data: mockRecentData,
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from
-        .mockReturnValueOnce(mockTotalQuery)
-        .mockReturnValueOnce(mockRecentQuery);
+      mockQuery.select
+        .mockResolvedValueOnce({ data: mockLogData, error: null })
+        .mockResolvedValueOnce({ data: mockRecentData, error: null });
 
       const result = await service.getLogStats();
 
@@ -413,32 +343,23 @@ describe('LogService', () => {
     });
 
     it('should handle database errors', async () => {
-      const mockQuery = {
-        select: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.select.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
 
       await expect(service.getLogStats()).rejects.toThrow(
-        'Failed to fetch log stats'
+        'Failed to fetch log stats',
       );
     });
   });
 
   describe('pruneOldLogs', () => {
     it('should prune old logs', async () => {
-      const mockQuery = {
-        delete: jest.fn().mockReturnThis(),
-        lt: jest.fn().mockResolvedValue({
-          data: [{ id: 1 }, { id: 2 }],
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.lt.mockResolvedValue({
+        data: [{ id: 1 }, { id: 2 }],
+        error: null,
+      });
 
       const result = await service.pruneOldLogs(90);
 
@@ -446,36 +367,25 @@ describe('LogService', () => {
       expect(mockQuery.delete).toHaveBeenCalled();
       expect(mockQuery.lt).toHaveBeenCalledWith(
         'created_at',
-        expect.any(String)
+        expect.any(String),
       );
       expect(result).toEqual({ deleted: 2 });
     });
 
     it('should handle database errors', async () => {
-      const mockQuery = {
-        delete: jest.fn().mockReturnThis(),
-        lt: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
+      mockQuery.lt.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
 
       await expect(service.pruneOldLogs(90)).rejects.toThrow(
-        'Failed to prune old logs'
+        'Failed to prune old logs',
       );
     });
   });
 
   describe('convenience methods', () => {
     it('should provide convenience methods for different log levels', async () => {
-      const mockQuery = {
-        insert: jest.fn().mockResolvedValue({ error: null }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockQuery);
-
       piiRedactionService.redactPii.mockReturnValue({
         text: 'Test message',
         piiFound: false,

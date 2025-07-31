@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { register as globalRegistry } from 'prom-client';
-import { pushTimeseries } from 'prometheus-remote-write';
+import { pushTimeseries, Timeseries } from 'prometheus-remote-write';
 
 @Injectable()
 export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RemoteWriteService.name);
-  private intervalId: NodeJS.Timeout;
+  private intervalId: NodeJS.Timeout | undefined;
   private readonly enabled: boolean;
   private readonly url: string;
   private readonly username: string;
@@ -21,22 +21,20 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {
     this.enabled = this.configService.get<boolean>(
       'GRAFANA_REMOTE_WRITE_ENABLED',
-      false
+      false,
     );
-    this.url = this.configService.get<string>('GRAFANA_PROMETHEUS_URL');
-    this.username = this.configService.get<string>(
-      'GRAFANA_PROMETHEUS_USERNAME'
-    );
-    this.password = this.configService.get<string>(
-      'GRAFANA_PROMETHEUS_PASSWORD'
-    );
+    this.url = this.configService.get<string>('GRAFANA_PROMETHEUS_URL') || '';
+    this.username =
+      this.configService.get<string>('GRAFANA_PROMETHEUS_USERNAME') || '';
+    this.password =
+      this.configService.get<string>('GRAFANA_PROMETHEUS_PASSWORD') || '';
     this.pushIntervalMs = this.configService.get<number>(
       'GRAFANA_PUSH_INTERVAL_MS',
-      30000
+      30000,
     ); // 30 seconds default
   }
 
-  onModuleInit() {
+  onModuleInit(): void {
     if (!this.enabled) {
       this.logger.log('Remote write is disabled');
       return;
@@ -50,28 +48,33 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
     this.startPushing();
   }
 
-  private startPushing() {
+  private startPushing(): void {
     this.logger.log(
-      `Starting remote write to ${this.url} every ${this.pushIntervalMs}ms`
+      `Starting remote write to ${this.url} every ${this.pushIntervalMs}ms`,
     );
 
     // Initial push
-    this.pushMetrics();
+    void this.pushMetrics();
 
     // Schedule regular pushes
     this.intervalId = setInterval(() => {
-      this.pushMetrics();
+      void this.pushMetrics();
     }, this.pushIntervalMs);
   }
 
-  private async pushMetrics() {
+  private async pushMetrics(): Promise<void> {
     try {
       const metrics = await globalRegistry.metrics();
 
       // Filter to only include visapi_ metrics to reduce payload size
       const filteredMetrics = metrics
         .split('\n')
-        .filter(line => line.includes('visapi_') || line.startsWith('# TYPE visapi_') || line.startsWith('# HELP visapi_'))
+        .filter(
+          (line) =>
+            line.includes('visapi_') ||
+            line.startsWith('# TYPE visapi_') ||
+            line.startsWith('# HELP visapi_'),
+        )
         .join('\n');
 
       if (!filteredMetrics.trim()) {
@@ -79,17 +82,21 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      this.logger.debug(`Converting ${filteredMetrics.split('\n').length} lines of metrics to protobuf format`);
+      this.logger.debug(
+        `Converting ${filteredMetrics.split('\n').length} lines of metrics to protobuf format`,
+      );
 
       // Parse metrics and convert to protobuf TimeSeries format
       const timeSeries = this.parseMetricsToTimeSeries(filteredMetrics);
-      
+
       if (timeSeries.length === 0) {
         this.logger.warn('No time series data parsed from metrics');
         return;
       }
 
-      this.logger.debug(`Pushing ${timeSeries.length} time series to Grafana Cloud`);
+      this.logger.debug(
+        `Pushing ${timeSeries.length} time series to Grafana Cloud`,
+      );
 
       // Use the prometheus-remote-write library to push metrics
       const result = await pushTimeseries(timeSeries, {
@@ -108,37 +115,40 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       if (result.status === 200) {
         this.logger.debug('Successfully pushed metrics to Grafana Cloud');
       } else {
-        this.logger.error(`Failed to push metrics: ${result.status} ${result.statusText}`);
+        this.logger.error(
+          `Failed to push metrics: ${result.status} ${result.statusText}`,
+        );
         if (result.errorMessage) {
           this.logger.error(`Error message: ${result.errorMessage}`);
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
         'Failed to push metrics to Grafana Cloud',
-        error.message
+        errorMessage,
       );
-      
+
       // Log more details about the error
-      if (error.response) {
-        this.logger.error(`Status: ${error.response.status}`);
-        this.logger.error(`Response: ${JSON.stringify(error.response.data)}`);
-        if (error.response.headers) {
-          this.logger.error(`Headers: ${JSON.stringify(error.response.headers)}`);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const response = error.response as {
+          status?: number;
+          data?: unknown;
+          headers?: unknown;
+        };
+        this.logger.error(`Status: ${response.status}`);
+        this.logger.error(`Response: ${JSON.stringify(response.data)}`);
+        if (response.headers) {
+          this.logger.error(`Headers: ${JSON.stringify(response.headers)}`);
         }
       }
     }
   }
 
-  private parseMetricsToTimeSeries(metrics: string): Array<{
-    labels: { __name__: string; [key: string]: string };
-    samples: Array<{ value: number; timestamp?: number }>;
-  }> {
+  private parseMetricsToTimeSeries(metrics: string): Timeseries[] {
     const lines = metrics.trim().split('\n');
-    const timeSeries: Array<{
-      labels: { __name__: string; [key: string]: string };
-      samples: Array<{ value: number; timestamp?: number }>;
-    }> = [];
+    const timeSeries: Timeseries[] = [];
     const timestamp = Date.now();
 
     for (const line of lines) {
@@ -153,19 +163,21 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Parse metric line: metric_name{labels} value
-      const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*(?:\{[^}]*\})?) ([0-9.-]+)$/);
+      const match = line.match(
+        /^([a-zA-Z_][a-zA-Z0-9_]*(?:\{[^}]*\})?) ([0-9.-]+)$/,
+      );
       if (!match) {
         continue;
       }
 
       const [, metricWithLabels, value] = match;
       const [metricName, labelsStr] = metricWithLabels.split('{');
-      
+
       // Create labels object for the timeseries
       const labels: { __name__: string; [key: string]: string } = {
         __name__: metricName,
       };
-      
+
       if (labelsStr) {
         const labelPairs = labelsStr.slice(0, -1).split(','); // Remove closing }
         for (const pair of labelPairs) {
@@ -183,18 +195,19 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       // Create TimeSeries entry
       timeSeries.push({
         labels,
-        samples: [{
-          value: parseFloat(value),
-          timestamp: timestamp
-        }]
+        samples: [
+          {
+            value: parseFloat(value),
+            timestamp: timestamp,
+          },
+        ],
       });
     }
 
     return timeSeries;
   }
 
-
-  onModuleDestroy() {
+  onModuleDestroy(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.logger.log('Stopped remote write');

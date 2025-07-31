@@ -23,26 +23,29 @@ export class PdfTemplateService {
   /**
    * Register Handlebars helpers
    */
-  private registerHelpers() {
+  private registerHelpers(): void {
     // Date formatting helper
-    Handlebars.registerHelper('formatDate', (date: string | Date, format: string) => {
-      const d = new Date(date);
-      if (format === 'short') {
-        return d.toLocaleDateString();
-      }
-      return d.toLocaleString();
-    });
+    Handlebars.registerHelper(
+      'formatDate',
+      (date: string | Date, format: string) => {
+        const d = new Date(date);
+        if (format === 'short') {
+          return d.toLocaleDateString();
+        }
+        return d.toLocaleString();
+      },
+    );
 
     // Currency formatting helper
-    Handlebars.registerHelper('currency', (amount: number, currency = 'USD') => {
-      return new Intl.NumberFormat('en-US', {
+    Handlebars.registerHelper('currency', (amount: number, currency = 'USD') =>
+      new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
-      }).format(amount);
-    });
+      }).format(amount),
+    );
 
     // Conditional helper
-    Handlebars.registerHelper('eq', (a: any, b: any) => a === b);
+    Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   }
 
   /**
@@ -50,8 +53,9 @@ export class PdfTemplateService {
    */
   async loadTemplate(templateName: string): Promise<PdfTemplate> {
     // Check cache first
-    if (this.templates.has(templateName)) {
-      return this.templates.get(templateName)!;
+    const cachedTemplate = this.templates.get(templateName);
+    if (cachedTemplate) {
+      return cachedTemplate;
     }
 
     try {
@@ -70,7 +74,7 @@ export class PdfTemplateService {
       this.logger.info({ templateName }, 'Template loaded and compiled');
 
       return template;
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error({ error, templateName }, 'Failed to load template');
       throw new Error(`Template not found: ${templateName}`);
     }
@@ -79,14 +83,20 @@ export class PdfTemplateService {
   /**
    * Render a template with data
    */
-  async renderTemplate(templateName: string, data: any): Promise<string> {
+  async renderTemplate(
+    templateName: string,
+    data: Record<string, unknown>,
+  ): Promise<string> {
     const template = await this.loadTemplate(templateName);
-    
+
     try {
       const html = template.compiled(data);
-      this.logger.debug({ templateName, dataKeys: Object.keys(data) }, 'Template rendered');
+      this.logger.debug(
+        { templateName, dataKeys: Object.keys(data) },
+        'Template rendered',
+      );
       return html;
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error({ error, templateName }, 'Failed to render template');
       throw new Error(`Failed to render template: ${templateName}`);
     }
@@ -99,9 +109,9 @@ export class PdfTemplateService {
     try {
       const files = await fs.readdir(this.templatesDir);
       return files
-        .filter(file => file.endsWith('.html'))
-        .map(file => file.replace('.html', ''));
-    } catch (error) {
+        .filter((file) => file.endsWith('.html'))
+        .map((file) => file.replace('.html', ''));
+    } catch (error: unknown) {
       this.logger.error({ error }, 'Failed to list templates');
       return [];
     }

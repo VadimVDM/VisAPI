@@ -9,6 +9,7 @@ import {
 } from '@visapi/shared-types';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class SlackService {
@@ -16,7 +17,7 @@ export class SlackService {
     @InjectPinoLogger(SlackService.name)
     private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService
+    private readonly httpService: HttpService,
   ) {}
 
   async sendGrafanaAlert(payload: GrafanaWebhookPayload): Promise<void> {
@@ -46,16 +47,18 @@ export class SlackService {
             'Content-Type': 'application/json',
           },
           timeout: 10000,
-        })
+        }),
       );
 
       this.logger.info('Slack alert sent successfully', {
         ruleName: payload.ruleName,
         state: payload.state,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to send Slack alert', {
-        error: error.message,
+        error: errorMessage,
         ruleName: payload.ruleName,
         state: payload.state,
       });
@@ -221,7 +224,7 @@ export class SlackService {
   async sendCustomAlert(
     message: string,
     severity: 'info' | 'warning' | 'error' = 'info',
-    channel?: string
+    channel?: string,
   ): Promise<void> {
     if (!this.configService.slackEnabled) {
       this.logger.debug('Slack integration disabled, skipping custom alert');
@@ -238,14 +241,14 @@ export class SlackService {
       severity === 'error'
         ? 'danger'
         : severity === 'warning'
-        ? 'warning'
-        : 'good';
+          ? 'warning'
+          : 'good';
     const emoji =
       severity === 'error'
         ? ':red_circle:'
         : severity === 'warning'
-        ? ':warning:'
-        : ':information_source:';
+          ? ':warning:'
+          : ':information_source:';
 
     const slackMessage: SlackMessage = {
       channel: channel || this.configService.slackDefaultChannel,
@@ -269,16 +272,18 @@ export class SlackService {
             'Content-Type': 'application/json',
           },
           timeout: 10000,
-        })
+        }),
       );
 
       this.logger.info('Custom Slack alert sent successfully', {
         severity,
         channel: channel || this.configService.slackDefaultChannel,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to send custom Slack alert', {
-        error: error.message,
+        error: errorMessage,
         severity,
         message,
       });
@@ -286,21 +291,20 @@ export class SlackService {
     }
   }
 
-  async validateWebhookSignature(
+  validateWebhookSignature(
     payload: string,
     timestamp: string,
-    signature: string
-  ): Promise<boolean> {
+    signature: string,
+  ): boolean {
     const signingSecret = this.configService.slackSigningSecret;
     if (!signingSecret) {
       this.logger.warn(
-        'Slack signing secret not configured, skipping signature validation'
+        'Slack signing secret not configured, skipping signature validation',
       );
       return true; // Allow if no secret configured
     }
 
     try {
-      const crypto = require('crypto');
       const basestring = `v0:${timestamp}:${payload}`;
       const mySignature =
         'v0=' +
@@ -312,11 +316,13 @@ export class SlackService {
       // Use timing-safe comparison
       return crypto.timingSafeEqual(
         Buffer.from(signature, 'utf8'),
-        Buffer.from(mySignature, 'utf8')
+        Buffer.from(mySignature, 'utf8'),
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to validate webhook signature', {
-        error: error.message,
+        error: errorMessage,
       });
       return false;
     }

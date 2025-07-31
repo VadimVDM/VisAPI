@@ -13,14 +13,18 @@ import { CreateWorkflowDto, UpdateWorkflowDto } from '../dto';
 export class WorkflowValidationInterceptor implements NestInterceptor {
   constructor(private readonly validationService: WorkflowValidationService) {}
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const { body } = request;
 
     // Only validate if we have a workflow schema in the body
     if (body && body.schema) {
       const workflowData = this.buildWorkflowForValidation(body);
-      const result = await this.validationService.validateCompleteWorkflow(workflowData);
+      const result =
+        await this.validationService.validateCompleteWorkflow(workflowData);
 
       if (!result.valid) {
         throw new BadRequestException({
@@ -33,7 +37,9 @@ export class WorkflowValidationInterceptor implements NestInterceptor {
     return next.handle();
   }
 
-  private buildWorkflowForValidation(body: CreateWorkflowDto | UpdateWorkflowDto): any {
+  private buildWorkflowForValidation(
+    body: CreateWorkflowDto | UpdateWorkflowDto,
+  ): any {
     return {
       id: body.name ? this.generateIdFromName(body.name) : undefined,
       name: body.name,

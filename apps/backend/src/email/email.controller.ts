@@ -34,8 +34,10 @@ export class EmailController {
     @Headers() headers: WebhookHeaders,
   ) {
     try {
-      this.logger.log(`Received auth hook for user: ${payload.user?.email}, action: ${payload.email_data?.email_action_type}`);
-      
+      this.logger.log(
+        `Received auth hook for user: ${payload.user?.email}, action: ${payload.email_data?.email_action_type}`,
+      );
+
       // Validate payload
       if (!payload.user?.email || !payload.email_data) {
         throw new HttpException(
@@ -66,10 +68,11 @@ export class EmailController {
         message: 'Email sent successfully',
         messageId: result.messageId,
       };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Auth hook processing failed: ${message}`, stack);
 
-    } catch (error) {
-      this.logger.error(`Auth hook processing failed: ${error.message}`, error.stack);
-      
       if (error instanceof HttpException) {
         throw error;
       }
@@ -85,15 +88,16 @@ export class EmailController {
    * Send welcome email endpoint
    */
   @Post('welcome')
-  async sendWelcomeEmail(
-    @Body() body: { email: string; name?: string },
-  ) {
+  async sendWelcomeEmail(@Body() body: { email: string; name?: string }) {
     try {
       if (!body.email) {
         throw new HttpException('Email is required', HttpStatus.BAD_REQUEST);
       }
 
-      const result = await this.emailService.sendWelcomeEmail(body.email, body.name);
+      const result = await this.emailService.sendWelcomeEmail(
+        body.email,
+        body.name,
+      );
 
       if (!result.success) {
         throw new HttpException(
@@ -107,10 +111,11 @@ export class EmailController {
         message: 'Welcome email sent successfully',
         messageId: result.messageId,
       };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Welcome email failed: ${message}`, stack);
 
-    } catch (error) {
-      this.logger.error(`Welcome email failed: ${error.message}`, error.stack);
-      
       if (error instanceof HttpException) {
         throw error;
       }
@@ -129,7 +134,10 @@ export class EmailController {
   async sendTestEmail(@Query('to') toEmail: string) {
     try {
       if (!toEmail) {
-        throw new HttpException('Email parameter "to" is required', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Email parameter "to" is required',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const result = await this.emailService.sendTestEmail(toEmail);
@@ -146,10 +154,11 @@ export class EmailController {
         message: 'Test email sent successfully',
         messageId: result.messageId,
       };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Test email failed: ${message}`, stack);
 
-    } catch (error) {
-      this.logger.error(`Test email failed: ${error.message}`, error.stack);
-      
       if (error instanceof HttpException) {
         throw error;
       }
@@ -165,7 +174,7 @@ export class EmailController {
    * Health check for email service
    */
   @Get('health')
-  async healthCheck() {
+  healthCheck() {
     return {
       status: 'healthy',
       service: 'email',

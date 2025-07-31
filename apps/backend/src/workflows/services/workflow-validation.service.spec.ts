@@ -60,11 +60,13 @@ describe('WorkflowValidationService', () => {
         // Missing required fields: triggers, steps, enabled
       };
 
-      const result = service.validateWorkflowDefinition(invalidWorkflow);
+      const result = service.validateWorkflowDefinition(
+        invalidWorkflow as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors!.length).toBeGreaterThan(0);
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it('should reject workflow with invalid step type', () => {
@@ -88,11 +90,15 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = service.validateWorkflowDefinition(invalidWorkflow);
+      const result = service.validateWorkflowDefinition(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors!.some(error => error.includes('invalid.type'))).toBe(true);
+      expect(
+        result.errors.some((error) => error.includes('invalid.type')),
+      ).toBe(true);
     });
 
     it('should reject workflow with invalid phone number format', () => {
@@ -119,7 +125,9 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = service.validateWorkflowDefinition(invalidWorkflow);
+      const result = service.validateWorkflowDefinition(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
@@ -140,11 +148,15 @@ describe('WorkflowValidationService', () => {
         steps: [],
       };
 
-      const result = service.validateWorkflowDefinition(invalidWorkflow);
+      const result = service.validateWorkflowDefinition(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors!.some(error => error.includes('minItems'))).toBe(true);
+      expect(result.errors.some((error) => error.includes('minItems'))).toBe(
+        true,
+      );
     });
   });
 
@@ -200,7 +212,7 @@ describe('WorkflowValidationService', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('Unknown step type');
+      expect(result.errors[0]).toContain('Unknown step type');
     });
 
     it('should reject whatsapp.send with missing contact', () => {
@@ -212,7 +224,7 @@ describe('WorkflowValidationService', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('contact');
+      expect(result.errors[0]).toContain('contact');
     });
 
     it('should reject whatsapp.send with invalid phone format', () => {
@@ -225,7 +237,7 @@ describe('WorkflowValidationService', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('phone number format');
+      expect(result.errors[0]).toContain('phone number format');
     });
 
     it('should reject email.send with invalid email format', () => {
@@ -238,7 +250,7 @@ describe('WorkflowValidationService', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('email format');
+      expect(result.errors[0]).toContain('email format');
     });
   });
 
@@ -252,7 +264,7 @@ describe('WorkflowValidationService', () => {
         '0 9,17 * * *',
       ];
 
-      validCronExpressions.forEach(expression => {
+      validCronExpressions.forEach((expression) => {
         const result = service.validateCronExpression(expression);
         expect(result.valid).toBe(true);
       });
@@ -267,7 +279,7 @@ describe('WorkflowValidationService', () => {
         '',
       ];
 
-      invalidCronExpressions.forEach(expression => {
+      invalidCronExpressions.forEach((expression) => {
         const result = service.validateCronExpression(expression);
         expect(result.valid).toBe(false);
       });
@@ -276,11 +288,7 @@ describe('WorkflowValidationService', () => {
 
   describe('validateUniqueStepIds', () => {
     it('should validate unique step IDs', () => {
-      const steps = [
-        { id: 'step-1' },
-        { id: 'step-2' },
-        { id: 'step-3' },
-      ];
+      const steps = [{ id: 'step-1' }, { id: 'step-2' }, { id: 'step-3' }];
 
       const result = service.validateUniqueStepIds(steps);
 
@@ -288,17 +296,13 @@ describe('WorkflowValidationService', () => {
     });
 
     it('should reject duplicate step IDs', () => {
-      const steps = [
-        { id: 'step-1' },
-        { id: 'step-2' },
-        { id: 'step-1' },
-      ];
+      const steps = [{ id: 'step-1' }, { id: 'step-2' }, { id: 'step-1' }];
 
       const result = service.validateUniqueStepIds(steps);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('Duplicate step IDs');
+      expect(result.errors[0]).toContain('Duplicate step IDs');
     });
   });
 
@@ -368,11 +372,13 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(invalidWorkflow);
+      const result = await service.validateCompleteWorkflow(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('Duplicate step IDs');
+      expect(result.errors[0]).toContain('Duplicate step IDs');
     });
 
     it('should reject workflow with invalid cron schedule', async () => {
@@ -399,11 +405,13 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(invalidWorkflow);
+      const result = await service.validateCompleteWorkflow(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('Cron trigger');
+      expect(result.errors[0]).toContain('Cron trigger');
     });
 
     it('should reject workflow with invalid step configuration', async () => {
@@ -430,11 +438,13 @@ describe('WorkflowValidationService', () => {
         ],
       };
 
-      const result = await service.validateCompleteWorkflow(invalidWorkflow);
+      const result = await service.validateCompleteWorkflow(
+        invalidWorkflow as unknown as WorkflowSchema,
+      );
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
-      expect(result.errors![0]).toContain('contact');
+      expect(result.errors[0]).toContain('contact');
     });
   });
 });

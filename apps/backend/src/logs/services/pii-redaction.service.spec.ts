@@ -22,7 +22,7 @@ describe('PiiRedactionService', () => {
         '1234567890',
       ];
 
-      testCases.forEach(phone => {
+      testCases.forEach((phone) => {
         const result = service.redactPii(`Call me at ${phone}`);
         expect(result.text).toBe('Call me at [PHONE_REDACTED]');
         expect(result.piiFound).toBe(true);
@@ -37,7 +37,7 @@ describe('PiiRedactionService', () => {
         'user123@test-domain.org',
       ];
 
-      testCases.forEach(email => {
+      testCases.forEach((email) => {
         const result = service.redactPii(`Contact us at ${email}`);
         expect(result.text).toBe('Contact us at [EMAIL_REDACTED]');
         expect(result.piiFound).toBe(true);
@@ -53,7 +53,7 @@ describe('PiiRedactionService', () => {
         '1234567890123456',
       ];
 
-      testCases.forEach(card => {
+      testCases.forEach((card) => {
         const result = service.redactPii(`Card: ${card}`);
         expect(result.text).toBe('Card: [CARD_REDACTED]');
         expect(result.piiFound).toBe(true);
@@ -62,12 +62,9 @@ describe('PiiRedactionService', () => {
     });
 
     it('should redact SSN numbers', () => {
-      const testCases = [
-        '123-45-6789',
-        '123456789',
-      ];
+      const testCases = ['123-45-6789', '123456789'];
 
-      testCases.forEach(ssn => {
+      testCases.forEach((ssn) => {
         const result = service.redactPii(`SSN: ${ssn}`);
         expect(result.text).toBe('SSN: [SSN_REDACTED]');
         expect(result.piiFound).toBe(true);
@@ -76,13 +73,9 @@ describe('PiiRedactionService', () => {
     });
 
     it('should redact IP addresses', () => {
-      const testCases = [
-        '192.168.1.1',
-        '10.0.0.1',
-        '172.16.0.1',
-      ];
+      const testCases = ['192.168.1.1', '10.0.0.1', '172.16.0.1'];
 
-      testCases.forEach(ip => {
+      testCases.forEach((ip) => {
         const result = service.redactPii(`Server IP: ${ip}`);
         expect(result.text).toBe('Server IP: [IP_REDACTED]');
         expect(result.piiFound).toBe(true);
@@ -91,10 +84,13 @@ describe('PiiRedactionService', () => {
     });
 
     it('should redact multiple PII types in one text', () => {
-      const text = 'Contact John at john@example.com or call +1234567890. IP: 192.168.1.1';
+      const text =
+        'Contact John at john@example.com or call +1234567890. IP: 192.168.1.1';
       const result = service.redactPii(text);
-      
-      expect(result.text).toBe('Contact John at [EMAIL_REDACTED] or call [PHONE_REDACTED]. IP: [IP_REDACTED]');
+
+      expect(result.text).toBe(
+        'Contact John at [EMAIL_REDACTED] or call [PHONE_REDACTED]. IP: [IP_REDACTED]',
+      );
       expect(result.piiFound).toBe(true);
       expect(result.redactedFields).toContain('email');
       expect(result.redactedFields).toContain('phone_number');
@@ -108,13 +104,13 @@ describe('PiiRedactionService', () => {
         redactedFields: [],
       });
 
-      expect(service.redactPii(null as any)).toEqual({
+      expect(service.redactPii(null as string)).toEqual({
         text: '',
         piiFound: false,
         redactedFields: [],
       });
 
-      expect(service.redactPii(undefined as any)).toEqual({
+      expect(service.redactPii(undefined as string)).toEqual({
         text: '',
         piiFound: false,
         redactedFields: [],
@@ -122,7 +118,7 @@ describe('PiiRedactionService', () => {
     });
 
     it('should handle non-string input', () => {
-      const result = service.redactPii(123 as any);
+      const result = service.redactPii(123 as unknown as string);
       expect(result.text).toBe('');
       expect(result.piiFound).toBe(false);
     });
@@ -130,7 +126,7 @@ describe('PiiRedactionService', () => {
     it('should not modify text without PII', () => {
       const text = 'This is a normal message without sensitive data';
       const result = service.redactPii(text);
-      
+
       expect(result.text).toBe(text);
       expect(result.piiFound).toBe(false);
       expect(result.redactedFields).toEqual([]);
@@ -151,11 +147,12 @@ describe('PiiRedactionService', () => {
 
       const result = service.redactPiiFromObject(obj);
 
-      expect(result.obj.name).toBe('John Doe');
-      expect(result.obj.email).toBe('[EMAIL_REDACTED]');
-      expect(result.obj.phone).toBe('[PHONE_REDACTED]');
-      expect(result.obj.metadata.ip).toBe('[IP_REDACTED]');
-      expect(result.obj.metadata.notes).toBe('Contact at [EMAIL_REDACTED]');
+      const redactedObj = result.obj as Record<string, any>;
+      expect(redactedObj.name).toBe('John Doe');
+      expect(redactedObj.email).toBe('[EMAIL_REDACTED]');
+      expect(redactedObj.phone).toBe('[PHONE_REDACTED]');
+      expect(redactedObj.metadata.ip).toBe('[IP_REDACTED]');
+      expect(redactedObj.metadata.notes).toBe('Contact at [EMAIL_REDACTED]');
       expect(result.piiFound).toBe(true);
       expect(result.redactedFields).toContain('email');
       expect(result.redactedFields).toContain('phone_number');
@@ -163,17 +160,14 @@ describe('PiiRedactionService', () => {
     });
 
     it('should handle arrays', () => {
-      const arr = [
-        'john@example.com',
-        '+1234567890',
-        'normal text',
-      ];
+      const arr = ['john@example.com', '+1234567890', 'normal text'];
 
       const result = service.redactPiiFromObject(arr);
 
-      expect(result.obj[0]).toBe('[EMAIL_REDACTED]');
-      expect(result.obj[1]).toBe('[PHONE_REDACTED]');
-      expect(result.obj[2]).toBe('normal text');
+      const redactedArr = result.obj as string[];
+      expect(redactedArr[0]).toBe('[EMAIL_REDACTED]');
+      expect(redactedArr[1]).toBe('[PHONE_REDACTED]');
+      expect(redactedArr[2]).toBe('normal text');
       expect(result.piiFound).toBe(true);
     });
 
@@ -190,7 +184,8 @@ describe('PiiRedactionService', () => {
 
       const result = service.redactPiiFromObject(obj);
 
-      expect(result.obj.level1.level2.level3.email).toBe('[EMAIL_REDACTED]');
+      const redactedObj = result.obj as Record<string, any>;
+      expect(redactedObj.level1.level2.level3.email).toBe('[EMAIL_REDACTED]');
       expect(result.piiFound).toBe(true);
     });
 
@@ -212,13 +207,14 @@ describe('PiiRedactionService', () => {
       expect(service.containsPii('Call +1234567890')).toBe(true);
       expect(service.containsPii('Normal text')).toBe(false);
       expect(service.containsPii('')).toBe(false);
-      expect(service.containsPii(null as any)).toBe(false);
+      expect(service.containsPii(null as string)).toBe(false);
     });
   });
 
   describe('getPiiStats', () => {
     it('should return PII statistics', () => {
-      const text = 'Contact john@example.com or jane@test.com, call +1234567890 or +0987654321';
+      const text =
+        'Contact john@example.com or jane@test.com, call +1234567890 or +0987654321';
       const stats = service.getPiiStats(text);
 
       expect(stats.email).toBe(2);
@@ -229,7 +225,7 @@ describe('PiiRedactionService', () => {
 
     it('should handle empty text', () => {
       const stats = service.getPiiStats('');
-      expect(Object.values(stats).every(count => count === 0)).toBe(true);
+      expect(Object.values(stats).every((count) => count === 0)).toBe(true);
     });
   });
 
@@ -245,7 +241,7 @@ describe('PiiRedactionService', () => {
 
     it('should allow removing patterns', () => {
       service.removePattern('email');
-      
+
       const result = service.redactPii('Contact: john@example.com');
       expect(result.text).toBe('Contact: john@example.com');
       expect(result.piiFound).toBe(false);

@@ -2,7 +2,20 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '@visapi/core-supabase';
 import { QueueService } from '../queue/queue.service';
-import { QUEUE_NAMES, JOB_NAMES, WorkflowSchema } from '@visapi/shared-types';
+import {
+  QUEUE_NAMES,
+  JOB_NAMES,
+  WorkflowSchema,
+  Workflow,
+} from '@visapi/shared-types';
+import { Job } from 'bullmq';
+
+interface CronDriftMetric {
+  workflowId: string;
+  schedule: string;
+  nextRun: Date;
+  drift: number;
+}
 
 @Injectable()
 export class CronSeederService implements OnModuleInit {
@@ -13,13 +26,13 @@ export class CronSeederService implements OnModuleInit {
     private readonly queueService: QueueService,
   ) {}
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     try {
       await this.seedCronJobs();
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
         { error },
-        'Failed to seed cron jobs during startup - application will continue without cron job seeding'
+        'Failed to seed cron jobs during startup - application will continue without cron job seeding',
       );
       // Don't throw the error to prevent application startup failure
     }
@@ -31,7 +44,7 @@ export class CronSeederService implements OnModuleInit {
     try {
       // Get all enabled workflows with cron triggers
       const workflows = await this.getWorkflowsWithCronTriggers();
-      
+
       if (workflows.length === 0) {
         this.logger.info('No workflows with cron triggers found');
       } else {
@@ -53,14 +66,14 @@ export class CronSeederService implements OnModuleInit {
       }
 
       this.logger.info('Cron job seeding completed successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error({ error }, 'Failed to seed cron jobs');
       throw error;
     }
   }
 
-  private async getWorkflowsWithCronTriggers(): Promise<any[]> {
-    const { data, error } = await this.supabase.client
+  private async getWorkflowsWithCronTriggers(): Promise<Workflow[]> {
+    const { data, error } = await this.supabase.serviceClient
       .from('workflows')
       .select('*')
       .eq('enabled', true);
@@ -71,11 +84,9 @@ export class CronSeederService implements OnModuleInit {
 
     // Filter workflows that have cron triggers
     return (data || []).filter((workflow) => {
-      const schema = workflow.schema as any;
+      const schema = workflow.schema as unknown as WorkflowSchema;
       return schema?.triggers?.some(
-        (trigger: any) => 
-          trigger.type === 'cron' && 
-          trigger.config?.schedule
+        (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
       );
     });
   }
@@ -89,14 +100,16 @@ export class CronSeederService implements OnModuleInit {
       // Remove jobs that match our cron pattern
       for (const job of repeatableJobs) {
         if (job.id?.startsWith('cron-') || job.id === 'log-pruning') {
-          const jobId = job.id.startsWith('cron-') ? job.id.replace('cron-', '') : job.id;
+          const jobId = job.id.startsWith('cron-')
+            ? job.id.replace('cron-', '')
+            : job.id;
           await this.queueService.removeRepeatableJob(
             QUEUE_NAMES.DEFAULT,
             jobId,
           );
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.warn(
         { error },
         'Failed to clear existing cron jobs, continuing anyway',
@@ -104,16 +117,16 @@ export class CronSeederService implements OnModuleInit {
     }
   }
 
-  private async scheduleWorkflow(workflow: any): Promise<void> {
-    const schema = workflow.schema as any;
+  private async scheduleWorkflow(workflow: Workflow): Promise<void> {
+    const schema = workflow.schema as unknown as WorkflowSchema;
     const cronTriggers = schema.triggers.filter(
-      (trigger: any) => trigger.type === 'cron' && trigger.config?.schedule,
+      (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
     );
 
     for (const trigger of cronTriggers) {
       try {
         const schedule = trigger.config.schedule;
-        const timezone = trigger.config.timezone || 'UTC';
+        const timezone = (trigger.config.timezone as string) || 'UTC';
 
         await this.queueService.addRepeatableJob(
           QUEUE_NAMES.DEFAULT,
@@ -144,7 +157,7 @@ export class CronSeederService implements OnModuleInit {
           },
           'Scheduled cron job for workflow',
         );
-      } catch (error) {
+      } catch (error: unknown) {
         this.logger.error(
           {
             error,
@@ -163,17 +176,14 @@ export class CronSeederService implements OnModuleInit {
   async updateWorkflowCronJobs(workflowId: string): Promise<void> {
     try {
       // Remove existing cron job
-      await this.queueService.removeRepeatableJob(
-        QUEUE_NAMES.DEFAULT,
-        workflowId,
-      );
+      await this.removeWorkflowCronJobs(workflowId);
 
       // Fetch the updated workflow
-      const { data: workflow, error } = await this.supabase.client
+      const { data: workflow, error } = await this.supabase.serviceClient
         .from('workflows')
         .select('*')
         .eq('id', workflowId)
-        .single();
+        .single<Workflow>();
 
       if (error || !workflow) {
         this.logger.warn(
@@ -185,18 +195,16 @@ export class CronSeederService implements OnModuleInit {
 
       // Reschedule if still enabled and has cron triggers
       if (workflow.enabled) {
-        const schema = workflow.schema as any;
+        const schema = workflow.schema as unknown as WorkflowSchema;
         const hasCronTrigger = schema?.triggers?.some(
-          (trigger: any) => 
-            trigger.type === 'cron' && 
-            trigger.config?.schedule
+          (trigger) => trigger.type === 'cron' && trigger.config?.schedule,
         );
 
         if (hasCronTrigger) {
           await this.scheduleWorkflow(workflow);
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
         { error, workflowId },
         'Failed to update workflow cron jobs',
@@ -211,14 +219,11 @@ export class CronSeederService implements OnModuleInit {
     try {
       await this.queueService.removeRepeatableJob(
         QUEUE_NAMES.DEFAULT,
-        workflowId,
+        `visapi:${workflowId}:*`,
       );
 
-      this.logger.info(
-        { workflowId },
-        'Removed cron jobs for workflow',
-      );
-    } catch (error) {
+      this.logger.info({ workflowId }, 'Removed cron jobs for workflow');
+    } catch (error: unknown) {
       this.logger.error(
         { error, workflowId },
         'Failed to remove workflow cron jobs',
@@ -229,24 +234,17 @@ export class CronSeederService implements OnModuleInit {
   /**
    * Get cron drift metrics for monitoring
    */
-  async getCronDriftMetrics(): Promise<
-    Array<{
-      workflowId: string;
-      schedule: string;
-      nextRun: Date;
-      drift: number;
-    }>
-  > {
-    const metrics = [];
-    
+  async getCronDriftMetrics(): Promise<CronDriftMetric[]> {
+    const metrics: CronDriftMetric[] = [];
+
     try {
       const repeatableJobs = await this.queueService.getRepeatableJobs(
         QUEUE_NAMES.DEFAULT,
       );
 
       for (const job of repeatableJobs) {
-        if (job.id?.startsWith('cron-')) {
-          const workflowId = job.id.replace('cron-', '');
+        if (job.name === JOB_NAMES.PROCESS_WORKFLOW && job.next) {
+          const workflowId = (job as any).data.workflowId as string;
           const nextRun = new Date(job.next);
           const now = new Date();
           const drift = nextRun.getTime() - now.getTime();
@@ -259,7 +257,7 @@ export class CronSeederService implements OnModuleInit {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error({ error }, 'Failed to get cron drift metrics');
     }
 
@@ -293,11 +291,8 @@ export class CronSeederService implements OnModuleInit {
         },
         'Scheduled log pruning job',
       );
-    } catch (error) {
-      this.logger.error(
-        { error },
-        'Failed to schedule log pruning job',
-      );
+    } catch (error: unknown) {
+      this.logger.error({ error }, 'Failed to schedule log pruning job');
     }
   }
 }

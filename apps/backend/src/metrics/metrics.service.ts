@@ -36,14 +36,14 @@ export class MetricsService {
     public redisOperationsTotal: Counter<string>,
 
     @InjectMetric('redis_operation_errors_total')
-    public redisOperationErrorsTotal: Counter<string>
+    public redisOperationErrorsTotal: Counter<string>,
   ) {}
 
   recordHttpRequest(
     method: string,
     route: string,
     statusCode: number,
-    duration: number
+    duration: number,
   ): void {
     const labels = { method, route, status_code: statusCode.toString() };
 
@@ -63,7 +63,7 @@ export class MetricsService {
     jobName: string,
     queue: string,
     success: boolean,
-    duration: number
+    duration: number,
   ): void {
     const labels = { job_name: jobName, queue, success: success.toString() };
 
@@ -85,18 +85,18 @@ export class MetricsService {
   recordWorkflowExecution(
     workflowId: string,
     duration: number,
-    success: boolean
+    success: boolean,
   ): void {
     this.workflowExecutionDuration.observe(
       { workflow_id: workflowId, success: success.toString() },
-      duration / 1000
+      duration / 1000,
     );
   }
 
   recordApiKeyValidation(duration: number, valid: boolean): void {
     this.apiKeyValidationDuration.observe(
       { valid: valid.toString() },
-      duration / 1000
+      duration / 1000,
     );
   }
 

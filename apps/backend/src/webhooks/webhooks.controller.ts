@@ -9,7 +9,12 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { WebhooksService } from './webhooks.service';
 import { N8nWebhookDto } from './dto/n8n-order.dto';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
@@ -27,7 +32,8 @@ export class WebhooksController {
   @ApiSecurity('api_key')
   @ApiOperation({
     summary: 'Receive order data from n8n.visanet.app',
-    description: 'Webhook endpoint to receive visa order data from n8n automation',
+    description:
+      'Webhook endpoint to receive visa order data from n8n automation',
   })
   @ApiResponse({
     status: 200,
@@ -52,11 +58,15 @@ export class WebhooksController {
     try {
       // Validate required fields
       if (!body?.form || !body?.order) {
-        throw new BadRequestException('Invalid webhook payload: missing form or order data');
+        throw new BadRequestException(
+          'Invalid webhook payload: missing form or order data',
+        );
       }
 
       if (!body.order.id || !body.form.id) {
-        throw new BadRequestException('Invalid webhook payload: missing required IDs');
+        throw new BadRequestException(
+          'Invalid webhook payload: missing required IDs',
+        );
       }
 
       // Process the webhook
@@ -76,7 +86,10 @@ export class WebhooksController {
       }
 
       // Log and wrap other errors
-      console.error('Error processing n8n webhook:', error);
+      console.error(
+        'Error processing n8n webhook:',
+        error instanceof Error ? error.message : error,
+      );
       throw new InternalServerErrorException('Failed to process webhook');
     }
   }

@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiKeysController } from './api-keys.controller';
 import { AuthService } from '../auth/auth.service';
-import { ApiKeyRecord } from '@visapi/shared-types';
+import { ApiKeyRecord, User } from '@visapi/shared-types';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
+import { Request } from 'express';
 
 describe('ApiKeysController', () => {
   let controller: ApiKeysController;
@@ -40,7 +41,7 @@ describe('ApiKeysController', () => {
       userRecord: {
         id: 'user-123',
       },
-    };
+    } as unknown as Request & { userRecord: User };
 
     const createApiKeyDto: CreateApiKeyDto = {
       name: 'Test API Key',
@@ -69,7 +70,7 @@ describe('ApiKeysController', () => {
 
       const result = await controller.createApiKey(
         createApiKeyDto,
-        mockRequest as Express.Request & { userRecord: { id?: string } }
+        mockRequest,
       );
 
       expect(result).toEqual({
@@ -89,26 +90,27 @@ describe('ApiKeysController', () => {
       expect(authService.createApiKey).toHaveBeenCalledWith(
         'Test API Key',
         ['webhooks:trigger', 'workflows:read'],
-        'user-123'
+        'user-123',
       );
     });
 
     it('should handle auth service errors', async () => {
       authService.createApiKey.mockRejectedValue(
-        new Error('Failed to create API key')
+        new Error('Failed to create API key'),
       );
 
       await expect(
-        controller.createApiKey(createApiKeyDto, mockRequest as Express.Request & { apiKey: { created_by?: string } })
+        controller.createApiKey(
+          createApiKeyDto,
+          mockRequest,
+        ),
       ).rejects.toThrow('Failed to create API key');
     });
   });
 
   describe('listApiKeys', () => {
-    const mockRequest = {};
-
     it('should return list of API keys without sensitive data', async () => {
-      const mockApiKeys = [
+      const mockApiKeys: ApiKeyRecord[] = [
         {
           id: 'key-1',
           name: 'Production Key',
@@ -171,11 +173,11 @@ describe('ApiKeysController', () => {
 
     it('should handle auth service errors when listing keys', async () => {
       authService.listApiKeys.mockRejectedValue(
-        new Error('Failed to list API keys')
+        new Error('Failed to list API keys'),
       );
 
       await expect(controller.listApiKeys()).rejects.toThrow(
-        'Failed to list API keys'
+        'Failed to list API keys',
       );
     });
   });
@@ -184,7 +186,7 @@ describe('ApiKeysController', () => {
     it('should revoke an API key successfully', async () => {
       const keyId = 'key-to-revoke';
 
-      authService.revokeApiKey.mockResolvedValue();
+      authService.revokeApiKey.mockResolvedValue(undefined);
 
       const result = await controller.revokeApiKey(keyId);
 
@@ -199,11 +201,11 @@ describe('ApiKeysController', () => {
       const keyId = 'key-to-revoke';
 
       authService.revokeApiKey.mockRejectedValue(
-        new Error('Failed to revoke API key')
+        new Error('Failed to revoke API key'),
       );
 
       await expect(controller.revokeApiKey(keyId)).rejects.toThrow(
-        'Failed to revoke API key'
+        'Failed to revoke API key',
       );
     });
   });
