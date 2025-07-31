@@ -1,11 +1,18 @@
 import { Module } from '@nestjs/common';
 import { WebhooksController } from './webhooks.controller';
-import { QueueModule } from '../queue/queue.module';
-import { AuthModule } from '../auth/auth.module';
-import { RedisModule } from '@visapi/util-redis';
+import { WebhooksService } from './webhooks.service';
+import { SupabaseModule } from '@visapi/core-supabase';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [QueueModule, AuthModule, RedisModule],
+  imports: [
+    SupabaseModule,
+    BullModule.registerQueue({
+      name: 'workflows',
+    }),
+  ],
   controllers: [WebhooksController],
+  providers: [WebhooksService],
+  exports: [WebhooksService],
 })
 export class WebhooksModule {}

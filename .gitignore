@@ -214,3 +214,18 @@ terraform.tfvars
 notes.md
 TODO.md
 NOTES.md
+
+# API Keys and Secrets
+*api-key*
+*api_key*
+*.secret
+*.key
+*-secret.*
+*_secret.*
+n8n_*.txt
+n8n_*.json
+api-keys.txt
+secrets.txt
+
+# Gemini AI settings (contains API tokens)
+.gemini/

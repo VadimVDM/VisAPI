@@ -71,3 +71,128 @@ Stores application logs for auditing and debugging, with a 90-day retention poli
 - pii_redacted: boolean
 - created_at: timestamptz (90-day retention)
 ```
+
+## Order Processing Tables
+
+### `orders`
+
+Stores visa order data received from n8n.visanet.app webhook.
+
+```sql
+- id: uuid (primary key)
+- order_id: text (unique, external order ID e.g. "RU250731IL1")
+- form_id: text (external form ID)
+- payment_id: text
+- payment_processor: text
+- amount: numeric(10,2)
+- currency: text
+- coupon: text (nullable)
+- status: text (default 'active')
+- branch: text
+- domain: text
+- raw_data: jsonb (complete raw webhook data)
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+```
+
+### `applicants`
+
+Stores individual applicant information for each order.
+
+```sql
+- id: uuid (primary key)
+- order_id: uuid (foreign key to orders, CASCADE DELETE)
+- applicant_id: text (external applicant ID)
+- passport_nationality: text
+- passport_first_name: text
+- passport_last_name: text
+- passport_sex: text
+- passport_date_of_birth: date
+- passport_country_of_birth: text
+- passport_number: text
+- passport_date_of_issue: date
+- passport_date_of_expiry: date
+- passport_place_of_issue: text (for some visa types)
+- past_visit_visited: boolean (default false)
+- past_visit_year: text
+- address_line: text
+- address_city: text
+- address_country: text
+- occupation_education: text
+- occupation_status: text
+- occupation_name: text
+- occupation_seniority: text
+- occupation_phone: jsonb ({code, number})
+- occupation_address: jsonb ({line, city, country})
+- extra_nationality_status: text
+- family_data: jsonb (complete family structure)
+- files: jsonb (all file URLs)
+- id_number: text (national ID number)
+- crime: text (criminal record info)
+- religion: text
+- military: jsonb ({served, role, rank})
+- past_travels: jsonb (complex travel history including SAARC)
+- visited: boolean (default false, for Korean visas)
+- city_of_birth: text (for Korean visas)
+- last_travel: jsonb ({traveled, country, from, until})
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+```
+
+### `form_metadata`
+
+Stores form-level metadata for orders.
+
+```sql
+- id: uuid (primary key)
+- order_id: uuid (foreign key to orders, CASCADE DELETE)
+- form_id: text
+- country: text
+- entry_date: date
+- entry_port: text (nullable)
+- product: jsonb (complete product information)
+- quantity: integer
+- urgency: text
+- client: jsonb (client information)
+- meta: jsonb (form metadata - url, branch, domain, etc.)
+- children: jsonb (array of children, default '[]')
+- stay_address: text (address in destination country)
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+```
+
+### `business_info`
+
+Stores business information for business visa applications.
+
+```sql
+- id: uuid (primary key)
+- order_id: uuid (foreign key to orders, CASCADE DELETE)
+- name: text
+- sector: text
+- website: text
+- address_line: text
+- address_city: text
+- address_country: text
+- phone: jsonb ({code, number})
+- created_at: timestamptz (NOT NULL, default now())
+- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+```
+
+### `webhook_logs`
+
+Tracks all incoming webhook requests for debugging and auditing.
+
+```sql
+- id: uuid (primary key)
+- source: text (e.g., 'n8n.visanet.app')
+- endpoint: text
+- method: text
+- headers: jsonb
+- body: jsonb
+- status_code: integer
+- response: jsonb
+- error: text
+- processing_time_ms: integer
+- created_at: timestamptz (NOT NULL, default now())
+```
