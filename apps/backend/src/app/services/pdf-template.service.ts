@@ -37,11 +37,13 @@ export class PdfTemplateService {
     );
 
     // Currency formatting helper
-    Handlebars.registerHelper('currency', (amount: number, currency = 'USD') =>
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
-      }).format(amount),
+    Handlebars.registerHelper(
+      'currency',
+      (amount: number, currency: string = 'USD') =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency,
+        }).format(amount),
     );
 
     // Conditional helper

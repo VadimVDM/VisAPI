@@ -57,7 +57,7 @@ export class QueueService {
       ...defaultOptions,
       ...options,
       priority: options?.priority || this.getDefaultPriority(queueName),
-    });
+    }) as Promise<Job<T>>;
   }
 
   async getJob<T>(
@@ -65,7 +65,7 @@ export class QueueService {
     jobId: string,
   ): Promise<Job<T> | undefined> {
     const queue = this.getQueue(queueName);
-    return queue.getJob(jobId);
+    return queue.getJob(jobId) as Promise<Job<T> | undefined>;
   }
 
   async getQueueMetrics(queueName?: string): Promise<QueueMetrics[]> {
@@ -161,7 +161,7 @@ export class QueueService {
       removeOnComplete: true,
       removeOnFail: false,
       priority: this.getDefaultPriority(queueName),
-    });
+    }) as Promise<Job<T>>;
   }
 
   async removeRepeatableJob(

@@ -41,7 +41,7 @@ export class WorkflowsService {
     }
 
     this.logger.log(`Created workflow: ${data.id}`);
-    return this.mapToResponseDto(data);
+    return this.mapToResponseDto(data as any);
   }
 
   async findAll(): Promise<WorkflowResponseDto[]> {
@@ -55,7 +55,7 @@ export class WorkflowsService {
       throw new Error('Failed to fetch workflows');
     }
 
-    return data.map((workflow) => this.mapToResponseDto(workflow));
+    return data.map((workflow) => this.mapToResponseDto(workflow as any));
   }
 
   async findOne(id: string): Promise<WorkflowResponseDto> {
@@ -70,7 +70,7 @@ export class WorkflowsService {
       throw new NotFoundException(`Workflow with id ${id} not found`);
     }
 
-    return this.mapToResponseDto(data);
+    return this.mapToResponseDto(data as any);
   }
 
   async update(
@@ -80,7 +80,7 @@ export class WorkflowsService {
     const { name, description, enabled, variables, schema } = updateWorkflowDto;
 
     // Build update data, only including fields that are provided
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (enabled !== undefined) updateData.enabled = enabled;
@@ -105,7 +105,7 @@ export class WorkflowsService {
     }
 
     this.logger.log(`Updated workflow: ${id}`);
-    return this.mapToResponseDto(data);
+    return this.mapToResponseDto(data as any);
   }
 
   async remove(id: string): Promise<void> {
@@ -134,7 +134,7 @@ export class WorkflowsService {
       throw new Error('Failed to fetch enabled workflows');
     }
 
-    return data.map((workflow) => this.mapToResponseDto(workflow));
+    return data.map((workflow) => this.mapToResponseDto(workflow as any));
   }
 
   private mapToResponseDto(workflow: any): WorkflowResponseDto {
@@ -143,7 +143,7 @@ export class WorkflowsService {
       name: workflow.name,
       description: workflow.description,
       enabled: workflow.enabled,
-      variables: workflow.schema?.variables,
+      variables: workflow.schema?.variables || undefined,
       schema: workflow.schema,
       created_at: workflow.created_at,
       updated_at: workflow.updated_at,

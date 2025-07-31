@@ -87,6 +87,7 @@ describe('ApiKeysController', () => {
         message: 'Save this key securely. It will not be shown again.',
       });
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(authService.createApiKey).toHaveBeenCalledWith(
         'Test API Key',
         ['webhooks:trigger', 'workflows:read'],
@@ -168,6 +169,7 @@ describe('ApiKeysController', () => {
         },
       ]);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(authService.listApiKeys).toHaveBeenCalled();
     });
 
@@ -194,6 +196,7 @@ describe('ApiKeysController', () => {
         message: 'API key revoked successfully',
       });
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(authService.revokeApiKey).toHaveBeenCalledWith(keyId);
     });
 

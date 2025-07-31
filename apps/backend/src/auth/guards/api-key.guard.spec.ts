@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -90,9 +91,8 @@ describe('ApiKeyGuard', () => {
       expect(authService.validateApiKey).toHaveBeenCalledWith(
         'vapi_validkey123',
       );
-      expect(
-        (context.switchToHttp().getRequest()).apiKey,
-      ).toEqual(mockApiKey);
+      const request = context.switchToHttp().getRequest() as Request & { apiKey: ApiKeyRecord };
+      expect(request.apiKey).toEqual(mockApiKey);
     });
 
     it('should throw UnauthorizedException when API key is missing', async () => {

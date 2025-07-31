@@ -19,36 +19,42 @@ describe('AuthService', () => {
   let service: AuthService;
 
   // Mock factory for Supabase client to reduce boilerplate
-  const createMockSupabaseClient = () => ({
-    from: jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn(),
+  const createMockSupabaseClient = () => {
+    const selectMock = jest.fn();
+    const singleMock = jest.fn();
+    const eqMock = jest.fn();
+    const orderMock = jest.fn().mockReturnValue({ data: [], error: null });
+
+    eqMock.mockReturnValue({ single: singleMock });
+    selectMock.mockReturnValue({
+      eq: eqMock,
+      order: orderMock,
+      single: singleMock,
+    });
+
+    return {
+      from: jest.fn().mockReturnValue({
+        select: selectMock,
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn(),
+          }),
         }),
-        order: jest.fn().mockReturnValue({
-          data: [],
-          error: null,
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            data: null,
+            error: null,
+          }),
+        }),
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            data: null,
+            error: null,
+          }),
         }),
       }),
-      insert: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          single: jest.fn(),
-        }),
-      }),
-      update: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          data: null,
-          error: null,
-        }),
-      }),
-      delete: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          data: null,
-          error: null,
-        }),
-      }),
-    }),
-  });
+    };
+  };
 
   const mockSupabaseClient = createMockSupabaseClient();
 
@@ -114,9 +120,12 @@ describe('AuthService', () => {
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       // Configure the final single() method to return the api key
-      jest
-        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
-        .mockResolvedValue({ data: mockApiKey, error: null });
+      const fromResult = mockSupabaseClient.from('api_keys');
+      const selectResult = fromResult.select();
+      (selectResult.single as jest.Mock).mockResolvedValue({
+        data: mockApiKey,
+        error: null,
+      });
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
@@ -130,9 +139,12 @@ describe('AuthService', () => {
 
     it('should return null when key is not found', async () => {
       // Configure the final single() method to return no data
-      jest
-        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
-        .mockResolvedValue({ data: null, error: { message: 'No rows found' } });
+      const fromResult = mockSupabaseClient.from('api_keys');
+      const selectResult = fromResult.select();
+      (selectResult.single as jest.Mock).mockResolvedValue({
+        data: null,
+        error: { message: 'No rows found' },
+      });
 
       const result = await service.validateApiKey('invalid_testsecret');
 
@@ -155,9 +167,12 @@ describe('AuthService', () => {
       };
 
       // Configure the final single() method to return expired key
-      jest
-        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
-        .mockResolvedValue({ data: mockApiKey, error: null });
+      const fromResult = mockSupabaseClient.from('api_keys');
+      const selectResult = fromResult.select();
+      (selectResult.single as jest.Mock).mockResolvedValue({
+        data: mockApiKey,
+        error: null,
+      });
 
       const result = await service.validateApiKey('vapi_testsecret123');
 
@@ -166,12 +181,12 @@ describe('AuthService', () => {
 
     it('should handle database errors gracefully', async () => {
       // Configure the final single() method to return database error
-      jest
-        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
-        .mockResolvedValue({
-          data: null,
-          error: { message: 'Database error' },
-        });
+      const fromResult = mockSupabaseClient.from('api_keys');
+      const selectResult = fromResult.select();
+      (selectResult.single as jest.Mock).mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
 
       const result = await service.validateApiKey('test_key');
 
@@ -197,9 +212,12 @@ describe('AuthService', () => {
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       // Configure the final single() method to return the api key (but bcrypt will fail)
-      jest
-        .spyOn(mockSupabaseClient.from('api_keys').select(), 'single')
-        .mockResolvedValue({ data: mockApiKey, error: null });
+      const fromResult = mockSupabaseClient.from('api_keys');
+      const selectResult = fromResult.select();
+      (selectResult.single as jest.Mock).mockResolvedValue({
+        data: mockApiKey,
+        error: null,
+      });
 
       const result = await service.validateApiKey('vapi_wrongsecret');
 
@@ -235,7 +253,7 @@ describe('AuthService', () => {
         scopes: ['webhooks:trigger', 'workflows:read'],
       });
 
-      const result = await service.checkScopes(apiKey, ['webhooks:trigger']);
+      const result = service.checkScopes(apiKey, ['webhooks:trigger']);
 
       expect(result).toBe(true);
     });
@@ -245,7 +263,7 @@ describe('AuthService', () => {
         scopes: ['webhooks:trigger'],
       });
 
-      const result = await service.checkScopes(apiKey, ['admin:write']);
+      const result = service.checkScopes(apiKey, ['admin:write']);
 
       expect(result).toBe(false);
     });
@@ -255,7 +273,7 @@ describe('AuthService', () => {
         scopes: [],
       });
 
-      const result = await service.checkScopes(apiKey, []);
+      const result = service.checkScopes(apiKey, []);
 
       expect(result).toBe(true);
     });

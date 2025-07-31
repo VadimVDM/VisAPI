@@ -13,6 +13,6 @@ export class AdminController {
     @Next() next: NextFunction,
   ): void {
     const router = this.adminService.getRouter();
-    router(req, res, next);
+    void router(req, res, next);
   }
 }
