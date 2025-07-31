@@ -579,10 +579,12 @@ export class OrderDto implements Order {
   status!: (typeof ORDER_STATUSES)[number];
 }
 
-// Main Vizi Webhook DTO - More permissive for real webhook data
+// Main Vizi Webhook DTO - validate structure but not complex nested data
 export class ViziWebhookDto {
+  // Validate that form exists and is an object, but don't deep-validate
+  // The service layer handles the actual VisaForm type checking
   @IsObject()
-  form!: Record<string, any>; // Accept any form structure from Visanet
+  form!: VisaForm;
 
   @ValidateNested()
   @Type(() => OrderDto)
