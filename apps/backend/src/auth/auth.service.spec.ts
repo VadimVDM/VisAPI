@@ -113,7 +113,6 @@ describe('AuthService', () => {
       const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
-        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
@@ -163,7 +162,6 @@ describe('AuthService', () => {
       const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
-        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
@@ -205,7 +203,6 @@ describe('AuthService', () => {
       const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
-        hashed_key: '', // Legacy field
         prefix: 'vapi_',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],

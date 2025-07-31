@@ -19,7 +19,6 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           expires_at: string | null;
-          hashed_key: string;
           hashed_secret: string | null;
           id: string;
           last_used_at: string | null;
@@ -32,7 +31,6 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           expires_at?: string | null;
-          hashed_key: string;
           hashed_secret?: string | null;
           id?: string;
           last_used_at?: string | null;
@@ -45,7 +43,6 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           expires_at?: string | null;
-          hashed_key?: string;
           hashed_secret?: string | null;
           id?: string;
           last_used_at?: string | null;
@@ -60,285 +57,6 @@ export type Database = {
             columns: ['created_by'];
             isOneToOne: false;
             referencedRelation: 'users';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      api_keys_backup: {
-        Row: {
-          created_at: string | null;
-          created_by: string | null;
-          expires_at: string | null;
-          hashed_key: string | null;
-          id: string | null;
-          name: string | null;
-          scopes: string[] | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          created_by?: string | null;
-          expires_at?: string | null;
-          hashed_key?: string | null;
-          id?: string | null;
-          name?: string | null;
-          scopes?: string[] | null;
-        };
-        Update: {
-          created_at?: string | null;
-          created_by?: string | null;
-          expires_at?: string | null;
-          hashed_key?: string | null;
-          id?: string | null;
-          name?: string | null;
-          scopes?: string[] | null;
-        };
-        Relationships: [];
-      };
-      applicants: {
-        Row: {
-          address_city: string | null;
-          address_country: string | null;
-          address_line: string | null;
-          address_set_by: number | null;
-          applicant_id: string;
-          city_of_birth: string | null;
-          created_at: string;
-          crime: string | null;
-          extra_nationality_status: string | null;
-          family_data: Json | null;
-          files: Json | null;
-          guardian_passport: string | null;
-          id: string;
-          id_number: string | null;
-          last_travel: Json | null;
-          marital_status: string | null;
-          military: Json | null;
-          occupation_address: Json | null;
-          occupation_education: string | null;
-          occupation_name: string | null;
-          occupation_phone: Json | null;
-          occupation_seniority: string | null;
-          occupation_status: string | null;
-          order_id: string;
-          passport_country_of_birth: string | null;
-          passport_date_of_birth: string | null;
-          passport_date_of_expiry: string | null;
-          passport_date_of_issue: string | null;
-          passport_first_name: string | null;
-          passport_last_name: string | null;
-          passport_nationality: string | null;
-          passport_number: string | null;
-          passport_place_of_issue: string | null;
-          passport_sex: string | null;
-          past_travels: Json | null;
-          past_visit_visited: boolean | null;
-          past_visit_year: string | null;
-          religion: string | null;
-          updated_at: string;
-          visited: boolean | null;
-        };
-        Insert: {
-          address_city?: string | null;
-          address_country?: string | null;
-          address_line?: string | null;
-          address_set_by?: number | null;
-          applicant_id: string;
-          city_of_birth?: string | null;
-          created_at?: string;
-          crime?: string | null;
-          extra_nationality_status?: string | null;
-          family_data?: Json | null;
-          files?: Json | null;
-          guardian_passport?: string | null;
-          id?: string;
-          id_number?: string | null;
-          last_travel?: Json | null;
-          marital_status?: string | null;
-          military?: Json | null;
-          occupation_address?: Json | null;
-          occupation_education?: string | null;
-          occupation_name?: string | null;
-          occupation_phone?: Json | null;
-          occupation_seniority?: string | null;
-          occupation_status?: string | null;
-          order_id: string;
-          passport_country_of_birth?: string | null;
-          passport_date_of_birth?: string | null;
-          passport_date_of_expiry?: string | null;
-          passport_date_of_issue?: string | null;
-          passport_first_name?: string | null;
-          passport_last_name?: string | null;
-          passport_nationality?: string | null;
-          passport_number?: string | null;
-          passport_place_of_issue?: string | null;
-          passport_sex?: string | null;
-          past_travels?: Json | null;
-          past_visit_visited?: boolean | null;
-          past_visit_year?: string | null;
-          religion?: string | null;
-          updated_at?: string;
-          visited?: boolean | null;
-        };
-        Update: {
-          address_city?: string | null;
-          address_country?: string | null;
-          address_line?: string | null;
-          address_set_by?: number | null;
-          applicant_id?: string;
-          city_of_birth?: string | null;
-          created_at?: string;
-          crime?: string | null;
-          extra_nationality_status?: string | null;
-          family_data?: Json | null;
-          files?: Json | null;
-          guardian_passport?: string | null;
-          id?: string;
-          id_number?: string | null;
-          last_travel?: Json | null;
-          marital_status?: string | null;
-          military?: Json | null;
-          occupation_address?: Json | null;
-          occupation_education?: string | null;
-          occupation_name?: string | null;
-          occupation_phone?: Json | null;
-          occupation_seniority?: string | null;
-          occupation_status?: string | null;
-          order_id?: string;
-          passport_country_of_birth?: string | null;
-          passport_date_of_birth?: string | null;
-          passport_date_of_expiry?: string | null;
-          passport_date_of_issue?: string | null;
-          passport_first_name?: string | null;
-          passport_last_name?: string | null;
-          passport_nationality?: string | null;
-          passport_number?: string | null;
-          passport_place_of_issue?: string | null;
-          passport_sex?: string | null;
-          past_travels?: Json | null;
-          past_visit_visited?: boolean | null;
-          past_visit_year?: string | null;
-          religion?: string | null;
-          updated_at?: string;
-          visited?: boolean | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'applicants_order_id_fkey';
-            columns: ['order_id'];
-            isOneToOne: false;
-            referencedRelation: 'orders';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      business_info: {
-        Row: {
-          address_city: string | null;
-          address_country: string | null;
-          address_line: string | null;
-          created_at: string;
-          id: string;
-          name: string | null;
-          order_id: string;
-          phone: Json | null;
-          sector: string | null;
-          updated_at: string;
-          website: string | null;
-        };
-        Insert: {
-          address_city?: string | null;
-          address_country?: string | null;
-          address_line?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          order_id: string;
-          phone?: Json | null;
-          sector?: string | null;
-          updated_at?: string;
-          website?: string | null;
-        };
-        Update: {
-          address_city?: string | null;
-          address_country?: string | null;
-          address_line?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string | null;
-          order_id?: string;
-          phone?: Json | null;
-          sector?: string | null;
-          updated_at?: string;
-          website?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'business_info_order_id_fkey';
-            columns: ['order_id'];
-            isOneToOne: false;
-            referencedRelation: 'orders';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      form_metadata: {
-        Row: {
-          children: Json | null;
-          client: Json | null;
-          country: string | null;
-          created_at: string;
-          entry_date: string | null;
-          entry_port: string | null;
-          form_id: string;
-          id: string;
-          meta: Json | null;
-          order_id: string;
-          product: Json | null;
-          quantity: number | null;
-          stay_address: string | null;
-          updated_at: string;
-          urgency: string | null;
-        };
-        Insert: {
-          children?: Json | null;
-          client?: Json | null;
-          country?: string | null;
-          created_at?: string;
-          entry_date?: string | null;
-          entry_port?: string | null;
-          form_id: string;
-          id?: string;
-          meta?: Json | null;
-          order_id: string;
-          product?: Json | null;
-          quantity?: number | null;
-          stay_address?: string | null;
-          updated_at?: string;
-          urgency?: string | null;
-        };
-        Update: {
-          children?: Json | null;
-          client?: Json | null;
-          country?: string | null;
-          created_at?: string;
-          entry_date?: string | null;
-          entry_port?: string | null;
-          form_id?: string;
-          id?: string;
-          meta?: Json | null;
-          order_id?: string;
-          product?: Json | null;
-          quantity?: number | null;
-          stay_address?: string | null;
-          updated_at?: string;
-          urgency?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'form_metadata_order_id_fkey';
-            columns: ['order_id'];
-            isOneToOne: false;
-            referencedRelation: 'orders';
             referencedColumns: ['id'];
           },
         ];
@@ -383,57 +101,6 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
-      };
-      orders: {
-        Row: {
-          amount: number | null;
-          branch: string | null;
-          coupon: string | null;
-          created_at: string;
-          currency: string | null;
-          domain: string | null;
-          form_id: string;
-          id: string;
-          order_id: string;
-          payment_id: string | null;
-          payment_processor: string | null;
-          raw_data: Json;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          amount?: number | null;
-          branch?: string | null;
-          coupon?: string | null;
-          created_at?: string;
-          currency?: string | null;
-          domain?: string | null;
-          form_id: string;
-          id?: string;
-          order_id: string;
-          payment_id?: string | null;
-          payment_processor?: string | null;
-          raw_data: Json;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          amount?: number | null;
-          branch?: string | null;
-          coupon?: string | null;
-          created_at?: string;
-          currency?: string | null;
-          domain?: string | null;
-          form_id?: string;
-          id?: string;
-          order_id?: string;
-          payment_id?: string | null;
-          payment_processor?: string | null;
-          raw_data?: Json;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
       };
       roles: {
         Row: {
@@ -538,69 +205,30 @@ export type Database = {
         };
         Relationships: [];
       };
-      users_backup: {
+      webhook_data: {
         Row: {
           created_at: string | null;
-          email: string | null;
-          id: string | null;
-          role: Database['public']['Enums']['user_role'] | null;
-          updated_at: string | null;
+          data: Json;
+          processed: boolean | null;
+          processed_at: string | null;
+          type: string;
+          webhook_id: string;
         };
         Insert: {
           created_at?: string | null;
-          email?: string | null;
-          id?: string | null;
-          role?: Database['public']['Enums']['user_role'] | null;
-          updated_at?: string | null;
+          data: Json;
+          processed?: boolean | null;
+          processed_at?: string | null;
+          type: string;
+          webhook_id?: string;
         };
         Update: {
           created_at?: string | null;
-          email?: string | null;
-          id?: string | null;
-          role?: Database['public']['Enums']['user_role'] | null;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      webhook_logs: {
-        Row: {
-          body: Json | null;
-          created_at: string;
-          endpoint: string;
-          error: string | null;
-          headers: Json | null;
-          id: string;
-          method: string;
-          processing_time_ms: number | null;
-          response: Json | null;
-          source: string;
-          status_code: number | null;
-        };
-        Insert: {
-          body?: Json | null;
-          created_at?: string;
-          endpoint: string;
-          error?: string | null;
-          headers?: Json | null;
-          id?: string;
-          method: string;
-          processing_time_ms?: number | null;
-          response?: Json | null;
-          source: string;
-          status_code?: number | null;
-        };
-        Update: {
-          body?: Json | null;
-          created_at?: string;
-          endpoint?: string;
-          error?: string | null;
-          headers?: Json | null;
-          id?: string;
-          method?: string;
-          processing_time_ms?: number | null;
-          response?: Json | null;
-          source?: string;
-          status_code?: number | null;
+          data?: Json;
+          processed?: boolean | null;
+          processed_at?: string | null;
+          type?: string;
+          webhook_id?: string;
         };
         Relationships: [];
       };

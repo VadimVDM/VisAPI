@@ -32,9 +32,10 @@ export class AuthService {
     name: string,
     scopes: string[],
     createdBy: string,
+    customPrefix?: string,
   ): Promise<{ key: string; apiKey: ApiKeyRecord }> {
     // Generate prefix and secret
-    const prefix = this.config.apiKeyPrefix ?? 'vapi_';
+    const prefix = customPrefix || this.config.apiKeyPrefix || 'visapi_';
     const secret = randomBytes(32).toString('hex');
     const fullKey = `${prefix}${secret}`;
 
@@ -53,7 +54,6 @@ export class AuthService {
       .insert({
         name,
         prefix,
-        hashed_key: hashedSecret, // This was missing
         hashed_secret: hashedSecret,
         scopes,
         expires_at: expiresAt.toISOString(),
@@ -142,7 +142,7 @@ export class AuthService {
   private splitApiKey(apiKey: string): { prefix: string; secret: string } {
     // Split by the last dot to handle prefixes like "n8n_xxxx.secret"
     const lastDotIndex = apiKey.lastIndexOf('.');
-    
+
     if (lastDotIndex === -1) {
       return { prefix: '', secret: '' };
     }

@@ -2,7 +2,8 @@
 
 **Date**: July 31, 2025  
 **Project**: VisAPI - Enterprise Workflow Automation System  
-**Feature**: n8n.visanet.app Webhook Integration
+**Feature**: n8n.visanet.app Webhook Integration  
+**Status**: DEPRECATED - Replaced by Vizi webhook integration
 
 ## Executive Summary
 
@@ -51,17 +52,20 @@ We created a comprehensive database schema to store visa order data across multi
 ### 2. API Endpoint Implementation
 
 #### Endpoint Details
+
 - **URL**: `POST /api/v1/webhooks/n8n/orders`
 - **Authentication**: API key via `X-API-Key` header
 - **Content-Type**: `application/json`
 
 #### Security Features
+
 - API key authentication with bcrypt hashing
 - Scoped permissions: `webhook:n8n` and `orders:write`
 - Input validation for required fields
 - Error handling with appropriate HTTP status codes
 
 #### NestJS Architecture
+
 ```
 WebhooksModule
 ├── WebhooksController (HTTP layer)
@@ -96,11 +100,13 @@ The webhook service handles complex data transformations:
 The implementation successfully handles three distinct visa types:
 
 #### Israeli Visa to Russia
+
 - Basic structure with standard fields
 - Single applicant support
 - Minimal required information
 
 #### Israeli Visa to India
+
 - Complex structure with additional fields:
   - Military service details
   - National ID numbers
@@ -109,6 +115,7 @@ The implementation successfully handles three distinct visa types:
 - Multi-applicant support (tested with 2 applicants)
 
 #### Korean K-ETA
+
 - Simplified structure with unique fields:
   - Last travel information
   - City of birth
@@ -119,12 +126,14 @@ The implementation successfully handles three distinct visa types:
 ### 5. API Key Management
 
 #### Generation Process
+
 1. Created secure API key generation scripts
 2. Uses cryptographically secure random values
 3. Implements prefix/secret pattern (e.g., `n8n_xxx.yyy`)
 4. Bcrypt hashing for secret storage
 
 #### Key Features
+
 - 1-year expiration by default
 - Scoped permissions for security
 - Database storage with audit fields
@@ -133,11 +142,13 @@ The implementation successfully handles three distinct visa types:
 ### 6. Testing and Documentation
 
 #### Test Scripts Created
+
 1. `test-n8n-webhook.js` - Basic single applicant test
 2. `test-multi-applicant-webhook.js` - Israeli multi-applicant test
 3. `test-korean-visa-webhook.js` - Korean visa specific test
 
 #### Documentation
+
 1. **Database Schema** - Updated with all new tables and fields
 2. **n8n Webhook Setup Guide** - Complete integration guide
 3. **API Endpoint Documentation** - Swagger/OpenAPI annotations
@@ -145,26 +156,32 @@ The implementation successfully handles three distinct visa types:
 ## Technical Challenges and Solutions
 
 ### Challenge 1: Variable Data Structures
+
 Different visa types have significantly different data structures.
 
-**Solution**: 
+**Solution**:
+
 - Made most fields optional in DTOs
 - Used JSONB for complex nested data
 - Stored raw data as backup
 - Implemented flexible validation
 
 ### Challenge 2: Backward Compatibility
+
 Need to support both old and new data formats.
 
 **Solution**:
+
 - Added conditional logic in data mapping
 - Used optional chaining for nested properties
 - Provided default values for missing fields
 
 ### Challenge 3: Multi-Applicant Orders
+
 Orders can have varying numbers of applicants.
 
 **Solution**:
+
 - One-to-many relationship with applicants table
 - Array processing in service layer
 - Proper foreign key constraints
@@ -218,13 +235,14 @@ Five migrations were created to build the complete schema:
    - Error logging with stack traces
 
 2. **Debug Queries**
+
    ```sql
    -- Recent webhooks
    SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 10;
-   
+
    -- Failed webhooks
    SELECT * FROM webhook_logs WHERE error IS NOT NULL;
-   
+
    -- Multi-applicant orders
    SELECT o.order_id, COUNT(a.id) as applicants
    FROM orders o JOIN applicants a ON a.order_id = o.id
@@ -250,37 +268,92 @@ Five migrations were created to build the complete schema:
    - Send WhatsApp notifications
    - Email confirmations
 
+## Migration to Vizi Webhooks
+
+As of July 31, 2025, the n8n webhook integration has been deprecated and replaced by the Vizi webhook system. The new implementation provides significant improvements:
+
+### Key Improvements in Vizi Integration
+
+1. **Exact Type Matching**
+   - Uses official Visanet types from `@visapi/visanet-types`
+   - No more manual type mapping or conversions
+   - Full TypeScript type safety
+
+2. **Enhanced Validation**
+   - Comprehensive DTOs with class-validator
+   - Discriminated unions for complex types
+   - Better error messages for validation failures
+
+3. **Direct Workflow Integration**
+   - Automatic workflow triggering based on country
+   - Priority queue routing based on urgency
+   - Better context enrichment for workflow processing
+
+4. **Improved Security**
+   - Custom `vizi_` prefix for webhook-specific keys
+   - New `webhook:vizi` scope
+   - Maintained backward compatibility during transition
+
+### Migration Path
+
+1. **New Endpoint**: `/api/v1/webhooks/vizi/orders`
+2. **New API Key Prefix**: `vizi_` instead of `n8n_`
+3. **New Scope**: `webhook:vizi` instead of `webhook:n8n`
+4. **Same Core Functionality**: All features maintained and improved
+
+### Implementation Details
+
+The Vizi webhook implementation includes:
+
+- Complete shared types library at `libs/shared/visanet-types/`
+- New webhook module at `apps/backend/src/vizi-webhooks/`
+- Comprehensive DTOs with proper validation
+- Type guards for runtime type checking
+- Direct integration with existing workflow system
+
 ## Conclusion
 
-The n8n webhook implementation successfully achieves its goals of:
+The n8n webhook implementation successfully achieved its goals of:
+
 - ✅ Receiving and storing visa order data securely
 - ✅ Supporting multiple visa types with varying structures
 - ✅ Handling multi-applicant orders
 - ✅ Providing comprehensive logging and debugging capabilities
 - ✅ Maintaining data integrity and security
 
-The flexible schema design ensures the system can adapt to new visa types without major changes, while the comprehensive logging provides excellent debugging capabilities for production operations.
+The flexible schema design ensured the system could adapt to new visa types, and this foundation enabled a smooth migration to the improved Vizi webhook system. The n8n integration served its purpose as a testing platform and proved the concept, allowing us to build the production-ready Vizi integration with confidence.
 
 ## Appendix: Key Files
 
 ### Backend Implementation
+
 - `/apps/backend/src/webhooks/webhooks.module.ts`
 - `/apps/backend/src/webhooks/webhooks.controller.ts`
 - `/apps/backend/src/webhooks/webhooks.service.ts`
 - `/apps/backend/src/webhooks/dto/n8n-order.dto.ts`
 
 ### Database Migrations
+
 - `/apps/backend/migrations/003_create_orders_tables.sql`
 - `/apps/backend/migrations/004_add_additional_order_fields.sql`
 - `/apps/backend/migrations/005_add_korean_visa_fields.sql`
 
 ### Testing Scripts
+
 - `/tools/scripts/generate-api-key-values.js`
 - `/tools/scripts/test-n8n-webhook.js`
 - `/tools/scripts/test-multi-applicant-webhook.js`
 - `/tools/scripts/test-korean-visa-webhook.js`
 
 ### Documentation
+
 - `/docs/database-schema.md` (updated)
-- `/docs/n8n-webhook-setup.md` (new)
+- `/docs/n8n-webhook-setup.md` (deprecated - see vizi-webhook-setup.md)
 - `/docs/n8n-webhook-implementation-report.md` (this file)
+
+### Vizi Migration Files (New)
+
+- `/libs/shared/visanet-types/` - Complete Visanet types library
+- `/apps/backend/src/vizi-webhooks/` - New Vizi webhook module
+- `/docs/vizi-webhook-setup.md` - Current webhook documentation
+- `/tasks/vizi-webhook-migration-guide.md` - Migration implementation guide

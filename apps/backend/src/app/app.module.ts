@@ -8,7 +8,7 @@ import { AuthModule } from '../auth/auth.module';
 import { QueueModule } from '../queue/queue.module';
 import { HealthModule } from '../health/health.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
-import { WebhooksModule } from '../webhooks/webhooks.module';
+import { ViziWebhooksModule } from '../vizi-webhooks/vizi-webhooks.module';
 import { AdminModule } from '../admin/admin.module';
 import { CronModule } from '../cron/cron.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -51,7 +51,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     QueueModule,
     HealthModule,
     ApiKeysModule,
-    WebhooksModule,
+    ViziWebhooksModule,
     AdminModule,
     CronModule,
     WorkflowsModule,

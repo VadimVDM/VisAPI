@@ -65,8 +65,7 @@ export class ApiKeyResponseDto {
    * Creates a response DTO from an API key record, excluding sensitive fields
    */
   static fromRecord(record: ApiKeyRecord): ApiKeyResponseDto {
-    const { hashed_key, hashed_secret, ...safeFields } = record;
-    void hashed_key; // Exclude legacy field
+    const { hashed_secret, ...safeFields } = record;
     void hashed_secret; // Exclude sensitive field
     return safeFields as ApiKeyResponseDto;
   }

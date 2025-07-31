@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: July 18, 2025
+Essential information for working with the VisAPI project. Updated: July 31, 2025
 
 ## Project Overview
 
@@ -45,6 +45,10 @@ Essential information for working with the VisAPI project. Updated: July 18, 202
 - ✅ Enhanced password security system with 12+ character requirements and visual feedback (July 18, 2025)
 - ✅ Comprehensive password validation with strength indicators and secure generation (July 18, 2025)
 - ✅ Enterprise-grade authentication security with multi-layer password protection (July 18, 2025)
+- ✅ Vizi webhook integration with exact Visanet types and API key system (July 31, 2025)
+- ✅ Complete shared types library (@visapi/visanet-types) with discriminated unions (July 31, 2025)
+- ✅ Database optimization with redundant column removal and proper RLS policies (July 31, 2025)
+- ✅ Complete n8n system removal with clean architecture transition (July 31, 2025)
 
 ## Project Structure
 
@@ -53,7 +57,7 @@ VisAPI/
 ├── apps/
 │   ├── frontend/          # Next.js 14 admin dashboard (Vercel)
 │   └── backend/           # NestJS API gateway (Render)
-├── libs/                  # NX shared libraries (9 specialized libraries)
+├── libs/                  # NX shared libraries (10 specialized libraries)
 │   ├── frontend/          # Frontend-specific libraries
 │   │   ├── data-access/   # API clients and React hooks
 │   │   └── ui-components/ # Reusable UI components
@@ -66,7 +70,8 @@ VisAPI/
 │   │   └── util-redis/    # Redis utilities and idempotency
 │   └── shared/            # Cross-platform shared libraries
 │       ├── types/         # TypeScript type definitions
-│       └── utils/         # Common utility functions
+│       ├── utils/         # Common utility functions
+│       └── visanet-types/ # Visanet/Vizi types with DTOs
 ├── packages/
 │   └── config/            # Shared configuration
 ├── tools/
@@ -210,15 +215,16 @@ For a detailed breakdown of all core tables (`users`, `api_keys`, `workflows`, `
 ### Key Endpoints
 
 ```
-POST /api/v1/triggers/{key}     # Webhook trigger with idempotency
-GET  /api/v1/workflows          # List workflows
-POST /api/v1/workflows          # Create workflow
-GET  /api/v1/logs               # Paginated logs with filters
-GET  /api/v1/queue/metrics      # Queue health and metrics
-POST /api/v1/email/auth-hook    # Supabase auth email webhook
-GET  /api/v1/healthz            # Health check (DB + Redis)
-GET  /api/v1/livez              # Liveness probe
-GET  /api/v1/version            # Git SHA and build info
+POST /api/v1/triggers/{key}         # Webhook trigger with idempotency
+POST /api/v1/webhooks/vizi/orders   # Vizi webhook endpoint for visa orders
+GET  /api/v1/workflows              # List workflows
+POST /api/v1/workflows              # Create workflow
+GET  /api/v1/logs                   # Paginated logs with filters
+GET  /api/v1/queue/metrics          # Queue health and metrics
+POST /api/v1/email/auth-hook        # Supabase auth email webhook
+GET  /api/v1/healthz                # Health check (DB + Redis)
+GET  /api/v1/livez                  # Liveness probe
+GET  /api/v1/version                # Git SHA and build info
 ```
 
 ## Security Guidelines
@@ -228,6 +234,8 @@ GET  /api/v1/version            # Git SHA and build info
 - **Frontend:** Supabase Email Magic-Link with @visanet.com domain allowlist
 - **Backend:** API key authentication with scoped permissions using secure prefix/secret pattern
 - **API Keys:** 90-day rotation, prefix/secret pattern with bcrypt hashing, unique per service
+  - Main API keys use `visapi_` prefix
+  - Vizi webhook keys use `vizi_` prefix with `webhook:vizi` scope
 - **RLS:** Row-Level Security enabled on all tables with comprehensive policies
 - **Password Security:** Enterprise-grade 12+ character requirements with multi-factor validation
 - **Password Validation:** Real-time strength assessment with visual feedback and secure generation
@@ -259,6 +267,7 @@ GET  /api/v1/version            # Git SHA and build info
 VisAPI features a complete enterprise email system with branded templates and Resend integration for all authentication and transactional emails.
 
 **Email Service (`@visapi/email-service`):**
+
 - **Branded Templates**: Magic link, welcome, password reset, and email verification templates
 - **Resend SDK**: Direct integration with `resend` Node.js package for reliable delivery
 - **Template Engine**: Dynamic email generation with user data and secure URLs
@@ -268,15 +277,17 @@ VisAPI features a complete enterprise email system with branded templates and Re
 - **Token Exchange**: Server-side token verification with `/api/v1/auth/confirm` endpoint
 
 **Email Templates:**
+
 ```typescript
 // Available templates with VisAPI branding
-generateMagicLinkEmail()       // Passwordless authentication
-generateWelcomeEmail()         // New user onboarding
-generatePasswordResetEmail()   // Secure password recovery
-generateEmailVerificationEmail() // Account confirmation
+generateMagicLinkEmail(); // Passwordless authentication
+generateWelcomeEmail(); // New user onboarding
+generatePasswordResetEmail(); // Secure password recovery
+generateEmailVerificationEmail(); // Account confirmation
 ```
 
 **Configuration:**
+
 ```bash
 # Required environment variables
 RESEND_API_KEY=re_your_api_key_here
@@ -284,6 +295,7 @@ RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
 ```
 
 **Authentication Email Flow:**
+
 1. User triggers auth action (signup, login, password reset)
 2. Supabase sends webhook to `/api/v1/email/auth-hook`
 3. Email service processes webhook and selects appropriate template
@@ -294,6 +306,7 @@ RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
 8. Frontend establishes authenticated session
 
 **Production Ready:**
+
 - Email templates tested across major email clients
 - Error recovery with detailed logging
 - Rate limiting and delivery monitoring
@@ -306,12 +319,14 @@ RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
 VisAPI implements a comprehensive multi-layer password security system that exceeds industry standards for enterprise applications.
 
 **Security Configuration:**
+
 - **Supabase Settings**: 12+ character minimum, all character types required, 8-digit OTP (3600s expiry)
 - **Backend Validation**: Real-time validation with `@visapi/shared-utils` password validation
 - **Frontend Guidance**: Interactive strength indicators and secure password generation
 - **Multi-Layer Protection**: Database-level, API-level, and client-side validation
 
 **Password Requirements:**
+
 ```typescript
 // Enforced password standards
 {
@@ -324,12 +339,14 @@ VisAPI implements a comprehensive multi-layer password security system that exce
 ```
 
 **UI Components (`apps/frontend/src/components/ui/`):**
+
 - **PasswordInput**: Enhanced input with visibility toggle and integrated features
 - **PasswordGenerator**: One-click secure 14-character password generation
 - **PasswordStrengthIndicator**: Real-time visual feedback with requirements checklist
 - **Enhanced SignupPage**: Beautiful UI with integrated password tools
 
 **Validation Features:**
+
 - **Strength Scoring**: 0-4 scale (Very Weak → Very Strong)
 - **Pattern Detection**: Identifies and penalizes common weak patterns
 - **Real-Time Feedback**: Live validation as users type
@@ -337,17 +354,19 @@ VisAPI implements a comprehensive multi-layer password security system that exce
 - **Secure Generation**: Cryptographically secure password creation
 
 **Implementation:**
+
 ```typescript
 // Password validation utility
-validatePassword(password, requirements) // Returns PasswordStrength object
-generateSecurePassword(length = 14)     // Creates secure passwords
+validatePassword(password, requirements); // Returns PasswordStrength object
+generateSecurePassword((length = 14)); // Creates secure passwords
 
 // Backend validation in AuthService
-signUpWithEmail()    // Validates before account creation
-updatePassword()     // Validates password changes
+signUpWithEmail(); // Validates before account creation
+updatePassword(); // Validates password changes
 ```
 
 **Security Benefits:**
+
 - Prevents weak passwords at multiple validation layers
 - Reduces password-related security incidents
 - Improves user experience with helpful guidance
@@ -378,6 +397,7 @@ Use these tools:
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
 4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations
+6. **Vizi Webhooks:** Complete integration with Visanet's Vizi app for visa order processing
 
 ### Queue System (BullMQ)
 
@@ -513,7 +533,7 @@ logger.info(
     action: 'workflow.triggered',
     workflowId: workflow.id,
   },
-  'Workflow triggered successfully'
+  'Workflow triggered successfully',
 );
 ```
 
@@ -702,8 +722,9 @@ pnpm nx show project frontend
 **Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete, Magic Link Authentication Operational**
 
 VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved all major milestones:
+
 - Week 1: Authentication system with magic links ✅
-- Week 2: Premium dashboard UI with real-time data ✅  
+- Week 2: Premium dashboard UI with real-time data ✅
 - Week 3: Email integration with branded templates ✅ (100% - magic links fully implemented)
 - Week 4: Comprehensive testing coverage (upcoming)
 
@@ -743,6 +764,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - `docs/sprint-*.md` files: Individual sprint plans with technical specifications.
 - `docs/runbooks/`: Operational runbooks for DLQ replay, Redis failover, and secret rotation.
 - `docs/security/`: Security documentation, threat models, and assessment checklists.
+- `docs/vizi-webhook-setup.md`: Vizi webhook integration guide and implementation details.
 - `load-tests/`: k6 load testing suite for performance validation.
 - `chaos-engineering/`: Chaos testing toolkit for failure simulation.
 
@@ -759,6 +781,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 7.  **Follow security guidelines** - never commit secrets
 8.  **Use NX commands** for generating new components/services
 9.  **Keep CLAUDE.md updated** with important project changes
+10. **Use @visapi/visanet-types** for all Vizi/Visanet type definitions
 
 ### Email System Development Notes:
 
@@ -799,6 +822,16 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - **Testing**: Password validation tested in auth.service.spec.ts
 - **User Experience**: Real-time feedback with visual indicators and secure generation
 
+### Vizi Webhook Development Notes:
+
+- **Type Library**: Use `@visapi/visanet-types` for all Vizi/Visanet types and DTOs
+- **Webhook Endpoint**: POST to `/api/v1/webhooks/vizi/orders` with Vizi webhook payload
+- **API Keys**: Vizi keys use `vizi_` prefix with `webhook:vizi` scope
+- **Validation**: DTOs use class-validator with discriminated unions for complex types
+- **Type Guards**: Use type guard functions from `@visapi/visanet-types` for runtime checks
+- **Key Generation**: Use `node scripts/create-vizi-api-key.js` to create new Vizi API keys
+- **Database**: Clean architecture with n8n references completely removed
+
 ### Common Fixes:
 
 1. **NestJS API Path Versioning**: Controllers must use `@Controller('v1/resource')` not `@Controller('api/v1/resource')` (app has global 'api' prefix)
@@ -812,16 +845,20 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 9. **CSS Build Issues**: Verify PostCSS config uses `@tailwindcss/postcss` for v4 compatibility
 10. **Password Validation**: Use `validatePassword()` from `@visapi/shared-utils`, not custom validation
 11. **Password Components**: Import from `@/components/ui/password-*` for consistent password UI
+12. **Vizi DTO Properties**: Add `!` to all class properties in DTOs to fix TypeScript strict initialization errors
+13. **API Key Custom Prefix**: Use `createApiKey()` with custom prefix parameter for non-default prefixes
+14. **Database Schema**: Use `hashed_secret` column only, `hashed_key` has been removed (July 31, 2025)
+15. **API Key Generation**: Use standalone script `scripts/create-vizi-api-key.js` for Vizi keys
 
 ### Known Issues (Non-Critical):
 
 1. **TypeScript Linting**: ~315 backend and ~42 frontend strict mode violations remaining
-2. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility  
+2. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility
 3. **NX Peer Dependencies**: Minor @nx/linter version mismatch - non-blocking
 4. **Next.js 15 Html Import Error**: Known Next.js v15 issue during static page generation - doesn't affect runtime (July 18, 2025)
 
 ---
 
-**Last Updated:** July 18, 2025
+**Last Updated:** July 31, 2025
 **Version:** v1.0.0 - Production Ready  
-**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational), Enhanced password security system deployed - Production stable
+**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational), Enhanced password security system deployed, Vizi webhook integration completed - Production stable

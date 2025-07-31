@@ -16,7 +16,6 @@ describe('ApiKeyGuard', () => {
   const mockApiKey: ApiKeyRecord = {
     id: 'api-key-123',
     name: 'Test API Key',
-    hashed_key: '', // Legacy field
     prefix: 'vapi_',
     hashed_secret: 'hashed-secret',
     scopes: ['webhooks:trigger', 'workflows:read'],

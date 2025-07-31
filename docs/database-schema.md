@@ -32,8 +32,7 @@ Manages API keys for authenticating with the backend API. Uses a secure prefix/s
 ```sql
 - id: uuid (primary key)
 - name: text (NOT NULL)
-- hashed_key: text (LEGACY - will be removed)
-- prefix: text (for fast lookups, indexed)
+- prefix: text (for fast lookups, indexed, e.g., 'visapi_xxx' or 'vizi_xxx')
 - hashed_secret: text (bcrypt hashed, secure storage)
 - scopes: text[] (default empty array)
 - expires_at: timestamptz (nullable, indexed)
@@ -62,137 +61,70 @@ Defines the automated workflows.
 Stores application logs for auditing and debugging, with a 90-day retention policy.
 
 ```sql
-- id: uuid (primary key)
-- level: text
-- message: text
-- metadata: jsonb
-- workflow_id: uuid (nullable)
-- job_id: text (nullable)
-- pii_redacted: boolean
-- created_at: timestamptz (90-day retention)
+- id: bigint (primary key, auto-incrementing)
+- level: text (NOT NULL)
+- message: text (NOT NULL)
+- metadata: jsonb (default '{}')
+- workflow_id: uuid (nullable, foreign key to workflows)
+- job_id: text (nullable, indexed)
+- pii_redacted: boolean (default true)
+- created_at: timestamptz (NOT NULL, default now(), indexed DESC)
 ```
 
-## Order Processing Tables
+## Sprint 5 Tables
 
-### `orders`
+### `roles`
 
-Stores visa order data received from n8n.visanet.app webhook.
+Enhanced role-based access control system.
 
 ```sql
 - id: uuid (primary key)
-- order_id: text (unique, external order ID e.g. "RU250731IL1")
-- form_id: text (external form ID)
-- payment_id: text
-- payment_processor: text
-- amount: numeric(10,2)
-- currency: text
-- coupon: text (nullable)
-- status: text (default 'active')
-- branch: text
-- domain: text
-- raw_data: jsonb (complete raw webhook data)
+- name: varchar (unique, indexed)
+- display_name: varchar (NOT NULL)
+- description: text (nullable)
+- permissions: jsonb (default '{}')
 - created_at: timestamptz (NOT NULL, default now())
 - updated_at: timestamptz (NOT NULL, default now(), auto-updated)
 ```
 
-### `applicants`
+### `user_roles`
 
-Stores individual applicant information for each order.
-
-```sql
-- id: uuid (primary key)
-- order_id: uuid (foreign key to orders, CASCADE DELETE)
-- applicant_id: text (external applicant ID)
-- passport_nationality: text
-- passport_first_name: text
-- passport_last_name: text
-- passport_sex: text
-- passport_date_of_birth: date
-- passport_country_of_birth: text
-- passport_number: text
-- passport_date_of_issue: date
-- passport_date_of_expiry: date
-- passport_place_of_issue: text (for some visa types)
-- past_visit_visited: boolean (default false)
-- past_visit_year: text
-- address_line: text
-- address_city: text
-- address_country: text
-- occupation_education: text
-- occupation_status: text
-- occupation_name: text
-- occupation_seniority: text
-- occupation_phone: jsonb ({code, number})
-- occupation_address: jsonb ({line, city, country})
-- extra_nationality_status: text
-- family_data: jsonb (complete family structure)
-- files: jsonb (all file URLs)
-- id_number: text (national ID number)
-- crime: text (criminal record info)
-- religion: text
-- military: jsonb ({served, role, rank})
-- past_travels: jsonb (complex travel history including SAARC)
-- visited: boolean (default false, for Korean visas)
-- city_of_birth: text (for Korean visas)
-- last_travel: jsonb ({traveled, country, from, until})
-- created_at: timestamptz (NOT NULL, default now())
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
-```
-
-### `form_metadata`
-
-Stores form-level metadata for orders.
+User-role assignments for RBAC.
 
 ```sql
-- id: uuid (primary key)
-- order_id: uuid (foreign key to orders, CASCADE DELETE)
-- form_id: text
-- country: text
-- entry_date: date
-- entry_port: text (nullable)
-- product: jsonb (complete product information)
-- quantity: integer
-- urgency: text
-- client: jsonb (client information)
-- meta: jsonb (form metadata - url, branch, domain, etc.)
-- children: jsonb (array of children, default '[]')
-- stay_address: text (address in destination country)
-- created_at: timestamptz (NOT NULL, default now())
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+- user_id: uuid (foreign key to users, composite primary key)
+- role_id: uuid (foreign key to roles, composite primary key)
+- assigned_at: timestamptz (NOT NULL, default now())
+- assigned_by: uuid (nullable, foreign key to users)
 ```
 
-### `business_info`
+## Webhook Processing Tables
 
-Stores business information for business visa applications.
+### `webhook_data`
+
+Stores incoming webhook data for processing. RLS enabled with service_role only access.
 
 ```sql
-- id: uuid (primary key)
-- order_id: uuid (foreign key to orders, CASCADE DELETE)
-- name: text
-- sector: text
-- website: text
-- address_line: text
-- address_city: text
-- address_country: text
-- phone: jsonb ({code, number})
-- created_at: timestamptz (NOT NULL, default now())
-- updated_at: timestamptz (NOT NULL, default now(), auto-updated)
+- webhook_id: uuid (primary key, default gen_random_uuid())
+- type: varchar (NOT NULL)
+- data: jsonb (NOT NULL)
+- processed: boolean (default false)
+- created_at: timestamptz (default now())
+- processed_at: timestamptz (nullable)
 ```
 
-### `webhook_logs`
+## Index Summary
 
-Tracks all incoming webhook requests for debugging and auditing.
+The database uses strategic indexes for performance:
 
-```sql
-- id: uuid (primary key)
-- source: text (e.g., 'n8n.visanet.app')
-- endpoint: text
-- method: text
-- headers: jsonb
-- body: jsonb
-- status_code: integer
-- response: jsonb
-- error: text
-- processing_time_ms: integer
-- created_at: timestamptz (NOT NULL, default now())
-```
+- `api_keys`: prefix lookup, expiration filtering
+- `logs`: timestamp ordering, workflow/job filtering
+- `roles`: name uniqueness
+- `user_roles`: user and role lookups
+- `webhook_data`: type/processed status filtering
+
+## Notes
+
+- **Legacy tables removed**: All n8n-related tables (orders, applicants, form_metadata, business_info, webhook_logs) have been dropped as part of the Vizi webhook migration
+- **Clean architecture**: Database now focuses on core VisAPI functionality: users, auth, workflows, logs, and webhook processing
+- **Security first**: All tables have RLS enabled with appropriate policies

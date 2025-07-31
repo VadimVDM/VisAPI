@@ -107,6 +107,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "jest": "^30.0.5",
     "jest-environment-node": "^30.0.5",
+    "jest-util": "^30.0.2",
     "jsdom": "^26.1.0",
     "lighthouse": "^12.8.0",
     "nx": "21.3.10",
