@@ -4,7 +4,7 @@ terraform {
   required_providers {
     render = {
       source  = "render-oss/render"
-      version = "~> 1.3.0"
+      version = "~> 1.7.2"
     }
     vercel = {
       source  = "vercel/vercel"
