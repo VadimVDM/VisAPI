@@ -14,6 +14,7 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.CRITICAL) private criticalQueue: Queue,
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
     @InjectQueue(QUEUE_NAMES.BULK) private bulkQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.CGB_SYNC) private cgbSyncQueue: Queue,
     private readonly config: ConfigService,
   ) {}
 
@@ -23,6 +24,8 @@ export class QueueService {
         return this.criticalQueue;
       case QUEUE_NAMES.BULK:
         return this.bulkQueue;
+      case QUEUE_NAMES.CGB_SYNC:
+        return this.cgbSyncQueue;
       case QUEUE_NAMES.DEFAULT:
       default:
         return this.defaultQueue;

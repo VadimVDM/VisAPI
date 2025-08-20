@@ -4,11 +4,11 @@ import { useAuth } from '@/components/auth/AuthProvider';
 
 // Role hierarchy levels (higher number = more permissions)
 export const ROLE_LEVELS = {
-  analytics: 1,    // Read-only access to metrics, logs, and reports
-  support: 2,      // View logs, trigger workflows, basic monitoring
-  developer: 3,    // Create/edit workflows, API key management, view logs  
-  manager: 4,      // Workflow management, analytics, team oversight
-  admin: 5,        // Full system access, user management, all features
+  analytics: 1, // Read-only access to metrics, logs, and reports
+  support: 2, // View logs, trigger workflows, basic monitoring
+  developer: 3, // Create/edit workflows, API key management, view logs
+  manager: 4, // Workflow management, analytics, team oversight
+  admin: 5, // Full system access, user management, all features
 } as const;
 
 export type Role = keyof typeof ROLE_LEVELS;
@@ -70,16 +70,16 @@ export const useRole = () => {
   const hasPermission = (permission: string): boolean => {
     const allowedRoles = PERMISSIONS[permission as keyof typeof PERMISSIONS];
     if (!allowedRoles) return false;
-    
+
     return allowedRoles.includes(userRole);
   };
 
   const hasAnyPermission = (permissions: string[]): boolean => {
-    return permissions.some(permission => hasPermission(permission));
+    return permissions.some((permission) => hasPermission(permission));
   };
 
   const hasAllPermissions = (permissions: string[]): boolean => {
-    return permissions.every(permission => hasPermission(permission));
+    return permissions.every((permission) => hasPermission(permission));
   };
 
   const getRoleLevel = (): number => {
@@ -93,7 +93,7 @@ export const useRole = () => {
   const getDisplayName = (): string => {
     const roleNames = {
       analytics: 'Analytics User',
-      support: 'Support User', 
+      support: 'Support User',
       developer: 'Developer',
       manager: 'Manager',
       admin: 'Admin User',

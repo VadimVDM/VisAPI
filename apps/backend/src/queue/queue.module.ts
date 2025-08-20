@@ -5,6 +5,10 @@ import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { AuthModule } from '../auth/auth.module';
+import { CGBSyncProcessor } from './processors/cgb-sync.processor';
+import { CgbModule } from '@visapi/backend-core-cgb';
+import { SupabaseModule } from '@visapi/core-supabase';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
   imports: [
@@ -43,11 +47,15 @@ import { AuthModule } from '../auth/auth.module';
       { name: QUEUE_NAMES.SLACK },
       { name: QUEUE_NAMES.WHATSAPP },
       { name: QUEUE_NAMES.PDF },
+      { name: QUEUE_NAMES.CGB_SYNC },
       { name: QUEUE_NAMES.DLQ },
     ),
+    CgbModule,
+    SupabaseModule,
+    MetricsModule,
   ],
   controllers: [QueueController],
-  providers: [QueueService],
+  providers: [QueueService, CGBSyncProcessor],
   exports: [QueueService, BullModule],
 })
 export class QueueModule {}

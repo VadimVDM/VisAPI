@@ -105,13 +105,17 @@
     );
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   /* Improved focus styles */
   *:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--background));
+    box-shadow:
+      0 0 0 2px hsl(var(--ring)),
+      0 0 0 4px hsl(var(--background));
   }
 
   /* Smooth scrolling */
@@ -203,12 +207,14 @@
 
   /* Enhanced shadows */
   .shadow-visanet {
-    box-shadow: 0 1px 3px hsl(var(--shadow-color) / var(--shadow-strength)),
+    box-shadow:
+      0 1px 3px hsl(var(--shadow-color) / var(--shadow-strength)),
       0 4px 12px hsl(var(--shadow-color) / calc(var(--shadow-strength) * 0.6));
   }
 
   .shadow-visanet-lg {
-    box-shadow: 0 4px 6px hsl(var(--shadow-color) / var(--shadow-strength)),
+    box-shadow:
+      0 4px 6px hsl(var(--shadow-color) / var(--shadow-strength)),
       0 20px 25px hsl(var(--shadow-color) / calc(var(--shadow-strength) * 0.8));
   }
 

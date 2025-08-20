@@ -9,11 +9,14 @@ import { Play, Loader2, CheckCircle, XCircle } from 'lucide-react';
 // Mock imports for testing
 const authenticatedFetch = async (url: string, options?: RequestInit) => {
   // Mock implementation
-  return new Response(JSON.stringify({
-    success: true,
-    jobId: 'job_' + Math.random().toString(36).substr(2, 9),
-    message: 'Workflow triggered successfully'
-  }), { status: 200 });
+  return new Response(
+    JSON.stringify({
+      success: true,
+      jobId: 'job_' + Math.random().toString(36).substr(2, 9),
+      message: 'Workflow triggered successfully',
+    }),
+    { status: 200 },
+  );
 };
 
 const useApiData = <T,>(url: string) => {
@@ -41,7 +44,7 @@ const useApiData = <T,>(url: string) => {
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    }
+    },
   ];
 
   return {
@@ -69,7 +72,11 @@ type WorkflowRecord = {
 // Workflows now fetched from API instead of hardcoded
 
 export default function TriggersPage() {
-  const { data: workflows, loading: workflowsLoading, error: workflowsError } = useApiData<WorkflowRecord[]>('/api/v1/workflows');
+  const {
+    data: workflows,
+    loading: workflowsLoading,
+    error: workflowsError,
+  } = useApiData<WorkflowRecord[]>('/api/v1/workflows');
   const [triggering, setTriggering] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, TriggerResponse>>({});
 
@@ -86,7 +93,7 @@ export default function TriggersPage() {
             status: 'approved',
             applicationId: 'APP-' + Math.random().toString(36).substr(2, 9),
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -137,54 +144,55 @@ export default function TriggersPage() {
                 const result = results[workflow.id];
                 const isTriggering = triggering === workflow.id;
 
-              return (
-                <div
-                  key={workflow.id}
-                  className="border-b border-gray-200 last:border-b-0 pb-6 last:pb-0"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {workflow.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {workflow.description || 'No description available'}
-                      </p>
+                return (
+                  <div
+                    key={workflow.id}
+                    className="border-b border-gray-200 last:border-b-0 pb-6 last:pb-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {workflow.name}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {workflow.description || 'No description available'}
+                        </p>
 
-                      {result && (
-                        <div
-                          className={`mt-2 flex items-center space-x-2 text-sm ${
-                            result.success ? 'text-green-600' : 'text-red-600'
-                          }`}
-                        >
-                          {result.success ? (
-                            <CheckCircle className="h-4 w-4" />
-                          ) : (
-                            <XCircle className="h-4 w-4" />
-                          )}
-                          <span>
-                            {result.success
-                              ? `Job queued successfully (ID: ${result.jobId})`
-                              : result.message || 'Failed to trigger workflow'}
-                          </span>
-                        </div>
-                      )}
+                        {result && (
+                          <div
+                            className={`mt-2 flex items-center space-x-2 text-sm ${
+                              result.success ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {result.success ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                            <span>
+                              {result.success
+                                ? `Job queued successfully (ID: ${result.jobId})`
+                                : result.message ||
+                                  'Failed to trigger workflow'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => triggerWorkflow(workflow.id)}
+                        disabled={isTriggering}
+                        className="flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isTriggering ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        {isTriggering ? 'Triggering...' : 'Trigger'}
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => triggerWorkflow(workflow.id)}
-                      disabled={isTriggering}
-                      className="flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isTriggering ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Play className="h-4 w-4 mr-2" />
-                      )}
-                      {isTriggering ? 'Triggering...' : 'Trigger'}
-                    </button>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -206,7 +214,7 @@ export default function TriggersPage() {
               applicationId: 'APP-ABC123DEF',
             },
             null,
-            2
+            2,
           )}
         </pre>
       </div>

@@ -16,7 +16,6 @@ import {
   RefreshCcw,
 } from 'lucide-react';
 import { supabase } from '@visapi/frontend-data';
-import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 
 import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -90,7 +89,7 @@ function ResetPasswordForm() {
     if (!accessToken || tokenType !== 'bearer' || type !== 'recovery') {
       setTokenValid(false);
       setError(
-        'Invalid or expired reset link. Please request a new password reset.'
+        'Invalid or expired reset link. Please request a new password reset.',
       );
       return;
     }
@@ -122,7 +121,7 @@ function ResetPasswordForm() {
       setError(
         err instanceof Error
           ? err.message
-          : 'An unexpected error occurred. Please try again.'
+          : 'An unexpected error occurred. Please try again.',
       );
       console.error('Reset password error:', err);
     } finally {

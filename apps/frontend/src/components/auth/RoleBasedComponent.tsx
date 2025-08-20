@@ -22,7 +22,13 @@ export const RoleBasedComponent = ({
   fallback = null,
   showFallback = false,
 }: RoleBasedComponentProps) => {
-  const { hasRole, hasPermission, hasAllPermissions, hasAnyPermission, isAuthenticated } = useRole();
+  const {
+    hasRole,
+    hasPermission,
+    hasAllPermissions,
+    hasAnyPermission,
+    isAuthenticated,
+  } = useRole();
 
   // Check authentication first
   if (!isAuthenticated) {
@@ -54,25 +60,49 @@ export const RoleBasedComponent = ({
 };
 
 // Convenience components for common use cases
-export const AdminOnly = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
+export const AdminOnly = ({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) => (
   <RoleBasedComponent requiredRole="admin" fallback={fallback}>
     {children}
   </RoleBasedComponent>
 );
 
-export const ManagerOrAbove = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
+export const ManagerOrAbove = ({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) => (
   <RoleBasedComponent requiredRole="manager" fallback={fallback}>
     {children}
   </RoleBasedComponent>
 );
 
-export const DeveloperOrAbove = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
+export const DeveloperOrAbove = ({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) => (
   <RoleBasedComponent requiredRole="developer" fallback={fallback}>
     {children}
   </RoleBasedComponent>
 );
 
-export const SupportOrAbove = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
+export const SupportOrAbove = ({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) => (
   <RoleBasedComponent requiredRole="support" fallback={fallback}>
     {children}
   </RoleBasedComponent>

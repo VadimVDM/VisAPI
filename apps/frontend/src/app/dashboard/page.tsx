@@ -1,10 +1,27 @@
 'use client';
 
-import { Activity, Users, Clock, AlertCircle, TrendingUp, BarChart3 } from 'lucide-react';
+import {
+  Activity,
+  Users,
+  Clock,
+  AlertCircle,
+  TrendingUp,
+  BarChart3,
+} from 'lucide-react';
 import { useDashboard } from '@visapi/frontend-data';
 import { MetricCard } from '@/components/ui/metric-card';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SimpleLineChart, SimpleAreaChart, SimpleBarChart } from '@/components/ui/charts';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  SimpleLineChart,
+  SimpleAreaChart,
+  SimpleBarChart,
+} from '@/components/ui/charts';
 
 // Chart data type compatible with recharts
 interface ChartData {
@@ -22,48 +39,53 @@ export default function DashboardPage() {
     loading,
     error,
     refreshAll,
-    lastUpdated
+    lastUpdated,
   } = useDashboard();
 
   // Fallback to mock data if API is not available
   const totalJobs = metrics?.totalJobs ?? 1234;
   const failedJobs = metrics?.failedJobs ?? 23;
   const activeWorkflows = metrics?.activeWorkflows ?? 8;
-  const successRate = metrics?.successRate ? `${metrics.successRate.toFixed(1)}%` : '98.1%';
+  const successRate = metrics?.successRate
+    ? `${metrics.successRate.toFixed(1)}%`
+    : '98.1%';
 
   // Convert API data to chart format or use fallback mock data
-  const jobsOverTimeData: ChartData[] = jobsOverTime.length > 0 
-    ? jobsOverTime.map(item => ({ name: item.name, value: item.value }))
-    : [
-        { name: 'Jan', value: 400 },
-        { name: 'Feb', value: 300 },
-        { name: 'Mar', value: 600 },
-        { name: 'Apr', value: 800 },
-        { name: 'May', value: 500 },
-        { name: 'Jun', value: 700 },
-        { name: 'Jul', value: 900 },
-      ];
+  const jobsOverTimeData: ChartData[] =
+    jobsOverTime.length > 0
+      ? jobsOverTime.map((item) => ({ name: item.name, value: item.value }))
+      : [
+          { name: 'Jan', value: 400 },
+          { name: 'Feb', value: 300 },
+          { name: 'Mar', value: 600 },
+          { name: 'Apr', value: 800 },
+          { name: 'May', value: 500 },
+          { name: 'Jun', value: 700 },
+          { name: 'Jul', value: 900 },
+        ];
 
-  const workflowStatusData: ChartData[] = workflowStatus.length > 0 
-    ? workflowStatus.map(item => ({ name: item.name, value: item.value }))
-    : [
-        { name: 'Running', value: 8 },
-        { name: 'Completed', value: 23 },
-        { name: 'Failed', value: 2 },
-        { name: 'Pending', value: 4 },
-      ];
+  const workflowStatusData: ChartData[] =
+    workflowStatus.length > 0
+      ? workflowStatus.map((item) => ({ name: item.name, value: item.value }))
+      : [
+          { name: 'Running', value: 8 },
+          { name: 'Completed', value: 23 },
+          { name: 'Failed', value: 2 },
+          { name: 'Pending', value: 4 },
+        ];
 
-  const performanceChartData: ChartData[] = performanceData.length > 0 
-    ? performanceData.map(item => ({ name: item.name, value: item.value }))
-    : [
-        { name: '00:00', value: 65 },
-        { name: '04:00', value: 59 },
-        { name: '08:00', value: 80 },
-        { name: '12:00', value: 81 },
-        { name: '16:00', value: 56 },
-        { name: '20:00', value: 55 },
-      ];
-  
+  const performanceChartData: ChartData[] =
+    performanceData.length > 0
+      ? performanceData.map((item) => ({ name: item.name, value: item.value }))
+      : [
+          { name: '00:00', value: 65 },
+          { name: '04:00', value: 59 },
+          { name: '08:00', value: 80 },
+          { name: '12:00', value: 81 },
+          { name: '16:00', value: 56 },
+          { name: '20:00', value: 55 },
+        ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -80,8 +102,10 @@ export default function DashboardPage() {
           {error ? (
             <>
               <AlertCircle className="h-5 w-5 text-red-500" />
-              <span className="text-sm text-red-500">API connection issues</span>
-              <button 
+              <span className="text-sm text-red-500">
+                API connection issues
+              </span>
+              <button
                 onClick={refreshAll}
                 className="ml-2 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
                 disabled={loading}
@@ -113,43 +137,43 @@ export default function DashboardPage() {
           description="Jobs processed today"
           trend={{
             value: 12,
-            label: "from last month"
+            label: 'from last month',
           }}
           icon={<Activity className="h-4 w-4" />}
           loading={loading}
         />
-        
+
         <MetricCard
           title="Active Workflows"
           value={activeWorkflows}
           description="Workflows currently enabled"
           trend={{
             value: 4.75,
-            label: "from last month"
+            label: 'from last month',
           }}
           icon={<Users className="h-4 w-4" />}
           loading={loading}
         />
-        
+
         <MetricCard
           title="Success Rate"
           value={`${successRate}%`}
           description="Successful job executions"
           trend={{
             value: 2.02,
-            label: "from last month"
+            label: 'from last month',
           }}
           icon={<Clock className="h-4 w-4" />}
           loading={loading}
         />
-        
+
         <MetricCard
           title="Failed Jobs"
           value={failedJobs}
           description="Jobs that failed today"
           trend={{
             value: -1.39,
-            label: "from last month"
+            label: 'from last month',
           }}
           icon={<AlertCircle className="h-4 w-4" />}
           loading={loading}
@@ -183,7 +207,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">2 minutes ago</p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-4">
               <div className="flex-shrink-0">
                 <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
@@ -199,7 +223,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">5 minutes ago</p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-4">
               <div className="flex-shrink-0">
                 <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
@@ -227,7 +251,7 @@ export default function DashboardPage() {
           dataKey="value"
           className="lg:col-span-1"
         />
-        
+
         <SimpleBarChart
           data={workflowStatusData}
           title="Workflow Status"

@@ -29,7 +29,7 @@ const useApiData = <T,>(url: string) => {
       completed: 500,
       failed: 8,
       delayed: 2,
-    }
+    },
   ];
 
   return {
@@ -49,12 +49,19 @@ interface QueueMetrics {
 }
 
 export default function QueuePage() {
-  const { data: queueMetrics, loading, error } = useApiData<QueueMetrics[]>('/api/v1/queue/metrics');
+  const {
+    data: queueMetrics,
+    loading,
+    error,
+  } = useApiData<QueueMetrics[]>('/api/v1/queue/metrics');
 
   // Aggregate metrics across all queues
-  const totalActive = queueMetrics?.reduce((sum, queue) => sum + queue.active, 0) || 0;
-  const totalCompleted = queueMetrics?.reduce((sum, queue) => sum + queue.completed, 0) || 0;
-  const totalFailed = queueMetrics?.reduce((sum, queue) => sum + queue.failed, 0) || 0;
+  const totalActive =
+    queueMetrics?.reduce((sum, queue) => sum + queue.active, 0) || 0;
+  const totalCompleted =
+    queueMetrics?.reduce((sum, queue) => sum + queue.completed, 0) || 0;
+  const totalFailed =
+    queueMetrics?.reduce((sum, queue) => sum + queue.failed, 0) || 0;
   return (
     <div className="space-y-6">
       <div>

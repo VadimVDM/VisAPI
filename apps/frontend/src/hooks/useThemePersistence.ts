@@ -51,7 +51,7 @@ export function useThemePersistence() {
         }
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   return { theme, setTheme, saveThemePreference };

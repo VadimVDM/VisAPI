@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useRole } from '@/hooks/useRole';
 import { RoleBasedComponent } from '../auth/RoleBasedComponent';
 import { Button } from './button';
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -30,41 +30,41 @@ import {
 import { ThemeToggle } from './theme-toggle';
 
 const navigation = [
-  { 
-    name: 'Dashboard', 
-    href: '/dashboard', 
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
     icon: Home,
-    permission: 'analytics:read' // Everyone with basic access can see dashboard
+    permission: 'analytics:read', // Everyone with basic access can see dashboard
   },
-  { 
-    name: 'Workflows', 
-    href: '/dashboard/workflows', 
+  {
+    name: 'Workflows',
+    href: '/dashboard/workflows',
     icon: Workflow,
-    permission: 'workflows:read'
+    permission: 'workflows:read',
   },
-  { 
-    name: 'Queue', 
-    href: '/dashboard/queue', 
+  {
+    name: 'Queue',
+    href: '/dashboard/queue',
     icon: Activity,
-    permission: 'queue:read'
+    permission: 'queue:read',
   },
-  { 
-    name: 'Logs', 
-    href: '/dashboard/logs', 
+  {
+    name: 'Logs',
+    href: '/dashboard/logs',
     icon: FileText,
-    permission: 'logs:read'
+    permission: 'logs:read',
   },
-  { 
-    name: 'API Keys', 
-    href: '/dashboard/api-keys', 
+  {
+    name: 'API Keys',
+    href: '/dashboard/api-keys',
     icon: Key,
-    permission: 'api-keys:read'
+    permission: 'api-keys:read',
   },
-  { 
-    name: 'Manual Triggers', 
-    href: '/dashboard/triggers', 
+  {
+    name: 'Manual Triggers',
+    href: '/dashboard/triggers',
     icon: Play,
-    permission: 'workflows:execute'
+    permission: 'workflows:execute',
   },
 ];
 
@@ -84,9 +84,9 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
     }
   };
 
-  const NavigationItem = ({ item }: { item: typeof navigation[0] }) => {
+  const NavigationItem = ({ item }: { item: (typeof navigation)[0] }) => {
     const isActive = pathname === item.href;
-    
+
     const linkContent = (
       <Link
         href={item.href}
@@ -98,7 +98,10 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
         aria-current={isActive ? 'page' : undefined}
         aria-label={`Navigate to ${item.name}`}
       >
-        <item.icon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} aria-hidden="true" />
+        <item.icon
+          className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`}
+          aria-hidden="true"
+        />
         {!collapsed && <span>{item.name}</span>}
       </Link>
     );
@@ -107,9 +110,7 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
       return (
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              {linkContent}
-            </TooltipTrigger>
+            <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
             <TooltipContent side="right">
               <p>{item.name}</p>
             </TooltipContent>
@@ -122,11 +123,11 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
   };
 
   return (
-    <aside 
+    <aside
       className={`flex flex-col bg-card border-r transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
-      }`} 
-      role="complementary" 
+      }`}
+      role="complementary"
       aria-label="Sidebar navigation"
     >
       {/* Header */}
@@ -142,7 +143,7 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
             size="icon"
             onClick={onToggle}
             className="h-8 w-8"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -156,7 +157,10 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
         {navigation.map((item) => (
-          <RoleBasedComponent key={item.name} requiredPermission={item.permission}>
+          <RoleBasedComponent
+            key={item.name}
+            requiredPermission={item.permission}
+          >
             <NavigationItem item={item} />
           </RoleBasedComponent>
         ))}
@@ -173,7 +177,10 @@ export const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
         {!collapsed && (
           <div className="flex items-center mb-3 px-3 py-2 rounded-lg bg-muted/50">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate" title={user?.email}>
+              <p
+                className="text-sm font-medium text-foreground truncate"
+                title={user?.email}
+              >
                 {user?.email}
               </p>
               <p className="text-xs text-muted-foreground truncate">

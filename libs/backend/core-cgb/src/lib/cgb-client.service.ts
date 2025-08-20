@@ -14,6 +14,9 @@ import {
   CgbApiResponse,
   CGB_ENDPOINTS,
   WHATSAPP_CHANNEL_NAME,
+  CGBContactData,
+  CGBContact,
+  WhatsAppValidationResponse,
 } from '@visapi/shared-types';
 
 export class CgbApiError extends Error {
@@ -203,10 +206,91 @@ export class CgbClientService {
   }
 
   /**
+   * Get contact by ID (phone number)
+   */
+  async getContactById(id: string): Promise<CGBContact | null> {
+    try {
+      this.logger.debug(`Getting contact by ID: ${id}`);
+      
+      const response = await this.makeRequest<CGBContact>('GET', `/contacts/${id}`);
+      return response.data;
+    } catch (error) {
+      if (error instanceof CgbApiError && error.statusCode === 404) {
+        return null;
+      }
+      this.logger.error(`Failed to get contact ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create contact with custom fields
+   */
+  async createContactWithFields(data: CGBContactData): Promise<CGBContact> {
+    try {
+      this.logger.debug(`Creating contact with fields for phone: ${data.phone}`);
+      
+      const payload = {
+        id: data.id,
+        phone: data.phone,
+        name: data.name,
+        email: data.email,
+        customFields: data.cufs,
+      };
+
+      const response = await this.makeRequest<CGBContact>('POST', '/contacts', {
+        data: payload,
+      });
+
+      this.logger.debug(`Contact created with ID: ${response.data?.id}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to create contact for ${data.phone}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update contact custom fields
+   */
+  async updateContactFields(id: string, cufs: Record<string, any>): Promise<CGBContact> {
+    try {
+      this.logger.debug(`Updating contact fields for ID: ${id}`);
+      
+      const response = await this.makeRequest<CGBContact>('PATCH', `/contacts/${id}`, {
+        data: {
+          customFields: cufs,
+        },
+      });
+
+      this.logger.debug(`Contact ${id} fields updated`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to update contact ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate if phone has WhatsApp
+   */
+  async validateWhatsApp(phone: string): Promise<boolean> {
+    try {
+      this.logger.debug(`Validating WhatsApp for phone: ${phone}`);
+      
+      const response = await this.makeRequest<WhatsAppValidationResponse>('GET', `/contacts/${phone}/validate-whatsapp`);
+      return response.data?.hasWhatsApp || false;
+    } catch (error) {
+      this.logger.warn(`Failed to validate WhatsApp for ${phone}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Make HTTP request to CGB API with error handling and retries
    */
   private async makeRequest<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     endpoint: string,
     options: {
       data?: any;

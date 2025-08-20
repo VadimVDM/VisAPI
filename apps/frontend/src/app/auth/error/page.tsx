@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { Suspense } from 'react';
-import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();

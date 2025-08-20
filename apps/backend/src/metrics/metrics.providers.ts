@@ -73,4 +73,46 @@ export const metricsProviders = [
     help: 'Total number of Redis operation errors',
     labelNames: ['operation'],
   }),
+
+  // CGB Sync Metrics
+  makeCounterProvider({
+    name: 'cgb_sync_total',
+    help: 'Total number of CGB sync attempts',
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_sync_success',
+    help: 'Total number of successful CGB syncs',
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_sync_failures',
+    help: 'Total number of failed CGB syncs',
+  }),
+
+  makeHistogramProvider({
+    name: 'cgb_sync_duration',
+    help: 'CGB sync operation duration in seconds',
+    buckets: [0.5, 1, 2, 5, 10, 20, 30, 60],
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_contacts_created',
+    help: 'Total number of new CGB contacts created',
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_contacts_updated',
+    help: 'Total number of existing CGB contacts updated',
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_whatsapp_available',
+    help: 'Total number of contacts with WhatsApp available',
+  }),
+
+  makeCounterProvider({
+    name: 'cgb_whatsapp_unavailable',
+    help: 'Total number of contacts without WhatsApp',
+  }),
 ];

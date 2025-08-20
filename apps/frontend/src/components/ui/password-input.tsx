@@ -8,7 +8,8 @@ import { Button } from './button';
 import { PasswordGenerator } from './password-generator';
 import { PasswordStrengthIndicator } from './password-strength-indicator';
 
-interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface PasswordInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
   showGenerator?: boolean;
   showStrengthIndicator?: boolean;
   showRequirements?: boolean;
@@ -17,17 +18,20 @@ interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement>
 }
 
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ 
-    showGenerator = false, 
-    showStrengthIndicator = false, 
-    showRequirements = false,
-    generatorLength = 14,
-    onPasswordChange,
-    className = '',
-    ...props 
-  }, ref) => {
+  (
+    {
+      showGenerator = false,
+      showStrengthIndicator = false,
+      showRequirements = false,
+      generatorLength = 14,
+      onPasswordChange,
+      className = '',
+      ...props
+    },
+    ref,
+  ) => {
     const [showPassword, setShowPassword] = useState(false);
-    const [password, setPassword] = useState(props.value as string || '');
+    const [password, setPassword] = useState((props.value as string) || '');
     const [hasInteracted, setHasInteracted] = useState(false);
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,13 +51,13 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
       setPassword(newPassword);
       setHasInteracted(true);
       onPasswordChange?.(newPassword);
-      
+
       // Create a synthetic event to trigger form validation
       const syntheticEvent = {
         target: { value: newPassword },
         currentTarget: { value: newPassword },
       } as React.ChangeEvent<HTMLInputElement>;
-      
+
       props.onChange?.(syntheticEvent);
     };
 
@@ -94,11 +98,23 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         {showRequirements && !hasInteracted && (
           <div className="bg-visanet-blue/10 border border-visanet-blue/20 rounded-lg p-3">
             <p className="text-sm text-foreground flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2 text-visanet-blue flex-shrink-0">
-                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                <path d="m7 11V7a5 5 0 0 1 10 0v4"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 mr-2 text-visanet-blue flex-shrink-0"
+              >
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                <path d="m7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Must be at least 12 characters with uppercase, lowercase, numbers, and symbols
+              Must be at least 12 characters with uppercase, lowercase, numbers,
+              and symbols
             </p>
           </div>
         )}
@@ -108,7 +124,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 PasswordInput.displayName = 'PasswordInput';

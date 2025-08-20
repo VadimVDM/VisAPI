@@ -33,7 +33,7 @@ const useApiData = <T,>(url: string) => {
       enabled: false,
       created_at: new Date(Date.now() - 172800000).toISOString(),
       updated_at: new Date(Date.now() - 7200000).toISOString(),
-    }
+    },
   ];
 
   return {
@@ -64,7 +64,12 @@ type WorkflowRecord = {
 };
 
 export default function WorkflowsPage() {
-  const { data: workflows, loading, error, refetch } = useApiData<WorkflowRecord[]>('/api/v1/workflows');
+  const {
+    data: workflows,
+    loading,
+    error,
+    refetch,
+  } = useApiData<WorkflowRecord[]>('/api/v1/workflows');
 
   // Data fetching handled by useApiData hook
 

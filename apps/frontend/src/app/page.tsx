@@ -12,8 +12,10 @@ export default function HomePage() {
     const checkAuthAndRedirect = async () => {
       try {
         // Check if user is authenticated
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session) {
           // User is authenticated, redirect to dashboard
           router.replace('/dashboard');

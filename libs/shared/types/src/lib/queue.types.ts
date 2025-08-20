@@ -5,6 +5,7 @@ export const QUEUE_NAMES = {
   SLACK: 'slack',
   WHATSAPP: 'whatsapp',
   PDF: 'pdf',
+  CGB_SYNC: 'cgb-sync',
   DLQ: 'dlq',
 } as const;
 
@@ -18,6 +19,7 @@ export const JOB_NAMES = {
   SEND_SLACK: 'slack.send',
   SEND_WHATSAPP: 'whatsapp.send',
   GENERATE_PDF: 'pdf.generate',
+  SYNC_CGB_CONTACT: 'cgb.sync-contact',
   PROCESS_IMAGE: 'image.process',
   PROCESS_WORKFLOW: 'workflow.process',
   PRUNE_LOGS: 'logs.prune',

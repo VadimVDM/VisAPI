@@ -21,21 +21,39 @@ export const ProtectedRoute = ({
   requireAll = false,
   fallback,
 }: ProtectedRouteProps) => {
-  const { hasRole, hasPermission, hasAllPermissions, hasAnyPermission, isAuthenticated } = useRole();
+  const {
+    hasRole,
+    hasPermission,
+    hasAllPermissions,
+    hasAnyPermission,
+    isAuthenticated,
+  } = useRole();
 
   // Check authentication first
   if (!isAuthenticated) {
-    return fallback || <UnauthorizedPage message="Please login to access this page." />;
+    return (
+      fallback || (
+        <UnauthorizedPage message="Please login to access this page." />
+      )
+    );
   }
 
   // Check role-based access
   if (requiredRole && !hasRole(requiredRole)) {
-    return fallback || <UnauthorizedPage message="You don't have permission to access this page." />;
+    return (
+      fallback || (
+        <UnauthorizedPage message="You don't have permission to access this page." />
+      )
+    );
   }
 
   // Check single permission
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    return fallback || <UnauthorizedPage message="You don't have permission to perform this action." />;
+    return (
+      fallback || (
+        <UnauthorizedPage message="You don't have permission to perform this action." />
+      )
+    );
   }
 
   // Check multiple permissions
@@ -45,7 +63,11 @@ export const ProtectedRoute = ({
       : hasAnyPermission(requiredPermissions);
 
     if (!hasAccess) {
-      return fallback || <UnauthorizedPage message="You don't have the required permissions for this page." />;
+      return (
+        fallback || (
+          <UnauthorizedPage message="You don't have the required permissions for this page." />
+        )
+      );
     }
   }
 

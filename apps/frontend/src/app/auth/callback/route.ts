@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 /**
  * Handle auth callbacks from magic links
  * This route receives tokens from the backend auth confirm endpoint
  */
-export async function GET(request: NextRequest) {
+export function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const accessToken = searchParams.get('access_token');
   const refreshToken = searchParams.get('refresh_token');
@@ -15,14 +14,14 @@ export async function GET(request: NextRequest) {
   // Handle errors
   if (error) {
     return NextResponse.redirect(
-      new URL(`/auth/login?error=${encodeURIComponent(error)}`, request.url)
+      new URL(`/auth/login?error=${encodeURIComponent(error)}`, request.url),
     );
   }
 
   // Validate tokens
   if (!accessToken || !refreshToken) {
     return NextResponse.redirect(
-      new URL('/auth/login?error=Missing+authentication+tokens', request.url)
+      new URL('/auth/login?error=Missing+authentication+tokens', request.url),
     );
   }
 
@@ -55,7 +54,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Auth callback error:', error);
     return NextResponse.redirect(
-      new URL('/auth/login?error=Authentication+failed', request.url)
+      new URL('/auth/login?error=Authentication+failed', request.url),
     );
   }
 }

@@ -48,9 +48,9 @@ export class LogsController {
     const result = await this.logService.getLogs(filters);
 
     return {
-      logs: result.data.map(log => ({
+      logs: result.data.map((log) => ({
         ...log,
-        metadata: log.metadata as Record<string, unknown>
+        metadata: log.metadata as Record<string, unknown>,
       })),
       total: result.pagination.total,
       offset: result.pagination.page,

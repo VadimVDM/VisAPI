@@ -7,7 +7,13 @@ import { useState } from 'react';
 // Mock supabase for testing
 const supabase = {
   auth: {
-    signInWithOtp: async ({ email, options }: { email: string; options?: any }) => {
+    signInWithOtp: async ({
+      email,
+      options,
+    }: {
+      email: string;
+      options?: any;
+    }) => {
       // Mock implementation
       return { error: null };
     },
@@ -37,7 +43,7 @@ export const LoginForm = () => {
 
       if (!allowedDomains.includes(emailDomain)) {
         setMessage(
-          'Email domain not allowed. Please use a visanet.app email address.'
+          'Email domain not allowed. Please use a visanet.app email address.',
         );
         setIsError(true);
         setLoading(false);
@@ -73,15 +79,18 @@ export const LoginForm = () => {
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
             <Mail className="h-6 w-6 text-primary-600" aria-hidden="true" />
           </div>
-          <h1 id="login-heading" className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h1
+            id="login-heading"
+            className="mt-6 text-center text-3xl font-extrabold text-gray-900"
+          >
             VisAPI Admin Dashboard
           </h1>
           <p className="mt-2 text-center text-sm text-gray-600">
             Login with your email to access the admin dashboard
           </p>
         </div>
-        <form 
-          className="mt-8 space-y-6" 
+        <form
+          className="mt-8 space-y-6"
           onSubmit={handleLogin}
           role="form"
           aria-labelledby="login-heading"
@@ -101,7 +110,7 @@ export const LoginForm = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              aria-describedby={message ? "login-message" : undefined}
+              aria-describedby={message ? 'login-message' : undefined}
               aria-invalid={isError}
               aria-required="true"
             />
@@ -112,12 +121,17 @@ export const LoginForm = () => {
               type="submit"
               disabled={loading || !email}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-describedby={loading ? "loading-status" : undefined}
+              aria-describedby={loading ? 'loading-status' : undefined}
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  <span id="loading-status" className="sr-only">Sending magic link...</span>
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                  <span id="loading-status" className="sr-only">
+                    Sending magic link...
+                  </span>
                 </>
               ) : (
                 'Send Magic Link'
@@ -133,7 +147,7 @@ export const LoginForm = () => {
                   ? 'text-green-600'
                   : 'text-red-600'
               }`}
-              role={isError ? "alert" : "status"}
+              role={isError ? 'alert' : 'status'}
               aria-live="polite"
               aria-atomic="true"
             >

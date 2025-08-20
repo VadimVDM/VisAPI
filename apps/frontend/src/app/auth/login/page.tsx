@@ -58,7 +58,7 @@ function LoginForm() {
   const defaultMethod =
     searchParams.get('method') === 'password' ? 'password' : 'magic-link';
   const [authMethod, setAuthMethod] = useState<'password' | 'magic-link'>(
-    defaultMethod
+    defaultMethod,
   );
 
   const passwordForm = useForm<PasswordFormValues>({

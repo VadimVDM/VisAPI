@@ -1,7 +1,11 @@
 'use client';
 
 import React from 'react';
-import { validatePassword, DEFAULT_PASSWORD_REQUIREMENTS, PasswordStrength } from '@visapi/shared-utils';
+import {
+  validatePassword,
+  DEFAULT_PASSWORD_REQUIREMENTS,
+  PasswordStrength,
+} from '@visapi/shared-utils';
 import { Check, X, Shield, AlertTriangle } from 'lucide-react';
 
 interface PasswordStrengthIndicatorProps {
@@ -33,17 +37,26 @@ const strengthIcons = {
   4: Shield,
 };
 
-export function PasswordStrengthIndicator({ password, className = '' }: PasswordStrengthIndicatorProps) {
-  const strength: PasswordStrength = validatePassword(password, DEFAULT_PASSWORD_REQUIREMENTS);
-  
+export function PasswordStrengthIndicator({
+  password,
+  className = '',
+}: PasswordStrengthIndicatorProps) {
+  const strength: PasswordStrength = validatePassword(
+    password,
+    DEFAULT_PASSWORD_REQUIREMENTS,
+  );
+
   if (!password) {
     return null;
   }
 
-  const StrengthIcon = strengthIcons[strength.score as keyof typeof strengthIcons];
+  const StrengthIcon =
+    strengthIcons[strength.score as keyof typeof strengthIcons];
 
   return (
-    <div className={`bg-gradient-to-r from-visanet-green/5 to-visanet-blue/5 border border-visanet-green/20 rounded-lg p-3 space-y-3 ${className}`}>
+    <div
+      className={`bg-gradient-to-r from-visanet-green/5 to-visanet-blue/5 border border-visanet-green/20 rounded-lg p-3 space-y-3 ${className}`}
+    >
       {/* Strength Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -51,21 +64,31 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
             Password Strength
           </span>
           <div className="flex items-center space-x-1">
-            <StrengthIcon className={`h-4 w-4 ${
-              strength.score >= 3 ? 'text-green-600' : 
-              strength.score >= 2 ? 'text-yellow-600' : 'text-red-600'
-            }`} />
-            <span className={`text-sm font-medium ${
-              strength.score >= 3 ? 'text-green-600' : 
-              strength.score >= 2 ? 'text-yellow-600' : 'text-red-600'
-            }`}>
+            <StrengthIcon
+              className={`h-4 w-4 ${
+                strength.score >= 3
+                  ? 'text-green-600'
+                  : strength.score >= 2
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+              }`}
+            />
+            <span
+              className={`text-sm font-medium ${
+                strength.score >= 3
+                  ? 'text-green-600'
+                  : strength.score >= 2
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+              }`}
+            >
               {strengthLabels[strength.score as keyof typeof strengthLabels]}
             </span>
           </div>
         </div>
-        
+
         <div className="w-full bg-muted rounded-full h-2">
-          <div 
+          <div
             className={`h-2 rounded-full transition-all duration-300 ${
               strengthColors[strength.score as keyof typeof strengthColors]
             }`}
@@ -76,9 +99,7 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
 
       {/* Requirements Checklist */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium text-foreground">
-          Requirements
-        </h4>
+        <h4 className="text-sm font-medium text-foreground">Requirements</h4>
         <div className="grid grid-cols-1 gap-1">
           <RequirementItem
             met={strength.hasMinLength}
@@ -92,10 +113,7 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
             met={strength.hasLowercase}
             label="Lowercase letters (a-z)"
           />
-          <RequirementItem
-            met={strength.hasDigits}
-            label="Numbers (0-9)"
-          />
+          <RequirementItem met={strength.hasDigits} label="Numbers (0-9)" />
           <RequirementItem
             met={strength.hasSymbols}
             label="Symbols (!@#$...)"
@@ -106,12 +124,13 @@ export function PasswordStrengthIndicator({ password, className = '' }: Password
       {/* Feedback */}
       {strength.feedback.length > 0 && (
         <div className="space-y-1">
-          <h4 className="text-sm font-medium text-foreground">
-            Suggestions
-          </h4>
+          <h4 className="text-sm font-medium text-foreground">Suggestions</h4>
           <ul className="space-y-1">
             {strength.feedback.map((feedback, index) => (
-              <li key={index} className="text-xs text-red-600 dark:text-red-400 flex items-start space-x-1">
+              <li
+                key={index}
+                className="text-xs text-red-600 dark:text-red-400 flex items-start space-x-1"
+              >
                 <X className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <span>{feedback}</span>
               </li>
@@ -131,16 +150,18 @@ interface RequirementItemProps {
 function RequirementItem({ met, label }: RequirementItemProps) {
   return (
     <div className="flex items-center space-x-2">
-      <div className={`flex-shrink-0 ${met ? 'text-green-600' : 'text-gray-400'}`}>
-        {met ? (
-          <Check className="h-4 w-4" />
-        ) : (
-          <X className="h-4 w-4" />
-        )}
+      <div
+        className={`flex-shrink-0 ${met ? 'text-green-600' : 'text-gray-400'}`}
+      >
+        {met ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
       </div>
-      <span className={`text-sm ${
-        met ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-      }`}>
+      <span
+        className={`text-sm ${
+          met
+            ? 'text-green-600 dark:text-green-400'
+            : 'text-gray-500 dark:text-gray-400'
+        }`}
+      >
         {label}
       </span>
     </div>

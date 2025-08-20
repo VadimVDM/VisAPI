@@ -33,7 +33,7 @@ const useLogs = () => {
         workflow_id: 'document-generation',
         job_id: 'job_456',
         pii_redacted: true,
-      }
+      },
     ],
     loading: false,
     error: null,
@@ -79,7 +79,7 @@ export default function LogsPage() {
   // Apply filters when they change
   useEffect(() => {
     const newFilters: LogFilters = {};
-    
+
     if (searchTerm) newFilters.search = searchTerm;
     if (selectedLevel) newFilters.level = selectedLevel as any;
     if (selectedWorkflow) newFilters.workflow_id = selectedWorkflow;
@@ -94,7 +94,9 @@ export default function LogsPage() {
   const handleExport = async (format: 'csv' | 'json' = 'csv') => {
     try {
       const data = await exportLogs(format);
-      const blob = new Blob([data], { type: format === 'csv' ? 'text/csv' : 'application/json' });
+      const blob = new Blob([data], {
+        type: format === 'csv' ? 'text/csv' : 'application/json',
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -125,15 +127,17 @@ export default function LogsPage() {
           )}
         </div>
         <div className="flex items-center space-x-3">
-          <button 
+          <button
             onClick={handleRefresh}
             disabled={loading}
             className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+            />
             Refresh
           </button>
-          <button 
+          <button
             onClick={() => handleExport('csv')}
             className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
@@ -158,7 +162,7 @@ export default function LogsPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             </div>
           </div>
-          <select 
+          <select
             value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
@@ -169,7 +173,7 @@ export default function LogsPage() {
             <option value="info">Info</option>
             <option value="debug">Debug</option>
           </select>
-          <select 
+          <select
             value={selectedWorkflow}
             onChange={(e) => setSelectedWorkflow(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
@@ -187,10 +191,10 @@ export default function LogsPage() {
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="flex">
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error loading logs</h3>
-              <div className="mt-2 text-sm text-red-700">
-                {error}
-              </div>
+              <h3 className="text-sm font-medium text-red-800">
+                Error loading logs
+              </h3>
+              <div className="mt-2 text-sm text-red-700">{error}</div>
             </div>
           </div>
         </div>
@@ -238,7 +242,9 @@ export default function LogsPage() {
                     {formatTimestamp(log.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(log.level)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(log.level)}`}
+                    >
                       {log.level.toUpperCase()}
                     </span>
                   </td>
@@ -261,14 +267,15 @@ export default function LogsPage() {
             )}
           </tbody>
         </table>
-        
+
         {/* Pagination */}
         {logs.length > 0 && (
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
             <div className="flex-1 flex justify-between items-center">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing page {pagination.page} of {pagination.pages} ({pagination.total} total logs)
+                  Showing page {pagination.page} of {pagination.pages} (
+                  {pagination.total} total logs)
                 </p>
               </div>
               <div className="flex space-x-2">

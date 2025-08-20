@@ -10,7 +10,7 @@ export async function sendEmailWithResend(emailData: EmailData, apiKey: string):
     const resend = new Resend(apiKey);
 
     // Extract email from "Name <email>" format for Resend
-    let fromEmail = emailData.from || 'VisAPI <noreply@visanet.app>';
+    const fromEmail = emailData.from || 'VisAPI <noreply@visanet.app>';
     
     // Resend supports "Name <email>" format directly
     // But we should ensure the email domain is verified in Resend

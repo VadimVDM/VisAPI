@@ -10,7 +10,7 @@ export interface SupabaseEmailHookData {
   user: {
     email: string;
     id: string;
-    user_metadata?: Record<string, any>;
+    user_metadata?: Record<string, unknown>;
   };
   email_data: {
     token: string;

@@ -98,6 +98,39 @@ export interface FieldType {
   type: number;
 }
 
+// CGB Contact Sync Types
+export interface CGBContactData {
+  id: string; // Phone number as ID
+  phone: string;
+  name?: string;
+  email?: string;
+  cufs: Record<string, any>; // Custom fields
+}
+
+export interface CGBContact {
+  id: string; // Phone number as ID
+  phone: string;
+  name: string;
+  email: string;
+  hasWhatsApp: boolean;
+  customFields: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CGBContactSyncResult {
+  status: 'success' | 'failed' | 'no_whatsapp';
+  action: 'created' | 'updated' | 'skipped';
+  contactId?: string;
+  hasWhatsApp?: boolean;
+  error?: string;
+}
+
+export interface WhatsAppValidationResponse {
+  hasWhatsApp: boolean;
+  phone: string;
+}
+
 export const WHATSAPP_CHANNEL = 5;
 export const WHATSAPP_CHANNEL_NAME = 'whatsapp';
 

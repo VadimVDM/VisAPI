@@ -99,7 +99,7 @@ export class EmailService {
           break;
 
         default:
-          throw new Error(`Unsupported email action type: ${email_data.email_action_type}`);
+          throw new Error(`Unsupported email action type: ${String(email_data.email_action_type)}`);
       }
 
       // Send email using our method

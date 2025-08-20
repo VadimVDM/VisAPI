@@ -28,11 +28,12 @@ describe('AuthService', () => {
 
   // Mock factory for Supabase client to reduce boilerplate
   const createMockSupabaseClient = (): Partial<SupabaseClient<Database>> => {
-    const selectMock = jest.fn();
     const singleMock = jest.fn();
     const eqMock = jest.fn();
+    const selectMock = jest.fn();
     const orderMock = jest.fn().mockReturnValue({ data: [], error: null });
 
+    // Setup chaining: select() -> eq() -> single()
     eqMock.mockReturnValue({ single: singleMock });
     selectMock.mockReturnValue({
       eq: eqMock,
@@ -113,7 +114,7 @@ describe('AuthService', () => {
       const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
-        prefix: 'vapi_',
+        prefix: 'vapi_test',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
         expires_at: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
@@ -126,20 +127,22 @@ describe('AuthService', () => {
       // Mock bcrypt.compare to return true for valid secret
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      // Configure the final single() method to return the api key
+      // Configure the eq() method in the chain to return the api key
       const fromResult = mockSupabaseClient.from('api_keys');
       const selectResult = fromResult.select();
-      (selectResult.single as jest.Mock).mockResolvedValue({
+      const eqResult = selectResult.eq('prefix', 'vapi_test');
+      (eqResult.single as jest.Mock).mockResolvedValue({
         data: mockApiKey,
         error: null,
       } as SupabaseResponse<ApiKeyRecord>);
 
-      const result = await service.validateApiKey('vapi_testsecret123');
+      // Use proper API key format with dot separator
+      const result = await service.validateApiKey('vapi_test.secret123');
 
       expect(result).toEqual(mockApiKey);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('api_keys');
       expect(mockedBcrypt.compare).toHaveBeenCalledWith(
-        'testsecret123',
+        'secret123',
         'hashed-value',
       );
     });
@@ -203,7 +206,7 @@ describe('AuthService', () => {
       const mockApiKey: ApiKeyRecord = {
         id: '123',
         name: 'test-key',
-        prefix: 'vapi_',
+        prefix: 'vapi_test',
         hashed_secret: 'hashed-value',
         scopes: ['webhooks:trigger'],
         expires_at: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
@@ -216,15 +219,16 @@ describe('AuthService', () => {
       // Mock bcrypt.compare to return false for invalid secret
       (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      // Configure the final single() method to return the api key (but bcrypt will fail)
+      // Configure the eq() method in the chain to return the api key (but bcrypt will fail)
       const fromResult = mockSupabaseClient.from('api_keys');
       const selectResult = fromResult.select();
-      (selectResult.single as jest.Mock).mockResolvedValue({
+      const eqResult = selectResult.eq('prefix', 'vapi_test');
+      (eqResult.single as jest.Mock).mockResolvedValue({
         data: mockApiKey,
         error: null,
       } as SupabaseResponse<ApiKeyRecord>);
 
-      const result = await service.validateApiKey('vapi_wrongsecret');
+      const result = await service.validateApiKey('vapi_test.wrongsecret');
 
       expect(result).toBeNull();
       expect(mockedBcrypt.compare).toHaveBeenCalledWith(

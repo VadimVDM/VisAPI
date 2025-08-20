@@ -21,6 +21,7 @@ import { Scopes } from '../auth/decorators/scopes.decorator';
 import { ViziWebhooksService } from './vizi-webhooks.service';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { LogService } from '@visapi/backend-logging';
+import { OrdersService } from '../orders/orders.service';
 // import { IdempotencyService } from '@visapi/util-redis';
 
 @Controller('v1/webhooks/vizi')
@@ -30,6 +31,7 @@ export class ViziWebhooksController {
 
   constructor(
     private readonly viziWebhooksService: ViziWebhooksService,
+    private readonly ordersService: OrdersService,
     // private readonly idempotencyService: IdempotencyService,
     private readonly logService: LogService,
   ) {
@@ -106,11 +108,31 @@ export class ViziWebhooksController {
         throw new BadRequestException('Missing required form or order data');
       }
 
+      // Save order to database first
+      let orderId: string;
+      try {
+        orderId = await this.ordersService.createOrder(body);
+        this.logger.log(`Order saved to database: ${body.order.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to save order to database: ${error.message}`);
+        // Continue processing even if order save fails
+        // This ensures webhook processing isn't blocked by DB issues
+      }
+
       // Process the webhook
       const result = await this.viziWebhooksService.processViziOrder(
         body,
         correlationId,
       );
+
+      // Update order with processing results
+      if (orderId) {
+        await this.ordersService.updateOrderProcessing(
+          body.order.id,
+          result.workflowId,
+          result.jobId,
+        );
+      }
 
       // Store result for idempotency
       // TODO: Implement idempotency when IdempotencyService is updated
@@ -128,6 +150,7 @@ export class ViziWebhooksController {
           form_id: body.form.id,
           workflow_id: result.workflowId,
           job_id: result.jobId,
+          order_db_id: orderId,
           correlationId,
           source: 'webhook',
         },

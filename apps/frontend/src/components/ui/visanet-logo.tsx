@@ -27,12 +27,7 @@ export function VisanetLogo({
 
   if (!mounted) {
     // Return a placeholder with the same dimensions to prevent layout shift
-    return (
-      <div
-        className={className}
-        style={{ width, height }}
-      />
-    );
+    return <div className={className} style={{ width, height }} />;
   }
 
   const currentTheme = theme === 'system' ? systemTheme : theme;

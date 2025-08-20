@@ -54,7 +54,6 @@ describe('ApiKeysController', () => {
         apiKey: {
           id: 'api-key-123',
           name: 'Test API Key',
-          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'hashed-secret',
           scopes: ['webhooks:trigger', 'workflows:read'],
@@ -115,7 +114,6 @@ describe('ApiKeysController', () => {
         {
           id: 'key-1',
           name: 'Production Key',
-          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'should-be-removed',
           scopes: ['webhooks:trigger'],
@@ -128,7 +126,6 @@ describe('ApiKeysController', () => {
         {
           id: 'key-2',
           name: 'Development Key',
-          hashed_key: '', // Legacy field
           prefix: 'vapi_',
           hashed_secret: 'should-also-be-removed',
           scopes: ['workflows:read'],

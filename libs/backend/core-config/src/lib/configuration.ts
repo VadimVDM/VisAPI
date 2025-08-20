@@ -47,6 +47,11 @@ export default () => ({
     timeout: parseInt(process.env.CGB_TIMEOUT, 10) || 30000,
     retryAttempts: parseInt(process.env.CGB_RETRY_ATTEMPTS, 10) || 3,
     cacheTimeout: parseInt(process.env.CGB_CACHE_TIMEOUT, 10) || 3600,
+    syncEnabled: process.env.CGB_SYNC_ENABLED === 'true',
+    syncDryRun: process.env.CGB_SYNC_DRY_RUN === 'true',
+    syncBatchSize: parseInt(process.env.CGB_SYNC_BATCH_SIZE, 10) || 10,
+    syncConcurrency: parseInt(process.env.CGB_SYNC_CONCURRENCY, 10) || 5,
+    syncDelayMs: parseInt(process.env.CGB_SYNC_DELAY_MS, 10) || 2000,
   },
   slack: {
     webhookUrl: process.env.SLACK_WEBHOOK_URL || '',

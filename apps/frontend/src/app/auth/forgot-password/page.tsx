@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Mail, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
 import { supabase } from '@visapi/frontend-data';
-import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +57,7 @@ export default function ForgotPasswordPage() {
         data.email,
         {
           redirectTo: `${window.location.origin}/auth/reset-password`,
-        }
+        },
       );
 
       if (resetError) {
@@ -71,7 +70,7 @@ export default function ForgotPasswordPage() {
       setError(
         err instanceof Error
           ? err.message
-          : 'An unexpected error occurred. Please try again.'
+          : 'An unexpected error occurred. Please try again.',
       );
       console.error('Reset password error:', err);
     } finally {
@@ -129,7 +128,9 @@ export default function ForgotPasswordPage() {
                 disabled={isLoading}
                 className="w-full"
               >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-current" />}
+                {isLoading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-current" />
+                )}
                 Resend email
               </Button>
             </div>

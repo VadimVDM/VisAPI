@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: July 31, 2025
+Essential information for working with the VisAPI project. Updated: August 20, 2025
 
 ## Project Overview
 

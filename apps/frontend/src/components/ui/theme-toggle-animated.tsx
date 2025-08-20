@@ -43,7 +43,7 @@ export function ThemeToggleAnimated() {
         saveThemePreference(newTheme);
       });
     },
-    [theme, setTheme, saveThemePreference]
+    [theme, setTheme, saveThemePreference],
   );
 
   if (!mounted) {

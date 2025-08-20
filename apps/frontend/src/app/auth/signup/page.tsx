@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@visapi/frontend-data';
-import { ThemeToggleAnimated } from '@/components/ui/theme-toggle-animated';
 import { UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,6 @@ import { PasswordInput } from '@/components/ui/password-input';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -88,7 +86,7 @@ export default function SignupPage() {
 
   // Default to magic link method
   const [signupMethod, setSignupMethod] = useState<'magic-link' | 'password'>(
-    'magic-link'
+    'magic-link',
   );
 
   // Allowed email domains (should match backend configuration)
@@ -162,7 +160,7 @@ export default function SignupPage() {
 
       // Show success message - user needs to check email
       router.push(
-        '/auth/login?method=magic-link&email=' + encodeURIComponent(data.email)
+        '/auth/login?method=magic-link&email=' + encodeURIComponent(data.email),
       );
     } catch (err) {
       setError('Something went wrong. Please try again.');

@@ -112,4 +112,54 @@ export class ConfigService {
   get slackEnabled(): boolean {
     return this.configService.get<boolean>('slack.enabled');
   }
+  
+  // CGB Configuration
+  get cgbApiUrl(): string {
+    return this.configService.get<string>('cgb.apiUrl');
+  }
+  
+  get cgbApiKey(): string {
+    return this.configService.get<string>('cgb.apiKey');
+  }
+  
+  get cgbTimeout(): number {
+    return this.configService.get<number>('cgb.timeout');
+  }
+  
+  get cgbRetryAttempts(): number {
+    return this.configService.get<number>('cgb.retryAttempts');
+  }
+  
+  get cgbCacheTimeout(): number {
+    return this.configService.get<number>('cgb.cacheTimeout');
+  }
+  
+  get cgbSyncEnabled(): boolean {
+    return this.configService.get<boolean>('cgb.syncEnabled');
+  }
+  
+  get cgbSyncDryRun(): boolean {
+    return this.configService.get<boolean>('cgb.syncDryRun');
+  }
+  
+  get cgbSyncBatchSize(): number {
+    return this.configService.get<number>('cgb.syncBatchSize');
+  }
+  
+  get cgbSyncConcurrency(): number {
+    return this.configService.get<number>('cgb.syncConcurrency');
+  }
+  
+  get cgbSyncDelayMs(): number {
+    return this.configService.get<number>('cgb.syncDelayMs');
+  }
+  
+  // Resend Configuration
+  get resendApiKey(): string {
+    return this.configService.get<string>('resend.apiKey');
+  }
+  
+  get resendFromEmail(): string {
+    return this.configService.get<string>('resend.fromEmail');
+  }
 }
