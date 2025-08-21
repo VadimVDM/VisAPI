@@ -57,9 +57,15 @@ export class LogService {
       // Redact PII from message
       const messageResult = this.piiRedactionService.redactPii(logEntry.message);
       
+      // Combine metadata with correlation_id if present
+      const combinedMetadata = {
+        ...logEntry.metadata,
+        ...(logEntry.correlation_id && { correlation_id: logEntry.correlation_id })
+      };
+      
       // Redact PII from metadata
-      const metadataResult = logEntry.metadata 
-        ? this.piiRedactionService.redactPiiFromObject(logEntry.metadata)
+      const metadataResult = Object.keys(combinedMetadata).length > 0
+        ? this.piiRedactionService.redactPiiFromObject(combinedMetadata)
         : { obj: null, piiFound: false, redactedFields: [] };
 
       // Determine if any PII was found

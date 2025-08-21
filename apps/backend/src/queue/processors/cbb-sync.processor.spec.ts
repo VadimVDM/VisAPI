@@ -7,9 +7,9 @@ import { ConfigService } from '@visapi/core-config';
 import { Register } from 'prom-client';
 
 describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is implemented
-  let processor: any; // CGBSyncProcessor;
+  let processor: unknown; // CGBSyncProcessor;
   let supabaseService: jest.Mocked<SupabaseService>;
-  let cgbService: any; // Mock CgbService since it doesn't exist yet
+  let cgbService: unknown; // Mock CgbService since it doesn't exist yet
   let configService: jest.Mocked<ConfigService>;
   let register: jest.Mocked<Register>;
 
@@ -48,7 +48,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
 
     supabaseService = {
       client: mockSupabaseClient,
-    } as any;
+    } as jest.Mocked<SupabaseService>;
 
     cgbService = {
       searchContacts: jest.fn(),

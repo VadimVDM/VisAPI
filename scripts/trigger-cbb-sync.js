@@ -8,8 +8,8 @@
 const Bull = require('bullmq');
 const { createClient } = require('@supabase/supabase-js');
 
-// Load environment
-require('dotenv').config();
+// Load environment - use backend env for production services
+require('dotenv').config({ path: '.env.backend' });
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

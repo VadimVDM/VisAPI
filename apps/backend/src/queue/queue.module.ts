@@ -9,6 +9,7 @@ import { CBBSyncProcessor } from './processors/cbb-sync.processor';
 import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
+import { LoggingModule } from '@visapi/backend-logging';
 import {
   makeCounterProvider,
   makeHistogramProvider,
@@ -39,6 +40,32 @@ import {
         return {
           connection: {
             url: redisUrl,
+            // Optimized for Railway Redis
+            keepAlive: 30000,
+            connectTimeout: 10000,
+            commandTimeout: 5000,
+            maxRetriesPerRequest: 3,
+            enableReadyCheck: true,
+            enableOfflineQueue: true,
+            retryStrategy: (times: number) => {
+              if (times > 10) return null;
+              return Math.min(times * 100, 2000);
+            },
+          },
+          // Queue-specific optimizations
+          defaultJobOptions: {
+            removeOnComplete: {
+              age: 3600, // Keep completed jobs for 1 hour
+              count: 100, // Keep max 100 completed jobs
+            },
+            removeOnFail: {
+              age: 86400, // Keep failed jobs for 24 hours
+            },
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
           },
         };
       },
@@ -57,6 +84,7 @@ import {
     CbbModule,
     SupabaseModule,
     MetricsModule,
+    LoggingModule,
   ],
   controllers: [QueueController],
   providers: [

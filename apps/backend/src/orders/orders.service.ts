@@ -236,12 +236,12 @@ export class OrdersService {
       // Handle various date formats
       const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
-        this.logger.warn(`Invalid entry date format: ${date}`);
+        this.logger.warn(`Invalid entry date format: ${String(date)}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
-      this.logger.warn(`Failed to parse entry date: ${date}`);
+      this.logger.warn(`Failed to parse entry date: ${String(date)}`);
       return undefined;
     }
   }

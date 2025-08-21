@@ -88,14 +88,14 @@ export class ViziWebhooksController {
       // Ensure payment_processor is valid
       const validProcessors = ['stripe', 'paypal', 'tbank', 'bill', 'bit', 'paybox'];
       if (order?.payment_processor && !validProcessors.includes(order.payment_processor as string)) {
-        this.logger.warn(`Invalid payment processor: ${order.payment_processor}, defaulting to stripe`);
+        this.logger.warn(`Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`);
         order.payment_processor = 'stripe';
       }
       
       // Ensure status is valid
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
       if (order?.status && !validStatuses.includes(order.status as string)) {
-        this.logger.warn(`Invalid order status: ${order.status}, defaulting to active`);
+        this.logger.warn(`Invalid order status: ${String(order.status)}, defaulting to active`);
         order.status = 'active';
       }
     } catch (error) {
@@ -168,7 +168,7 @@ export class ViziWebhooksController {
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(webhookData);
-        this.logger.log(`Order saved to database: ${order?.id} (DB ID: ${orderId})`);
+        this.logger.log(`Order saved to database: ${String(order?.id)} (DB ID: ${orderId})`);
       } catch (error) {
         const err = error as Record<string, unknown>;
         const errorDetails = {
@@ -179,14 +179,14 @@ export class ViziWebhooksController {
         };
         
         this.logger.error(
-          `Failed to save order ${order?.id} to database: ${JSON.stringify(errorDetails)}`,
+          `Failed to save order ${String(order?.id)} to database: ${JSON.stringify(errorDetails)}`,
           err.stack as string,
         );
         
         // Log the failed order creation with full details
         await this.logService.createLog({
           level: 'error',
-          message: `Order creation failed for ${order?.id}`,
+          message: `Order creation failed for ${String(order?.id)}`,
           metadata: {
             webhook_type: 'vizi_order',
             order_id: order?.id,

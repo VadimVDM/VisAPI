@@ -224,7 +224,7 @@ async function backfillOrders() {
       });
     }
     
-    const group = orderGroups.get(orderId)!;
+    const group = orderGroups.get(orderId);
     
     if (log.message === 'Received Vizi webhook') {
       group.receivedLog = log;
