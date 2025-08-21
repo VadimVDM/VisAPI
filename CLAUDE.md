@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: August 20, 2025
+Essential information for working with the VisAPI project. Updated: August 21, 2025
 
 ## Project Overview
 
@@ -49,6 +49,8 @@ Essential information for working with the VisAPI project. Updated: August 20, 2
 - ✅ Complete shared types library (@visapi/visanet-types) with discriminated unions (July 31, 2025)
 - ✅ Database optimization with redundant column removal and proper RLS policies (July 31, 2025)
 - ✅ Complete n8n system removal with clean architecture transition (July 31, 2025)
+- ✅ Vizi webhook order creation fixed with proper validation handling (August 21, 2025)
+- ✅ Production build configuration optimized - scripts excluded from webpack bundle (August 21, 2025)
 
 ## Project Structure
 
@@ -719,16 +721,14 @@ pnpm nx show project frontend
 
 ## Project Status & Roadmap
 
-**Current Status: Production Live & Stable, Sprint 5 Week 1-3 Complete, Magic Link Authentication Operational**
+**Current Status: Production Live & Stable**
 
-VisAPI is a complete, enterprise-grade workflow automation system. All planned features from Sprints 0 through 4 are fully implemented, tested, and deployed to production. Sprint 5 (Frontend Excellence) has achieved all major milestones:
-
-- Week 1: Authentication system with magic links ✅
-- Week 2: Premium dashboard UI with real-time data ✅
-- Week 3: Email integration with branded templates ✅ (100% - magic links fully implemented)
-- Week 4: Comprehensive testing coverage (upcoming)
-
-The system is production-ready with all infrastructure deployed and operational, including custom domain magic link authentication.
+VisAPI is a complete, enterprise-grade workflow automation system with all core features operational:
+- Vizi webhook integration processing orders correctly
+- Full workflow automation with WhatsApp, PDF generation, and scheduling
+- Enterprise dashboard with real-time monitoring
+- Magic link authentication fully operational
+- All production deployments stable on Vercel (frontend) and Render (backend)
 
 **Key Milestones Achieved:**
 
@@ -827,10 +827,11 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - **Type Library**: Use `@visapi/visanet-types` for all Vizi/Visanet types and DTOs
 - **Webhook Endpoint**: POST to `/api/v1/webhooks/vizi/orders` with Vizi webhook payload
 - **API Keys**: Vizi keys use `vizi_` prefix with `webhook:vizi` scope
-- **Validation**: DTOs use class-validator with discriminated unions for complex types
+- **Validation**: Accept as `any`, normalize (lowercase branch), then cast to DTO to handle validation edge cases
+- **Order Creation**: All webhooks now properly create orders in database with validation and error handling
 - **Type Guards**: Use type guard functions from `@visapi/visanet-types` for runtime checks
 - **Key Generation**: Use `node scripts/create-vizi-api-key.js` to create new Vizi API keys
-- **Database**: Clean architecture with n8n references completely removed
+- **Testing**: Use `test-vizi-webhook.js` to test webhook processing locally or against production
 
 ### Common Fixes:
 
@@ -849,6 +850,8 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 13. **API Key Custom Prefix**: Use `createApiKey()` with custom prefix parameter for non-default prefixes
 14. **Database Schema**: Use `hashed_secret` column only, `hashed_key` has been removed (July 31, 2025)
 15. **API Key Generation**: Use standalone script `scripts/create-vizi-api-key.js` for Vizi keys
+16. **Vizi Webhook Validation**: Accept webhook as `any` type initially, normalize branch to lowercase, then cast to DTO
+17. **Production Build Scripts**: Exclude `src/scripts/**/*.ts` from tsconfig.app.json to prevent dev dependency issues
 
 ### Known Issues (Non-Critical):
 
@@ -859,6 +862,6 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ---
 
-**Last Updated:** July 31, 2025
+**Last Updated:** August 21, 2025
 **Version:** v1.0.0 - Production Ready  
-**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational), Enhanced password security system deployed, Vizi webhook integration completed - Production stable
+**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational), Vizi webhook order creation fixed, Production stable with all systems operational

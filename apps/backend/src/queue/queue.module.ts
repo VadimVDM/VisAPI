@@ -9,6 +9,10 @@ import { CGBSyncProcessor } from './processors/cgb-sync.processor';
 import { CgbModule } from '@visapi/backend-core-cgb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
+import {
+  makeCounterProvider,
+  makeHistogramProvider,
+} from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -55,7 +59,44 @@ import { MetricsModule } from '../metrics/metrics.module';
     MetricsModule,
   ],
   controllers: [QueueController],
-  providers: [QueueService, CGBSyncProcessor],
+  providers: [
+    QueueService,
+    CGBSyncProcessor,
+    // CGB Sync Metrics
+    makeCounterProvider({
+      name: 'cgb_sync_total',
+      help: 'Total number of CGB sync attempts',
+    }),
+    makeCounterProvider({
+      name: 'cgb_sync_success',
+      help: 'Total number of successful CGB syncs',
+    }),
+    makeCounterProvider({
+      name: 'cgb_sync_failures',
+      help: 'Total number of failed CGB syncs',
+    }),
+    makeHistogramProvider({
+      name: 'cgb_sync_duration',
+      help: 'CGB sync operation duration in seconds',
+      buckets: [0.5, 1, 2, 5, 10, 20, 30, 60],
+    }),
+    makeCounterProvider({
+      name: 'cgb_contacts_created',
+      help: 'Total number of new CGB contacts created',
+    }),
+    makeCounterProvider({
+      name: 'cgb_contacts_updated',
+      help: 'Total number of existing CGB contacts updated',
+    }),
+    makeCounterProvider({
+      name: 'cgb_whatsapp_available',
+      help: 'Total number of contacts with WhatsApp available',
+    }),
+    makeCounterProvider({
+      name: 'cgb_whatsapp_unavailable',
+      help: 'Total number of contacts without WhatsApp',
+    }),
+  ],
   exports: [QueueService, BullModule],
 })
 export class QueueModule {}

@@ -1,6 +1,6 @@
-# Engineering Workflow Protocol: Plan → Code → Test → Document
+# Engineering Workflow Protocol: Part 1 - Planning
 
-As the lead engineer, your primary function is to execute a structured, multi-phase workflow for any given task. This protocol is divided into two main parts, ensuring a clear separation between strategic planning and tactical execution.
+As the lead engineer, your primary function is to assess a task's complexity, build a deep understanding of the codebase, research the task, and produce a detailed, user-approved implementation plan.
 
 ---
 
@@ -111,108 +111,8 @@ _A list of all external dependencies, files to be modified, and potential impact
 _A clear definition of "done." This must include the specific high-level tests (e.g., E2E tests) that need to pass to validate the entire implementation._
 ```
 
-**Handoff & Approval (User Approval Gate):**
+### Handoff & Approval (User Approval Gate)
 
-- Part 1 is complete once the plan file is created and saved.
-- **Present the plan to the user for review. Do not proceed to Part 2 until the user gives explicit approval.**
-- The approved plan is the primary input for Part 2.
-
----
-
----
-
-## PART 2: IMPLEMENTATION, TEST & DOCUMENT
-
-**Objective:** To execute the approved plan from Part 1, write clean and tested code, verify its correctness, and produce comprehensive documentation.
-
-### 2.1. Implementation Phase
-
-**Objective:** To write clean, efficient, and conventional code that fulfills the requirements outlined in the plan.
-
-**Actions:**
-
-1.  **Iterate Through Tasks:** Address each task from the plan's checklist one by one.
-2.  **Implement Code & Tests:** Write the implementation code _and_ the corresponding unit/integration tests for the current task.
-3.  **Iterative Verification:** After completing each task, run the specific tests you just wrote for it, along with any directly related existing tests. Ensure they pass before moving to the next task.
-4.  **Update Progress:** Mark the task as complete in the `/tasks/<feature-name>-plan.md` file:
-    ` - [x] Task 1: Description ✓ Completed`
-
-**Core Guidelines:**
-
-- **Adhere to Conventions:** Strictly match the style, formatting, and architectural patterns of the existing codebase.
-- **Clarity is Key:** Use descriptive, self-documenting variable and method names. Add comments only to explain the _why_, not the _what_.
-- **Error Handling:** Implement robust error handling and logging for all new functionality.
-
-**Plan Deviation Protocol:**
-
-- If you discover a technical reason that requires a significant deviation from the plan, **stop**.
-- Document the issue and the proposed new approach in the plan file under a "Plan Deviations" section.
-- **Notify the user** of the required change and ask for confirmation before proceeding with the new approach.
-
-### 2.2. Final Testing & Quality Assurance
-
-**Objective:** To rigorously verify the correctness, robustness, and reliability of the _entire_ implementation.
-
-**Actions:**
-
-- **Full Test Suite:** Run the _entire_ project test suite (including all new and existing tests) to check for regressions.
-- **Code Quality Checks:**
-  1.  Format all modified code (`npm run format`).
-  2.  Lint the code and address all critical warnings (`npm run lint`).
-  3.  Ensure the project type-checks and builds successfully without errors (`npm run type-check` and `npm run build`).
-- **Manual & UX Testing (If Applicable):**
-  - Use **`playwright`** to walk through the user flows affected by the changes.
-  - Verify that all interactions work as expected and check for edge cases.
-
-**Failure Protocol:**
-If any test fails:
-
-1.  **Root Cause Analysis:** Perform a thorough analysis of the failure.
-2.  **Revise Plan:** Update the implementation plan with a strategy to fix the issue.
-3.  **Re-implement & Re-test:** Correct the code and re-run all relevant tests until they pass.
-
-### 2.3. Documentation & Finalization
-
-**Objective:** To conclude the task by creating comprehensive documentation and finalizing all project artifacts.
-
-**Actions:**
-
-1.  **Finalize Task Artifacts:**
-    - Ensure all items are checked off in `/tasks/<feature-name>-plan.md`.
-    - Add the completion date to the top of the plan file using `Bash(date)`.
-    - Move the completed plan to `/tasks/completed/`.
-    - Update the main `/tasks/roadmap.md` to reflect the task's completion (if applicable).
-
-2.  **Create Implementation Report:**
-    - Create a detailed report at `/docs/<feature-name>-implementation.md` using the template below.
-
-    ```markdown
-    # [Feature/Task Name] Implementation Report - `Bash(date)`
-
-    ## 1. Overview
-
-    _A brief, high-level description of what was implemented and why._
-
-    ## 2. Architectural Decisions
-
-    _Key architectural choices, trade-offs considered, and patterns used._
-
-    ## 3. Code Changes
-
-    _A list of all modified and created files, explaining the purpose of each change._
-
-    ## 4. Testing Strategy
-
-    _An overview of the tests added, manual testing performed, and edge cases covered._
-
-    ## 5. Setup & Commands
-
-    _Any new commands or environment setup steps required for future developers._
-
-    ## 6. Notes & Future Work
-
-    _Any caveats, known issues, or suggestions for future improvements._
-    ```
-
-3.  **Finalize Knowledge Base & Close Loop:**
-    - Follow the protocol in `.claude/commands/doc-update-protocol.md` to update all relevant `CLAUDE.md` and `GEMINI.md` files with summaries and links to the new implementation report.
+- This protocol is complete once the plan file is created and saved.
+- **Present the plan to the user for review. Do not proceed with implementation until the user gives explicit approval.**
+- The approved plan file is the primary input for the execution phase, which is governed by the `code-execute-phase.md` protocol.
