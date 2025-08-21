@@ -75,7 +75,7 @@ export class ViziWebhooksController {
     const correlationId =
       headers['x-correlation-id'] || headers['x-request-id'];
     const idempotencyKey = headers['x-idempotency-key'];
-    
+
     // Transform and validate the webhook data
     const bodyAsRecord = body as Record<string, unknown>;
     try {
@@ -84,22 +84,38 @@ export class ViziWebhooksController {
       if (order?.branch && typeof order.branch === 'string') {
         order.branch = order.branch.toLowerCase();
       }
-      
+
       // Ensure payment_processor is valid
-      const validProcessors = ['stripe', 'paypal', 'tbank', 'bill', 'bit', 'paybox'];
-      if (order?.payment_processor && !validProcessors.includes(order.payment_processor as string)) {
-        this.logger.warn(`Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`);
+      const validProcessors = [
+        'stripe',
+        'paypal',
+        'tbank',
+        'bill',
+        'bit',
+        'paybox',
+      ];
+      if (
+        order?.payment_processor &&
+        !validProcessors.includes(order.payment_processor as string)
+      ) {
+        this.logger.warn(
+          `Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`,
+        );
         order.payment_processor = 'stripe';
       }
-      
+
       // Ensure status is valid
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
       if (order?.status && !validStatuses.includes(order.status as string)) {
-        this.logger.warn(`Invalid order status: ${String(order.status)}, defaulting to active`);
+        this.logger.warn(
+          `Invalid order status: ${String(order.status)}, defaulting to active`,
+        );
         order.status = 'active';
       }
     } catch (error) {
-      this.logger.error(`Error normalizing webhook data: ${(error as Error).message}`);
+      this.logger.error(
+        `Error normalizing webhook data: ${(error as Error).message}`,
+      );
     }
 
     // Log incoming webhook with detailed validation info
@@ -109,28 +125,32 @@ export class ViziWebhooksController {
     const product = form?.product as Record<string, unknown> | undefined;
     const phone = client?.phone as Record<string, unknown> | undefined;
     const applicants = form?.applicants as unknown[] | undefined;
-    
+
     const webhookValidation = {
       hasOrder: !!order,
       hasForm: !!form,
       orderId: order?.id,
       formId: form?.id,
       country: form?.country,
-      clientData: client ? {
-        name: client.name,
-        email: client.email,
-        hasPhone: !!phone,
-        phoneCode: phone?.code,
-        phoneNumber: phone?.number,
-        whatsappEnabled: client.whatsappAlertsEnabled,
-      } : null,
-      productData: product ? {
-        name: product.name,
-        country: product.country,
-      } : null,
+      clientData: client
+        ? {
+            name: client.name,
+            email: client.email,
+            hasPhone: !!phone,
+            phoneCode: phone?.code,
+            phoneNumber: phone?.number,
+            whatsappEnabled: client.whatsappAlertsEnabled,
+          }
+        : null,
+      productData: product
+        ? {
+            name: product.name,
+            country: product.country,
+          }
+        : null,
       applicantCount: applicants?.length || 0,
     };
-    
+
     await this.logService.createLog({
       level: 'info',
       message: 'Received Vizi webhook',
@@ -163,12 +183,14 @@ export class ViziWebhooksController {
 
       // Cast to ViziWebhookDto after normalization
       const webhookData = bodyAsRecord as unknown as ViziWebhookDto;
-      
+
       // Save order to database first
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(webhookData);
-        this.logger.log(`Order saved to database: ${String(order?.id)} (DB ID: ${orderId})`);
+        this.logger.log(
+          `Order saved to database: ${String(order?.id)} (DB ID: ${orderId})`,
+        );
       } catch (error) {
         const err = error as Record<string, unknown>;
         const errorDetails = {
@@ -177,12 +199,12 @@ export class ViziWebhooksController {
           detail: err.detail,
           stack: err.stack,
         };
-        
+
         this.logger.error(
           `Failed to save order ${String(order?.id)} to database: ${JSON.stringify(errorDetails)}`,
           err.stack as string,
         );
-        
+
         // Log the failed order creation with full details
         await this.logService.createLog({
           level: 'error',
@@ -198,7 +220,7 @@ export class ViziWebhooksController {
           },
           correlation_id: correlationId,
         });
-        
+
         // Throw the error to prevent marking webhook as successful
         throw new BadRequestException(
           `Failed to save order to database: ${(error as Error).message}`,

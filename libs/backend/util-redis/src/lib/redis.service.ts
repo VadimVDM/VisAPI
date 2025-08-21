@@ -43,14 +43,14 @@ export class RedisService {
             this.logger.error('Redis connection failed after 10 retries');
             return null; // Stop retrying
           }
-          const delay = Math.min(times * 100, 2000); // Max 2 seconds
+          const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s
           this.logger.warn(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
           return delay;
         },
         
         // Error handling
         reconnectOnError: (err: Error) => {
-          const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
+          const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED'];
           if (targetErrors.some(e => err.message.includes(e))) {
             this.logger.warn('Redis reconnecting due to error:', err.message);
             return true; // Reconnect

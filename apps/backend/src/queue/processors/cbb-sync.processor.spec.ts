@@ -6,7 +6,8 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
 import { Register } from 'prom-client';
 
-describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is implemented
+describe.skip('CGBSyncProcessor', () => {
+  // Skip tests until processor is implemented
   let processor: unknown; // CGBSyncProcessor;
   let supabaseService: jest.Mocked<SupabaseService>;
   let cgbService: unknown; // Mock CgbService since it doesn't exist yet
@@ -80,7 +81,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
 
     // processor = module.get<CGBSyncProcessor>(CGBSyncProcessor);
     processor = { process: jest.fn() }; // Mock processor for now
-    
+
     // Suppress console logs during tests
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation();
@@ -134,7 +135,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         },
       });
       expect(cgbService.getContactStatus).toHaveBeenCalledWith('447700900123');
-      
+
       // Verify database update
       expect(updateMock).toHaveBeenCalledWith({
         cgb_sync_status: 'completed',
@@ -144,7 +145,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         cgb_sync_completed_at: expect.any(String),
         cgb_sync_error: null,
       });
-      
+
       // Verify metrics
       const metric = register.getSingleMetric('visapi_cgb_sync_total');
       expect(metric.inc).toHaveBeenCalledWith({ status: 'success' });
@@ -158,7 +159,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         name: 'Old Name',
         cufs: {},
       };
-      
+
       cgbService.searchContacts.mockResolvedValue([existingContact]);
       cgbService.updateContact.mockResolvedValue({
         ...existingContact,
@@ -187,7 +188,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         expect.objectContaining({
           name: 'John Doe',
           phone: '447700900123',
-        })
+        }),
       );
       expect(cgbService.createContact).not.toHaveBeenCalled();
     });
@@ -223,7 +224,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
           cgb_sync_status: 'completed',
           cgb_contact_exists: true,
           cgb_has_whatsapp: false,
-        })
+        }),
       );
     });
 
@@ -233,11 +234,13 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         ...mockOrder,
         whatsapp_alerts_enabled: false,
       };
-      
+
       supabaseService.client.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: orderWithoutWhatsApp, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: orderWithoutWhatsApp, error: null }),
       });
 
       // Act
@@ -270,7 +273,9 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
       });
 
       // Act & Assert
-      await expect(processor.process(mockJob)).rejects.toThrow('Order not found: IL250819GB16');
+      await expect(processor.process(mockJob)).rejects.toThrow(
+        'Order not found: IL250819GB16',
+      );
     });
 
     it('should handle CGB API errors gracefully', async () => {
@@ -286,16 +291,18 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
       updateMock.mockReturnValue({ eq: eqMock });
 
       // Act & Assert
-      await expect(processor.process(mockJob)).rejects.toThrow('CGB API timeout');
-      
+      await expect(processor.process(mockJob)).rejects.toThrow(
+        'CGB API timeout',
+      );
+
       // Verify error was recorded in database
       expect(updateMock).toHaveBeenCalledWith(
         expect.objectContaining({
           cgb_sync_status: 'failed',
           cgb_sync_error: expect.stringContaining('CGB API timeout'),
-        })
+        }),
       );
-      
+
       // Verify failure metric
       const metric = register.getSingleMetric('visapi_cgb_sync_total');
       expect(metric.inc).toHaveBeenCalledWith({ status: 'failure' });
@@ -308,7 +315,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         cgb_sync_status: 'completed',
         cgb_contact_id: 'existing-id',
       };
-      
+
       supabaseService.client.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
@@ -329,11 +336,13 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         ...mockOrder,
         client_phone: null,
       };
-      
+
       supabaseService.client.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: orderWithoutPhone, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: orderWithoutPhone, error: null }),
       });
 
       // Act
@@ -350,13 +359,15 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
         ...mockOrder,
         client_phone: '+44 7700 900123', // Phone with spaces and plus
       };
-      
+
       supabaseService.client.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: orderWithFormattedPhone, error: null }),
+        single: jest
+          .fn()
+          .mockResolvedValue({ data: orderWithFormattedPhone, error: null }),
       });
-      
+
       cgbService.searchContacts.mockResolvedValue([]);
       cgbService.createContact.mockResolvedValue({
         id: 'cgb-contact-789',
@@ -372,7 +383,7 @@ describe.skip('CGBSyncProcessor', () => { // Skip tests until processor is imple
       expect(cgbService.createContact).toHaveBeenCalledWith(
         expect.objectContaining({
           phone: '447700900123', // Should be formatted without spaces or plus
-        })
+        }),
       );
     });
 

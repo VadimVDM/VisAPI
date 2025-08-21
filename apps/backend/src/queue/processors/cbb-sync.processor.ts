@@ -48,14 +48,22 @@ export class CBBSyncProcessor extends WorkerHost {
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
-    @InjectMetric('cbb_sync_total') private readonly syncTotalCounter: Counter<string>,
-    @InjectMetric('cbb_sync_success') private readonly syncSuccessCounter: Counter<string>,
-    @InjectMetric('cbb_sync_failures') private readonly syncFailureCounter: Counter<string>,
-    @InjectMetric('cbb_sync_duration') private readonly syncDurationHistogram: Histogram<string>,
-    @InjectMetric('cbb_contacts_created') private readonly contactsCreatedCounter: Counter<string>,
-    @InjectMetric('cbb_contacts_updated') private readonly contactsUpdatedCounter: Counter<string>,
-    @InjectMetric('cbb_whatsapp_available') private readonly whatsappAvailableCounter: Counter<string>,
-    @InjectMetric('cbb_whatsapp_unavailable') private readonly whatsappUnavailableCounter: Counter<string>,
+    @InjectMetric('cbb_sync_total')
+    private readonly syncTotalCounter: Counter<string>,
+    @InjectMetric('cbb_sync_success')
+    private readonly syncSuccessCounter: Counter<string>,
+    @InjectMetric('cbb_sync_failures')
+    private readonly syncFailureCounter: Counter<string>,
+    @InjectMetric('cbb_sync_duration')
+    private readonly syncDurationHistogram: Histogram<string>,
+    @InjectMetric('cbb_contacts_created')
+    private readonly contactsCreatedCounter: Counter<string>,
+    @InjectMetric('cbb_contacts_updated')
+    private readonly contactsUpdatedCounter: Counter<string>,
+    @InjectMetric('cbb_whatsapp_available')
+    private readonly whatsappAvailableCounter: Counter<string>,
+    @InjectMetric('cbb_whatsapp_unavailable')
+    private readonly whatsappUnavailableCounter: Counter<string>,
   ) {
     super();
   }
@@ -88,8 +96,8 @@ export class CBBSyncProcessor extends WorkerHost {
       // 2. Check if already synced
       if (order.cbb_sync_status === 'synced') {
         this.logger.log(`Order ${orderId} already synced`);
-        return { 
-          status: 'success', 
+        return {
+          status: 'success',
           action: 'skipped',
           contactId: order.cbb_contact_id,
         };
@@ -107,20 +115,27 @@ export class CBBSyncProcessor extends WorkerHost {
 
       if (contact) {
         // CBB API limitation: Can only update custom fields, not basic fields
-        this.logger.warn(`Contact ${order.client_phone} exists. CBB API only allows updating custom fields.`);
-        
+        this.logger.warn(
+          `Contact ${order.client_phone} exists. CBB API only allows updating custom fields.`,
+        );
+
         // Check if basic fields differ
-        if (contact.name !== contactData.name || contact.email !== contactData.email) {
+        if (
+          contact.name !== contactData.name ||
+          contact.email !== contactData.email
+        ) {
           this.logger.warn(
             `Cannot update basic fields for existing contact ${order.client_phone}. ` +
-            `Current: name="${contact.name}", email="${contact.email}". ` +
-            `New: name="${contactData.name}", email="${contactData.email}"`
+              `Current: name="${contact.name}", email="${contact.email}". ` +
+              `New: name="${contactData.name}", email="${contactData.email}"`,
           );
         }
-        
+
         // Update custom fields only (CBB API limitation)
         contact = await this.cbbService.updateContactComplete(contactData);
-        this.logger.log(`Updated CBB contact custom fields for order ${orderId}`);
+        this.logger.log(
+          `Updated CBB contact custom fields for order ${orderId}`,
+        );
         this.contactsUpdatedCounter.inc();
       } else {
         // Create new contact
@@ -131,8 +146,10 @@ export class CBBSyncProcessor extends WorkerHost {
       }
 
       // 6. Validate WhatsApp
-      const hasWhatsApp = await this.cbbService.validateWhatsApp(order.client_phone);
-      
+      const hasWhatsApp = await this.cbbService.validateWhatsApp(
+        order.client_phone,
+      );
+
       if (hasWhatsApp) {
         this.whatsappAvailableCounter.inc();
       } else {
@@ -181,15 +198,14 @@ export class CBBSyncProcessor extends WorkerHost {
         contactId: contact.id,
         hasWhatsApp,
       };
-
     } catch (error) {
       // Handle errors
       await this.handleSyncError(orderId, error);
       this.syncFailureCounter.inc();
-      
+
       const duration = (Date.now() - startTime) / 1000;
       this.syncDurationHistogram.observe(duration);
-      
+
       throw error;
     }
   }
@@ -197,7 +213,7 @@ export class CBBSyncProcessor extends WorkerHost {
   private prepareContactData(order: OrderData): CBBContactData {
     // Determine if order is urgent (for CBB boolean field)
     const isUrgent = order.urgency === 'urgent' || order.urgency === 'express';
-    
+
     // Calculate order_date Unix timestamp (in seconds)
     let orderDateUnix: number | undefined;
     if (order.entry_date) {
@@ -205,26 +221,39 @@ export class CBBSyncProcessor extends WorkerHost {
         const date = new Date(order.entry_date);
         if (!isNaN(date.getTime())) {
           orderDateUnix = Math.floor(date.getTime() / 1000); // Convert to seconds
-          this.logger.debug(`Converted entry_date ${order.entry_date} to Unix timestamp: ${orderDateUnix}`);
+          this.logger.debug(
+            `Converted entry_date ${order.entry_date} to Unix timestamp: ${orderDateUnix}`,
+          );
         }
       } catch (error) {
-        this.logger.warn(`Failed to convert entry_date to Unix timestamp: ${order.entry_date}`);
+        this.logger.warn(
+          `Failed to convert entry_date to Unix timestamp: ${order.entry_date}`,
+        );
       }
     }
-    
+
     // Extract gender from first applicant's passport data
     let gender: string | undefined;
-    if (order.applicants_data && Array.isArray(order.applicants_data) && order.applicants_data[0]) {
+    if (
+      order.applicants_data &&
+      Array.isArray(order.applicants_data) &&
+      order.applicants_data[0]
+    ) {
       const firstApplicant = order.applicants_data[0];
       if (firstApplicant.passport?.sex) {
         // Convert passport sex (m/f) to CBB gender format
-        gender = firstApplicant.passport.sex === 'm' ? 'male' : 
-                 firstApplicant.passport.sex === 'f' ? 'female' : 
-                 undefined;
-        this.logger.debug(`Extracted gender for ${order.order_id}: ${gender} from passport sex: ${firstApplicant.passport.sex}`);
+        gender =
+          firstApplicant.passport.sex === 'm'
+            ? 'male'
+            : firstApplicant.passport.sex === 'f'
+              ? 'female'
+              : undefined;
+        this.logger.debug(
+          `Extracted gender for ${order.order_id}: ${gender} from passport sex: ${firstApplicant.passport.sex}`,
+        );
       }
     }
-    
+
     // Map language based on branch - optional field, only set if we have a mapping
     // IL = Hebrew, RU = Russian, SE = Swedish, CO/others = English
     let language: string | undefined;
@@ -245,7 +274,7 @@ export class CBBSyncProcessor extends WorkerHost {
         language = 'English US';
     }
     this.logger.debug(`Mapped branch ${order.branch} to language: ${language}`);
-    
+
     return {
       id: order.client_phone,
       phone: order.client_phone,
@@ -260,28 +289,29 @@ export class CBBSyncProcessor extends WorkerHost {
         visa_country: order.product_country,
         visa_type: order.product_doc_type || 'tourist',
         OrderNumber: order.order_id,
-        
+
         // Number fields (type 1)
         visa_quantity: order.visa_quantity || 1,
-        
+
         // Boolean field (type 4) - CBB expects 1 for true, 0 for false
         order_urgent: isUrgent ? 1 : 0,
-        
+
         // Additional order information (text fields)
         order_priority: order.urgency || 'standard',
-        
+
         // Date field (type 2) expects Unix timestamp in seconds
         order_date: orderDateUnix,
-        
+
         // System fields
-        Email: order.client_email,  // System field ID -12
+        Email: order.client_email, // System field ID -12
       },
     };
   }
 
   private async handleSyncError(orderId: string, error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
     await this.updateCBBSyncResult(orderId, {
       cbb_sync_status: 'failed',
       cbb_sync_error: errorMessage,
@@ -324,26 +354,35 @@ export class CBBSyncProcessor extends WorkerHost {
   private async updateCBBSyncStatus(orderId: string, status: string) {
     const { error } = await this.supabaseService.client
       .from('orders')
-      .update({ 
+      .update({
         cbb_sync_status: status,
         cbb_sync_attempted_at: new Date().toISOString(),
       })
       .eq('order_id', orderId);
 
     if (error) {
-      this.logger.error(`Failed to update sync status for order ${orderId}:`, error);
+      this.logger.error(
+        `Failed to update sync status for order ${orderId}:`,
+        error,
+      );
       throw error;
     }
   }
 
-  private async updateCBBSyncResult(orderId: string, updates: Partial<OrderData>) {
+  private async updateCBBSyncResult(
+    orderId: string,
+    updates: Partial<OrderData>,
+  ) {
     const { error } = await this.supabaseService.client
       .from('orders')
       .update(updates)
       .eq('order_id', orderId);
 
     if (error) {
-      this.logger.error(`Failed to update sync result for order ${orderId}:`, error);
+      this.logger.error(
+        `Failed to update sync result for order ${orderId}:`,
+        error,
+      );
       throw error;
     }
   }

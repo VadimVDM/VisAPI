@@ -67,7 +67,9 @@ describe('OrdersService - CBB Sync Integration', () => {
       from: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: { id: 'order-id-123' }, error: null }),
+      single: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'order-id-123' }, error: null }),
       eq: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
     };
@@ -96,7 +98,7 @@ describe('OrdersService - CBB Sync Integration', () => {
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
-    
+
     // Suppress console logs during tests
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -123,7 +125,7 @@ describe('OrdersService - CBB Sync Integration', () => {
           attempts: 3,
           removeOnComplete: true,
           removeOnFail: false,
-        }
+        },
       );
     });
 
@@ -153,7 +155,7 @@ describe('OrdersService - CBB Sync Integration', () => {
           attempts: 3,
           removeOnComplete: true,
           removeOnFail: false,
-        }
+        },
       );
     });
 
@@ -182,7 +184,7 @@ describe('OrdersService - CBB Sync Integration', () => {
         { orderId: 'IL250819GB16' },
         expect.objectContaining({
           delay: 2000, // Default delay
-        })
+        }),
       );
     });
 
@@ -200,7 +202,7 @@ describe('OrdersService - CBB Sync Integration', () => {
         { orderId: 'IL250819GB16' },
         expect.objectContaining({
           delay: 5000,
-        })
+        }),
       );
     });
 
@@ -220,7 +222,9 @@ describe('OrdersService - CBB Sync Integration', () => {
 
     it('should handle undefined cbbSyncEnabled as false', async () => {
       // Arrange
-      (configService as { cbbSyncEnabled: boolean | undefined }).cbbSyncEnabled = undefined;
+      (
+        configService as { cbbSyncEnabled: boolean | undefined }
+      ).cbbSyncEnabled = undefined;
 
       // Act
       await service.createOrder(mockWebhookData);
@@ -250,7 +254,7 @@ describe('OrdersService - CBB Sync Integration', () => {
       expect(supabaseService.client.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           client_phone: '15551234567', // Cleaned phone number
-        })
+        }),
       );
     });
 
@@ -293,7 +297,7 @@ describe('OrdersService - CBB Sync Integration', () => {
       expect(supabaseService.client.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           client_phone: '0000000000', // Fallback phone
-        })
+        }),
       );
       // Sync will still be triggered for ALL orders
       // The CBB processor will handle the invalid phone gracefully
@@ -303,10 +307,10 @@ describe('OrdersService - CBB Sync Integration', () => {
     it('should handle duplicate order with existing CBB sync', async () => {
       // Arrange
       let callCount = 0;
-      
+
       supabaseService.client.from = jest.fn().mockImplementation(() => {
         callCount++;
-        
+
         if (callCount === 1) {
           // First call - insert attempt that fails with duplicate
           return {
@@ -353,7 +357,7 @@ describe('OrdersService - CBB Sync Integration', () => {
           attempts: 3,
           removeOnComplete: true,
           removeOnFail: false,
-        }
+        },
       );
     });
   });
@@ -367,7 +371,7 @@ describe('OrdersService - CBB Sync Integration', () => {
       expect(supabaseService.client.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           client_phone: '447700900123',
-        })
+        }),
       );
     });
 
@@ -391,7 +395,7 @@ describe('OrdersService - CBB Sync Integration', () => {
       expect(supabaseService.client.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           client_phone: '447700900123',
-        })
+        }),
       );
     });
 
@@ -415,7 +419,7 @@ describe('OrdersService - CBB Sync Integration', () => {
       expect(supabaseService.client.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           client_phone: '447700900123',
-        })
+        }),
       );
     });
   });

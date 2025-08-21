@@ -44,12 +44,34 @@ import {
             keepAlive: 30000,
             connectTimeout: 10000,
             commandTimeout: 5000,
-            maxRetriesPerRequest: 3,
+            maxRetriesPerRequest: null, // Required by BullMQ
             enableReadyCheck: true,
             enableOfflineQueue: true,
+            lazyConnect: true, // Don't connect immediately
             retryStrategy: (times: number) => {
-              if (times > 10) return null;
-              return Math.min(times * 100, 2000);
+              if (times > 10) {
+                console.error(
+                  '[BullMQ] Redis connection failed after 10 retries',
+                );
+                return null;
+              }
+              const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s
+              console.log(
+                `[BullMQ] Retrying Redis connection in ${delay}ms (attempt ${times})`,
+              );
+              return delay;
+            },
+            reconnectOnError: (err: Error) => {
+              const targetErrors = [
+                'READONLY',
+                'ECONNRESET',
+                'ETIMEDOUT',
+                'ECONNREFUSED',
+              ];
+              if (targetErrors.some((e) => err.message.includes(e))) {
+                return 1; // Reconnect after 1ms
+              }
+              return false;
             },
           },
           // Queue-specific optimizations

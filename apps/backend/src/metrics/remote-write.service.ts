@@ -48,13 +48,17 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
     if (isCloudEnabled) {
       // Grafana Cloud mode - requires auth
       if (!this.url || !this.username || !this.password) {
-        this.logger.warn('Remote write is enabled but cloud credentials are missing');
+        this.logger.warn(
+          'Remote write is enabled but cloud credentials are missing',
+        );
         return;
       }
     } else {
       // Self-hosted mode - only needs URL
       if (!this.url) {
-        this.logger.warn('Remote write is enabled but Prometheus URL is missing');
+        this.logger.warn(
+          'Remote write is enabled but Prometheus URL is missing',
+        );
         return;
       }
     }
@@ -132,7 +136,8 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
             },
           }
         : {
-            url: this.url || 'http://grafana.railway.internal:9090/api/v1/write',
+            url:
+              this.url || 'http://grafana.railway.internal:9090/api/v1/write',
             timeout: 10000,
             verbose: false,
             headers: {
@@ -143,7 +148,9 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       // Use the prometheus-remote-write library to push metrics
       const result = await pushTimeseries(timeSeries, config);
 
-      const destination = isCloudEnabled ? 'Grafana Cloud' : 'self-hosted Grafana';
+      const destination = isCloudEnabled
+        ? 'Grafana Cloud'
+        : 'self-hosted Grafana';
       if (result.status === 200 || result.status === 204) {
         this.logger.debug(`Successfully pushed metrics to ${destination}`);
       } else {
@@ -161,7 +168,9 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
         'GRAFANA_CLOUD_ENABLED',
         true,
       );
-      const destination = isCloudEnabled ? 'Grafana Cloud' : 'self-hosted Grafana';
+      const destination = isCloudEnabled
+        ? 'Grafana Cloud'
+        : 'self-hosted Grafana';
       this.logger.error(
         `Failed to push metrics to ${destination}`,
         errorMessage,
