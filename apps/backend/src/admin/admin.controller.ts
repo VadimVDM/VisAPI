@@ -3,13 +3,24 @@ import { Request, Response, NextFunction } from 'express';
 import { AdminService } from './admin.service';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
-@Controller('admin')
+@Controller('admin/queues')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @ApiExcludeEndpoint()
-  @All('queues*')
-  getQueues(
+  @All()
+  handleAllQueues(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ): void {
+    const router = this.adminService.getRouter();
+    void router(req, res, next);
+  }
+
+  @ApiExcludeEndpoint()
+  @All('*')
+  handleAllQueueSubPaths(
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
