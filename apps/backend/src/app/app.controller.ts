@@ -28,7 +28,7 @@ export class AppController {
   @Get('v1/version')
   version() {
     return {
-      version: '0.1.0',
+      version: '0.5.0',
       commit: process.env.GIT_SHA || 'local',
       build: process.env.BUILD_NUMBER || 'local',
     };

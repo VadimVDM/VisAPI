@@ -35,7 +35,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('VisAPI')
     .setDescription('Workflow automation API for Visanet')
-    .setVersion('1.0')
+    .setVersion('0.5.0')
     .addApiKey(
       {
         type: 'apiKey',
