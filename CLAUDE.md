@@ -9,9 +9,10 @@ Essential information for working with the VisAPI project. Updated: August 21, 2
 ### Production Environment
 
 - **Frontend**: https://app.visanet.app (Vercel)
-- **Backend**: https://api.visanet.app (Render)
+- **Backend**: https://api.visanet.app (Railway - migrated August 21, 2025)
 - **Database**: Supabase (pangdzwamawwgmvxnwkk)
-- **Queue**: Upstash Redis
+- **Queue**: Railway Redis (migrated from Upstash)
+- **Monitoring**: Self-hosted Grafana (optional, prepared for Railway)
 
 ### Key Achievements
 
@@ -51,6 +52,9 @@ Essential information for working with the VisAPI project. Updated: August 21, 2
 - ✅ Complete n8n system removal with clean architecture transition (July 31, 2025)
 - ✅ Vizi webhook order creation fixed with proper validation handling (August 21, 2025)
 - ✅ Production build configuration optimized - scripts excluded from webpack bundle (August 21, 2025)
+- ✅ Railway migration completed - backend and Redis moved from Render/Upstash (August 21, 2025)
+- ✅ Self-hosted monitoring prepared with Grafana support on Railway (August 21, 2025)
+- ✅ Node.js 22 deployment configuration with Nixpacks (August 21, 2025)
 
 ## Project Structure
 
@@ -98,10 +102,10 @@ VisAPI/
 
 ```
 ┌──────────────┐ HTTPS  ┌────────────────┐  WebSocket  ┌──────────────────┐
-│   Vercel     │──────▶│ Render Gateway │────────────▶│   Render Worker  │
+│   Vercel     │──────▶│ Railway Gateway│────────────▶│  Railway Worker  │
 │ (Next.js UI) │       │  (NestJS)      │             │   (BullMQ)       │
 └──────────────┘       │  /api/v1/*     │◀──Redis────▶│                  │
-                       └──────▲─────────┘   (Upstash) └──────────────────┘
+                       └──────▲─────────┘  (Railway)  └──────────────────┘
                               │ SQL
                               ▼
                        ┌────────────────┐
@@ -124,13 +128,14 @@ VisAPI/
 **Backend** (api.visanet.app)
 
 - NestJS 11.1 with TypeScript
-- BullMQ + Redis 8 (Upstash)
+- BullMQ + Redis 8 (Railway)
 - PostgreSQL 16 (Supabase)
-- Deployed on Render
+- Deployed on Railway (auto-deploy from GitHub)
 
 **Infrastructure**
 
 - NX 21.2 Monorepo + pnpm 10.13
+- Node.js 22 runtime (via Nixpacks)
 - Docker for local dev (PostgreSQL 16, Redis 8)
 - GitHub Actions CI/CD with security scanning
 - Domain: visanet.app
@@ -597,12 +602,14 @@ GRAFANA_PUSH_INTERVAL_MS=30000
 - Configuration: `/vercel.json` + `.vercel/project.json`
 - Build: `pnpm nx build frontend`
 
-**Backend (Render)**
+**Backend (Railway)**
 
 - URL: https://api.visanet.app
 - **Auto-deploy**: Triggered automatically on every push to `main`
 - Build: `pnpm install && pnpm nx build backend`
 - Start: `node dist/apps/backend/main.js`
+- Node.js: v22 (via Nixpacks configuration)
+- Redis: Integrated Railway service
 
 ### GitHub Actions Workflows
 
@@ -633,9 +640,6 @@ git push origin main
 
 # Check deployment status
 curl https://api.visanet.app/api/v1/healthz
-
-# Manual production deployment (optional)
-gh workflow run deploy-production.yml
 ```
 
 ## Troubleshooting
@@ -677,10 +681,12 @@ pnpm nx build frontend-data
 **Redis Connection Issues**
 
 ```bash
-# Check Redis connectivity
-redis-cli -h localhost -p 6379 ping
+# For Railway Redis (production)
+# Use public URL if internal DNS fails
+# redis://default:[password]@hopper.proxy.rlwy.net:25566
 
-# Check Docker Redis
+# For local development
+redis-cli -h localhost -p 6379 ping
 docker-compose logs redis
 ```
 
@@ -706,10 +712,10 @@ pnpm nx show project frontend
 ### External Services
 
 - **Supabase:** Database + Auth + File Storage
-- **Upstash:** Redis for production queues
-- **Render:** Backend API gateway and workers
+- **Railway:** Backend hosting + Redis queues
 - **Vercel:** Frontend hosting
 - **Slack:** Internal notifications
+- **Resend:** Email service
 
 ### Documentation Links
 
@@ -767,6 +773,7 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - `docs/vizi-webhook-setup.md`: Vizi webhook integration guide and implementation details.
 - `load-tests/`: k6 load testing suite for performance validation.
 - `chaos-engineering/`: Chaos testing toolkit for failure simulation.
+
 
 ## Notes for Claude Code
 
