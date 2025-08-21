@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
 import { CBBContactData, CBBContactSyncResult } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
+import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 
@@ -46,6 +47,7 @@ export class CBBSyncProcessor extends WorkerHost {
   constructor(
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
+    private readonly logService: LogService,
     @InjectMetric('cbb_sync_total') private readonly syncTotalCounter: Counter<string>,
     @InjectMetric('cbb_sync_success') private readonly syncSuccessCounter: Counter<string>,
     @InjectMetric('cbb_sync_failures') private readonly syncFailureCounter: Counter<string>,
@@ -64,6 +66,17 @@ export class CBBSyncProcessor extends WorkerHost {
 
     this.logger.log(`Starting CBB contact sync for order: ${orderId}`);
     this.syncTotalCounter.inc();
+
+    // Log to database
+    await this.logService.createLog({
+      level: 'info',
+      message: 'Starting CBB contact sync',
+      metadata: {
+        order_id: orderId,
+        job_id: job.id,
+        source: 'cbb_sync',
+      },
+    });
 
     try {
       // 1. Fetch order details
@@ -140,6 +153,21 @@ export class CBBSyncProcessor extends WorkerHost {
         contact_id: contact.id,
         action: isNewContact ? 'created' : 'updated',
         has_whatsapp: hasWhatsApp,
+      });
+
+      // Log to database
+      await this.logService.createLog({
+        level: 'info',
+        message: `CBB contact sync ${hasWhatsApp ? 'successful' : 'completed - no WhatsApp'}`,
+        metadata: {
+          order_id: orderId,
+          cbb_contact_id: contact.id,
+          action: isNewContact ? 'created' : 'updated',
+          has_whatsapp: hasWhatsApp,
+          client_phone: order.client_phone,
+          client_name: order.client_name,
+          source: 'cbb_sync',
+        },
       });
 
       // Record metrics
@@ -263,6 +291,18 @@ export class CBBSyncProcessor extends WorkerHost {
     this.logger.error(`CBB contact sync failed for order ${orderId}`, {
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Log error to database
+    await this.logService.createLog({
+      level: 'error',
+      message: 'CBB contact sync failed',
+      metadata: {
+        order_id: orderId,
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        source: 'cbb_sync',
+      },
     });
   }
 

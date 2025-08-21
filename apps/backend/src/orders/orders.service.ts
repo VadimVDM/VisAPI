@@ -144,9 +144,9 @@ export class OrdersService {
       
       this.logger.log(`Order created successfully: ${data.id}`);
       
-      // Trigger CBB sync for ALL orders (not just WhatsApp enabled)
-      const cbbSyncEnabled = this.configService.cbbSyncEnabled !== false;
-      if (cbbSyncEnabled) {
+      // Trigger CBB sync ONLY for IL branch orders
+      const isILBranch = orderData.branch?.toLowerCase() === 'il';
+      if (isILBranch) {
         try {
           const syncDelay = this.configService.cbbSyncDelayMs || 2000;
           await this.queueService.addJob(
@@ -160,13 +160,13 @@ export class OrdersService {
               removeOnFail: false,
             }
           );
-          this.logger.log(`CBB sync queued for order ${orderData.order_id} (WhatsApp alerts: ${orderData.whatsapp_alerts_enabled})`);
+          this.logger.log(`CBB sync queued for IL branch order ${orderData.order_id} (WhatsApp alerts: ${orderData.whatsapp_alerts_enabled})`);
         } catch (error) {
           // Don't fail the order creation if queue fails
           this.logger.error(`Failed to queue CBB sync for order ${orderData.order_id}:`, error);
         }
       } else {
-        this.logger.debug(`CBB sync disabled globally for order ${orderData.order_id}`);
+        this.logger.debug(`CBB sync skipped for non-IL branch order ${orderData.order_id} (branch: ${orderData.branch})`);
       }
       
       return data.id;
