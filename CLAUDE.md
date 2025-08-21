@@ -68,7 +68,7 @@ VisAPI/
 │   │   ├── data-access/   # API clients and React hooks
 │   │   └── ui-components/ # Reusable UI components
 │   ├── backend/           # Backend-specific libraries
-│   │   ├── core-cgb/      # WhatsApp CGB API integration
+│   │   ├── core-cbb/      # WhatsApp CBB API integration
 │   │   ├── core-config/   # Configuration management
 │   │   ├── core-supabase/ # Database and storage services
 │   │   ├── email-service/ # Email templates and Resend integration
@@ -400,7 +400,7 @@ Use these tools:
 ### Connector Types
 
 1. **Slack:** SDK wrapper for notifications
-2. **WhatsApp:** Complete CGB API integration with contact resolution
+2. **WhatsApp:** Complete CBB API integration with contact resolution
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
 4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations
@@ -765,7 +765,7 @@ This document contains the complete project history and is the single source for
 For deeper dives into specific technical implementations, see the `docs/` directory. Key documents include:
 
 - `docs/testing-guide.md`: Best practices for running the test suite efficiently.
-- `docs/cgb-api-reference.md`: Detailed reference for the WhatsApp integration.
+- `docs/cbb-api-reference.md`: Detailed reference for the WhatsApp integration.
 - `docs/grafana-prometheus-setup.md`: Complete monitoring setup guide with dashboard URLs and troubleshooting.
 - `docs/sprint-*.md` files: Individual sprint plans with technical specifications.
 - `docs/runbooks/`: Operational runbooks for DLQ replay, Redis failover, and secret rotation.
