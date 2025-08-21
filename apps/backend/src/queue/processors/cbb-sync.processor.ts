@@ -93,9 +93,21 @@ export class CBBSyncProcessor extends WorkerHost {
       let isNewContact = false;
 
       if (contact) {
-        // Update existing contact with ALL fields (basic + custom)
+        // CBB API limitation: Can only update custom fields, not basic fields
+        this.logger.warn(`Contact ${order.client_phone} exists. CBB API only allows updating custom fields.`);
+        
+        // Check if basic fields differ
+        if (contact.name !== contactData.name || contact.email !== contactData.email) {
+          this.logger.warn(
+            `Cannot update basic fields for existing contact ${order.client_phone}. ` +
+            `Current: name="${contact.name}", email="${contact.email}". ` +
+            `New: name="${contactData.name}", email="${contactData.email}"`
+          );
+        }
+        
+        // Update custom fields only (CBB API limitation)
         contact = await this.cbbService.updateContactComplete(contactData);
-        this.logger.log(`Updated CBB contact for order ${orderId} with all fields`);
+        this.logger.log(`Updated CBB contact custom fields for order ${orderId}`);
         this.contactsUpdatedCounter.inc();
       } else {
         // Create new contact

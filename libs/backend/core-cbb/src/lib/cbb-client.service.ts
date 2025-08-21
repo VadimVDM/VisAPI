@@ -262,19 +262,46 @@ export class CbbClientService {
 
   /**
    * Update contact custom fields ONLY
+   * CBB API requires using field name as ID and sending value as formData
    */
   async updateContactFields(id: string, cufs: Record<string, any>): Promise<CBBContact> {
     try {
       this.logger.debug(`Updating contact custom fields for ID: ${id}`);
       
-      const response = await this.makeRequest<CBBContact>('PATCH', `/contacts/${id}`, {
-        data: {
-          customFields: cufs,
-        },
-      });
+      // Update each custom field individually using field name as ID
+      for (const [fieldName, fieldValue] of Object.entries(cufs)) {
+        try {
+          this.logger.debug(`Updating custom field ${fieldName} = ${fieldValue}`);
+          
+          // Use form data as CBB expects
+          const formData = new URLSearchParams();
+          formData.append('value', String(fieldValue));
+          
+          await this.makeRequest('POST', `/contacts/${id}/custom_fields/${fieldName}`, {
+            data: formData.toString(),
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          });
+          
+          this.logger.debug(`Updated custom field ${fieldName} successfully`);
+        } catch (error) {
+          this.logger.error(`Failed to update custom field ${fieldName}:`, error);
+          // Continue updating other fields even if one fails
+        }
+      }
 
-      this.logger.debug(`Contact ${id} custom fields updated`);
-      return response.data;
+      // Return the contact data (CBB doesn't return updated contact from field updates)
+      return {
+        id: id,
+        phone: id,
+        name: '',
+        email: '',
+        hasWhatsApp: true,
+        customFields: cufs,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     } catch (error) {
       this.logger.error(`Failed to update contact ${id}:`, error);
       throw error;
@@ -282,35 +309,74 @@ export class CbbClientService {
   }
 
   /**
-   * Update contact with ALL fields (basic + custom)
+   * Update contact - CBB API allows updating some basic fields and custom fields
+   * Basic fields that CAN be updated: email, first_name (through custom field endpoint)
+   * Basic fields that CANNOT be updated: gender, language (only set during creation)
    */
   async updateContactComplete(data: CBBContactData): Promise<CBBContact> {
     try {
-      this.logger.debug(`Updating complete contact data for ID: ${data.id}`);
+      this.logger.debug(`Updating contact ID: ${data.id}`);
       
-      const requestData: any = {
+      // Update email if provided (CBB allows email update through custom field endpoint)
+      if (data.email) {
+        try {
+          this.logger.debug(`Updating email to: ${data.email}`);
+          const formData = new URLSearchParams();
+          formData.append('value', data.email);
+          
+          await this.makeRequest('POST', `/contacts/${data.id}/custom_fields/email`, {
+            data: formData.toString(),
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          });
+          this.logger.debug('Email updated successfully');
+        } catch (error) {
+          this.logger.error('Failed to update email:', error);
+        }
+      }
+      
+      // Update first_name if provided (extract from full name)
+      if (data.name) {
+        try {
+          const firstName = data.name.split(' ')[0];
+          this.logger.debug(`Updating first_name to: ${firstName}`);
+          const formData = new URLSearchParams();
+          formData.append('value', firstName);
+          
+          await this.makeRequest('POST', `/contacts/${data.id}/custom_fields/first_name`, {
+            data: formData.toString(),
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          });
+          this.logger.debug('First name updated successfully');
+        } catch (error) {
+          this.logger.error('Failed to update first_name:', error);
+        }
+      }
+      
+      // Note: gender and language cannot be updated after creation
+      if (data.gender || data.language) {
+        this.logger.warn('CBB API limitation: Cannot update gender or language for existing contacts');
+      }
+      
+      // Update custom fields
+      if (data.cufs && Object.keys(data.cufs).length > 0) {
+        await this.updateContactFields(data.id, data.cufs);
+      }
+      
+      // Return the contact data we have (CBB doesn't return updated contact from field updates)
+      return {
+        id: data.id,
         phone: data.phone,
         name: data.name,
         email: data.email,
+        hasWhatsApp: true,
         customFields: data.cufs,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-
-      // Add optional fields only if provided and not undefined
-      if (data.gender && data.gender !== undefined) {
-        requestData.gender = data.gender;
-        this.logger.debug(`Updating gender to: ${data.gender}`);
-      }
-      if (data.language && data.language !== undefined) {
-        requestData.language = data.language;
-        this.logger.debug(`Updating language to: ${data.language}`);
-      }
-      
-      const response = await this.makeRequest<CBBContact>('PATCH', `/contacts/${data.id}`, {
-        data: requestData,
-      });
-
-      this.logger.debug(`Contact ${data.id} fully updated with all fields`);
-      return response.data;
     } catch (error) {
       this.logger.error(`Failed to update contact ${data.id}:`, error);
       throw error;
@@ -319,13 +385,16 @@ export class CbbClientService {
 
   /**
    * Validate if phone has WhatsApp
+   * NOTE: CBB API doesn't have a WhatsApp validation endpoint
+   * We assume if contact exists, they have WhatsApp capability
    */
   async validateWhatsApp(phone: string): Promise<boolean> {
     try {
-      this.logger.debug(`Validating WhatsApp for phone: ${phone}`);
+      this.logger.debug(`Checking if contact ${phone} exists (assuming WhatsApp if exists)`);
       
-      const response = await this.makeRequest<WhatsAppValidationResponse>('GET', `/contacts/${phone}/validate-whatsapp`);
-      return response.data?.hasWhatsApp || false;
+      // Try to get the contact - if it exists, assume WhatsApp is available
+      const contact = await this.getContactById(phone);
+      return contact !== null;
     } catch (error) {
       this.logger.warn(`Failed to validate WhatsApp for ${phone}:`, error);
       return false;

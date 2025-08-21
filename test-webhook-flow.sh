@@ -3,18 +3,21 @@
 # Test the complete webhook flow with proper data
 # This simulates a real Vizi webhook with correct structure
 
-API_URL="https://api.visanet.app"
-API_KEY="vizi_8goxcvyqvzgz53vqggdw8hykm7lqfemjz37zgyuvwx8rhvncvdzsgw"
+API_URL="https://visapi.up.railway.app"
+API_KEY="vizi_32cf6923b6d84884.YBGmlP3VLQ1GrV51BL_wurqPBzjh3A3jISRfsdqb49g"
 
-# Create a test payload with proper structure
+# Create a test payload with proper structure  
+TIMESTAMP=$(date +%s)
+# Convert seconds to milliseconds by adding 000
+TIMESTAMP_MS="${TIMESTAMP}000"
 PAYLOAD='{
   "form": {
-    "id": "frm_test_'$(date +%s)'",
+    "id": "frm_test_'${TIMESTAMP}'",
     "meta": {
       "url": "https://visanet.app/india",
       "branch": "il",
       "domain": "visanet.app",
-      "timestamp": '$(date +%s%3N)'
+      "timestamp": '${TIMESTAMP_MS}'
     },
     "entry": {
       "date": "2025-10-01",
@@ -56,7 +59,7 @@ PAYLOAD='{
     "amount": 150,
     "branch": "il",
     "status": "active",
-    "form_id": "frm_test_'$(date +%s)'",
+    "form_id": "frm_test_'${TIMESTAMP}'",
     "currency": "USD",
     "payment_processor": "stripe"
   }
