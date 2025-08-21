@@ -336,13 +336,12 @@ export class CbbClientService {
         }
       }
       
-      // Update first_name if provided (extract from full name)
+      // Update first_name if provided (use complete name as-is)
       if (data.name) {
         try {
-          const firstName = data.name.split(' ')[0];
-          this.logger.debug(`Updating first_name to: ${firstName}`);
+          this.logger.debug(`Updating first_name to: ${data.name}`);
           const formData = new URLSearchParams();
-          formData.append('value', firstName);
+          formData.append('value', data.name);
           
           await this.makeRequest('POST', `/contacts/${data.id}/custom_fields/first_name`, {
             data: formData.toString(),
