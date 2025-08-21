@@ -99,8 +99,8 @@ These variables are for the backend NestJS application and must be kept secret.
 
 | Variable                           | Description                                        | Required |
 | ---------------------------------- | -------------------------------------------------- | -------- |
-| `CGB_API_URL`                      | WhatsApp API endpoint (ChatGPT Builder)            | ✅       |
-| `CGB_API_KEY`                      | WhatsApp API key                                   | ✅       |
+| `CBB_API_URL`                      | WhatsApp API endpoint (ChatGPT Builder)            | ✅       |
+| `CBB_API_KEY`                      | WhatsApp API key                                   | ✅       |
 | `RESEND_API_KEY`                   | Resend API key for sending emails                  | ✅       |
 | `NOREPLY_EMAIL`                    | The "From" address for system emails               | ✅       |
 | `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD` | Set to `true` in production to use system Chromium | ✅       |

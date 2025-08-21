@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-import { CgbClientService } from './cgb-client.service';
+import { CbbClientService } from './cbb-client.service';
 import { ContactResolverService } from './contact-resolver.service';
 import { TemplateService } from './template.service';
 
@@ -14,14 +14,14 @@ import { TemplateService } from './template.service';
     ConfigModule,
   ],
   providers: [
-    CgbClientService,
+    CbbClientService,
     ContactResolverService,
     TemplateService,
   ],
   exports: [
-    CgbClientService,
+    CbbClientService,
     ContactResolverService,
     TemplateService,
   ],
 })
-export class CgbModule {}
+export class CbbModule {}

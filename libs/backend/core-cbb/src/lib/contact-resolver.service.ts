@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Contact, CreateContactDto } from '@visapi/shared-types';
-import { CgbClientService, ContactNotFoundError } from './cgb-client.service';
+import { CbbClientService, ContactNotFoundError } from './cbb-client.service';
 
 @Injectable()
 export class ContactResolverService {
@@ -9,13 +9,13 @@ export class ContactResolverService {
   private readonly cacheTimeout: number;
 
   constructor(
-    private readonly cgbClient: CgbClientService
+    private readonly cbbClient: CbbClientService
   ) {
     this.cacheTimeout = 3600000; // 1 hour in milliseconds
   }
 
   /**
-   * Resolve phone number to CGB contact, creating if necessary
+   * Resolve phone number to CBB contact, creating if necessary
    */
   async resolveContact(phone: string): Promise<Contact> {
     const normalizedPhone = this.normalizePhoneNumber(phone);
@@ -29,7 +29,7 @@ export class ContactResolverService {
 
     try {
       // Try to find existing contact
-      let contact = await this.cgbClient.findContactByPhone(normalizedPhone);
+      let contact = await this.cbbClient.findContactByPhone(normalizedPhone);
       
       if (!contact) {
         this.logger.debug(`Contact not found for ${normalizedPhone}, creating new contact`);
@@ -64,7 +64,7 @@ export class ContactResolverService {
       ],
     };
 
-    return await this.cgbClient.createContact(contactData);
+    return await this.cbbClient.createContact(contactData);
   }
 
   /**

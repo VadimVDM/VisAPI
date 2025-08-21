@@ -144,13 +144,13 @@ export class OrdersService {
       
       this.logger.log(`Order created successfully: ${data.id}`);
       
-      // Trigger CGB sync for ALL orders (not just WhatsApp enabled)
-      const cgbSyncEnabled = this.configService.cgbSyncEnabled !== false;
-      if (cgbSyncEnabled) {
+      // Trigger CBB sync for ALL orders (not just WhatsApp enabled)
+      const cbbSyncEnabled = this.configService.cbbSyncEnabled !== false;
+      if (cbbSyncEnabled) {
         try {
-          const syncDelay = this.configService.cgbSyncDelayMs || 2000;
+          const syncDelay = this.configService.cbbSyncDelayMs || 2000;
           await this.queueService.addJob(
-            QUEUE_NAMES.CGB_SYNC, 
+            QUEUE_NAMES.CBB_SYNC, 
             'sync-contact', 
             { orderId: orderData.order_id },
             {
@@ -160,13 +160,13 @@ export class OrdersService {
               removeOnFail: false,
             }
           );
-          this.logger.log(`CGB sync queued for order ${orderData.order_id} (WhatsApp alerts: ${orderData.whatsapp_alerts_enabled})`);
+          this.logger.log(`CBB sync queued for order ${orderData.order_id} (WhatsApp alerts: ${orderData.whatsapp_alerts_enabled})`);
         } catch (error) {
           // Don't fail the order creation if queue fails
-          this.logger.error(`Failed to queue CGB sync for order ${orderData.order_id}:`, error);
+          this.logger.error(`Failed to queue CBB sync for order ${orderData.order_id}:`, error);
         }
       } else {
-        this.logger.debug(`CGB sync disabled globally for order ${orderData.order_id}`);
+        this.logger.debug(`CBB sync disabled globally for order ${orderData.order_id}`);
       }
       
       return data.id;

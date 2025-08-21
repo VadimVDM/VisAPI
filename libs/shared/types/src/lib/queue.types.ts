@@ -5,7 +5,7 @@ export const QUEUE_NAMES = {
   SLACK: 'slack',
   WHATSAPP: 'whatsapp',
   PDF: 'pdf',
-  CGB_SYNC: 'cgb-sync',
+  CBB_SYNC: 'cbb-sync',
   DLQ: 'dlq',
 } as const;
 
@@ -19,7 +19,7 @@ export const JOB_NAMES = {
   SEND_SLACK: 'slack.send',
   SEND_WHATSAPP: 'whatsapp.send',
   GENERATE_PDF: 'pdf.generate',
-  SYNC_CGB_CONTACT: 'cgb.sync-contact',
+  SYNC_CBB_CONTACT: 'cbb.sync-contact',
   PROCESS_IMAGE: 'image.process',
   PROCESS_WORKFLOW: 'workflow.process',
   PRUNE_LOGS: 'logs.prune',
@@ -36,8 +36,8 @@ export interface WhatsAppJobData {
 
 export interface WhatsAppJobResult {
   success: boolean;
-  contactId: number;                       // CGB contact ID
-  messageId?: string;                      // CGB message ID if available
+  contactId: number;                       // CBB contact ID
+  messageId?: string;                      // CBB message ID if available
   to: string;                             // Original phone number
   timestamp: string;
   error?: string;

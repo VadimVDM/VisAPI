@@ -109,13 +109,13 @@ export type Database = {
           applicants_data: Json | null
           branch: string
           business_data: Json | null
-          cgb_contact_exists: boolean | null
-          cgb_contact_id: string | null
-          cgb_has_whatsapp: boolean | null
-          cgb_sync_attempted_at: string | null
-          cgb_sync_completed_at: string | null
-          cgb_sync_error: string | null
-          cgb_sync_status: string | null
+          cbb_contact_exists: boolean | null
+          cbb_contact_id: string | null
+          cbb_has_whatsapp: boolean | null
+          cbb_sync_attempted_at: string | null
+          cbb_sync_completed_at: string | null
+          cbb_sync_error: string | null
+          cbb_sync_status: string | null
           client_email: string
           client_name: string
           client_phone: string
@@ -164,13 +164,13 @@ export type Database = {
           applicants_data?: Json | null
           branch: string
           business_data?: Json | null
-          cgb_contact_exists?: boolean | null
-          cgb_contact_id?: string | null
-          cgb_has_whatsapp?: boolean | null
-          cgb_sync_attempted_at?: string | null
-          cgb_sync_completed_at?: string | null
-          cgb_sync_error?: string | null
-          cgb_sync_status?: string | null
+          cbb_contact_exists?: boolean | null
+          cbb_contact_id?: string | null
+          cbb_has_whatsapp?: boolean | null
+          cbb_sync_attempted_at?: string | null
+          cbb_sync_completed_at?: string | null
+          cbb_sync_error?: string | null
+          cbb_sync_status?: string | null
           client_email: string
           client_name: string
           client_phone: string
@@ -219,13 +219,13 @@ export type Database = {
           applicants_data?: Json | null
           branch?: string
           business_data?: Json | null
-          cgb_contact_exists?: boolean | null
-          cgb_contact_id?: string | null
-          cgb_has_whatsapp?: boolean | null
-          cgb_sync_attempted_at?: string | null
-          cgb_sync_completed_at?: string | null
-          cgb_sync_error?: string | null
-          cgb_sync_status?: string | null
+          cbb_contact_exists?: boolean | null
+          cbb_contact_id?: string | null
+          cbb_has_whatsapp?: boolean | null
+          cbb_sync_attempted_at?: string | null
+          cbb_sync_completed_at?: string | null
+          cbb_sync_error?: string | null
+          cbb_sync_status?: string | null
           client_email?: string
           client_name?: string
           client_phone?: string

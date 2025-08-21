@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@visapi/core-config';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { BullModule } from '@nestjs/bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
-import { CgbModule } from '@visapi/backend-core-cgb';
+import { CbbModule } from '@visapi/backend-core-cbb';
 import { WorkerService } from './worker.service';
 import { SlackProcessor } from './processors/slack.processor';
 import { WhatsAppProcessor } from './processors/whatsapp.processor';
@@ -19,7 +19,7 @@ import { LoggingModule } from '@visapi/backend-logging';
   imports: [
     ConfigModule, 
     SupabaseModule, 
-    CgbModule,
+    CbbModule,
     LoggingModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],

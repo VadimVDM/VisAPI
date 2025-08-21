@@ -78,7 +78,7 @@ export interface FindContactResponse {
   found: boolean;
 }
 
-export interface CgbApiResponse<T = any> {
+export interface CbbApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
@@ -98,8 +98,8 @@ export interface FieldType {
   type: number;
 }
 
-// CGB Contact Sync Types
-export interface CGBContactData {
+// CBB Contact Sync Types
+export interface CBBContactData {
   id: string; // Phone number as ID
   phone: string;
   name?: string;
@@ -107,7 +107,7 @@ export interface CGBContactData {
   cufs: Record<string, any>; // Custom fields
 }
 
-export interface CGBContact {
+export interface CBBContact {
   id: string; // Phone number as ID
   phone: string;
   name: string;
@@ -118,7 +118,7 @@ export interface CGBContact {
   updatedAt: string;
 }
 
-export interface CGBContactSyncResult {
+export interface CBBContactSyncResult {
   status: 'success' | 'failed' | 'no_whatsapp';
   action: 'created' | 'updated' | 'skipped';
   contactId?: string;
@@ -134,7 +134,7 @@ export interface WhatsAppValidationResponse {
 export const WHATSAPP_CHANNEL = 5;
 export const WHATSAPP_CHANNEL_NAME = 'whatsapp';
 
-export const CGB_ENDPOINTS = {
+export const CBB_ENDPOINTS = {
   CONTACTS: '/contacts',
   FIND_CONTACT: '/contacts/find_by_custom_field',
   SEND_TEXT: (contactId: number) => `/contacts/${contactId}/send/text`,

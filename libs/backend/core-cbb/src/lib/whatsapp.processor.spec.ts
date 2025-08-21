@@ -3,16 +3,16 @@ import { Job } from 'bullmq';
 import { WhatsAppProcessor } from './whatsapp.processor';
 import { WhatsAppJobData, WhatsAppJobResult, Contact } from '@visapi/shared-types';
 import {
-  CgbClientService,
+  CbbClientService,
   ContactResolverService,
   TemplateService,
-  CgbApiError,
+  CbbApiError,
   ContactNotFoundError
-} from '@visapi/backend-core-cgb';
+} from '@visapi/backend-core-cbb';
 
 describe('WhatsAppProcessor', () => {
   let processor: WhatsAppProcessor;
-  let cgbClient: jest.Mocked<CgbClientService>;
+  let cbbClient: jest.Mocked<CbbClientService>;
   let contactResolver: jest.Mocked<ContactResolverService>;
   let templateService: jest.Mocked<TemplateService>;
 
@@ -47,7 +47,7 @@ describe('WhatsAppProcessor', () => {
   };
 
   beforeEach(async () => {
-    const mockCgbClient = {
+    const mockCbbClient = {
       sendTextMessage: jest.fn(),
       sendFileMessage: jest.fn(),
       sendFlow: jest.fn(),
@@ -65,14 +65,14 @@ describe('WhatsAppProcessor', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WhatsAppProcessor,
-        { provide: CgbClientService, useValue: mockCgbClient },
+        { provide: CbbClientService, useValue: mockCbbClient },
         { provide: ContactResolverService, useValue: mockContactResolver },
         { provide: TemplateService, useValue: mockTemplateService },
       ],
     }).compile();
 
     processor = module.get<WhatsAppProcessor>(WhatsAppProcessor);
-    cgbClient = module.get(CgbClientService);
+    cbbClient = module.get(CbbClientService);
     contactResolver = module.get(ContactResolverService);
     templateService = module.get(TemplateService);
   });
@@ -91,7 +91,7 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendTextMessage.mockResolvedValue({
+      cbbClient.sendTextMessage.mockResolvedValue({
         success: true,
         message_id: 'msg_123',
       });
@@ -107,7 +107,7 @@ describe('WhatsAppProcessor', () => {
       });
 
       expect(contactResolver.resolveContact).toHaveBeenCalledWith('+1234567890');
-      expect(cgbClient.sendTextMessage).toHaveBeenCalledWith(123, 'Hello, this is a test message');
+      expect(cbbClient.sendTextMessage).toHaveBeenCalledWith(123, 'Hello, this is a test message');
     });
 
     it('should generate fallback message ID if not provided by API', async () => {
@@ -119,7 +119,7 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendTextMessage.mockResolvedValue({
+      cbbClient.sendTextMessage.mockResolvedValue({
         success: true,
         // No message_id provided
       });
@@ -127,7 +127,7 @@ describe('WhatsAppProcessor', () => {
       const result = await processor.process(job);
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toMatch(/^cgb_\d+$/);
+      expect(result.messageId).toMatch(/^cbb_\d+$/);
     });
   });
 
@@ -144,7 +144,7 @@ describe('WhatsAppProcessor', () => {
       contactResolver.resolveContact.mockResolvedValue(mockContact);
       templateService.getTemplateFlowId.mockResolvedValue(200);
       templateService.processTemplateVariables.mockResolvedValue({});
-      cgbClient.sendFlow.mockResolvedValue({
+      cbbClient.sendFlow.mockResolvedValue({
         success: true,
         message_id: 'flow_msg_456',
       });
@@ -164,7 +164,7 @@ describe('WhatsAppProcessor', () => {
         name: 'John Doe',
         status: 'approved',
       });
-      expect(cgbClient.sendFlow).toHaveBeenCalledWith(123, 200);
+      expect(cbbClient.sendFlow).toHaveBeenCalledWith(123, 200);
     });
 
     it('should fallback to text message when template not found and fallback provided', async () => {
@@ -178,7 +178,7 @@ describe('WhatsAppProcessor', () => {
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
       templateService.getTemplateFlowId.mockRejectedValue(new Error("Template 'unknown_template' not found"));
-      cgbClient.sendTextMessage.mockResolvedValue({
+      cbbClient.sendTextMessage.mockResolvedValue({
         success: true,
         message_id: 'fallback_msg_789',
       });
@@ -216,7 +216,7 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendFileMessage.mockResolvedValue({
+      cbbClient.sendFileMessage.mockResolvedValue({
         success: true,
         message_id: 'file_msg_321',
       });
@@ -231,7 +231,7 @@ describe('WhatsAppProcessor', () => {
         timestamp: expect.any(String),
       });
 
-      expect(cgbClient.sendFileMessage).toHaveBeenCalledWith(
+      expect(cbbClient.sendFileMessage).toHaveBeenCalledWith(
         123,
         'https://example.com/document.pdf',
         'document'
@@ -251,7 +251,7 @@ describe('WhatsAppProcessor', () => {
         const job = createMockJob(jobData);
 
         contactResolver.resolveContact.mockResolvedValue(mockContact);
-        cgbClient.sendFileMessage.mockResolvedValue({
+        cbbClient.sendFileMessage.mockResolvedValue({
           success: true,
           message_id: `${fileType}_msg`,
         });
@@ -259,7 +259,7 @@ describe('WhatsAppProcessor', () => {
         const result = await processor.process(job);
 
         expect(result.success).toBe(true);
-        expect(cgbClient.sendFileMessage).toHaveBeenCalledWith(
+        expect(cbbClient.sendFileMessage).toHaveBeenCalledWith(
           123,
           `https://example.com/file.${fileType}`,
           fileType
@@ -297,7 +297,7 @@ describe('WhatsAppProcessor', () => {
       await expect(processor.process(job)).rejects.toThrow(ContactNotFoundError);
     });
 
-    it('should handle CGB API errors', async () => {
+    it('should handle CBB API errors', async () => {
       const jobData: WhatsAppJobData = {
         to: '+1234567890',
         message: 'Test message',
@@ -306,9 +306,9 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendTextMessage.mockRejectedValue(new CgbApiError('Rate limit exceeded', 429));
+      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Rate limit exceeded', 429));
 
-      await expect(processor.process(job)).rejects.toThrow(CgbApiError);
+      await expect(processor.process(job)).rejects.toThrow(CbbApiError);
     });
 
     it('should return failure result for permanent errors without rethrowing', async () => {
@@ -320,7 +320,7 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendTextMessage.mockRejectedValue(new CgbApiError('Unauthorized', 401));
+      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Unauthorized', 401));
 
       const result = await processor.process(job);
 
@@ -329,7 +329,7 @@ describe('WhatsAppProcessor', () => {
         contactId: 0,
         to: '+1234567890',
         timestamp: expect.any(String),
-        error: 'CGB API Error (401): Unauthorized',
+        error: 'CBB API Error (401): Unauthorized',
       });
     });
 
@@ -342,19 +342,19 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cgbClient.sendTextMessage.mockRejectedValue(new CgbApiError('Internal server error', 500));
+      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Internal server error', 500));
 
-      await expect(processor.process(job)).rejects.toThrow(CgbApiError);
+      await expect(processor.process(job)).rejects.toThrow(CbbApiError);
     });
   });
 
   describe('isPermanentFailure', () => {
     it('should identify permanent failures correctly', async () => {
       const permanentErrors = [
-        new CgbApiError('Bad request', 400),
-        new CgbApiError('Unauthorized', 401),
-        new CgbApiError('Forbidden', 403),
-        new CgbApiError('Not found', 404),
+        new CbbApiError('Bad request', 400),
+        new CbbApiError('Unauthorized', 401),
+        new CbbApiError('Forbidden', 403),
+        new CbbApiError('Not found', 404),
         new Error('invalid phone number'),
         new Error('malformed request'),
         new Error('template not found'),
@@ -378,8 +378,8 @@ describe('WhatsAppProcessor', () => {
 
     it('should identify retryable failures correctly', async () => {
       const retryableErrors = [
-        new CgbApiError('Internal server error', 500),
-        new CgbApiError('Service unavailable', 503),
+        new CbbApiError('Internal server error', 500),
+        new CbbApiError('Service unavailable', 503),
         new Error('Network timeout'),
         new Error('Connection reset'),
       ];
@@ -404,8 +404,8 @@ describe('WhatsAppProcessor', () => {
     it('should format different error types correctly', async () => {
       const testCases = [
         {
-          error: new CgbApiError('Rate limit exceeded', 429),
-          expected: 'CGB API Error (429): Rate limit exceeded',
+          error: new CbbApiError('Rate limit exceeded', 429),
+          expected: 'CBB API Error (429): Rate limit exceeded',
         },
         {
           error: new ContactNotFoundError('+1234567890'),

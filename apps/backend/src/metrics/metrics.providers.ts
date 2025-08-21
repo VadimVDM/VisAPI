@@ -74,45 +74,45 @@ export const metricsProviders = [
     labelNames: ['operation'],
   }),
 
-  // CGB Sync Metrics
+  // CBB Sync Metrics
   makeCounterProvider({
-    name: 'cgb_sync_total',
-    help: 'Total number of CGB sync attempts',
+    name: 'cbb_sync_total',
+    help: 'Total number of CBB sync attempts',
   }),
 
   makeCounterProvider({
-    name: 'cgb_sync_success',
-    help: 'Total number of successful CGB syncs',
+    name: 'cbb_sync_success',
+    help: 'Total number of successful CBB syncs',
   }),
 
   makeCounterProvider({
-    name: 'cgb_sync_failures',
-    help: 'Total number of failed CGB syncs',
+    name: 'cbb_sync_failures',
+    help: 'Total number of failed CBB syncs',
   }),
 
   makeHistogramProvider({
-    name: 'cgb_sync_duration',
-    help: 'CGB sync operation duration in seconds',
+    name: 'cbb_sync_duration',
+    help: 'CBB sync operation duration in seconds',
     buckets: [0.5, 1, 2, 5, 10, 20, 30, 60],
   }),
 
   makeCounterProvider({
-    name: 'cgb_contacts_created',
-    help: 'Total number of new CGB contacts created',
+    name: 'cbb_contacts_created',
+    help: 'Total number of new CBB contacts created',
   }),
 
   makeCounterProvider({
-    name: 'cgb_contacts_updated',
-    help: 'Total number of existing CGB contacts updated',
+    name: 'cbb_contacts_updated',
+    help: 'Total number of existing CBB contacts updated',
   }),
 
   makeCounterProvider({
-    name: 'cgb_whatsapp_available',
+    name: 'cbb_whatsapp_available',
     help: 'Total number of contacts with WhatsApp available',
   }),
 
   makeCounterProvider({
-    name: 'cgb_whatsapp_unavailable',
+    name: 'cbb_whatsapp_unavailable',
     help: 'Total number of contacts without WhatsApp',
   }),
 ];

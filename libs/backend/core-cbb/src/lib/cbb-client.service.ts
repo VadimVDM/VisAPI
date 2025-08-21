@@ -11,22 +11,22 @@ import {
   SendFileMessageDto,
   Flow,
   FindContactResponse,
-  CgbApiResponse,
-  CGB_ENDPOINTS,
+  CbbApiResponse,
+  CBB_ENDPOINTS,
   WHATSAPP_CHANNEL_NAME,
-  CGBContactData,
-  CGBContact,
+  CBBContactData,
+  CBBContact,
   WhatsAppValidationResponse,
 } from '@visapi/shared-types';
 
-export class CgbApiError extends Error {
+export class CbbApiError extends Error {
   constructor(
     message: string,
     public readonly statusCode: number,
     public readonly response?: any
   ) {
     super(message);
-    this.name = 'CgbApiError';
+    this.name = 'CbbApiError';
   }
 }
 
@@ -38,8 +38,8 @@ export class ContactNotFoundError extends Error {
 }
 
 @Injectable()
-export class CgbClientService {
-  private readonly logger = new Logger(CgbClientService.name);
+export class CbbClientService {
+  private readonly logger = new Logger(CbbClientService.name);
   private readonly baseURL: string;
   private readonly apiKey: string;
   private readonly timeout: number;
@@ -49,13 +49,13 @@ export class CgbClientService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService
   ) {
-    this.baseURL = this.configService.get<string>('cgb.apiUrl');
-    this.apiKey = this.configService.get<string>('cgb.apiKey');
-    this.timeout = this.configService.get<number>('cgb.timeout');
-    this.retryAttempts = this.configService.get<number>('cgb.retryAttempts');
+    this.baseURL = this.configService.get<string>('cbb.apiUrl');
+    this.apiKey = this.configService.get<string>('cbb.apiKey');
+    this.timeout = this.configService.get<number>('cbb.timeout');
+    this.retryAttempts = this.configService.get<number>('cbb.retryAttempts');
 
     if (!this.apiKey) {
-      this.logger.warn('CGB_API_KEY not configured - WhatsApp messages will fail');
+      this.logger.warn('CBB_API_KEY not configured - WhatsApp messages will fail');
     }
   }
 
@@ -66,7 +66,7 @@ export class CgbClientService {
     try {
       this.logger.debug(`Finding contact by phone: ${phone}`);
       
-      const response = await this.makeRequest<FindContactResponse>('GET', CGB_ENDPOINTS.FIND_CONTACT, {
+      const response = await this.makeRequest<FindContactResponse>('GET', CBB_ENDPOINTS.FIND_CONTACT, {
         params: {
           field_id: 'phone',
           value: phone,
@@ -75,7 +75,7 @@ export class CgbClientService {
 
       return response.data?.contact || null;
     } catch (error) {
-      if (error instanceof CgbApiError && error.statusCode === 404) {
+      if (error instanceof CbbApiError && error.statusCode === 404) {
         return null;
       }
       this.logger.error(`Failed to find contact by phone ${phone}:`, error);
@@ -90,7 +90,7 @@ export class CgbClientService {
     try {
       this.logger.debug(`Creating contact for phone: ${contactData.phone}`);
       
-      const response = await this.makeRequest<Contact>('POST', CGB_ENDPOINTS.CONTACTS, {
+      const response = await this.makeRequest<Contact>('POST', CBB_ENDPOINTS.CONTACTS, {
         data: contactData,
       });
 
@@ -114,7 +114,7 @@ export class CgbClientService {
         channel: WHATSAPP_CHANNEL_NAME,
       };
 
-      const response = await this.makeRequest<MessageResponse>('POST', CGB_ENDPOINTS.SEND_TEXT(contactId), {
+      const response = await this.makeRequest<MessageResponse>('POST', CBB_ENDPOINTS.SEND_TEXT(contactId), {
         data: payload,
       });
 
@@ -143,7 +143,7 @@ export class CgbClientService {
         channel: WHATSAPP_CHANNEL_NAME,
       };
 
-      const response = await this.makeRequest<MessageResponse>('POST', CGB_ENDPOINTS.SEND_FILE(contactId), {
+      const response = await this.makeRequest<MessageResponse>('POST', CBB_ENDPOINTS.SEND_FILE(contactId), {
         data: payload,
       });
 
@@ -162,7 +162,7 @@ export class CgbClientService {
     try {
       this.logger.debug(`Sending flow ${flowId} to contact ${contactId}`);
       
-      const response = await this.makeRequest<MessageResponse>('POST', CGB_ENDPOINTS.SEND_FLOW(contactId, flowId));
+      const response = await this.makeRequest<MessageResponse>('POST', CBB_ENDPOINTS.SEND_FLOW(contactId, flowId));
 
       this.logger.debug(`Flow sent to contact ${contactId}:`, response.data);
       return response.data;
@@ -179,7 +179,7 @@ export class CgbClientService {
     try {
       this.logger.debug('Fetching available flows');
       
-      const response = await this.makeRequest<Flow[]>('GET', CGB_ENDPOINTS.FLOWS);
+      const response = await this.makeRequest<Flow[]>('GET', CBB_ENDPOINTS.FLOWS);
 
       this.logger.debug(`Found ${response.data?.length || 0} flows`);
       return response.data || [];
@@ -196,7 +196,7 @@ export class CgbClientService {
     try {
       this.logger.debug(`Fetching contact details for ID: ${contactId}`);
       
-      const response = await this.makeRequest<Contact>('GET', `${CGB_ENDPOINTS.CONTACTS}/${contactId}`);
+      const response = await this.makeRequest<Contact>('GET', `${CBB_ENDPOINTS.CONTACTS}/${contactId}`);
 
       return response.data;
     } catch (error) {
@@ -208,14 +208,14 @@ export class CgbClientService {
   /**
    * Get contact by ID (phone number)
    */
-  async getContactById(id: string): Promise<CGBContact | null> {
+  async getContactById(id: string): Promise<CBBContact | null> {
     try {
       this.logger.debug(`Getting contact by ID: ${id}`);
       
-      const response = await this.makeRequest<CGBContact>('GET', `/contacts/${id}`);
+      const response = await this.makeRequest<CBBContact>('GET', `/contacts/${id}`);
       return response.data;
     } catch (error) {
-      if (error instanceof CgbApiError && error.statusCode === 404) {
+      if (error instanceof CbbApiError && error.statusCode === 404) {
         return null;
       }
       this.logger.error(`Failed to get contact ${id}:`, error);
@@ -226,7 +226,7 @@ export class CgbClientService {
   /**
    * Create contact with custom fields
    */
-  async createContactWithFields(data: CGBContactData): Promise<CGBContact> {
+  async createContactWithFields(data: CBBContactData): Promise<CBBContact> {
     try {
       this.logger.debug(`Creating contact with fields for phone: ${data.phone}`);
       
@@ -238,7 +238,7 @@ export class CgbClientService {
         customFields: data.cufs,
       };
 
-      const response = await this.makeRequest<CGBContact>('POST', '/contacts', {
+      const response = await this.makeRequest<CBBContact>('POST', '/contacts', {
         data: payload,
       });
 
@@ -253,11 +253,11 @@ export class CgbClientService {
   /**
    * Update contact custom fields
    */
-  async updateContactFields(id: string, cufs: Record<string, any>): Promise<CGBContact> {
+  async updateContactFields(id: string, cufs: Record<string, any>): Promise<CBBContact> {
     try {
       this.logger.debug(`Updating contact fields for ID: ${id}`);
       
-      const response = await this.makeRequest<CGBContact>('PATCH', `/contacts/${id}`, {
+      const response = await this.makeRequest<CBBContact>('PATCH', `/contacts/${id}`, {
         data: {
           customFields: cufs,
         },
@@ -287,7 +287,7 @@ export class CgbClientService {
   }
 
   /**
-   * Make HTTP request to CGB API with error handling and retries
+   * Make HTTP request to CBB API with error handling and retries
    */
   private async makeRequest<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
@@ -309,7 +309,7 @@ export class CgbClientService {
 
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
-        this.logger.debug(`CGB API ${method} ${endpoint} (attempt ${attempt}/${this.retryAttempts})`);
+        this.logger.debug(`CBB API ${method} ${endpoint} (attempt ${attempt}/${this.retryAttempts})`);
 
         const config = {
           method,
@@ -322,12 +322,12 @@ export class CgbClientService {
 
         const response = await firstValueFrom(this.httpService.request<T>(config));
         
-        // CGB API returns 200 with success: false for errors
+        // CBB API returns 200 with success: false for errors
         if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-          const cgbResponse = response.data as CgbApiResponse<T>;
-          if (!cgbResponse.success) {
-            throw new CgbApiError(
-              cgbResponse.error || cgbResponse.message || 'CGB API error',
+          const cbbResponse = response.data as CbbApiResponse<T>;
+          if (!cbbResponse.success) {
+            throw new CbbApiError(
+              cbbResponse.error || cbbResponse.message || 'CBB API error',
               response.status,
               response.data
             );
@@ -344,12 +344,12 @@ export class CgbClientService {
           
           // Don't retry on client errors (400-499)
           if (status >= 400 && status < 500) {
-            throw new CgbApiError(message, status, error.response.data);
+            throw new CbbApiError(message, status, error.response.data);
           }
           
-          this.logger.warn(`CGB API ${method} ${endpoint} failed (attempt ${attempt}): ${status} ${message}`);
+          this.logger.warn(`CBB API ${method} ${endpoint} failed (attempt ${attempt}): ${status} ${message}`);
         } else {
-          this.logger.warn(`CGB API ${method} ${endpoint} failed (attempt ${attempt}): ${error.message}`);
+          this.logger.warn(`CBB API ${method} ${endpoint} failed (attempt ${attempt}): ${error.message}`);
         }
 
         // Wait before retry (exponential backoff)

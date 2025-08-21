@@ -7,7 +7,7 @@ import { ConfigService } from '@visapi/core-config';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 
-describe('OrdersService - CGB Sync Integration', () => {
+describe('OrdersService - CBB Sync Integration', () => {
   let service: OrdersService;
   let supabaseService: jest.Mocked<SupabaseService>;
   let queueService: jest.Mocked<QueueService>;
@@ -81,8 +81,8 @@ describe('OrdersService - CGB Sync Integration', () => {
     } as any;
 
     configService = {
-      cgbSyncEnabled: true,
-      cgbSyncDelayMs: 2000,
+      cbbSyncEnabled: true,
+      cbbSyncDelayMs: 2000,
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -107,14 +107,14 @@ describe('OrdersService - CGB Sync Integration', () => {
     jest.clearAllMocks();
   });
 
-  describe('CGB Sync Triggering', () => {
-    it('should queue CGB sync for ALL orders when sync is enabled', async () => {
+  describe('CBB Sync Triggering', () => {
+    it('should queue CBB sync for ALL orders when sync is enabled', async () => {
       // Act
       await service.createOrder(mockWebhookData);
 
       // Assert
       expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CGB_SYNC,
+        QUEUE_NAMES.CBB_SYNC,
         'sync-contact',
         { orderId: 'IL250819GB16' },
         {
@@ -126,7 +126,7 @@ describe('OrdersService - CGB Sync Integration', () => {
       );
     });
 
-    it('should queue CGB sync even when WhatsApp alerts are disabled', async () => {
+    it('should queue CBB sync even when WhatsApp alerts are disabled', async () => {
       // Arrange - Order with WhatsApp alerts disabled
       const webhookWithoutWhatsApp = {
         ...mockWebhookData,
@@ -142,9 +142,9 @@ describe('OrdersService - CGB Sync Integration', () => {
       // Act
       await service.createOrder(webhookWithoutWhatsApp);
 
-      // Assert - Should STILL queue CGB sync (ALL orders sync)
+      // Assert - Should STILL queue CBB sync (ALL orders sync)
       expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CGB_SYNC,
+        QUEUE_NAMES.CBB_SYNC,
         'sync-contact',
         { orderId: 'IL250819GB16' },
         {
@@ -156,9 +156,9 @@ describe('OrdersService - CGB Sync Integration', () => {
       );
     });
 
-    it('should not queue CGB sync when sync is disabled in config', async () => {
+    it('should not queue CBB sync when sync is disabled in config', async () => {
       // Arrange
-      configService.cgbSyncEnabled = false;
+      configService.cbbSyncEnabled = false;
 
       // Act
       await service.createOrder(mockWebhookData);
@@ -167,16 +167,16 @@ describe('OrdersService - CGB Sync Integration', () => {
       expect(queueService.addJob).not.toHaveBeenCalled();
     });
 
-    it('should use default delay when cgbSyncDelayMs is not configured', async () => {
+    it('should use default delay when cbbSyncDelayMs is not configured', async () => {
       // Arrange
-      configService.cgbSyncDelayMs = undefined;
+      configService.cbbSyncDelayMs = undefined;
 
       // Act
       await service.createOrder(mockWebhookData);
 
       // Assert
       expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CGB_SYNC,
+        QUEUE_NAMES.CBB_SYNC,
         'sync-contact',
         { orderId: 'IL250819GB16' },
         expect.objectContaining({
@@ -185,16 +185,16 @@ describe('OrdersService - CGB Sync Integration', () => {
       );
     });
 
-    it('should use configured delay when cgbSyncDelayMs is set', async () => {
+    it('should use configured delay when cbbSyncDelayMs is set', async () => {
       // Arrange
-      configService.cgbSyncDelayMs = 5000;
+      configService.cbbSyncDelayMs = 5000;
 
       // Act
       await service.createOrder(mockWebhookData);
 
       // Assert
       expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CGB_SYNC,
+        QUEUE_NAMES.CBB_SYNC,
         'sync-contact',
         { orderId: 'IL250819GB16' },
         expect.objectContaining({
@@ -217,19 +217,19 @@ describe('OrdersService - CGB Sync Integration', () => {
       expect(supabaseService.client.from).toHaveBeenCalledWith('orders');
     });
 
-    it('should handle undefined cgbSyncEnabled as false', async () => {
+    it('should handle undefined cbbSyncEnabled as false', async () => {
       // Arrange
-      configService.cgbSyncEnabled = undefined as any;
+      configService.cbbSyncEnabled = undefined as any;
 
       // Act
       await service.createOrder(mockWebhookData);
 
       // Assert
-      // cgbSyncEnabled !== false evaluates to true for undefined, so sync will be queued
+      // cbbSyncEnabled !== false evaluates to true for undefined, so sync will be queued
       expect(queueService.addJob).toHaveBeenCalled();
     });
 
-    it('should properly transform phone number for CGB sync', async () => {
+    it('should properly transform phone number for CBB sync', async () => {
       // Arrange
       const webhookWithDifferentPhone = {
         ...mockWebhookData,
@@ -295,11 +295,11 @@ describe('OrdersService - CGB Sync Integration', () => {
         })
       );
       // Sync will still be triggered for ALL orders
-      // The CGB processor will handle the invalid phone gracefully
+      // The CBB processor will handle the invalid phone gracefully
       expect(queueService.addJob).toHaveBeenCalled();
     });
 
-    it('should handle duplicate order with existing CGB sync', async () => {
+    it('should handle duplicate order with existing CBB sync', async () => {
       // Arrange
       let callCount = 0;
       
@@ -338,13 +338,13 @@ describe('OrdersService - CGB Sync Integration', () => {
       expect(queueService.addJob).not.toHaveBeenCalled();
     });
 
-    it('should include all required job options for CGB sync', async () => {
+    it('should include all required job options for CBB sync', async () => {
       // Act
       await service.createOrder(mockWebhookData);
 
       // Assert
       expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CGB_SYNC,
+        QUEUE_NAMES.CBB_SYNC,
         'sync-contact',
         { orderId: 'IL250819GB16' },
         {

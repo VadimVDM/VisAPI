@@ -2,19 +2,19 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { WhatsAppJobData, WhatsAppJobResult } from '@visapi/shared-types';
 import { 
-  CgbClientService, 
+  CbbClientService, 
   ContactResolverService, 
   TemplateService,
-  CgbApiError,
+  CbbApiError,
   ContactNotFoundError 
-} from '@visapi/backend-core-cgb';
+} from '@visapi/backend-core-cbb';
 
 @Injectable()
 export class WhatsAppProcessor {
   private readonly logger = new Logger(WhatsAppProcessor.name);
 
   constructor(
-    private readonly cgbClient: CgbClientService,
+    private readonly cbbClient: CbbClientService,
     private readonly contactResolver: ContactResolverService,
     private readonly templateService: TemplateService
   ) {}
@@ -25,7 +25,7 @@ export class WhatsAppProcessor {
     this.logger.log(`Processing WhatsApp message to: ${to}`);
 
     try {
-      // Resolve phone number to CGB contact
+      // Resolve phone number to CBB contact
       const contact = await this.contactResolver.resolveContact(to);
       this.logger.debug(`Resolved contact ID ${contact.id} for phone: ${to}`);
 
@@ -45,7 +45,7 @@ export class WhatsAppProcessor {
       const result: WhatsAppJobResult = {
         success: true,
         contactId: contact.id,
-        messageId: messageResponse.message_id || `cgb_${Date.now()}`,
+        messageId: messageResponse.message_id || `cbb_${Date.now()}`,
         to,
         timestamp: new Date().toISOString(),
       };
@@ -79,7 +79,7 @@ export class WhatsAppProcessor {
    */
   private async sendTextMessage(contactId: number, text: string) {
     this.logger.debug(`Sending text message to contact ${contactId}: ${text.substring(0, 50)}...`);
-    return await this.cgbClient.sendTextMessage(contactId, text);
+    return await this.cbbClient.sendTextMessage(contactId, text);
   }
 
   /**
@@ -101,7 +101,7 @@ export class WhatsAppProcessor {
         await this.templateService.processTemplateVariables(templateName, variables);
       }
 
-      return await this.cgbClient.sendFlow(contactId, flowId);
+      return await this.cbbClient.sendFlow(contactId, flowId);
     } catch (error) {
       if (error.message.includes('not found')) {
         // Template not found, fall back to text message if variables include a fallback
@@ -124,15 +124,15 @@ export class WhatsAppProcessor {
     fileType: 'image' | 'document' | 'video' | 'audio'
   ) {
     this.logger.debug(`Sending ${fileType} file to contact ${contactId}: ${fileUrl}`);
-    return await this.cgbClient.sendFileMessage(contactId, fileUrl, fileType);
+    return await this.cbbClient.sendFileMessage(contactId, fileUrl, fileType);
   }
 
   /**
    * Format error message for job result
    */
   private formatErrorMessage(error: any): string {
-    if (error instanceof CgbApiError) {
-      return `CGB API Error (${error.statusCode}): ${error.message}`;
+    if (error instanceof CbbApiError) {
+      return `CBB API Error (${error.statusCode}): ${error.message}`;
     }
     
     if (error instanceof ContactNotFoundError) {
@@ -147,7 +147,7 @@ export class WhatsAppProcessor {
    */
   private isPermanentFailure(error: any): boolean {
     // Don't retry client errors (400-499) or contact resolution failures
-    if (error instanceof CgbApiError && error.statusCode >= 400 && error.statusCode < 500) {
+    if (error instanceof CbbApiError && error.statusCode >= 400 && error.statusCode < 500) {
       return true;
     }
 

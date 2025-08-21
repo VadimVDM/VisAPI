@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Flow } from '@visapi/shared-types';
-import { CgbClientService } from './cgb-client.service';
+import { CbbClientService } from './cbb-client.service';
 
 export interface TemplateMapping {
   templateName: string;
@@ -18,10 +18,10 @@ export class TemplateService {
   private readonly cacheTimeout: number;
 
   constructor(
-    private readonly cgbClient: CgbClientService,
+    private readonly cbbClient: CbbClientService,
     private readonly configService: ConfigService
   ) {
-    this.cacheTimeout = this.configService.get<number>('cgb.cacheTimeout') * 1000; // Convert to milliseconds
+    this.cacheTimeout = this.configService.get<number>('cbb.cacheTimeout') * 1000; // Convert to milliseconds
     this.initializeTemplateMappings();
   }
 
@@ -64,7 +64,7 @@ export class TemplateService {
     
     // For now, return variables as-is
     // In the future, this could handle variable transformation,
-    // validation, or mapping to CGB flow variables
+    // validation, or mapping to CBB flow variables
     return variables;
   }
 
@@ -94,8 +94,8 @@ export class TemplateService {
     }
 
     try {
-      this.logger.debug('Fetching flows from CGB API');
-      const flows = await this.cgbClient.getFlows();
+      this.logger.debug('Fetching flows from CBB API');
+      const flows = await this.cbbClient.getFlows();
       
       // Update cache
       this.flowsCache = flows;
@@ -154,11 +154,11 @@ export class TemplateService {
   private initializeTemplateMappings(): void {
     // Load template mappings from environment variables
     const templateMappings = [
-      { env: 'CGB_TEMPLATE_VISA_APPROVED', name: 'visa_approved' },
-      { env: 'CGB_TEMPLATE_VISA_REJECTED', name: 'visa_rejected' },
-      { env: 'CGB_TEMPLATE_DOCUMENT_REQUEST', name: 'document_request' },
-      { env: 'CGB_TEMPLATE_APPOINTMENT_REMINDER', name: 'appointment_reminder' },
-      { env: 'CGB_TEMPLATE_STATUS_UPDATE', name: 'status_update' },
+      { env: 'CBB_TEMPLATE_VISA_APPROVED', name: 'visa_approved' },
+      { env: 'CBB_TEMPLATE_VISA_REJECTED', name: 'visa_rejected' },
+      { env: 'CBB_TEMPLATE_DOCUMENT_REQUEST', name: 'document_request' },
+      { env: 'CBB_TEMPLATE_APPOINTMENT_REMINDER', name: 'appointment_reminder' },
+      { env: 'CBB_TEMPLATE_STATUS_UPDATE', name: 'status_update' },
     ];
 
     for (const mapping of templateMappings) {

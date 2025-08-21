@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { TemplateService } from './template.service';
-import { CgbClientService } from './cgb-client.service';
+import { CbbClientService } from './cbb-client.service';
 import { Flow } from '@visapi/shared-types';
 
 describe('TemplateService', () => {
   let service: TemplateService;
-  let cgbClient: jest.Mocked<CgbClientService>;
+  let cbbClient: jest.Mocked<CbbClientService>;
   let configService: jest.Mocked<ConfigService>;
 
   const mockFlows: Flow[] = [
@@ -17,16 +17,16 @@ describe('TemplateService', () => {
   ];
 
   beforeEach(async () => {
-    const mockCgbClient = {
+    const mockCbbClient = {
       getFlows: jest.fn(),
     };
 
     const mockConfigService = {
       get: jest.fn((key: string) => {
         const config: Record<string, any> = {
-          'cgb.cacheTimeout': 3600, // 1 hour
-          'CGB_TEMPLATE_VISA_APPROVED': '200',
-          'CGB_TEMPLATE_DOCUMENT_REQUEST': '300',
+          'cbb.cacheTimeout': 3600, // 1 hour
+          'CBB_TEMPLATE_VISA_APPROVED': '200',
+          'CBB_TEMPLATE_DOCUMENT_REQUEST': '300',
         };
         return config[key];
       }),
@@ -35,13 +35,13 @@ describe('TemplateService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateService,
-        { provide: CgbClientService, useValue: mockCgbClient },
+        { provide: CbbClientService, useValue: mockCbbClient },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<TemplateService>(TemplateService);
-    cgbClient = module.get(CgbClientService);
+    cbbClient = module.get(CbbClientService);
     configService = module.get(ConfigService);
   });
 
@@ -51,7 +51,7 @@ describe('TemplateService', () => {
 
   describe('getTemplateFlowId', () => {
     beforeEach(() => {
-      cgbClient.getFlows.mockResolvedValue(mockFlows);
+      cbbClient.getFlows.mockResolvedValue(mockFlows);
     });
 
     it('should return configured mapping for known templates', async () => {
@@ -79,7 +79,7 @@ describe('TemplateService', () => {
       expect(flowId2).toBe(100);
 
       // Should have called getFlows only once due to caching
-      expect(cgbClient.getFlows).toHaveBeenCalledTimes(1);
+      expect(cbbClient.getFlows).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error when template not found', async () => {
@@ -91,20 +91,20 @@ describe('TemplateService', () => {
 
   describe('getFlows', () => {
     it('should fetch and cache flows', async () => {
-      cgbClient.getFlows.mockResolvedValue(mockFlows);
+      cbbClient.getFlows.mockResolvedValue(mockFlows);
 
       const flows1 = await service.getFlows();
       expect(flows1).toEqual(mockFlows);
-      expect(cgbClient.getFlows).toHaveBeenCalledTimes(1);
+      expect(cbbClient.getFlows).toHaveBeenCalledTimes(1);
 
       // Second call should use cache
       const flows2 = await service.getFlows();
       expect(flows2).toEqual(mockFlows);
-      expect(cgbClient.getFlows).toHaveBeenCalledTimes(1);
+      expect(cbbClient.getFlows).toHaveBeenCalledTimes(1);
     });
 
     it('should return cached flows on API error if available', async () => {
-      cgbClient.getFlows.mockResolvedValueOnce(mockFlows);
+      cbbClient.getFlows.mockResolvedValueOnce(mockFlows);
 
       // First call succeeds and caches
       const flows1 = await service.getFlows();
@@ -114,7 +114,7 @@ describe('TemplateService', () => {
       service.clearCache();
 
       // Second call fails, should return cached flows with warning
-      cgbClient.getFlows.mockRejectedValueOnce(new Error('API error'));
+      cbbClient.getFlows.mockRejectedValueOnce(new Error('API error'));
 
       await expect(service.getFlows()).rejects.toThrow('API error');
     });
@@ -123,7 +123,7 @@ describe('TemplateService', () => {
       const initialFlows = [mockFlows[0]];
       const updatedFlows = mockFlows;
 
-      cgbClient.getFlows
+      cbbClient.getFlows
         .mockResolvedValueOnce(initialFlows)
         .mockResolvedValueOnce(updatedFlows);
 
@@ -137,13 +137,13 @@ describe('TemplateService', () => {
       // Second call should fetch fresh data
       const flows2 = await service.getFlows();
       expect(flows2).toEqual(updatedFlows);
-      expect(cgbClient.getFlows).toHaveBeenCalledTimes(2);
+      expect(cbbClient.getFlows).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('validateTemplate', () => {
     beforeEach(() => {
-      cgbClient.getFlows.mockResolvedValue(mockFlows);
+      cbbClient.getFlows.mockResolvedValue(mockFlows);
     });
 
     it('should return true for valid templates', async () => {
@@ -173,7 +173,7 @@ describe('TemplateService', () => {
 
   describe('getAvailableTemplates', () => {
     beforeEach(() => {
-      cgbClient.getFlows.mockResolvedValue(mockFlows);
+      cbbClient.getFlows.mockResolvedValue(mockFlows);
     });
 
     it('should return all available templates including mappings', async () => {
@@ -220,7 +220,7 @@ describe('TemplateService', () => {
 
   describe('cache management', () => {
     beforeEach(() => {
-      cgbClient.getFlows.mockResolvedValue(mockFlows);
+      cbbClient.getFlows.mockResolvedValue(mockFlows);
     });
 
     it('should provide cache statistics', async () => {
@@ -244,7 +244,7 @@ describe('TemplateService', () => {
 
   describe('error handling', () => {
     it('should handle getFlows API errors gracefully', async () => {
-      cgbClient.getFlows.mockRejectedValue(new Error('Network error'));
+      cbbClient.getFlows.mockRejectedValue(new Error('Network error'));
 
       await expect(service.getFlows()).rejects.toThrow('Network error');
     });
@@ -252,12 +252,12 @@ describe('TemplateService', () => {
     it('should handle invalid environment variable values', () => {
       // Test with invalid flow ID in environment
       configService.get.mockImplementation((key: string) => {
-        if (key === 'CGB_TEMPLATE_INVALID') return 'not_a_number';
+        if (key === 'CBB_TEMPLATE_INVALID') return 'not_a_number';
         return undefined;
       });
 
       // Should not crash, just ignore invalid mappings
-      expect(() => new TemplateService(cgbClient, configService)).not.toThrow();
+      expect(() => new TemplateService(cbbClient, configService)).not.toThrow();
     });
   });
 });

@@ -3,11 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { CgbClientService, CgbApiError } from './cgb-client.service';
+import { CbbClientService, CbbApiError } from './cbb-client.service';
 import { Contact, CreateContactDto, Flow, WHATSAPP_CHANNEL_NAME } from '@visapi/shared-types';
 
-describe('CgbClientService', () => {
-  let service: CgbClientService;
+describe('CbbClientService', () => {
+  let service: CbbClientService;
   let httpService: jest.Mocked<HttpService>;
   let configService: jest.Mocked<ConfigService>;
 
@@ -47,10 +47,10 @@ describe('CgbClientService', () => {
     const mockConfigService = {
       get: jest.fn((key: string) => {
         const config: Record<string, any> = {
-          'cgb.apiUrl': mockConfig.apiUrl,
-          'cgb.apiKey': mockConfig.apiKey,
-          'cgb.timeout': mockConfig.timeout,
-          'cgb.retryAttempts': mockConfig.retryAttempts,
+          'cbb.apiUrl': mockConfig.apiUrl,
+          'cbb.apiKey': mockConfig.apiKey,
+          'cbb.timeout': mockConfig.timeout,
+          'cbb.retryAttempts': mockConfig.retryAttempts,
         };
         return config[key];
       }),
@@ -58,13 +58,13 @@ describe('CgbClientService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        CgbClientService,
+        CbbClientService,
         { provide: HttpService, useValue: mockHttpService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
-    service = module.get<CgbClientService>(CgbClientService);
+    service = module.get<CbbClientService>(CbbClientService);
     httpService = module.get(HttpService);
     configService = module.get(ConfigService);
   });
@@ -134,7 +134,7 @@ describe('CgbClientService', () => {
       expect(result).toBeNull();
     });
 
-    it('should throw CgbApiError on other errors', async () => {
+    it('should throw CbbApiError on other errors', async () => {
       const error = {
         response: {
           status: 500,
@@ -144,7 +144,7 @@ describe('CgbClientService', () => {
 
       httpService.request.mockReturnValue(throwError(() => error));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CgbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
     });
   });
 
@@ -346,11 +346,11 @@ describe('CgbClientService', () => {
 
       httpService.request.mockReturnValue(throwError(() => clientError));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CgbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
       expect(httpService.request).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle CGB API success: false responses', async () => {
+    it('should handle CBB API success: false responses', async () => {
       const mockResponse: AxiosResponse = {
         data: { success: false, error: 'Invalid phone number' },
         status: 200,
@@ -361,7 +361,7 @@ describe('CgbClientService', () => {
 
       httpService.request.mockReturnValue(of(mockResponse));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CgbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
     });
   });
 
@@ -370,15 +370,15 @@ describe('CgbClientService', () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       
       configService.get.mockImplementation((key: string) => {
-        if (key === 'cgb.apiKey') return '';
-        return mockConfig[key.replace('cgb.', '')];
+        if (key === 'cbb.apiKey') return '';
+        return mockConfig[key.replace('cbb.', '')];
       });
 
       // Create new instance to trigger constructor
-      new CgbClientService(httpService, configService);
+      new CbbClientService(httpService, configService);
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('CGB_API_KEY not configured')
+        expect.stringContaining('CBB_API_KEY not configured')
       );
 
       warnSpy.mockRestore();

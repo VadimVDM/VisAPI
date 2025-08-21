@@ -1,13 +1,13 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { CgbClientService } from '@visapi/backend-core-cgb';
-import { CGBContactData, CGBContactSyncResult } from '@visapi/shared-types';
+import { CbbClientService } from '@visapi/backend-core-cbb';
+import { CBBContactData, CBBContactSyncResult } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 
-interface CGBSyncJobData {
+interface CBBSyncJobData {
   orderId: string;
 }
 
@@ -27,40 +27,40 @@ interface OrderData {
   form_id: string;
   webhook_received_at: string;
   whatsapp_alerts_enabled: boolean;
-  cgb_sync_status: string;
-  cgb_sync_attempted_at?: string;
-  cgb_sync_completed_at?: string;
-  cgb_sync_error?: string;
-  cgb_contact_exists?: boolean;
-  cgb_has_whatsapp?: boolean;
-  cgb_contact_id?: string;
+  cbb_sync_status: string;
+  cbb_sync_attempted_at?: string;
+  cbb_sync_completed_at?: string;
+  cbb_sync_error?: string;
+  cbb_contact_exists?: boolean;
+  cbb_has_whatsapp?: boolean;
+  cbb_contact_id?: string;
 }
 
 @Injectable()
-@Processor('cgb-sync')
-export class CGBSyncProcessor extends WorkerHost {
-  private readonly logger = new Logger(CGBSyncProcessor.name);
+@Processor('cbb-sync')
+export class CBBSyncProcessor extends WorkerHost {
+  private readonly logger = new Logger(CBBSyncProcessor.name);
 
   constructor(
-    private readonly cgbService: CgbClientService,
+    private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
-    @InjectMetric('cgb_sync_total') private readonly syncTotalCounter: Counter<string>,
-    @InjectMetric('cgb_sync_success') private readonly syncSuccessCounter: Counter<string>,
-    @InjectMetric('cgb_sync_failures') private readonly syncFailureCounter: Counter<string>,
-    @InjectMetric('cgb_sync_duration') private readonly syncDurationHistogram: Histogram<string>,
-    @InjectMetric('cgb_contacts_created') private readonly contactsCreatedCounter: Counter<string>,
-    @InjectMetric('cgb_contacts_updated') private readonly contactsUpdatedCounter: Counter<string>,
-    @InjectMetric('cgb_whatsapp_available') private readonly whatsappAvailableCounter: Counter<string>,
-    @InjectMetric('cgb_whatsapp_unavailable') private readonly whatsappUnavailableCounter: Counter<string>,
+    @InjectMetric('cbb_sync_total') private readonly syncTotalCounter: Counter<string>,
+    @InjectMetric('cbb_sync_success') private readonly syncSuccessCounter: Counter<string>,
+    @InjectMetric('cbb_sync_failures') private readonly syncFailureCounter: Counter<string>,
+    @InjectMetric('cbb_sync_duration') private readonly syncDurationHistogram: Histogram<string>,
+    @InjectMetric('cbb_contacts_created') private readonly contactsCreatedCounter: Counter<string>,
+    @InjectMetric('cbb_contacts_updated') private readonly contactsUpdatedCounter: Counter<string>,
+    @InjectMetric('cbb_whatsapp_available') private readonly whatsappAvailableCounter: Counter<string>,
+    @InjectMetric('cbb_whatsapp_unavailable') private readonly whatsappUnavailableCounter: Counter<string>,
   ) {
     super();
   }
 
-  async process(job: Job<CGBSyncJobData>): Promise<CGBContactSyncResult> {
+  async process(job: Job<CBBSyncJobData>): Promise<CBBContactSyncResult> {
     const { orderId } = job.data;
     const startTime = Date.now();
 
-    this.logger.log(`Starting CGB contact sync for order: ${orderId}`);
+    this.logger.log(`Starting CBB contact sync for order: ${orderId}`);
     this.syncTotalCounter.inc();
 
     try {
@@ -71,43 +71,43 @@ export class CGBSyncProcessor extends WorkerHost {
       }
 
       // 2. Check if already synced
-      if (order.cgb_sync_status === 'synced') {
+      if (order.cbb_sync_status === 'synced') {
         this.logger.log(`Order ${orderId} already synced`);
         return { 
           status: 'success', 
           action: 'skipped',
-          contactId: order.cgb_contact_id,
+          contactId: order.cbb_contact_id,
         };
       }
 
       // 3. Mark as syncing
-      await this.updateCGBSyncStatus(orderId, 'syncing');
+      await this.updateCBBSyncStatus(orderId, 'syncing');
 
       // 4. Prepare contact data
       const contactData = this.prepareContactData(order);
 
       // 5. Check if contact exists
-      let contact = await this.cgbService.getContactById(order.client_phone);
+      let contact = await this.cbbService.getContactById(order.client_phone);
       let isNewContact = false;
 
       if (contact) {
         // Update existing contact
-        contact = await this.cgbService.updateContactFields(
+        contact = await this.cbbService.updateContactFields(
           order.client_phone,
           contactData.cufs
         );
-        this.logger.log(`Updated CGB contact for order ${orderId}`);
+        this.logger.log(`Updated CBB contact for order ${orderId}`);
         this.contactsUpdatedCounter.inc();
       } else {
         // Create new contact
-        contact = await this.cgbService.createContactWithFields(contactData);
+        contact = await this.cbbService.createContactWithFields(contactData);
         isNewContact = true;
-        this.logger.log(`Created new CGB contact for order ${orderId}`);
+        this.logger.log(`Created new CBB contact for order ${orderId}`);
         this.contactsCreatedCounter.inc();
       }
 
       // 6. Validate WhatsApp
-      const hasWhatsApp = await this.cgbService.validateWhatsApp(order.client_phone);
+      const hasWhatsApp = await this.cbbService.validateWhatsApp(order.client_phone);
       
       if (hasWhatsApp) {
         this.whatsappAvailableCounter.inc();
@@ -116,16 +116,16 @@ export class CGBSyncProcessor extends WorkerHost {
       }
 
       // 7. Update order with results
-      await this.updateCGBSyncResult(orderId, {
-        cgb_contact_id: contact.id,
-        cgb_sync_status: hasWhatsApp ? 'synced' : 'no_whatsapp',
-        cgb_contact_exists: !isNewContact,
-        cgb_has_whatsapp: hasWhatsApp,
-        cgb_sync_completed_at: new Date().toISOString(),
+      await this.updateCBBSyncResult(orderId, {
+        cbb_contact_id: contact.id,
+        cbb_sync_status: hasWhatsApp ? 'synced' : 'no_whatsapp',
+        cbb_contact_exists: !isNewContact,
+        cbb_has_whatsapp: hasWhatsApp,
+        cbb_sync_completed_at: new Date().toISOString(),
       });
 
       // 8. Log success
-      this.logger.log(`CGB contact sync successful for order ${orderId}`, {
+      this.logger.log(`CBB contact sync successful for order ${orderId}`, {
         contact_id: contact.id,
         action: isNewContact ? 'created' : 'updated',
         has_whatsapp: hasWhatsApp,
@@ -155,7 +155,7 @@ export class CGBSyncProcessor extends WorkerHost {
     }
   }
 
-  private prepareContactData(order: OrderData): CGBContactData {
+  private prepareContactData(order: OrderData): CBBContactData {
     return {
       id: order.client_phone,
       phone: order.client_phone,
@@ -176,13 +176,13 @@ export class CGBSyncProcessor extends WorkerHost {
   private async handleSyncError(orderId: string, error: any) {
     const errorMessage = error.message || 'Unknown error';
     
-    await this.updateCGBSyncResult(orderId, {
-      cgb_sync_status: 'failed',
-      cgb_sync_error: errorMessage,
-      cgb_sync_attempted_at: new Date().toISOString(),
+    await this.updateCBBSyncResult(orderId, {
+      cbb_sync_status: 'failed',
+      cbb_sync_error: errorMessage,
+      cbb_sync_attempted_at: new Date().toISOString(),
     });
 
-    this.logger.error(`CGB contact sync failed for order ${orderId}`, {
+    this.logger.error(`CBB contact sync failed for order ${orderId}`, {
       error: errorMessage,
       stack: error.stack,
     });
@@ -203,12 +203,12 @@ export class CGBSyncProcessor extends WorkerHost {
     return data;
   }
 
-  private async updateCGBSyncStatus(orderId: string, status: string) {
+  private async updateCBBSyncStatus(orderId: string, status: string) {
     const { error } = await this.supabaseService.client
       .from('orders')
       .update({ 
-        cgb_sync_status: status,
-        cgb_sync_attempted_at: new Date().toISOString(),
+        cbb_sync_status: status,
+        cbb_sync_attempted_at: new Date().toISOString(),
       })
       .eq('order_id', orderId);
 
@@ -218,7 +218,7 @@ export class CGBSyncProcessor extends WorkerHost {
     }
   }
 
-  private async updateCGBSyncResult(orderId: string, updates: Partial<OrderData>) {
+  private async updateCBBSyncResult(orderId: string, updates: Partial<OrderData>) {
     const { error } = await this.supabaseService.client
       .from('orders')
       .update(updates)
