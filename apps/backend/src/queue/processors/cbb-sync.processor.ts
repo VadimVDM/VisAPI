@@ -251,8 +251,8 @@ export class CBBSyncProcessor extends WorkerHost {
     };
   }
 
-  private async handleSyncError(orderId: string, error: any) {
-    const errorMessage = error.message || 'Unknown error';
+  private async handleSyncError(orderId: string, error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     await this.updateCBBSyncResult(orderId, {
       cbb_sync_status: 'failed',
@@ -262,7 +262,7 @@ export class CBBSyncProcessor extends WorkerHost {
 
     this.logger.error(`CBB contact sync failed for order ${orderId}`, {
       error: errorMessage,
-      stack: error.stack,
+      stack: error instanceof Error ? error.stack : undefined,
     });
   }
 

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { QueueService } from '../queue/queue.service';
-import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES } from '@visapi/shared-types';
 import { ConfigService } from '@visapi/core-config';
 
 interface OrderTableData {
@@ -240,7 +240,7 @@ export class OrdersService {
         return undefined;
       }
       return parsedDate.toISOString();
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to parse entry date: ${date}`);
       return undefined;
     }
@@ -274,7 +274,7 @@ export class OrdersService {
       }
       
       return `${cleanCode}${cleanNumber}`;
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to transform phone number: ${JSON.stringify(phone)}, using fallback`);
       return '0000000000';
     }

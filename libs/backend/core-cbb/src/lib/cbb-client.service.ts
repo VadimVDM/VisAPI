@@ -23,7 +23,7 @@ export class CbbApiError extends Error {
   constructor(
     message: string,
     public readonly statusCode: number,
-    public readonly response?: any
+    public readonly response?: unknown
   ) {
     super(message);
     this.name = 'CbbApiError';
@@ -407,8 +407,8 @@ export class CbbClientService {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     endpoint: string,
     options: {
-      data?: any;
-      params?: any;
+      data?: unknown;
+      params?: Record<string, unknown>;
       headers?: Record<string, string>;
     } = {}
   ): Promise<AxiosResponse<T>> {
