@@ -211,12 +211,11 @@ export class ViziWebhooksController {
         correlationId,
       );
 
-      // Update order with processing results
-      await this.ordersService.updateOrderProcessing(
-        order?.id as string,
-        result.workflowId,
-        result.jobId,
-      );
+      // Update order with processing results (only if additional workflows were queued)
+      if (result.status === 'queued') {
+        // TODO: Update order with workflow processing info when workflows exist
+        // await this.ordersService.updateOrderProcessing(order?.id as string, workflowId, jobId);
+      }
 
       // Store result for idempotency
       // TODO: Implement idempotency when IdempotencyService is updated
@@ -232,15 +231,12 @@ export class ViziWebhooksController {
           webhook_type: 'vizi_order',
           order_id: order?.id,
           form_id: form?.id,
-          workflow_id: result.workflowId,
-          job_id: result.jobId,
           order_db_id: orderId,
+          result_status: result.status,
           webhook_data: bodyAsRecord, // Save full payload for data recovery
           correlationId,
           source: 'webhook',
         },
-        workflow_id: result.workflowId,
-        job_id: result.jobId,
         correlation_id: correlationId,
       });
 

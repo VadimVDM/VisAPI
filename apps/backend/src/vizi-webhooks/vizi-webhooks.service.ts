@@ -28,8 +28,7 @@ export class ViziWebhooksService {
     webhookData: ViziWebhookDto,
     correlationId?: string,
   ): Promise<{
-    workflowId: string | null;
-    jobId: string | null;
+    orderId: string;
     status: string;
   }> {
     const { form, order } = webhookData;
@@ -47,13 +46,12 @@ export class ViziWebhooksService {
     );
 
     if (!workflows || workflows.length === 0) {
-      this.logger.warn(
-        `No active workflow found for Vizi ${form.country} webhook`,
+      this.logger.log(
+        `No additional workflows found for Vizi ${form.country} - order creation workflow completed successfully`,
       );
       return {
-        workflowId: null,
-        jobId: null,
-        status: 'no_workflow',
+        orderId: order.id,
+        status: 'success',
       };
     }
 
@@ -139,8 +137,7 @@ export class ViziWebhooksService {
     });
 
     return {
-      workflowId: workflow.id,
-      jobId: job.id,
+      orderId: order.id,
       status: 'queued',
     };
   }
