@@ -15,6 +15,7 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
     @InjectQueue(QUEUE_NAMES.BULK) private bulkQueue: Queue,
     @InjectQueue(QUEUE_NAMES.CBB_SYNC) private cbbSyncQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES) private whatsappMessagesQueue: Queue,
     private readonly config: ConfigService,
   ) {}
 
@@ -26,6 +27,8 @@ export class QueueService {
         return this.bulkQueue;
       case QUEUE_NAMES.CBB_SYNC:
         return this.cbbSyncQueue;
+      case QUEUE_NAMES.WHATSAPP_MESSAGES:
+        return this.whatsappMessagesQueue;
       case QUEUE_NAMES.DEFAULT:
       default:
         return this.defaultQueue;
@@ -42,6 +45,10 @@ export class QueueService {
       priority?: number;
       removeOnComplete?: boolean;
       removeOnFail?: boolean;
+      backoff?: {
+        type: string;
+        delay: number;
+      };
     },
   ): Promise<Job<T>> {
     const queue = this.getQueue(queueName);
@@ -79,6 +86,7 @@ export class QueueService {
           { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
           { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
           { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
+          { name: QUEUE_NAMES.WHATSAPP_MESSAGES, queue: this.whatsappMessagesQueue },
         ];
 
     const metrics: QueueMetrics[] = [];

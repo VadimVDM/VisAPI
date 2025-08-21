@@ -4,6 +4,7 @@ export const QUEUE_NAMES = {
   BULK: 'bulk',
   SLACK: 'slack',
   WHATSAPP: 'whatsapp',
+  WHATSAPP_MESSAGES: 'whatsapp-messages',
   PDF: 'pdf',
   CBB_SYNC: 'cbb-sync',
   DLQ: 'dlq',
@@ -18,6 +19,7 @@ export const QUEUE_PRIORITIES = {
 export const JOB_NAMES = {
   SEND_SLACK: 'slack.send',
   SEND_WHATSAPP: 'whatsapp.send',
+  SEND_WHATSAPP_ORDER_CONFIRMATION: 'whatsapp.send-order-confirmation',
   GENERATE_PDF: 'pdf.generate',
   SYNC_CBB_CONTACT: 'cbb.sync-contact',
   PROCESS_IMAGE: 'image.process',
@@ -41,6 +43,12 @@ export interface WhatsAppJobResult {
   to: string;                             // Original phone number
   timestamp: string;
   error?: string;
+}
+
+export interface WhatsAppMessageJobData {
+  orderId: string;
+  contactId: string;                       // CBB contact ID (phone number)
+  messageType: 'order_confirmation' | 'status_update' | 'document_ready';
 }
 
 export interface LogPruneJobData {

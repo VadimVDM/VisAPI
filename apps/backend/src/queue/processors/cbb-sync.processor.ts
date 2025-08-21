@@ -2,11 +2,12 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
-import { CBBContactData, CBBContactSyncResult } from '@visapi/shared-types';
+import { CBBContactData, CBBContactSyncResult, QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
+import { QueueService } from '../queue.service';
 
 interface CBBSyncJobData {
   orderId: string;
@@ -36,6 +37,9 @@ interface OrderData {
   applicants_data?: any; // JSONB field - could be array or null
   cbb_synced?: boolean;  // Made optional since it might be null in DB
   cbb_contact_id?: string;
+  whatsapp_confirmation_sent?: boolean;  // Track if confirmation was sent
+  whatsapp_confirmation_sent_at?: string;
+  whatsapp_message_id?: string;
 }
 
 @Injectable()
@@ -47,6 +51,7 @@ export class CBBSyncProcessor extends WorkerHost {
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
+    private readonly queueService: QueueService,
     @InjectMetric('cbb_sync_total')
     private readonly syncTotalCounter: Counter<string>,
     @InjectMetric('cbb_sync_success')
@@ -155,11 +160,51 @@ export class CBBSyncProcessor extends WorkerHost {
       // 6. Update order with results
       await this.updateOrderCBBStatus(orderId, contact.id, true);
 
-      // 7. Log success
+      // 7. Queue WhatsApp order confirmation if enabled
+      if (hasWhatsApp && order.whatsapp_alerts_enabled && order.branch?.toLowerCase() === 'il') {
+        // Only send if not already sent
+        if (!order.whatsapp_confirmation_sent) {
+          try {
+            await this.queueService.addJob(
+              QUEUE_NAMES.WHATSAPP_MESSAGES,
+              JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
+              {
+                orderId: order.order_id,
+                contactId: contact.id,
+                messageType: 'order_confirmation',
+              },
+              {
+                delay: 1000, // 1 second delay after sync
+                attempts: 3,
+                backoff: {
+                  type: 'exponential',
+                  delay: 2000,
+                },
+              },
+            );
+            this.logger.log(
+              `Queued WhatsApp order confirmation for ${order.order_id} to contact ${contact.id}`,
+            );
+          } catch (error) {
+            // Don't fail the sync if we can't queue the message
+            this.logger.error(
+              `Failed to queue WhatsApp message for order ${orderId}:`,
+              error,
+            );
+          }
+        } else {
+          this.logger.log(
+            `WhatsApp confirmation already sent for order ${orderId}, skipping`,
+          );
+        }
+      }
+
+      // 8. Log success
       this.logger.log(`CBB contact sync successful for order ${orderId}`, {
         contact_id: contact.id,
         action: isNewContact ? 'created' : 'updated',
         has_whatsapp: hasWhatsApp,
+        whatsapp_queued: hasWhatsApp && order.whatsapp_alerts_enabled && order.branch?.toLowerCase() === 'il' && !order.whatsapp_confirmation_sent,
       });
 
       // Log to database

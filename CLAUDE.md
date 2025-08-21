@@ -55,6 +55,7 @@ Essential information for working with the VisAPI project. Updated: August 21, 2
 - ✅ Railway migration completed - backend and Redis moved from Render/Upstash (August 21, 2025)
 - ✅ Self-hosted monitoring prepared with Grafana support on Railway (August 21, 2025)
 - ✅ Node.js 22 deployment configuration with Nixpacks (August 21, 2025)
+- ✅ WhatsApp order confirmation messaging via CBB integration with Hebrew support (August 21, 2025)
 
 ## Project Structure
 
@@ -400,7 +401,7 @@ Use these tools:
 ### Connector Types
 
 1. **Slack:** SDK wrapper for notifications
-2. **WhatsApp:** Complete CBB API integration with contact resolution
+2. **WhatsApp:** Complete CBB API integration with flow templates, Hebrew messages, and order confirmations
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
 4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations

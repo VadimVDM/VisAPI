@@ -6,6 +6,7 @@ import { QueueController } from './queue.controller';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { AuthModule } from '../auth/auth.module';
 import { CBBSyncProcessor } from './processors/cbb-sync.processor';
+import { WhatsAppMessageProcessor } from './processors/whatsapp-message.processor';
 import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -119,6 +120,7 @@ import {
       { name: QUEUE_NAMES.BULK },
       { name: QUEUE_NAMES.SLACK },
       { name: QUEUE_NAMES.WHATSAPP },
+      { name: QUEUE_NAMES.WHATSAPP_MESSAGES },
       { name: QUEUE_NAMES.PDF },
       { name: QUEUE_NAMES.CBB_SYNC },
       { name: QUEUE_NAMES.DLQ },
@@ -132,6 +134,7 @@ import {
   providers: [
     QueueService,
     CBBSyncProcessor,
+    WhatsAppMessageProcessor,
     // CBB Sync Metrics
     makeCounterProvider({
       name: 'cbb_sync_total',
@@ -165,6 +168,23 @@ import {
     makeCounterProvider({
       name: 'cbb_whatsapp_unavailable',
       help: 'Total number of contacts without WhatsApp',
+    }),
+    // WhatsApp Message Metrics
+    makeCounterProvider({
+      name: 'whatsapp_messages_sent',
+      help: 'Total number of WhatsApp messages sent',
+      labelNames: ['message_type'],
+    }),
+    makeCounterProvider({
+      name: 'whatsapp_messages_failed',
+      help: 'Total number of WhatsApp messages failed',
+      labelNames: ['message_type'],
+    }),
+    makeHistogramProvider({
+      name: 'whatsapp_message_duration',
+      help: 'WhatsApp message sending duration in seconds',
+      labelNames: ['message_type'],
+      buckets: [0.5, 1, 2, 5, 10, 20, 30],
     }),
   ],
   exports: [QueueService, BullModule],
