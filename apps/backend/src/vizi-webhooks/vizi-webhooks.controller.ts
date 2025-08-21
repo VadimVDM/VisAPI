@@ -153,7 +153,7 @@ export class ViziWebhooksController {
 
     await this.logService.createLog({
       level: 'info',
-      message: 'Received Vizi webhook',
+      message: `Vizi webhook received for order ${order?.id || 'unknown'}`,
       metadata: {
         webhook_type: 'vizi_order',
         validation: webhookValidation,
@@ -248,7 +248,7 @@ export class ViziWebhooksController {
       // Log success WITH FULL WEBHOOK DATA
       await this.logService.createLog({
         level: 'info',
-        message: 'Vizi webhook processed successfully',
+        message: `Order ${order?.id} created successfully from Vizi webhook`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order?.id,
@@ -271,7 +271,7 @@ export class ViziWebhooksController {
 
       await this.logService.createLog({
         level: 'error',
-        message: 'Failed to process Vizi webhook',
+        message: `Failed to process Vizi webhook for order ${order?.id || 'unknown'}`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order?.id,
