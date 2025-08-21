@@ -40,9 +40,23 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (!this.url || !this.username || !this.password) {
-      this.logger.warn('Remote write is enabled but credentials are missing');
-      return;
+    const isCloudEnabled = this.configService.get<boolean>(
+      'GRAFANA_CLOUD_ENABLED',
+      true,
+    );
+
+    if (isCloudEnabled) {
+      // Grafana Cloud mode - requires auth
+      if (!this.url || !this.username || !this.password) {
+        this.logger.warn('Remote write is enabled but cloud credentials are missing');
+        return;
+      }
+    } else {
+      // Self-hosted mode - only needs URL
+      if (!this.url) {
+        this.logger.warn('Remote write is enabled but Prometheus URL is missing');
+        return;
+      }
     }
 
     this.startPushing();
@@ -94,29 +108,47 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      this.logger.debug(
-        `Pushing ${timeSeries.length} time series to Grafana Cloud`,
+      const isCloudEnabled = this.configService.get<boolean>(
+        'GRAFANA_CLOUD_ENABLED',
+        true,
       );
 
-      // Use the prometheus-remote-write library to push metrics
-      const result = await pushTimeseries(timeSeries, {
-        url: this.url,
-        auth: {
-          username: this.username,
-          password: this.password,
-        },
-        timeout: 10000,
-        verbose: false,
-        headers: {
-          'User-Agent': 'visapi-remote-write/1.0',
-        },
-      });
+      this.logger.debug(
+        `Pushing ${timeSeries.length} time series to ${isCloudEnabled ? 'Grafana Cloud' : 'self-hosted Grafana'}`,
+      );
 
-      if (result.status === 200) {
-        this.logger.debug('Successfully pushed metrics to Grafana Cloud');
+      // Configure based on cloud vs self-hosted
+      const config = isCloudEnabled
+        ? {
+            url: this.url,
+            auth: {
+              username: this.username,
+              password: this.password,
+            },
+            timeout: 10000,
+            verbose: false,
+            headers: {
+              'User-Agent': 'visapi-remote-write/1.0',
+            },
+          }
+        : {
+            url: this.url || 'http://grafana.railway.internal:9090/api/v1/write',
+            timeout: 10000,
+            verbose: false,
+            headers: {
+              'User-Agent': 'visapi-remote-write/1.0',
+            },
+          };
+
+      // Use the prometheus-remote-write library to push metrics
+      const result = await pushTimeseries(timeSeries, config);
+
+      const destination = isCloudEnabled ? 'Grafana Cloud' : 'self-hosted Grafana';
+      if (result.status === 200 || result.status === 204) {
+        this.logger.debug(`Successfully pushed metrics to ${destination}`);
       } else {
         this.logger.error(
-          `Failed to push metrics: ${result.status} ${result.statusText}`,
+          `Failed to push metrics to ${destination}: ${result.status} ${result.statusText}`,
         );
         if (result.errorMessage) {
           this.logger.error(`Error message: ${result.errorMessage}`);
@@ -125,8 +157,13 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
+      const isCloudEnabled = this.configService.get<boolean>(
+        'GRAFANA_CLOUD_ENABLED',
+        true,
+      );
+      const destination = isCloudEnabled ? 'Grafana Cloud' : 'self-hosted Grafana';
       this.logger.error(
-        'Failed to push metrics to Grafana Cloud',
+        `Failed to push metrics to ${destination}`,
         errorMessage,
       );
 
