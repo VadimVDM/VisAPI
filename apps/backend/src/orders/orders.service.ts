@@ -81,7 +81,39 @@ export class OrdersService {
    */
   async createOrder(webhookData: ViziWebhookDto): Promise<string> {
     try {
+      // Log the incoming webhook data structure for debugging
+      this.logger.debug(`Received webhook data: ${JSON.stringify({
+        orderId: webhookData.order?.id,
+        formId: webhookData.form?.id,
+        hasOrder: !!webhookData.order,
+        hasForm: !!webhookData.form,
+        orderFields: webhookData.order ? Object.keys(webhookData.order) : [],
+        formFields: webhookData.form ? Object.keys(webhookData.form) : [],
+      })}`);
+      
       const orderData = this.transformWebhookToOrder(webhookData);
+      
+      // Validate required fields before insert
+      const missingFields = [];
+      if (!orderData.order_id) missingFields.push('order_id');
+      if (!orderData.form_id) missingFields.push('form_id');
+      if (!orderData.branch) missingFields.push('branch');
+      if (!orderData.domain) missingFields.push('domain');
+      if (!orderData.payment_processor) missingFields.push('payment_processor');
+      if (!orderData.payment_id) missingFields.push('payment_id');
+      if (orderData.amount === null || orderData.amount === undefined) missingFields.push('amount');
+      if (!orderData.currency) missingFields.push('currency');
+      if (!orderData.order_status) missingFields.push('order_status');
+      if (!orderData.client_name) missingFields.push('client_name');
+      if (!orderData.client_email) missingFields.push('client_email');
+      if (!orderData.client_phone) missingFields.push('client_phone');
+      if (!orderData.product_name) missingFields.push('product_name');
+      if (!orderData.product_country) missingFields.push('product_country');
+      if (!orderData.webhook_received_at) missingFields.push('webhook_received_at');
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
       
       this.logger.log(`Creating order: ${orderData.order_id}`);
       
@@ -268,14 +300,14 @@ export class OrdersService {
     const orderData: OrderTableData = {
       // Order core data
       order_id: order.id,
-      form_id: order.form_id,
+      form_id: order.form_id || form.id || order.id, // Use form.id as fallback, then order.id
       branch: order.branch || this.extractBranchFromOrderId(order.id),
-      domain: order.domain || 'unknown',
-      payment_processor: order.payment_processor || 'unknown',
-      payment_id: order.payment_id || 'unknown',
-      amount: order.amount || 0,
+      domain: order.domain || 'visanet.app',
+      payment_processor: order.payment_processor || 'stripe',
+      payment_id: order.payment_id || `pending_${order.id}`,
+      amount: order.amount !== undefined ? order.amount : 0,
       currency: order.currency || this.getCurrencyForCountry(form.country),
-      order_status: order.status || 'active',
+      order_status: order.status || 'pending',
       
       // Client information (with phone transformation)
       client_name: form.client?.name || 'Unknown',
