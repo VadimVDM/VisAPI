@@ -78,6 +78,7 @@ export class QueueService {
           { name: QUEUE_NAMES.CRITICAL, queue: this.criticalQueue },
           { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
           { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
+          { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
         ];
 
     const metrics: QueueMetrics[] = [];

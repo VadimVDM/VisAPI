@@ -69,7 +69,7 @@ export class ViziWebhooksController {
     description: 'Insufficient permissions',
   })
   async handleViziOrder(
-    @Body() body: any, // Accept any to handle validation ourselves
+    @Body() body: unknown, // Accept unknown to handle validation ourselves
     @Headers() headers: Record<string, string>,
   ) {
     const correlationId =
@@ -77,49 +77,58 @@ export class ViziWebhooksController {
     const idempotencyKey = headers['x-idempotency-key'];
     
     // Transform and validate the webhook data
+    const bodyAsRecord = body as Record<string, unknown>;
     try {
       // Normalize branch to lowercase if present
-      if (body?.order?.branch && typeof body.order.branch === 'string') {
-        body.order.branch = body.order.branch.toLowerCase();
+      const order = bodyAsRecord.order as Record<string, unknown> | undefined;
+      if (order?.branch && typeof order.branch === 'string') {
+        order.branch = order.branch.toLowerCase();
       }
       
       // Ensure payment_processor is valid
       const validProcessors = ['stripe', 'paypal', 'tbank', 'bill', 'bit', 'paybox'];
-      if (body?.order?.payment_processor && !validProcessors.includes(body.order.payment_processor)) {
-        this.logger.warn(`Invalid payment processor: ${body.order.payment_processor}, defaulting to stripe`);
-        body.order.payment_processor = 'stripe';
+      if (order?.payment_processor && !validProcessors.includes(order.payment_processor as string)) {
+        this.logger.warn(`Invalid payment processor: ${order.payment_processor}, defaulting to stripe`);
+        order.payment_processor = 'stripe';
       }
       
       // Ensure status is valid
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
-      if (body?.order?.status && !validStatuses.includes(body.order.status)) {
-        this.logger.warn(`Invalid order status: ${body.order.status}, defaulting to active`);
-        body.order.status = 'active';
+      if (order?.status && !validStatuses.includes(order.status as string)) {
+        this.logger.warn(`Invalid order status: ${order.status}, defaulting to active`);
+        order.status = 'active';
       }
     } catch (error) {
-      this.logger.error(`Error normalizing webhook data: ${error.message}`);
+      this.logger.error(`Error normalizing webhook data: ${(error as Error).message}`);
     }
 
     // Log incoming webhook with detailed validation info
+    const order = bodyAsRecord.order as Record<string, unknown> | undefined;
+    const form = bodyAsRecord.form as Record<string, unknown> | undefined;
+    const client = form?.client as Record<string, unknown> | undefined;
+    const product = form?.product as Record<string, unknown> | undefined;
+    const phone = client?.phone as Record<string, unknown> | undefined;
+    const applicants = form?.applicants as unknown[] | undefined;
+    
     const webhookValidation = {
-      hasOrder: !!body.order,
-      hasForm: !!body.form,
-      orderId: body.order?.id,
-      formId: body.form?.id,
-      country: body.form?.country,
-      clientData: body.form?.client ? {
-        name: body.form.client.name,
-        email: body.form.client.email,
-        hasPhone: !!body.form.client.phone,
-        phoneCode: body.form.client.phone?.code,
-        phoneNumber: body.form.client.phone?.number,
-        whatsappEnabled: body.form.client.whatsappAlertsEnabled,
+      hasOrder: !!order,
+      hasForm: !!form,
+      orderId: order?.id,
+      formId: form?.id,
+      country: form?.country,
+      clientData: client ? {
+        name: client.name,
+        email: client.email,
+        hasPhone: !!phone,
+        phoneCode: phone?.code,
+        phoneNumber: phone?.number,
+        whatsappEnabled: client.whatsappAlertsEnabled,
       } : null,
-      productData: body.form?.product ? {
-        name: body.form.product.name,
-        country: body.form.product.country,
+      productData: product ? {
+        name: product.name,
+        country: product.country,
       } : null,
-      applicantCount: body.form?.applicants?.length || 0,
+      applicantCount: applicants?.length || 0,
     };
     
     await this.logService.createLog({
@@ -128,7 +137,7 @@ export class ViziWebhooksController {
       metadata: {
         webhook_type: 'vizi_order',
         validation: webhookValidation,
-        webhook_data: body, // Save full payload immediately upon receipt
+        webhook_data: bodyAsRecord, // Save full payload immediately upon receipt
         correlationId,
         idempotencyKey,
         source: 'webhook',
@@ -148,41 +157,42 @@ export class ViziWebhooksController {
 
     try {
       // Validate webhook payload based on country
-      if (!body.form || !body.order) {
+      if (!form || !order) {
         throw new BadRequestException('Missing required form or order data');
       }
 
       // Cast to ViziWebhookDto after normalization
-      const webhookData = body as ViziWebhookDto;
+      const webhookData = bodyAsRecord as unknown as ViziWebhookDto;
       
       // Save order to database first
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(webhookData);
-        this.logger.log(`Order saved to database: ${body.order.id} (DB ID: ${orderId})`);
+        this.logger.log(`Order saved to database: ${order?.id} (DB ID: ${orderId})`);
       } catch (error) {
+        const err = error as Record<string, unknown>;
         const errorDetails = {
-          message: error.message,
-          code: error.code,
-          detail: error.detail,
-          stack: error.stack,
+          message: err.message,
+          code: err.code,
+          detail: err.detail,
+          stack: err.stack,
         };
         
         this.logger.error(
-          `Failed to save order ${body.order.id} to database: ${JSON.stringify(errorDetails)}`,
-          error.stack,
+          `Failed to save order ${order?.id} to database: ${JSON.stringify(errorDetails)}`,
+          err.stack as string,
         );
         
         // Log the failed order creation with full details
         await this.logService.createLog({
           level: 'error',
-          message: `Order creation failed for ${body.order.id}`,
+          message: `Order creation failed for ${order?.id}`,
           metadata: {
             webhook_type: 'vizi_order',
-            order_id: body.order.id,
-            form_id: body.form.id,
+            order_id: order?.id,
+            form_id: form?.id,
             error: errorDetails,
-            webhook_data: body,
+            webhook_data: bodyAsRecord,
             correlationId,
             source: 'webhook',
           },
@@ -191,7 +201,7 @@ export class ViziWebhooksController {
         
         // Throw the error to prevent marking webhook as successful
         throw new BadRequestException(
-          `Failed to save order to database: ${error.message}`,
+          `Failed to save order to database: ${(error as Error).message}`,
         );
       }
 
@@ -203,7 +213,7 @@ export class ViziWebhooksController {
 
       // Update order with processing results
       await this.ordersService.updateOrderProcessing(
-        body.order.id,
+        order?.id as string,
         result.workflowId,
         result.jobId,
       );
@@ -220,12 +230,12 @@ export class ViziWebhooksController {
         message: 'Vizi webhook processed successfully',
         metadata: {
           webhook_type: 'vizi_order',
-          order_id: body.order.id,
-          form_id: body.form.id,
+          order_id: order?.id,
+          form_id: form?.id,
           workflow_id: result.workflowId,
           job_id: result.jobId,
           order_db_id: orderId,
-          webhook_data: body, // Save full payload for data recovery
+          webhook_data: bodyAsRecord, // Save full payload for data recovery
           correlationId,
           source: 'webhook',
         },
@@ -246,8 +256,8 @@ export class ViziWebhooksController {
         message: 'Failed to process Vizi webhook',
         metadata: {
           webhook_type: 'vizi_order',
-          order_id: body.order?.id,
-          form_id: body.form?.id,
+          order_id: order?.id,
+          form_id: form?.id,
           error: errorMessage,
           stack: errorStack,
           correlationId,

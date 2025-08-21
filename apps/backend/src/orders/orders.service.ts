@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { QueueService } from '../queue/queue.service';
-import { QUEUE_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES, Json } from '@visapi/shared-types';
 import { ConfigService } from '@visapi/core-config';
 
 interface OrderTableData {
@@ -44,20 +44,20 @@ interface OrderTableData {
   passport_url?: string;
   
   // JSON fields
-  passport_data?: any;
-  extra_nationality_data?: any;
-  address_data?: any;
-  family_data?: any;
-  occupation_data?: any;
-  military_data?: any;
-  past_travels_data?: any;
-  emergency_contact_data?: any;
-  business_data?: any;
-  files_data?: any;
-  coupon_data?: any;
-  form_meta_data?: any;
-  applicants_data?: any;
-  extra_data?: any;
+  passport_data?: Json;
+  extra_nationality_data?: Json;
+  address_data?: Json;
+  family_data?: Json;
+  occupation_data?: Json;
+  military_data?: Json;
+  past_travels_data?: Json;
+  emergency_contact_data?: Json;
+  business_data?: Json;
+  files_data?: Json;
+  coupon_data?: Json;
+  form_meta_data?: Json;
+  applicants_data?: Json;
+  extra_data?: Json;
   
   // Tracking
   webhook_received_at: string;
@@ -171,7 +171,7 @@ export class OrdersService {
       
       return data.id;
     } catch (error) {
-      this.logger.error(`Error creating order: ${error.message}`, error);
+      this.logger.error(`Error creating order: ${(error as Error).message}`, error);
       throw error;
     }
   }
@@ -201,14 +201,14 @@ export class OrdersService {
         this.logger.log(`Order ${orderId} processing status updated`);
       }
     } catch (error) {
-      this.logger.error(`Error updating order ${orderId}: ${error.message}`);
+      this.logger.error(`Error updating order ${orderId}: ${(error as Error).message}`);
     }
   }
 
   /**
    * Get order by order_id
    */
-  async getOrderByOrderId(orderId: string): Promise<any> {
+  async getOrderByOrderId(orderId: string): Promise<OrderTableData | null> {
     const { data, error } = await this.supabaseService
       .client
       .from('orders')
@@ -227,14 +227,14 @@ export class OrdersService {
   /**
    * Parse entry date safely
    */
-  private parseEntryDate(date: any): string | undefined {
+  private parseEntryDate(date: unknown): string | undefined {
     if (!date) {
       return undefined;
     }
     
     try {
       // Handle various date formats
-      const parsedDate = new Date(date);
+      const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
         this.logger.warn(`Invalid entry date format: ${date}`);
         return undefined;
@@ -287,7 +287,8 @@ export class OrdersService {
     const { form, order } = webhook;
     
     // Extract face and passport URLs from first applicant's files
-    const applicantFiles = (form.applicants?.[0] as any)?.files || {};
+    const firstApplicant = form.applicants?.[0] as unknown;
+    const applicantFiles = (firstApplicant as { files?: Record<string, unknown> })?.files || {};
     const faceUrl = applicantFiles.face || null;
     const passportUrl = applicantFiles.passport || null;
     
@@ -323,40 +324,40 @@ export class OrdersService {
       
       // Visa details (NOW AS INDIVIDUAL COLUMNS)
       visa_quantity: form.quantity || 1,
-      entry_date: this.parseEntryDate((form as any).entry?.date),
+      entry_date: this.parseEntryDate(((form as unknown as Record<string, unknown>).entry as { date?: unknown })?.date),
       urgency: form.urgency || 'standard',
-      file_transfer_method: (form as any).fileTransferMethod,
+      file_transfer_method: (form as unknown as Record<string, unknown>).fileTransferMethod as string | undefined,
       
       // Entry information
-      entry_port: (form as any).entry?.port,
-      entry_type: (form as any).entry?.crossing?.type,
+      entry_port: ((form as unknown as Record<string, unknown>).entry as { port?: string })?.port,
+      entry_type: ((form as unknown as Record<string, unknown>).entry as { crossing?: { type?: string } })?.crossing?.type,
       
       // Document URLs (FACE AND PASSPORT AS DEDICATED COLUMNS)
-      face_url: faceUrl,
-      passport_url: passportUrl,
+      face_url: faceUrl as string | undefined,
+      passport_url: passportUrl as string | undefined,
       
       // Categorized JSON data
       passport_data: form.applicants?.[0]?.passport || null,
-      extra_nationality_data: (form.applicants?.[0] as any)?.extraNationality || null,
+      extra_nationality_data: (firstApplicant as { extraNationality?: Json })?.extraNationality || null,
       address_data: {
-        personal: (form.applicants?.[0] as any)?.address,
-        work: (form.applicants?.[0] as any)?.occupation?.address,
-      },
-      family_data: (form.applicants?.[0] as any)?.family || null,
-      occupation_data: (form.applicants?.[0] as any)?.occupation || null,
-      military_data: (form.applicants?.[0] as any)?.military || null,
-      past_travels_data: (form.applicants?.[0] as any)?.pastTravels || null,
-      emergency_contact_data: (form as any)?.emergencyContact || null,
-      business_data: (form as any)?.business || null,
-      files_data: Object.keys(otherFiles).length > 0 ? otherFiles : null, // Other documents
-      coupon_data: order.coupon || form.discount || null,
+        personal: (firstApplicant as { address?: Json })?.address,
+        work: ((firstApplicant as { occupation?: Json })?.occupation as { address?: Json })?.address,
+      } as Json,
+      family_data: (firstApplicant as { family?: Json })?.family || null,
+      occupation_data: (firstApplicant as { occupation?: Json })?.occupation || null,
+      military_data: (firstApplicant as { military?: Json })?.military || null,
+      past_travels_data: (firstApplicant as { pastTravels?: Json })?.pastTravels || null,
+      emergency_contact_data: (form as unknown as Record<string, unknown>)?.emergencyContact as Json | null,
+      business_data: (form as unknown as Record<string, unknown>)?.business as Json | null,
+      files_data: Object.keys(otherFiles).length > 0 ? otherFiles as Json : null, // Other documents
+      coupon_data: (order.coupon || form.discount) as Json | null,
       form_meta_data: form.meta || null,
       
       // Full applicants array for multi-applicant orders
-      applicants_data: form.applicants || [],
+      applicants_data: (form.applicants || []) as unknown as Json,
       
       // Store any extra country-specific fields
-      extra_data: this.extractExtraFields(form),
+      extra_data: this.extractExtraFields(form as unknown as Json),
       
       // Tracking
       webhook_received_at: new Date().toISOString(),
@@ -420,22 +421,28 @@ export class OrdersService {
   /**
    * Extract fields not in standard structure
    */
-  private extractExtraFields(form: any): any {
+  private extractExtraFields(form: Json): Json {
+    // Only process if form is an object
+    if (!form || typeof form !== 'object' || Array.isArray(form)) {
+      return null;
+    }
+    
+    const formObj = form as { [key: string]: Json | undefined };
     const standardFields = [
       'id', 'country', 'client', 'product', 'quantity', 'urgency',
       'discount', 'termsAgreed', 'orderId', 'meta', 'entry', 'business',
       'applicants', 'fileTransferMethod', 'emergencyContact'
     ];
     
-    const extraFields: any = {
-      termsAgreed: form.termsAgreed,
-      orderId: form.orderId,
+    const extraFields: { [key: string]: Json | undefined } = {
+      termsAgreed: formObj.termsAgreed,
+      orderId: formObj.orderId,
     };
     
     // Add any non-standard fields
-    for (const key in form) {
+    for (const key in formObj) {
       if (!standardFields.includes(key)) {
-        extraFields[key] = form[key];
+        extraFields[key] = formObj[key];
       }
     }
     
@@ -452,7 +459,7 @@ export class OrdersService {
     status?: string;
     from_date?: string;
     to_date?: string;
-  } = {}): Promise<any[]> {
+  } = {}): Promise<OrderTableData[]> {
     let query = this.supabaseService
       .client
       .from('orders')

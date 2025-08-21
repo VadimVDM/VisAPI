@@ -5,6 +5,7 @@ import { ViziWebhooksService } from './vizi-webhooks.service';
 import { AuthService } from '../auth/auth.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { LogService } from '@visapi/backend-logging';
+import { OrdersService } from '../orders/orders.service';
 
 describe('ViziWebhooksController', () => {
   let controller: ViziWebhooksController;
@@ -27,6 +28,11 @@ describe('ViziWebhooksController', () => {
       createLog: jest.fn(),
     };
 
+    const mockOrdersService = {
+      createOrder: jest.fn(),
+      updateOrderProcessing: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ViziWebhooksController],
       providers: [
@@ -45,6 +51,10 @@ describe('ViziWebhooksController', () => {
         {
           provide: LogService,
           useValue: mockLogService,
+        },
+        {
+          provide: OrdersService,
+          useValue: mockOrdersService,
         },
         Reflector,
       ],

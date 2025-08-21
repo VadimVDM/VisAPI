@@ -74,16 +74,17 @@ describe('OrdersService - CBB Sync Integration', () => {
 
     supabaseService = {
       client: mockSupabaseClient,
-    } as any;
+      serviceClient: mockSupabaseClient,
+    } as jest.Mocked<SupabaseService>;
 
     queueService = {
       addJob: jest.fn().mockResolvedValue({ id: 'job-123' }),
-    } as any;
+    } as jest.Mocked<QueueService>;
 
     configService = {
       cbbSyncEnabled: true,
       cbbSyncDelayMs: 2000,
-    } as any;
+    } as jest.Mocked<ConfigService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -97,10 +98,10 @@ describe('OrdersService - CBB Sync Integration', () => {
     service = module.get<OrdersService>(OrdersService);
     
     // Suppress console logs during tests
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    jest.spyOn(Logger.prototype, 'debug').mockImplementation();
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -219,7 +220,7 @@ describe('OrdersService - CBB Sync Integration', () => {
 
     it('should handle undefined cbbSyncEnabled as false', async () => {
       // Arrange
-      configService.cbbSyncEnabled = undefined as any;
+      (configService as { cbbSyncEnabled: boolean | undefined }).cbbSyncEnabled = undefined;
 
       // Act
       await service.createOrder(mockWebhookData);
@@ -378,7 +379,7 @@ describe('OrdersService - CBB Sync Integration', () => {
           ...mockWebhookData.form,
           client: {
             ...mockWebhookData.form.client,
-            phone: '+447700900123' as any,
+            phone: '+447700900123' as unknown,
           },
         },
       };

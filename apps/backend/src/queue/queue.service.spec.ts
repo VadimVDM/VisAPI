@@ -11,6 +11,7 @@ describe('QueueService', () => {
   let criticalQueue: jest.Mocked<Queue>;
   let defaultQueue: jest.Mocked<Queue>;
   let bulkQueue: jest.Mocked<Queue>;
+  let cbbSyncQueue: jest.Mocked<Queue>;
 
   const createMockQueue = (): jest.Mocked<Queue> =>
     ({
@@ -31,6 +32,7 @@ describe('QueueService', () => {
     const mockCriticalQueue = createMockQueue();
     const mockDefaultQueue = createMockQueue();
     const mockBulkQueue = createMockQueue();
+    const mockCbbSyncQueue = createMockQueue();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +50,10 @@ describe('QueueService', () => {
           useValue: mockBulkQueue,
         },
         {
+          provide: getQueueToken(QUEUE_NAMES.CBB_SYNC),
+          useValue: mockCbbSyncQueue,
+        },
+        {
           provide: ConfigService,
           useValue: {
             queueMaxRetries: 3,
@@ -61,6 +67,7 @@ describe('QueueService', () => {
     criticalQueue = module.get(getQueueToken(QUEUE_NAMES.CRITICAL));
     defaultQueue = module.get(getQueueToken(QUEUE_NAMES.DEFAULT));
     bulkQueue = module.get(getQueueToken(QUEUE_NAMES.BULK));
+    cbbSyncQueue = module.get(getQueueToken(QUEUE_NAMES.CBB_SYNC));
   });
 
   it('should be defined', () => {
@@ -155,14 +162,16 @@ describe('QueueService', () => {
       criticalQueue.getJobCounts.mockResolvedValue(mockCounts);
       defaultQueue.getJobCounts.mockResolvedValue(mockCounts);
       bulkQueue.getJobCounts.mockResolvedValue(mockCounts);
+      cbbSyncQueue.getJobCounts.mockResolvedValue(mockCounts);
 
       criticalQueue.isPaused.mockResolvedValue(false);
       defaultQueue.isPaused.mockResolvedValue(false);
       bulkQueue.isPaused.mockResolvedValue(false);
+      cbbSyncQueue.isPaused.mockResolvedValue(false);
 
       const result = await service.getQueueMetrics();
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(4);
       expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.CRITICAL,
         counts: {
