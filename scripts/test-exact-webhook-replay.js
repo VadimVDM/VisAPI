@@ -7,7 +7,7 @@
  */
 
 const API_URL = 'https://visapi.up.railway.app/api/v1/webhooks/vizi/orders';
-const API_KEY = 'vizi_32cf6923b6d84884.YBGmlP3VLQ1GrV51BL_wurqPBzjh3A3jISRfsdqb49g';
+const API_KEY = process.env.VIZI_API_KEY || 'YOUR_VIZI_API_KEY_HERE';
 
 // Exact replica of IL250821IN1 with different order ID
 const testWebhook = {
@@ -209,8 +209,8 @@ async function runTest() {
       // Check if order was created in database
       console.log('\n🔍 Verifying order creation in database...');
       
-      const SUPABASE_URL = 'https://pangdzwamawwgmvxnwkk.supabase.co';
-      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmdkendhbWF3d2dtdnhud2trIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjUyMzY1MywiZXhwIjoyMDY4MDk5NjUzfQ.tMdbyEAUGf3NET5Sgy1DF0Ljlsg6gu8Jo9MvX51agtw';
+      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pangdzwamawwgmvxnwkk.supabase.co';
+      const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY_HERE';
       
       // Wait a moment for database to process
       await new Promise(resolve => setTimeout(resolve, 1000));

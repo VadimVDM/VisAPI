@@ -5,8 +5,14 @@
  * Quick script to import orders from webhooks received on August 20-21, 2025
  */
 
-const SUPABASE_URL = 'https://pangdzwamawwgmvxnwkk.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmdkendhbWF3d2dtdnhud2trIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjUyMzY1MywiZXhwIjoyMDY4MDk5NjUzfQ.tMdbyEAUGf3NET5Sgy1DF0Ljlsg6gu8Jo9MvX51agtw';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pangdzwamawwgmvxnwkk.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  console.error('Usage: SUPABASE_SERVICE_ROLE_KEY=your_key node scripts/import-missed-orders.js');
+  process.exit(1);
+}
 
 // Orders from logs (August 20-21, 2025)
 const missedOrders = [

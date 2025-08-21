@@ -42,7 +42,7 @@ async function testWebhook() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': 'vizi_32cf6923b6d84884_your_secret_here' // You need the full key
+        'X-API-Key': process.env.VIZI_API_KEY || 'YOUR_VIZI_API_KEY_HERE'
       },
       body: JSON.stringify(testPayload)
     });
@@ -65,8 +65,8 @@ async function testWebhook() {
       // Check if order was created in database
       console.log('\n🔍 Checking if order was created in database...');
       
-      const SUPABASE_URL = 'https://pangdzwamawwgmvxnwkk.supabase.co';
-      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmdkendhbWF3d2dtdnhud2trIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjUyMzY1MywiZXhwIjoyMDY4MDk5NjUzfQ.tMdbyEAUGf3NET5Sgy1DF0Ljlsg6gu8Jo9MvX51agtw';
+      const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pangdzwamawwgmvxnwkk.supabase.co';
+      const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY_HERE';
       
       const checkResponse = await fetch(
         `${SUPABASE_URL}/rest/v1/orders?order_id=eq.${testPayload.order_id}&select=*`,
