@@ -30,12 +30,7 @@ interface OrderData {
   whatsapp_alerts_enabled: boolean;
   passport_data?: any; // Legacy field - not used anymore
   applicants_data?: any; // JSONB field - could be array or null
-  cbb_sync_status: string;
-  cbb_sync_attempted_at?: string;
-  cbb_sync_completed_at?: string;
-  cbb_sync_error?: string;
-  cbb_contact_exists?: boolean;
-  cbb_has_whatsapp?: boolean;
+  cbb_synced?: boolean;  // Made optional since it might be null in DB
   cbb_contact_id?: string;
 }
 
@@ -94,7 +89,7 @@ export class CBBSyncProcessor extends WorkerHost {
       }
 
       // 2. Check if already synced
-      if (order.cbb_sync_status === 'synced') {
+      if (order.cbb_synced === true) {
         this.logger.log(`Order ${orderId} already synced`);
         return {
           status: 'success',
@@ -103,13 +98,10 @@ export class CBBSyncProcessor extends WorkerHost {
         };
       }
 
-      // 3. Mark as syncing
-      await this.updateCBBSyncStatus(orderId, 'syncing');
-
-      // 4. Prepare contact data
+      // 3. Prepare contact data
       const contactData = this.prepareContactData(order);
 
-      // 5. Check if contact exists
+      // 4. Check if contact exists
       let contact = await this.cbbService.getContactById(order.client_phone);
       let isNewContact = false;
 
@@ -145,7 +137,7 @@ export class CBBSyncProcessor extends WorkerHost {
         this.contactsCreatedCounter.inc();
       }
 
-      // 6. Validate WhatsApp
+      // 5. Validate WhatsApp
       const hasWhatsApp = await this.cbbService.validateWhatsApp(
         order.client_phone,
       );
@@ -156,16 +148,10 @@ export class CBBSyncProcessor extends WorkerHost {
         this.whatsappUnavailableCounter.inc();
       }
 
-      // 7. Update order with results
-      await this.updateCBBSyncResult(orderId, {
-        cbb_contact_id: contact.id,
-        cbb_sync_status: hasWhatsApp ? 'synced' : 'no_whatsapp',
-        cbb_contact_exists: !isNewContact,
-        cbb_has_whatsapp: hasWhatsApp,
-        cbb_sync_completed_at: new Date().toISOString(),
-      });
+      // 6. Update order with results
+      await this.updateOrderCBBStatus(orderId, contact.id, true);
 
-      // 8. Log success
+      // 7. Log success
       this.logger.log(`CBB contact sync successful for order ${orderId}`, {
         contact_id: contact.id,
         action: isNewContact ? 'created' : 'updated',
@@ -275,6 +261,35 @@ export class CBBSyncProcessor extends WorkerHost {
     }
     this.logger.debug(`Mapped branch ${order.branch} to language: ${language}`);
 
+    // Map country to flag emoji
+    const countryToFlag = this.getCountryFlag(order.product_country);
+    
+    // Extract visa details from applicants_data
+    let visaIntent = 'tourism'; // Default
+    let visaEntries = 'single'; // Default
+    let visaValidity = '30'; // Default in days
+    
+    if (
+      order.applicants_data &&
+      Array.isArray(order.applicants_data) &&
+      order.applicants_data[0]
+    ) {
+      const firstApplicant = order.applicants_data[0];
+      // Map visa intent based on occupation or other fields
+      if (firstApplicant.occupation?.status === 'employed') {
+        visaIntent = 'business';
+      } else if (firstApplicant.occupation?.education === 'academic') {
+        visaIntent = 'education';
+      }
+      
+      // For now, use defaults for entries and validity
+      // These could be enhanced based on product_doc_type or other fields
+      if (order.product_doc_type === 'multiple_entry') {
+        visaEntries = 'multiple';
+        visaValidity = '365'; // 1 year for multiple entry
+      }
+    }
+
     return {
       id: order.client_phone,
       phone: order.client_phone,
@@ -302,28 +317,64 @@ export class CBBSyncProcessor extends WorkerHost {
         // Date field (type 2) expects Unix timestamp in seconds
         order_date: orderDateUnix,
 
+        // New visa fields
+        visa_intent: visaIntent,
+        visa_entries: visaEntries,
+        visa_validity: visaValidity,
+        visa_flag: countryToFlag,
+
         // System fields
         Email: order.client_email, // System field ID -12
       },
     };
   }
 
+  private getCountryFlag(country: string): string {
+    // Normalize country name
+    const normalizedCountry = country?.toLowerCase().trim();
+    
+    // Map of country names to flag emojis
+    const countryFlags: Record<string, string> = {
+      'india': '🇮🇳',
+      'usa': '🇺🇸',
+      'us': '🇺🇸',
+      'united states': '🇺🇸',
+      'u.s.': '🇺🇸',
+      'uk': '🇬🇧',
+      'united kingdom': '🇬🇧',
+      'britain': '🇬🇧',
+      'canada': '🇨🇦',
+      'israel': '🇮🇱',
+      'thailand': '🇹🇭',
+      'south korea': '🇰🇷',
+      'korea': '🇰🇷',
+      'vietnam': '🇻🇳',
+      'saudi arabia': '🇸🇦',
+      'saudi': '🇸🇦',
+      'indonesia': '🇮🇩',
+      'bahrain': '🇧🇭',
+      'new zealand': '🇳🇿',
+      'cambodia': '🇰🇭',
+      'schengen': '🇪🇺',
+      'schengen area': '🇪🇺',
+      'morocco': '🇲🇦',
+      'sri lanka': '🇱🇰',
+      'togo': '🇹🇬',
+    };
+    
+    return countryFlags[normalizedCountry] || '';
+  }
+
   private async handleSyncError(orderId: string, error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
-
-    await this.updateCBBSyncResult(orderId, {
-      cbb_sync_status: 'failed',
-      cbb_sync_error: errorMessage,
-      cbb_sync_attempted_at: new Date().toISOString(),
-    });
 
     this.logger.error(`CBB contact sync failed for order ${orderId}`, {
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    // Log error to database
+    // Log error to database - detailed error info goes to logs, not orders table
     await this.logService.createLog({
       level: 'error',
       message: 'CBB contact sync failed',
@@ -351,36 +402,23 @@ export class CBBSyncProcessor extends WorkerHost {
     return data;
   }
 
-  private async updateCBBSyncStatus(orderId: string, status: string) {
+  private async updateOrderCBBStatus(
+    orderId: string,
+    contactId: string,
+    synced: boolean,
+  ) {
     const { error } = await this.supabaseService.client
       .from('orders')
       .update({
-        cbb_sync_status: status,
-        cbb_sync_attempted_at: new Date().toISOString(),
+        cbb_contact_id: contactId,
+        cbb_synced: synced,
+        updated_at: new Date().toISOString(),
       })
       .eq('order_id', orderId);
 
     if (error) {
       this.logger.error(
-        `Failed to update sync status for order ${orderId}:`,
-        error,
-      );
-      throw error;
-    }
-  }
-
-  private async updateCBBSyncResult(
-    orderId: string,
-    updates: Partial<OrderData>,
-  ) {
-    const { error } = await this.supabaseService.client
-      .from('orders')
-      .update(updates)
-      .eq('order_id', orderId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to update sync result for order ${orderId}:`,
+        `Failed to update CBB status for order ${orderId}:`,
         error,
       );
       throw error;

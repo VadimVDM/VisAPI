@@ -45,6 +45,26 @@ export class CbbClientService {
   private readonly timeout: number;
   private readonly retryAttempts: number;
 
+  // Mapping of field names to CBB field IDs
+  private readonly fieldIdMap: Record<string, string> = {
+    'Email': '-12',
+    'email': '-12',
+    'Phone Number': '-8',
+    'phone': '-8',
+    'customer_name': '779770',
+    'visa_country': '877737',
+    'visa_type': '527249',
+    'OrderNumber': '459752',
+    'visa_quantity': '949873',
+    'order_urgent': '763048',
+    'order_priority': '470125',
+    'order_date': '661549',
+    'visa_intent': '837162',
+    'visa_entries': '863041',
+    'visa_validity': '816014',
+    'visa_flag': '824812',
+  };
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService
@@ -207,13 +227,24 @@ export class CbbClientService {
 
   /**
    * Get contact by ID (phone number)
+   * Note: CBB returns a response even for non-existent contacts, but with empty fields
+   * We need to check if the contact actually has data to determine if it exists
    */
   async getContactById(id: string): Promise<CBBContact | null> {
     try {
       this.logger.debug(`Getting contact by ID: ${id}`);
       
       const response = await this.makeRequest<CBBContact>('GET', `/contacts/${id}`);
-      return response.data;
+      const contact = response.data;
+      
+      // CBB returns an object even for non-existent contacts, but with empty fields
+      // Check if this is a real contact by verifying it has actual data
+      if (!contact.phone || contact.phone === '') {
+        this.logger.debug(`Contact ${id} doesn't really exist (empty phone field)`);
+        return null;
+      }
+      
+      return contact;
     } catch (error) {
       if (error instanceof CbbApiError && error.statusCode === 404) {
         return null;
@@ -230,12 +261,26 @@ export class CbbClientService {
     try {
       this.logger.debug(`Creating contact with fields for phone: ${data.phone}`);
       
+      // Convert custom fields to CBB actions format
+      const actions = [];
+      if (data.cufs) {
+        for (const [fieldName, fieldValue] of Object.entries(data.cufs)) {
+          if (fieldValue !== undefined && fieldValue !== null) {
+            actions.push({
+              action: 'set_field_value',
+              field_name: fieldName,
+              value: String(fieldValue),
+            });
+          }
+        }
+      }
+
       const payload: any = {
-        id: data.id,
         phone: data.phone,
-        name: data.name,
         email: data.email,
-        customFields: data.cufs,
+        first_name: data.name,  // Use full name as first name
+        last_name: '',  // Leave last name empty
+        actions: actions,
       };
 
       // Add optional fields only if provided and not undefined
@@ -262,22 +307,29 @@ export class CbbClientService {
 
   /**
    * Update contact custom fields ONLY
-   * CBB API requires using field name as ID and sending value as formData
+   * CBB API requires using field ID (not field name) and sending value as formData
    */
   async updateContactFields(id: string, cufs: Record<string, any>): Promise<CBBContact> {
     try {
       this.logger.debug(`Updating contact custom fields for ID: ${id}`);
       
-      // Update each custom field individually using field name as ID
+      // Update each custom field individually using field ID
       for (const [fieldName, fieldValue] of Object.entries(cufs)) {
         try {
-          this.logger.debug(`Updating custom field ${fieldName} = ${fieldValue}`);
+          // Get the field ID from our mapping
+          const fieldId = this.fieldIdMap[fieldName];
+          if (!fieldId) {
+            this.logger.warn(`Unknown field name: ${fieldName}, skipping update`);
+            continue;
+          }
+
+          this.logger.debug(`Updating custom field ${fieldName} (ID: ${fieldId}) = ${fieldValue}`);
           
           // Use form data as CBB expects
           const formData = new URLSearchParams();
           formData.append('value', String(fieldValue));
           
-          await this.makeRequest('POST', `/contacts/${id}/custom_fields/${fieldName}`, {
+          await this.makeRequest('POST', `/contacts/${id}/custom_fields/${fieldId}`, {
             data: formData.toString(),
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
@@ -309,58 +361,22 @@ export class CbbClientService {
   }
 
   /**
-   * Update contact - CBB API allows updating some basic fields and custom fields
-   * Basic fields that CAN be updated: email, first_name (through custom field endpoint)
-   * Basic fields that CANNOT be updated: gender, language (only set during creation)
+   * Update contact - CBB API only allows updating custom fields for existing contacts
+   * Basic fields (first_name, email, etc.) cannot be updated after creation
    */
   async updateContactComplete(data: CBBContactData): Promise<CBBContact> {
     try {
       this.logger.debug(`Updating contact ID: ${data.id}`);
       
-      // Update email if provided (CBB allows email update through custom field endpoint)
-      if (data.email) {
-        try {
-          this.logger.debug(`Updating email to: ${data.email}`);
-          const formData = new URLSearchParams();
-          formData.append('value', data.email);
-          
-          await this.makeRequest('POST', `/contacts/${data.id}/custom_fields/email`, {
-            data: formData.toString(),
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-          });
-          this.logger.debug('Email updated successfully');
-        } catch (error) {
-          this.logger.error('Failed to update email:', error);
-        }
+      // Check if basic fields differ - if so, warn that they can't be updated
+      if (data.name || data.email) {
+        this.logger.warn(
+          `CBB API limitation: Cannot update basic fields (name, email) for existing contacts. ` +
+          `Contact ${data.id} will keep its original name and email. Only custom fields will be updated.`
+        );
       }
       
-      // Update first_name if provided (use complete name as-is)
-      if (data.name) {
-        try {
-          this.logger.debug(`Updating first_name to: ${data.name}`);
-          const formData = new URLSearchParams();
-          formData.append('value', data.name);
-          
-          await this.makeRequest('POST', `/contacts/${data.id}/custom_fields/first_name`, {
-            data: formData.toString(),
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-          });
-          this.logger.debug('First name updated successfully');
-        } catch (error) {
-          this.logger.error('Failed to update first_name:', error);
-        }
-      }
-      
-      // Note: gender and language cannot be updated after creation
-      if (data.gender || data.language) {
-        this.logger.warn('CBB API limitation: Cannot update gender or language for existing contacts');
-      }
-      
-      // Update custom fields
+      // Update custom fields only
       if (data.cufs && Object.keys(data.cufs).length > 0) {
         await this.updateContactFields(data.id, data.cufs);
       }

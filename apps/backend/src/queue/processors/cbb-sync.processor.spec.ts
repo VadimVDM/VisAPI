@@ -4,7 +4,8 @@ import { Job } from 'bullmq';
 // import { CGBSyncProcessor } from './cgb-sync.processor'; // Processor not implemented yet
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
-import { Register } from 'prom-client';
+import { Register as PromRegistry } from 'prom-client';
+import { CbbClientService } from '@visapi/core-cbb';
 
 describe.skip('CGBSyncProcessor', () => {
   // Skip tests until processor is implemented
@@ -56,18 +57,18 @@ describe.skip('CGBSyncProcessor', () => {
       getContactStatus: jest.fn(),
       createContact: jest.fn(),
       updateContact: jest.fn(),
-    } as any;
+    } as jest.Mocked<CbbClientService>;
 
     configService = {
       cgbSyncDryRun: false,
-    } as any;
+    } as jest.Mocked<Partial<ConfigService>>;
 
     register = {
       getSingleMetric: jest.fn().mockReturnValue({
         inc: jest.fn(),
         observe: jest.fn(),
       }),
-    } as any;
+    } as jest.Mocked<Partial<PromRegistry>>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

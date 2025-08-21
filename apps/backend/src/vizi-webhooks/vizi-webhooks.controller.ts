@@ -99,7 +99,7 @@ export class ViziWebhooksController {
         !validProcessors.includes(order.payment_processor as string)
       ) {
         this.logger.warn(
-          `Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`,
+          `Invalid payment processor: ${order.payment_processor as string}, defaulting to stripe`,
         );
         order.payment_processor = 'stripe';
       }
@@ -108,7 +108,7 @@ export class ViziWebhooksController {
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
       if (order?.status && !validStatuses.includes(order.status as string)) {
         this.logger.warn(
-          `Invalid order status: ${String(order.status)}, defaulting to active`,
+          `Invalid order status: ${order.status as string}, defaulting to active`,
         );
         order.status = 'active';
       }
@@ -153,7 +153,7 @@ export class ViziWebhooksController {
 
     await this.logService.createLog({
       level: 'info',
-      message: `Vizi webhook received for order ${order?.id || 'unknown'}`,
+      message: `Vizi webhook received for order ${order?.id ? String(order.id) : 'unknown'}`,
       metadata: {
         webhook_type: 'vizi_order',
         validation: webhookValidation,
@@ -189,7 +189,7 @@ export class ViziWebhooksController {
       try {
         orderId = await this.ordersService.createOrder(webhookData);
         this.logger.log(
-          `Order saved to database: ${String(order?.id)} (DB ID: ${orderId})`,
+          `Order saved to database: ${order?.id ? String(order.id) : 'unknown'} (DB ID: ${orderId})`,
         );
       } catch (error) {
         const err = error as Record<string, unknown>;
@@ -201,14 +201,14 @@ export class ViziWebhooksController {
         };
 
         this.logger.error(
-          `Failed to save order ${String(order?.id)} to database: ${JSON.stringify(errorDetails)}`,
+          `Failed to save order ${order?.id ? String(order.id) : 'unknown'} to database: ${JSON.stringify(errorDetails)}`,
           err.stack as string,
         );
 
         // Log the failed order creation with full details
         await this.logService.createLog({
           level: 'error',
-          message: `Order creation failed for ${String(order?.id)}`,
+          message: `Order creation failed for ${order?.id ? String(order.id) : 'unknown'}`,
           metadata: {
             webhook_type: 'vizi_order',
             order_id: order?.id,
@@ -248,7 +248,7 @@ export class ViziWebhooksController {
       // Log success WITH FULL WEBHOOK DATA
       await this.logService.createLog({
         level: 'info',
-        message: `Order ${order?.id} created successfully from Vizi webhook`,
+        message: `Order ${order?.id ? String(order.id) : 'unknown'} created successfully from Vizi webhook`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order?.id,
@@ -271,7 +271,7 @@ export class ViziWebhooksController {
 
       await this.logService.createLog({
         level: 'error',
-        message: `Failed to process Vizi webhook for order ${order?.id || 'unknown'}`,
+        message: `Failed to process Vizi webhook for order ${order?.id ? String(order.id) : 'unknown'}`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order?.id,
