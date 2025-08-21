@@ -264,8 +264,7 @@ async function testCBBSync() {
 
     // 3. Mark as syncing
     await updateOrderSyncStatus(ORDER_ID, {
-      cbb_sync_status: 'syncing',
-      cbb_sync_attempted_at: new Date().toISOString(),
+      cbb_synced: false, // Mark as in progress
     });
 
     // 4. Check if contact exists
@@ -289,11 +288,7 @@ async function testCBBSync() {
     // 6. Update order with results
     await updateOrderSyncStatus(ORDER_ID, {
       cbb_contact_id: contact.id || order.client_phone,
-      cbb_sync_status: hasWhatsApp ? 'synced' : 'no_whatsapp',
-      cbb_contact_exists: !isNewContact,
-      cbb_has_whatsapp: hasWhatsApp,
-      cbb_sync_completed_at: new Date().toISOString(),
-      cbb_sync_error: null,
+      cbb_synced: true, // Mark as completed
     });
 
     console.log('━'.repeat(50));
@@ -308,9 +303,7 @@ async function testCBBSync() {
     
     // Update order with error
     await updateOrderSyncStatus(ORDER_ID, {
-      cbb_sync_status: 'failed',
-      cbb_sync_error: error.message,
-      cbb_sync_attempted_at: new Date().toISOString(),
+      cbb_synced: false, // Mark as failed
     }).catch(err => console.error('Failed to update order error status:', err));
     
     process.exit(1);

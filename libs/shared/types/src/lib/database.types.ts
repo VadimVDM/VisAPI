@@ -109,13 +109,8 @@ export type Database = {
           applicants_data: Json | null
           branch: string
           business_data: Json | null
-          cbb_contact_exists: boolean | null
           cbb_contact_id: string | null
-          cbb_has_whatsapp: boolean | null
-          cbb_sync_attempted_at: string | null
-          cbb_sync_completed_at: string | null
-          cbb_sync_error: string | null
-          cbb_sync_status: string | null
+          cbb_synced: boolean | null
           client_email: string
           client_name: string
           client_phone: string
@@ -164,13 +159,8 @@ export type Database = {
           applicants_data?: Json | null
           branch: string
           business_data?: Json | null
-          cbb_contact_exists?: boolean | null
           cbb_contact_id?: string | null
-          cbb_has_whatsapp?: boolean | null
-          cbb_sync_attempted_at?: string | null
-          cbb_sync_completed_at?: string | null
-          cbb_sync_error?: string | null
-          cbb_sync_status?: string | null
+          cbb_synced?: boolean | null
           client_email: string
           client_name: string
           client_phone: string
@@ -219,13 +209,8 @@ export type Database = {
           applicants_data?: Json | null
           branch?: string
           business_data?: Json | null
-          cbb_contact_exists?: boolean | null
           cbb_contact_id?: string | null
-          cbb_has_whatsapp?: boolean | null
-          cbb_sync_attempted_at?: string | null
-          cbb_sync_completed_at?: string | null
-          cbb_sync_error?: string | null
-          cbb_sync_status?: string | null
+          cbb_synced?: boolean | null
           client_email?: string
           client_name?: string
           client_phone?: string
@@ -370,33 +355,6 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           theme_preference?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      webhook_data: {
-        Row: {
-          created_at: string | null
-          data: Json
-          processed: boolean | null
-          processed_at: string | null
-          type: string
-          webhook_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          data: Json
-          processed?: boolean | null
-          processed_at?: string | null
-          type: string
-          webhook_id?: string
-        }
-        Update: {
-          created_at?: string | null
-          data?: Json
-          processed?: boolean | null
-          processed_at?: string | null
-          type?: string
-          webhook_id?: string
         }
         Relationships: []
       }

@@ -37,26 +37,32 @@ import {
           };
         }
 
-        // Smart Redis URL handling for Railway deployments
-        // Use public URL if provided via REDIS_PUBLIC_URL, otherwise use REDIS_URL
-        // This allows Railway to use internal URLs when available but fall back during health checks
+        // Railway Redis URL handling - ALWAYS use public URL if available
+        // The internal .railway.internal URLs don't work reliably
         const publicRedisUrl = process.env.REDIS_PUBLIC_URL;
         const effectiveRedisUrl = publicRedisUrl || redisUrl;
         
         // Log which URL we're using (without exposing sensitive data)
         const isInternalUrl = redisUrl.includes('.railway.internal');
-        const isUsingPublic = effectiveRedisUrl === publicRedisUrl;
+        const isUsingPublic = !!publicRedisUrl && effectiveRedisUrl === publicRedisUrl;
         console.log(
           `[BullMQ] Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL`,
         );
+        
+        // Additional logging for debugging
+        if (isInternalUrl && !publicRedisUrl) {
+          console.warn(
+            '[BullMQ] WARNING: Using internal Railway URL without public URL fallback - this may fail!'
+          );
+        }
 
         return {
           connection: {
             url: effectiveRedisUrl,
-            // Optimized for Railway Redis
+            // Optimized for Railway Redis with increased timeouts
             keepAlive: 30000,
-            connectTimeout: 10000,
-            commandTimeout: 5000,
+            connectTimeout: 30000, // Increased from 10s to 30s for Railway
+            commandTimeout: 10000, // Increased from 5s to 10s for Railway
             maxRetriesPerRequest: null, // Required by BullMQ
             enableReadyCheck: true,
             enableOfflineQueue: true,

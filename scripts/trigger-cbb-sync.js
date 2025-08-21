@@ -46,9 +46,9 @@ async function triggerCBBSync() {
     // Fetch IL orders that need CBB sync
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('order_id, client_name, client_phone, branch, cbb_sync_status')
+      .select('order_id, client_name, client_phone, branch, cbb_synced')
       .eq('branch', 'il')
-      .in('cbb_sync_status', ['pending', null])
+      .or('cbb_synced.is.null,cbb_synced.eq.false')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -93,7 +93,7 @@ async function triggerCBBSync() {
     }
 
     console.log('\n✨ CBB sync jobs queued successfully!');
-    console.log('📊 Monitor progress in the logs table or check order cbb_sync_status');
+    console.log('📊 Monitor progress in the logs table or check order cbb_synced status');
 
     // Close queue connection
     await queue.close();
