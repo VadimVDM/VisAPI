@@ -1,12 +1,14 @@
 import { Controller, Req, Res, All, Next } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AdminService } from './admin.service';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @All('queues/:path(*)')
+  @ApiExcludeEndpoint()
+  @All('queues*')
   getQueues(
     @Req() req: Request,
     @Res() res: Response,
