@@ -19,6 +19,10 @@ interface OrderData {
   client_email: string;
   product_country: string;
   product_doc_type: string;
+  product_intent?: string;  // New field
+  product_entries?: string; // New field
+  product_validity?: string; // New field
+  product_days_to_use?: number; // New field
   visa_quantity: number;
   urgency: string;
   amount: number;
@@ -264,31 +268,29 @@ export class CBBSyncProcessor extends WorkerHost {
     // Map country to flag emoji
     const countryToFlag = this.getCountryFlag(order.product_country);
     
-    // Extract visa details from applicants_data
-    let visaIntent = 'tourism'; // Default
-    let visaEntries = 'single'; // Default
-    let visaValidity = '30'; // Default in days
+    // Use ACTUAL product data from the order, not guessing from applicant data!
+    let visaIntent = order.product_intent || 'tourism';
+    let visaEntries = order.product_entries || 'single';
+    let visaValidity = order.product_validity || 'month';
     
-    if (
-      order.applicants_data &&
-      Array.isArray(order.applicants_data) &&
-      order.applicants_data[0]
-    ) {
-      const firstApplicant = order.applicants_data[0];
-      // Map visa intent based on occupation or other fields
-      if (firstApplicant.occupation?.status === 'employed') {
-        visaIntent = 'business';
-      } else if (firstApplicant.occupation?.education === 'academic') {
-        visaIntent = 'education';
-      }
-      
-      // For now, use defaults for entries and validity
-      // These could be enhanced based on product_doc_type or other fields
-      if (order.product_doc_type === 'multiple_entry') {
-        visaEntries = 'multiple';
-        visaValidity = '365'; // 1 year for multiple entry
-      }
+    // Convert validity to days if needed
+    let visaValidityDays = '30'; // Default
+    if (order.product_days_to_use) {
+      visaValidityDays = String(order.product_days_to_use);
+    } else if (visaValidity === 'month') {
+      visaValidityDays = '30';
+    } else if (visaValidity === 'year') {
+      visaValidityDays = '365';
+    } else if (visaValidity === '3months') {
+      visaValidityDays = '90';
+    } else if (visaValidity === '6months') {
+      visaValidityDays = '180';
     }
+    
+    // Log what we're using for debugging
+    this.logger.debug(
+      `Using product data for ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidity} (${visaValidityDays} days)`
+    );
 
     return {
       id: order.client_phone,
@@ -317,10 +319,10 @@ export class CBBSyncProcessor extends WorkerHost {
         // Date field (type 2) expects Unix timestamp in seconds
         order_date: orderDateUnix,
 
-        // New visa fields
+        // New visa fields - using actual product data
         visa_intent: visaIntent,
         visa_entries: visaEntries,
-        visa_validity: visaValidity,
+        visa_validity: visaValidityDays,  // Use the converted days value
         visa_flag: countryToFlag,
 
         // System fields

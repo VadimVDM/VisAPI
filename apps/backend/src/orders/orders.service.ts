@@ -28,6 +28,10 @@ interface OrderTableData {
   product_country: string;
   product_doc_type?: string;
   product_doc_name?: string;
+  product_intent?: string;
+  product_entries?: string;
+  product_validity?: string;
+  product_days_to_use?: number;
 
   // Visa details
   visa_quantity: number;
@@ -343,6 +347,10 @@ export class OrdersService {
       product_country: form.product?.country || form.country || 'unknown',
       product_doc_type: form.product?.docType,
       product_doc_name: form.product?.docName,
+      product_intent: form.product?.intent || 'tourism',
+      product_entries: form.product?.entries || 'single',
+      product_validity: form.product?.validity || 'month',
+      product_days_to_use: form.product?.days_to_use || 30,
 
       // Visa details (NOW AS INDIVIDUAL COLUMNS)
       visa_quantity: form.quantity || 1,
