@@ -16,10 +16,9 @@ As the lead engineer, your primary function is to assess a task's complexity, bu
 
 ## Available MCP Tools (Global)
 
-- **`supabase`**: Direct database access (Project ID: `wfwwkpjxuixspvbggify`)
-- **`vercel`**: Deployment management (Project ID: `prj_ACMn6Qjo86AopC6aD0l1XWSlNKTD`)
-- **`stripe`** via **`http-server`**: Live payment processing (for test use the **`stripe`** cli)
-- **`replicate`**: AI models integration
+- **`supabase`**: Direct database access (Project ID: `pangdzwamawwgmvxnwkk`)
+- **`railway`**: Deployment management (backend)
+- **`vercel`**: Deployment management (frontend)
 - **`resend`**: Email services
 - **`context7`**: Documentation lookup
 - **`playwright`**: E2E and accessibility testing
