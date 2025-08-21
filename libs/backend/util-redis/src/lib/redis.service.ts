@@ -22,7 +22,19 @@ export class RedisService {
         retryStrategy: () => null, // Don't retry
       });
     } else {
-      this.redis = new Redis(redisUrl, {
+      // Smart Redis URL handling for Railway deployments
+      // Use public URL if provided via REDIS_PUBLIC_URL, otherwise use REDIS_URL
+      const publicRedisUrl = process.env.REDIS_PUBLIC_URL;
+      const effectiveRedisUrl = publicRedisUrl || redisUrl;
+      
+      // Log which URL we're using (without exposing sensitive data)
+      const isInternalUrl = redisUrl.includes('.railway.internal');
+      const isUsingPublic = effectiveRedisUrl === publicRedisUrl;
+      this.logger.log(
+        `Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL for connection`,
+      );
+      
+      this.redis = new Redis(effectiveRedisUrl, {
         // Connection pool settings
         maxRetriesPerRequest: 3,
         lazyConnect: true,
