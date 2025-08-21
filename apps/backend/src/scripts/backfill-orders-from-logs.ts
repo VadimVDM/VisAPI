@@ -409,9 +409,9 @@ async function backfillOrders() {
     
     console.log('\n🌍 Orders by country:');
     Object.entries(countryCounts)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .forEach(([country, count]) => {
-        const percentage = ((count / countryStats.length) * 100).toFixed(1);
+        const percentage = ((count as number / countryStats.length) * 100).toFixed(1);
         console.log(`  ${country.padEnd(15)} : ${String(count).padStart(4)} orders (${percentage}%)`);
       });
   }
@@ -429,9 +429,9 @@ async function backfillOrders() {
     
     console.log('\n📊 Orders by status:');
     Object.entries(statusCounts)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .forEach(([status, count]) => {
-        const percentage = ((count / statusStats.length) * 100).toFixed(1);
+        const percentage = ((count as number / statusStats.length) * 100).toFixed(1);
         console.log(`  ${status.padEnd(15)} : ${String(count).padStart(4)} orders (${percentage}%)`);
       });
   }

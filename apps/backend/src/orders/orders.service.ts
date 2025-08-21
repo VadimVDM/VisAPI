@@ -118,7 +118,7 @@ export class OrdersService {
       this.logger.log(`Creating order: ${orderData.order_id}`);
       
       const { data, error } = await this.supabaseService
-        .client
+        .serviceClient
         .from('orders')
         .insert(orderData)
         .select('id')
@@ -130,7 +130,7 @@ export class OrdersService {
           this.logger.warn(`Order ${orderData.order_id} already exists`);
           // Return existing order ID
           const { data: existing } = await this.supabaseService
-            .client
+            .serviceClient
             .from('orders')
             .select('id')
             .eq('order_id', orderData.order_id)
