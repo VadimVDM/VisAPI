@@ -193,23 +193,59 @@ export class OrdersService {
   }
 
   /**
+   * Parse entry date safely
+   */
+  private parseEntryDate(date: any): string | undefined {
+    if (!date) {
+      return undefined;
+    }
+    
+    try {
+      // Handle various date formats
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        this.logger.warn(`Invalid entry date format: ${date}`);
+        return undefined;
+      }
+      return parsedDate.toISOString();
+    } catch (error) {
+      this.logger.warn(`Failed to parse entry date: ${date}`);
+      return undefined;
+    }
+  }
+
+  /**
    * Transform phone number from object to string format
    * { code: "+44", number: "1234567890" } => "441234567890"
    */
-  private transformPhoneNumber(phone: { code: string; number: string } | string): string {
-    if (typeof phone === 'string') {
-      // Already a string, just clean it
-      return phone.replace(/^\+/, '').replace(/\D/g, '');
+  private transformPhoneNumber(phone: { code: string; number: string } | string | undefined): string {
+    try {
+      if (!phone) {
+        return '0000000000'; // Fallback for missing phone
+      }
+      
+      if (typeof phone === 'string') {
+        // Already a string, just clean it
+        return phone.replace(/^\+/, '').replace(/\D/g, '') || '0000000000';
+      }
+      
+      if (!phone.code || !phone.number) {
+        return '0000000000'; // Fallback for missing phone parts
+      }
+      
+      // Remove + from country code and all non-digits from number
+      const cleanCode = (phone.code || '').replace(/^\+/, '').replace(/\D/g, '');
+      const cleanNumber = (phone.number || '').replace(/\D/g, '');
+      
+      if (!cleanCode || !cleanNumber) {
+        return '0000000000';
+      }
+      
+      return `${cleanCode}${cleanNumber}`;
+    } catch (error) {
+      this.logger.warn(`Failed to transform phone number: ${JSON.stringify(phone)}, using fallback`);
+      return '0000000000';
     }
-    
-    if (!phone || !phone.code || !phone.number) {
-      return '0000000000'; // Fallback for missing phone
-    }
-    
-    // Remove + from country code and all non-digits from number
-    const cleanCode = phone.code.replace(/^\+/, '').replace(/\D/g, '');
-    const cleanNumber = phone.number.replace(/\D/g, '');
-    return `${cleanCode}${cleanNumber}`;
   }
 
   /**
@@ -255,7 +291,7 @@ export class OrdersService {
       
       // Visa details (NOW AS INDIVIDUAL COLUMNS)
       visa_quantity: form.quantity || 1,
-      entry_date: (form as any).entry?.date ? new Date((form as any).entry.date).toISOString() : undefined,
+      entry_date: this.parseEntryDate((form as any).entry?.date),
       urgency: form.urgency || 'standard',
       file_transfer_method: (form as any).fileTransferMethod,
       

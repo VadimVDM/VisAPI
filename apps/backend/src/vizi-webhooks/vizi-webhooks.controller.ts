@@ -76,15 +76,34 @@ export class ViziWebhooksController {
       headers['x-correlation-id'] || headers['x-request-id'];
     const idempotencyKey = headers['x-idempotency-key'];
 
-    // Log incoming webhook
+    // Log incoming webhook with detailed validation info
+    const webhookValidation = {
+      hasOrder: !!body.order,
+      hasForm: !!body.form,
+      orderId: body.order?.id,
+      formId: body.form?.id,
+      country: body.form?.country,
+      clientData: body.form?.client ? {
+        name: body.form.client.name,
+        email: body.form.client.email,
+        hasPhone: !!body.form.client.phone,
+        phoneCode: body.form.client.phone?.code,
+        phoneNumber: body.form.client.phone?.number,
+        whatsappEnabled: body.form.client.whatsappAlertsEnabled,
+      } : null,
+      productData: body.form?.product ? {
+        name: body.form.product.name,
+        country: body.form.product.country,
+      } : null,
+      applicantCount: body.form?.applicants?.length || 0,
+    };
+    
     await this.logService.createLog({
       level: 'info',
       message: 'Received Vizi webhook',
       metadata: {
         webhook_type: 'vizi_order',
-        order_id: body.order?.id,
-        form_id: body.form?.id,
-        country: body.form?.country,
+        validation: webhookValidation,
         correlationId,
         idempotencyKey,
         source: 'webhook',
@@ -112,27 +131,54 @@ export class ViziWebhooksController {
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(body);
-        this.logger.log(`Order saved to database: ${body.order.id}`);
+        this.logger.log(`Order saved to database: ${body.order.id} (DB ID: ${orderId})`);
       } catch (error) {
-        this.logger.error(`Failed to save order to database: ${error.message}`);
-        // Continue processing even if order save fails
-        // This ensures webhook processing isn't blocked by DB issues
+        const errorDetails = {
+          message: error.message,
+          code: error.code,
+          detail: error.detail,
+          stack: error.stack,
+        };
+        
+        this.logger.error(
+          `Failed to save order ${body.order.id} to database: ${JSON.stringify(errorDetails)}`,
+          error.stack,
+        );
+        
+        // Log the failed order creation with full details
+        await this.logService.createLog({
+          level: 'error',
+          message: `Order creation failed for ${body.order.id}`,
+          metadata: {
+            webhook_type: 'vizi_order',
+            order_id: body.order.id,
+            form_id: body.form.id,
+            error: errorDetails,
+            webhook_data: body,
+            correlationId,
+            source: 'webhook',
+          },
+          correlation_id: correlationId,
+        });
+        
+        // Throw the error to prevent marking webhook as successful
+        throw new BadRequestException(
+          `Failed to save order to database: ${error.message}`,
+        );
       }
 
-      // Process the webhook
+      // Process the webhook only if order was saved successfully
       const result = await this.viziWebhooksService.processViziOrder(
         body,
         correlationId,
       );
 
       // Update order with processing results
-      if (orderId) {
-        await this.ordersService.updateOrderProcessing(
-          body.order.id,
-          result.workflowId,
-          result.jobId,
-        );
-      }
+      await this.ordersService.updateOrderProcessing(
+        body.order.id,
+        result.workflowId,
+        result.jobId,
+      );
 
       // Store result for idempotency
       // TODO: Implement idempotency when IdempotencyService is updated
