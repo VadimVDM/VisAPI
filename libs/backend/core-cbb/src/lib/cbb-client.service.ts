@@ -230,13 +230,23 @@ export class CbbClientService {
     try {
       this.logger.debug(`Creating contact with fields for phone: ${data.phone}`);
       
-      const payload = {
+      const payload: any = {
         id: data.id,
         phone: data.phone,
         name: data.name,
         email: data.email,
         customFields: data.cufs,
       };
+
+      // Add optional fields only if provided and not undefined
+      if (data.gender && data.gender !== undefined) {
+        payload.gender = data.gender;
+        this.logger.debug(`Setting gender to: ${data.gender}`);
+      }
+      if (data.language && data.language !== undefined) {
+        payload.language = data.language;
+        this.logger.debug(`Setting language to: ${data.language}`);
+      }
 
       const response = await this.makeRequest<CBBContact>('POST', '/contacts', {
         data: payload,
@@ -251,11 +261,11 @@ export class CbbClientService {
   }
 
   /**
-   * Update contact custom fields
+   * Update contact custom fields ONLY
    */
   async updateContactFields(id: string, cufs: Record<string, any>): Promise<CBBContact> {
     try {
-      this.logger.debug(`Updating contact fields for ID: ${id}`);
+      this.logger.debug(`Updating contact custom fields for ID: ${id}`);
       
       const response = await this.makeRequest<CBBContact>('PATCH', `/contacts/${id}`, {
         data: {
@@ -263,10 +273,46 @@ export class CbbClientService {
         },
       });
 
-      this.logger.debug(`Contact ${id} fields updated`);
+      this.logger.debug(`Contact ${id} custom fields updated`);
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to update contact ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update contact with ALL fields (basic + custom)
+   */
+  async updateContactComplete(data: CBBContactData): Promise<CBBContact> {
+    try {
+      this.logger.debug(`Updating complete contact data for ID: ${data.id}`);
+      
+      const requestData: any = {
+        phone: data.phone,
+        name: data.name,
+        email: data.email,
+        customFields: data.cufs,
+      };
+
+      // Add optional fields only if provided and not undefined
+      if (data.gender && data.gender !== undefined) {
+        requestData.gender = data.gender;
+        this.logger.debug(`Updating gender to: ${data.gender}`);
+      }
+      if (data.language && data.language !== undefined) {
+        requestData.language = data.language;
+        this.logger.debug(`Updating language to: ${data.language}`);
+      }
+      
+      const response = await this.makeRequest<CBBContact>('PATCH', `/contacts/${data.id}`, {
+        data: requestData,
+      });
+
+      this.logger.debug(`Contact ${data.id} fully updated with all fields`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to update contact ${data.id}:`, error);
       throw error;
     }
   }
@@ -301,7 +347,7 @@ export class CbbClientService {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
+      'X-ACCESS-TOKEN': this.apiKey,  // CBB uses X-ACCESS-TOKEN header, not Authorization Bearer
       ...options.headers,
     };
 

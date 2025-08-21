@@ -104,6 +104,8 @@ export interface CBBContactData {
   phone: string;
   name?: string;
   email?: string;
+  gender?: string; // 'male' | 'female' | undefined - Optional, extracted from first applicant's passport
+  language?: string; // 'Hebrew' | 'Russian' | 'Swedish' | 'English US' - Optional, mapped from branch
   cufs: Record<string, any>; // Custom fields
 }
 

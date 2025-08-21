@@ -27,6 +27,8 @@ interface OrderData {
   form_id: string;
   webhook_received_at: string;
   whatsapp_alerts_enabled: boolean;
+  passport_data?: any; // Legacy field - not used anymore
+  applicants_data?: any; // JSONB field - could be array or null
   cbb_sync_status: string;
   cbb_sync_attempted_at?: string;
   cbb_sync_completed_at?: string;
@@ -91,12 +93,9 @@ export class CBBSyncProcessor extends WorkerHost {
       let isNewContact = false;
 
       if (contact) {
-        // Update existing contact
-        contact = await this.cbbService.updateContactFields(
-          order.client_phone,
-          contactData.cufs
-        );
-        this.logger.log(`Updated CBB contact for order ${orderId}`);
+        // Update existing contact with ALL fields (basic + custom)
+        contact = await this.cbbService.updateContactComplete(contactData);
+        this.logger.log(`Updated CBB contact for order ${orderId} with all fields`);
         this.contactsUpdatedCounter.inc();
       } else {
         // Create new contact
@@ -156,19 +155,86 @@ export class CBBSyncProcessor extends WorkerHost {
   }
 
   private prepareContactData(order: OrderData): CBBContactData {
+    // Determine if order is urgent (for CBB boolean field)
+    const isUrgent = order.urgency === 'urgent' || order.urgency === 'express';
+    
+    // Calculate order_date Unix timestamp (in seconds)
+    let orderDateUnix: number | undefined;
+    if (order.entry_date) {
+      try {
+        const date = new Date(order.entry_date);
+        if (!isNaN(date.getTime())) {
+          orderDateUnix = Math.floor(date.getTime() / 1000); // Convert to seconds
+          this.logger.debug(`Converted entry_date ${order.entry_date} to Unix timestamp: ${orderDateUnix}`);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to convert entry_date to Unix timestamp: ${order.entry_date}`);
+      }
+    }
+    
+    // Extract gender from first applicant's passport data
+    let gender: string | undefined;
+    if (order.applicants_data && Array.isArray(order.applicants_data) && order.applicants_data[0]) {
+      const firstApplicant = order.applicants_data[0];
+      if (firstApplicant.passport?.sex) {
+        // Convert passport sex (m/f) to CBB gender format
+        gender = firstApplicant.passport.sex === 'm' ? 'male' : 
+                 firstApplicant.passport.sex === 'f' ? 'female' : 
+                 undefined;
+        this.logger.debug(`Extracted gender for ${order.order_id}: ${gender} from passport sex: ${firstApplicant.passport.sex}`);
+      }
+    }
+    
+    // Map language based on branch - optional field, only set if we have a mapping
+    // IL = Hebrew, RU = Russian, SE = Swedish, CO/others = English
+    let language: string | undefined;
+    switch (order.branch?.toLowerCase()) {
+      case 'il':
+        language = 'Hebrew';
+        break;
+      case 'ru':
+        language = 'Russian';
+        break;
+      case 'se':
+        language = 'Swedish';
+        break;
+      case 'co':
+      default:
+        // For CO (Colombia) and other branches, use English
+        // Only set if explicitly needed, otherwise let CBB handle defaults
+        language = 'English US';
+    }
+    this.logger.debug(`Mapped branch ${order.branch} to language: ${language}`);
+    
     return {
       id: order.client_phone,
       phone: order.client_phone,
       name: order.client_name,
       email: order.client_email,
+      gender: gender,
+      language: language,
       cufs: {
-        Email: order.client_email,
-        OrderNumber: order.order_id,
+        // CBB Custom Fields - Must match exact field names from CBB API
+        // Text fields (type 0)
         customer_name: order.client_name,
-        order_urgent: order.urgency === 'urgent' || order.urgency === 'express', // Boolean based on urgency
         visa_country: order.product_country,
-        visa_quantity: order.visa_quantity,
         visa_type: order.product_doc_type || 'tourist',
+        OrderNumber: order.order_id,
+        
+        // Number fields (type 1)
+        visa_quantity: order.visa_quantity || 1,
+        
+        // Boolean field (type 4) - CBB expects 1 for true, 0 for false
+        order_urgent: isUrgent ? 1 : 0,
+        
+        // Additional order information (text fields)
+        order_priority: order.urgency || 'standard',
+        
+        // Date field (type 2) expects Unix timestamp in seconds
+        order_date: orderDateUnix,
+        
+        // System fields
+        Email: order.client_email,  // System field ID -12
       },
     };
   }

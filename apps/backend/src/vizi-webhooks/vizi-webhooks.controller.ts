@@ -128,6 +128,7 @@ export class ViziWebhooksController {
       metadata: {
         webhook_type: 'vizi_order',
         validation: webhookValidation,
+        webhook_data: body, // Save full payload immediately upon receipt
         correlationId,
         idempotencyKey,
         source: 'webhook',
@@ -213,7 +214,7 @@ export class ViziWebhooksController {
       //   await this.idempotencyService.set(idempotencyKey, result, 86400); // 24 hours
       // }
 
-      // Log success
+      // Log success WITH FULL WEBHOOK DATA
       await this.logService.createLog({
         level: 'info',
         message: 'Vizi webhook processed successfully',
@@ -224,6 +225,7 @@ export class ViziWebhooksController {
           workflow_id: result.workflowId,
           job_id: result.jobId,
           order_db_id: orderId,
+          webhook_data: body, // Save full payload for data recovery
           correlationId,
           source: 'webhook',
         },
