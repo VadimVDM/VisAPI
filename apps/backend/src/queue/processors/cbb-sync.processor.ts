@@ -390,7 +390,7 @@ export class CBBSyncProcessor extends WorkerHost {
   }
 
   private async getOrderByOrderId(orderId: string): Promise<OrderData | null> {
-    const { data, error } = await this.supabaseService.client
+    const { data, error } = await this.supabaseService.serviceClient
       .from('orders')
       .select('*')
       .eq('order_id', orderId)
@@ -409,7 +409,7 @@ export class CBBSyncProcessor extends WorkerHost {
     contactId: string,
     synced: boolean,
   ) {
-    const { error } = await this.supabaseService.client
+    const { error } = await this.supabaseService.serviceClient
       .from('orders')
       .update({
         cbb_contact_id: contactId,
@@ -424,6 +424,10 @@ export class CBBSyncProcessor extends WorkerHost {
         error,
       );
       throw error;
+    } else {
+      this.logger.log(
+        `Updated CBB status for order ${orderId}: synced=${synced}, contact_id=${contactId}`
+      );
     }
   }
 }
