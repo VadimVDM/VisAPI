@@ -69,12 +69,36 @@ export class ViziWebhooksController {
     description: 'Insufficient permissions',
   })
   async handleViziOrder(
-    @Body() body: ViziWebhookDto,
+    @Body() body: any, // Accept any to handle validation ourselves
     @Headers() headers: Record<string, string>,
   ) {
     const correlationId =
       headers['x-correlation-id'] || headers['x-request-id'];
     const idempotencyKey = headers['x-idempotency-key'];
+    
+    // Transform and validate the webhook data
+    try {
+      // Normalize branch to lowercase if present
+      if (body?.order?.branch && typeof body.order.branch === 'string') {
+        body.order.branch = body.order.branch.toLowerCase();
+      }
+      
+      // Ensure payment_processor is valid
+      const validProcessors = ['stripe', 'paypal', 'tbank', 'bill', 'bit', 'paybox'];
+      if (body?.order?.payment_processor && !validProcessors.includes(body.order.payment_processor)) {
+        this.logger.warn(`Invalid payment processor: ${body.order.payment_processor}, defaulting to stripe`);
+        body.order.payment_processor = 'stripe';
+      }
+      
+      // Ensure status is valid
+      const validStatuses = ['active', 'completed', 'issue', 'canceled'];
+      if (body?.order?.status && !validStatuses.includes(body.order.status)) {
+        this.logger.warn(`Invalid order status: ${body.order.status}, defaulting to active`);
+        body.order.status = 'active';
+      }
+    } catch (error) {
+      this.logger.error(`Error normalizing webhook data: ${error.message}`);
+    }
 
     // Log incoming webhook with detailed validation info
     const webhookValidation = {
@@ -127,10 +151,13 @@ export class ViziWebhooksController {
         throw new BadRequestException('Missing required form or order data');
       }
 
+      // Cast to ViziWebhookDto after normalization
+      const webhookData = body as ViziWebhookDto;
+      
       // Save order to database first
       let orderId: string;
       try {
-        orderId = await this.ordersService.createOrder(body);
+        orderId = await this.ordersService.createOrder(webhookData);
         this.logger.log(`Order saved to database: ${body.order.id} (DB ID: ${orderId})`);
       } catch (error) {
         const errorDetails = {
@@ -169,7 +196,7 @@ export class ViziWebhooksController {
 
       // Process the webhook only if order was saved successfully
       const result = await this.viziWebhooksService.processViziOrder(
-        body,
+        webhookData,
         correlationId,
       );
 

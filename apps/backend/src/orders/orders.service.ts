@@ -374,9 +374,18 @@ export class OrdersService {
   private extractBranchFromOrderId(orderId: string): string {
     // Order IDs like "IL250819GB16" - first 2 chars are branch
     if (!orderId || orderId.length < 2) {
-      return 'unknown';
+      return 'il'; // Default to 'il' which is a valid branch code
     }
-    return orderId.substring(0, 2).toLowerCase();
+    const extracted = orderId.substring(0, 2).toLowerCase();
+    
+    // Map to valid branch codes
+    const validBranches = ['se', 'co', 'il', 'ru', 'kz'];
+    if (validBranches.includes(extracted)) {
+      return extracted;
+    }
+    
+    // Default to 'il' if not a recognized branch
+    return 'il';
   }
 
   /**
