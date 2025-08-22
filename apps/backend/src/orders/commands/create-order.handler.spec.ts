@@ -16,7 +16,6 @@ describe('CreateOrderHandler', () => {
   let eventBus: jest.Mocked<EventBus>;
   let transformerService: jest.Mocked<OrderTransformerService>;
   let validatorService: jest.Mocked<OrderValidatorService>;
-  let syncService: jest.Mocked<OrderSyncService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -76,10 +75,10 @@ describe('CreateOrderHandler', () => {
   describe('execute', () => {
     it('should successfully create an order with valid data', async () => {
       // Arrange
-      const webhookData: ViziWebhookDto = {
+      const webhookData: Partial<ViziWebhookDto> = {
         order: { id: 'ORD-123' },
         form: { id: 'FORM-456' },
-      } as any;
+      };
 
       const command = new CreateOrderCommand(webhookData, 'correlation-123');
       
@@ -119,7 +118,7 @@ describe('CreateOrderHandler', () => {
 
     it('should handle duplicate order gracefully', async () => {
       // Arrange
-      const webhookData: ViziWebhookDto = { order: { id: 'ORD-DUP' } } as any;
+      const webhookData: Partial<ViziWebhookDto> = { order: { id: 'ORD-DUP' } };
       const command = new CreateOrderCommand(webhookData);
       
       const transformedData = { order_id: 'ORD-DUP' };
@@ -130,8 +129,7 @@ describe('CreateOrderHandler', () => {
       validatorService.sanitizeOrderData.mockReturnValue(transformedData);
       
       // Simulate duplicate key error
-      const duplicateError = new Error('duplicate key');
-      (duplicateError as any).code = '23505';
+      const duplicateError = Object.assign(new Error('duplicate key'), { code: '23505' });
       ordersRepository.create.mockRejectedValue(duplicateError);
       ordersRepository.findOne.mockResolvedValue(existingOrder);
 
@@ -147,7 +145,7 @@ describe('CreateOrderHandler', () => {
 
     it('should throw error when validation fails', async () => {
       // Arrange
-      const webhookData: ViziWebhookDto = { order: { id: 'ORD-INVALID' } } as any;
+      const webhookData: Partial<ViziWebhookDto> = { order: { id: 'ORD-INVALID' } };
       const command = new CreateOrderCommand(webhookData);
       
       transformerService.transformWebhookToOrder.mockReturnValue({});

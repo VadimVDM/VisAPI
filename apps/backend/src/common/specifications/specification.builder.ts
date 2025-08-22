@@ -1,5 +1,4 @@
 import { ISpecification } from './specification.interface';
-import { Specification } from './specification.base';
 import {
   OrderByBranchSpecification,
   OrderByStatusSpecification,
@@ -17,7 +16,7 @@ import {
  * Enables elegant query construction through method chaining
  */
 export class OrderSpecificationBuilder {
-  private specifications: ISpecification<any>[] = [];
+  private specifications: ISpecification<unknown>[] = [];
   private combineWithAnd = true;
 
   /**
@@ -35,9 +34,9 @@ export class OrderSpecificationBuilder {
     if (branches.length === 0) return this;
     
     const branchSpecs = branches.map(branch => new OrderByBranchSpecification(branch));
-    const orSpec: ISpecification<any> | null = branchSpecs.reduce((acc: ISpecification<any> | null, spec) => 
+    const orSpec: ISpecification<unknown> | null = branchSpecs.reduce((acc: ISpecification<unknown> | null, spec) => 
       acc ? acc.or(spec) : spec,
-      null as ISpecification<any> | null
+      null as ISpecification<unknown> | null
     );
     
     if (orSpec) {
@@ -114,7 +113,7 @@ export class OrderSpecificationBuilder {
   /**
    * Add custom specification
    */
-  withCustom(specification: ISpecification<any>): this {
+  withCustom(specification: ISpecification<unknown>): this {
     this.specifications.push(specification);
     return this;
   }
@@ -138,7 +137,7 @@ export class OrderSpecificationBuilder {
   /**
    * Build the final specification
    */
-  build(): ISpecification<any> | null {
+  build(): ISpecification<unknown> | null {
     if (this.specifications.length === 0) {
       return null;
     }
@@ -160,7 +159,7 @@ export class OrderSpecificationBuilder {
   /**
    * Build and get the database query
    */
-  toQuery(): any {
+  toQuery(): Record<string, unknown> {
     const specification = this.build();
     return specification ? specification.toQuery() : {};
   }
@@ -197,7 +196,7 @@ export class OrderSpecificationFactory {
   /**
    * Get today's orders specification
    */
-  static todaysOrders(): ISpecification<any> {
+  static todaysOrders(): ISpecification<unknown> {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     
@@ -210,7 +209,7 @@ export class OrderSpecificationFactory {
   /**
    * Get this week's orders specification
    */
-  static thisWeeksOrders(): ISpecification<any> {
+  static thisWeeksOrders(): ISpecification<unknown> {
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
@@ -226,7 +225,7 @@ export class OrderSpecificationFactory {
   /**
    * Get pending processing specification
    */
-  static pendingProcessing(): ISpecification<any> {
+  static pendingProcessing(): ISpecification<unknown> {
     return new UnprocessedOrderSpecification()
       .and(new OrderWithWhatsAppEnabledSpecification());
   }
@@ -234,14 +233,14 @@ export class OrderSpecificationFactory {
   /**
    * Get high-value orders specification
    */
-  static highValueOrders(threshold = 10000): ISpecification<any> {
+  static highValueOrders(threshold = 10000): ISpecification<unknown> {
     return new OrderByMinAmountSpecification(threshold);
   }
 
   /**
    * Get orders needing attention
    */
-  static needingAttention(): ISpecification<any> {
+  static needingAttention(): ISpecification<unknown> {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     

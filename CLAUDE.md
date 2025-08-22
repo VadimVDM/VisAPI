@@ -62,6 +62,8 @@ Essential information for working with the VisAPI project. Updated: August 22, 2
 - ✅ Advanced caching layer with @Cacheable, @CacheEvict decorators (August 22, 2025)
 - ✅ Domain events system with audit logging and event replay (August 22, 2025)
 - ✅ Specification pattern for complex query building (August 22, 2025)
+- ✅ CBB contact synchronization fixed with OrderSyncSaga implementation (August 22, 2025)
+- ✅ Automatic WhatsApp order confirmations for IL branch orders (August 22, 2025)
 
 ## Project Structure
 
@@ -891,6 +893,8 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 18. **WhatsApp Messages**: Use WhatsApp Business templates with `messaging_product: "whatsapp"` format
 19. **Template Variables**: Map template parameters correctly in order for proper variable substitution
 20. **Non-Template Messages**: Plain text messages create in CBB but don't deliver via WhatsApp
+21. **CBB Sync Trigger**: Orders now automatically trigger CBB sync via OrderSyncSaga after creation
+22. **CQRS Event Flow**: CreateOrderHandler publishes OrderCreatedForSync event, caught by OrderSyncSaga
 
 ### Known Issues (Non-Critical):
 
@@ -901,6 +905,6 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ---
 
-**Last Updated:** August 22, 2025
+**Last Updated:** August 23, 2025
 **Version:** v1.0.0 - Production Ready  
-**Status:** Production stable with WhatsApp Business template messaging operational
+**Status:** Production stable with automatic CBB sync and WhatsApp order confirmations operational

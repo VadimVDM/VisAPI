@@ -11,6 +11,7 @@ import { RepositoriesModule } from '@visapi/backend-repositories';
 import { EventsModule } from '@visapi/backend-events';
 import { CommandHandlers } from './commands';
 import { QueryHandlers } from './queries';
+import { OrderSyncSaga } from './sagas/order-sync.saga';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { QueryHandlers } from './queries';
     OrderSyncService,
     ...CommandHandlers,
     ...QueryHandlers,
+    OrderSyncSaga,
   ],
   exports: [OrdersService, CqrsModule],
 })
