@@ -1,16 +1,14 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@visapi/core-config';
 import { Database } from '@visapi/shared-types';
 
 @Injectable()
-export class SupabaseService implements OnModuleInit {
+export class SupabaseService {
   private supabase: SupabaseClient<Database>;
   private serviceSupabase: SupabaseClient<Database>;
 
-  constructor(private readonly config: ConfigService) {}
-
-  onModuleInit() {
+  constructor(private readonly config: ConfigService) {
     // Client for public operations (using anon key)
     this.supabase = createClient<Database>(
       this.config.supabaseUrl,
