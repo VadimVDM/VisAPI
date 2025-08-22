@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 // import { CGBSyncProcessor } from './cgb-sync.processor'; // Processor not implemented yet
@@ -70,7 +70,7 @@ describe.skip('CGBSyncProcessor', () => {
       }),
     } as jest.Mocked<Partial<PromRegistry>>;
 
-    const module: TestingModule = await Test.createTestingModule({
+    await Test.createTestingModule({
       providers: [
         // CGBSyncProcessor, // Processor not implemented yet
         { provide: SupabaseService, useValue: supabaseService },

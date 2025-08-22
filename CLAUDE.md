@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: August 21, 2025
+Essential information for working with the VisAPI project. Updated: August 22, 2025
 
 ## Project Overview
 
@@ -55,7 +55,7 @@ Essential information for working with the VisAPI project. Updated: August 21, 2
 - ✅ Railway migration completed - backend and Redis moved from Render/Upstash (August 21, 2025)
 - ✅ Self-hosted monitoring prepared with Grafana support on Railway (August 21, 2025)
 - ✅ Node.js 22 deployment configuration with Nixpacks (August 21, 2025)
-- ✅ WhatsApp order confirmation messaging via CBB integration with Hebrew support (August 21, 2025)
+- ✅ WhatsApp Business template messaging via CBB API with Hebrew support (August 22, 2025)
 
 ## Project Structure
 
@@ -401,7 +401,7 @@ Use these tools:
 ### Connector Types
 
 1. **Slack:** SDK wrapper for notifications
-2. **WhatsApp:** Complete CBB API integration with flow templates, Hebrew messages, and order confirmations
+2. **WhatsApp:** CBB API integration with WhatsApp Business templates for order confirmations
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
 4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations
@@ -841,6 +841,19 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - **Key Generation**: Use `node scripts/create-vizi-api-key.js` to create new Vizi API keys
 - **Testing**: Use `test-vizi-webhook.js` to test webhook processing locally or against production
 
+### WhatsApp CBB Integration Notes:
+
+- **Library**: Use `@visapi/backend-core-cbb` for all WhatsApp operations via CBB API
+- **Authentication**: CBB uses `X-ACCESS-TOKEN` header, not Authorization Bearer
+- **Contact IDs**: CBB uses phone numbers as contact IDs (e.g., "972507758758")
+- **Template Requirement**: WhatsApp Business API requires pre-approved templates only
+- **Template Format**: Use `messaging_product: "whatsapp"` format with components/parameters
+- **Order Confirmation**: Uses `order_confirmation_global` template with 8 variables
+- **Queue Processing**: WhatsApp messages sent via separate `WHATSAPP_MESSAGES` queue
+- **Hebrew Support**: Full Hebrew translations for countries, visa types, and processing times
+- **IL Branch Only**: Order confirmations only sent for IL branch with `whatsapp_alerts_enabled=true`
+- **Database Tracking**: Track message status with `whatsapp_confirmation_sent` columns
+
 ### Common Fixes:
 
 1. **NestJS API Path Versioning**: Controllers must use `@Controller('v1/resource')` not `@Controller('api/v1/resource')` (app has global 'api' prefix)
@@ -860,6 +873,9 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 15. **API Key Generation**: Use standalone script `scripts/create-vizi-api-key.js` for Vizi keys
 16. **Vizi Webhook Validation**: Accept webhook as `any` type initially, normalize branch to lowercase, then cast to DTO
 17. **Production Build Scripts**: Exclude `src/scripts/**/*.ts` from tsconfig.app.json to prevent dev dependency issues
+18. **WhatsApp Messages**: Use WhatsApp Business templates with `messaging_product: "whatsapp"` format
+19. **Template Variables**: Map template parameters correctly in order for proper variable substitution
+20. **Non-Template Messages**: Plain text messages create in CBB but don't deliver via WhatsApp
 
 ### Known Issues (Non-Critical):
 
@@ -870,6 +886,6 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 ---
 
-**Last Updated:** August 21, 2025
+**Last Updated:** August 22, 2025
 **Version:** v1.0.0 - Production Ready  
-**Status:** Sprints 0-4 completed, Sprint 5 Week 1-3 completed (100% - magic link authentication operational), Vizi webhook order creation fixed, Production stable with all systems operational
+**Status:** Production stable with WhatsApp Business template messaging operational

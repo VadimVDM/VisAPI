@@ -493,4 +493,107 @@ export class CbbClientService {
     // All retries failed
     throw lastError;
   }
+
+  /**
+   * Send WhatsApp templated message via CBB send_content endpoint
+   * Uses WhatsApp Business API template format with variables
+   * @param contactId The contact ID (phone number)
+   * @param templateName The template name (e.g., 'order_confirmation_global')
+   * @param languageCode The language code (e.g., 'he' for Hebrew)
+   * @param parameters Array of template parameters in order
+   */
+  async sendWhatsAppTemplate(
+    contactId: string, 
+    templateName: string, 
+    languageCode: string, 
+    parameters: string[]
+  ): Promise<any> {
+    this.logger.debug(`Sending WhatsApp template '${templateName}' to contact ${contactId}`);
+    this.logger.debug(`Language: ${languageCode}, Parameters: ${parameters.length}`);
+    
+    // Build the WhatsApp template message format
+    const templatePayload = {
+      messages: [
+        {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: contactId,
+          type: "template",
+          template: {
+            name: templateName,
+            language: {
+              code: languageCode
+            },
+            components: [
+              {
+                type: "body",
+                parameters: parameters.map(param => ({
+                  type: "text",
+                  text: param
+                }))
+              }
+            ]
+          }
+        }
+      ]
+    };
+    
+    try {
+      const response = await this.makeRequest('POST', `/contacts/${contactId}/send_content`, {
+        data: templatePayload
+      });
+      
+      this.logger.debug(`WhatsApp template '${templateName}' sent successfully to contact ${contactId}`);
+      this.logger.debug('CBB Response:', response.data);
+      
+      return {
+        success: true,
+        template: templateName,
+        contact_id: contactId,
+        response: response.data
+      };
+    } catch (error) {
+      this.logger.error(`Failed to send WhatsApp template '${templateName}':`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send WhatsApp order confirmation message
+   * Uses the order_confirmation_global template in Hebrew
+   */
+  async sendOrderConfirmation(
+    contactId: string,
+    orderData: {
+      customerName: string;
+      country: string;
+      countryFlag: string;
+      orderNumber: string;
+      visaType: string;
+      applicantCount: string;
+      paymentAmount: string;
+      processingDays: string;
+    }
+  ): Promise<any> {
+    this.logger.debug(`Sending order confirmation to ${contactId} for order ${orderData.orderNumber}`);
+    
+    // Template parameters in the correct order
+    const parameters = [
+      orderData.customerName,     // {{1}}
+      orderData.country,          // {{2}}
+      orderData.countryFlag,      // {{3}}
+      orderData.orderNumber,      // {{4}}
+      orderData.visaType,         // {{5}}
+      orderData.applicantCount,   // {{6}}
+      orderData.paymentAmount,    // {{7}}
+      orderData.processingDays    // {{8}}
+    ];
+    
+    return this.sendWhatsAppTemplate(
+      contactId,
+      'order_confirmation_global',
+      'he', // Hebrew
+      parameters
+    );
+  }
 }

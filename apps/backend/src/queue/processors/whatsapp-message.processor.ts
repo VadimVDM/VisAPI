@@ -194,30 +194,28 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         };
       }
 
-      // Build message based on type
-      let message: string;
-      switch (messageType) {
-        case 'order_confirmation':
-          message = this.buildOrderConfirmationMessage(order);
-          break;
-        case 'status_update':
-          message = this.buildStatusUpdateMessage(order);
-          break;
-        case 'document_ready':
-          message = this.buildDocumentReadyMessage(order);
-          break;
-        default:
-          throw new Error(`Unsupported message type: ${messageType}`);
-      }
-
-      // Send message via CBB API
-      // CBB expects numeric contact ID, but we store it as string (phone number)
-      const numericContactId = parseInt(contactId, 10);
-      if (isNaN(numericContactId)) {
-        throw new Error(`Invalid contact ID: ${contactId}`);
-      }
+      // Send the message based on type
+      let result: any;
       
-      const result = await this.cbbService.sendTextMessage(numericContactId, message);
+      if (messageType === 'order_confirmation') {
+        // Use the templated message for order confirmations
+        const orderData = this.prepareOrderConfirmationData(order);
+        this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${orderId}`);
+        result = await this.cbbService.sendOrderConfirmation(contactId, orderData);
+      } else {
+        // For other message types, we'll need to use appropriate templates
+        // For now, log a warning that these need template implementation
+        this.logger.warn(`Message type '${messageType}' needs template implementation. Skipping for now.`);
+        
+        // Return early for unsupported message types
+        return {
+          status: 'skipped',
+          orderId,
+          contactId,
+          messageType,
+          reason: 'Template not yet implemented'
+        };
+      }
 
       // Update order with WhatsApp tracking info
       if (messageType === 'order_confirmation') {
@@ -285,32 +283,33 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     }
   }
 
-  private buildOrderConfirmationMessage(order: OrderData): string {
+  private prepareOrderConfirmationData(order: OrderData): {
+    customerName: string;
+    country: string;
+    countryFlag: string;
+    orderNumber: string;
+    visaType: string;
+    applicantCount: string;
+    paymentAmount: string;
+    processingDays: string;
+  } {
     // Get Hebrew translations
     const countryHebrew = this.getCountryNameHebrew(order.product_country);
     const countryFlag = this.getCountryFlag(order.product_country);
     const visaTypeHebrew = this.getVisaTypeHebrew(order.product_doc_type, order.product_intent);
     const processingDays = this.calculateProcessingDays(order);
 
-    // Build the message with RTL support
-    const message = `שלום ${order.client_name},
-
-הזמנתך לויזה ל${countryHebrew} התקבלה בהצלחה ${countryFlag}
-
-להלן פרטי הזמנתך:
-• *מספר הזמנה*: ${order.order_id}
-• *סוג ויזה*: ${visaTypeHebrew}
-• *כמות מבקשים*: ${order.visa_quantity}×
-• *סכום תשלום*: ₪${order.amount}
-• *צפי לקבלת אישור תוך*: ${processingDays} ימי עסקים
-
-צוות המומחים שלנו כבר החל לטפל בבקשתך. נעדכן אותך כאן בוואטסאפ ברגע שהאישור יהיה מוכן.
-
-בינתיים, אם יש לך שאלות או בקשות – אנחנו כאן בשבילך בכל שלב.
-
-*תודה שבחרת בויזה.נט* 🛂`;
-
-    return message;
+    // Return the data object for the template
+    return {
+      customerName: order.client_name,
+      country: countryHebrew,
+      countryFlag: countryFlag,
+      orderNumber: order.order_id,
+      visaType: visaTypeHebrew,
+      applicantCount: String(order.visa_quantity || 1),
+      paymentAmount: String(order.amount || 0),
+      processingDays: String(processingDays)
+    };
   }
 
   private buildStatusUpdateMessage(order: OrderData): string {

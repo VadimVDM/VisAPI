@@ -260,7 +260,7 @@ export class CBBSyncProcessor extends WorkerHost {
             `Converted entry_date ${order.entry_date} to Unix timestamp: ${orderDateUnix}`,
           );
         }
-      } catch (error) {
+      } catch (_error) {
         this.logger.warn(
           `Failed to convert entry_date to Unix timestamp: ${order.entry_date}`,
         );
@@ -314,9 +314,9 @@ export class CBBSyncProcessor extends WorkerHost {
     const countryToFlag = this.getCountryFlag(order.product_country);
     
     // Use ACTUAL product data from the order, not guessing from applicant data!
-    let visaIntent = order.product_intent || 'tourism';
-    let visaEntries = order.product_entries || 'single';
-    let visaValidity = order.product_validity || 'month';
+    const visaIntent = order.product_intent || 'tourism';
+    const visaEntries = order.product_entries || 'single';
+    const visaValidity = order.product_validity || 'month';
     
     // Convert validity to days if needed
     let visaValidityDays = '30'; // Default
