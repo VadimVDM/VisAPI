@@ -7,6 +7,10 @@ import { QUEUE_NAMES } from '@visapi/shared-types';
 import { AuthModule } from '../auth/auth.module';
 import { CBBSyncProcessor } from './processors/cbb-sync.processor';
 import { WhatsAppMessageProcessor } from './processors/whatsapp-message.processor';
+import { WhatsAppTranslationService } from './services/whatsapp-translation.service';
+import { WhatsAppTemplateService } from './services/whatsapp-template.service';
+import { CBBFieldMapperService } from './services/cbb-field-mapper.service';
+import { CBBSyncOrchestratorService } from './services/cbb-sync-orchestrator.service';
 import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -135,6 +139,10 @@ import {
     QueueService,
     CBBSyncProcessor,
     WhatsAppMessageProcessor,
+    WhatsAppTranslationService,
+    WhatsAppTemplateService,
+    CBBFieldMapperService,
+    CBBSyncOrchestratorService,
     // CBB Sync Metrics
     makeCounterProvider({
       name: 'cbb_sync_total',
@@ -171,17 +179,17 @@ import {
     }),
     // WhatsApp Message Metrics
     makeCounterProvider({
-      name: 'whatsapp_messages_sent',
+      name: 'visapi_whatsapp_messages_sent_total',
       help: 'Total number of WhatsApp messages sent',
       labelNames: ['message_type'],
     }),
     makeCounterProvider({
-      name: 'whatsapp_messages_failed',
+      name: 'visapi_whatsapp_messages_failed_total',
       help: 'Total number of WhatsApp messages failed',
       labelNames: ['message_type'],
     }),
     makeHistogramProvider({
-      name: 'whatsapp_message_duration',
+      name: 'visapi_whatsapp_message_duration_seconds',
       help: 'WhatsApp message sending duration in seconds',
       labelNames: ['message_type'],
       buckets: [0.5, 1, 2, 5, 10, 20, 30],

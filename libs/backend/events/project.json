@@ -1,0 +1,20 @@
+{
+  "name": "events",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/events/src",
+  "projectType": "library",
+  "tags": ["scope:backend", "type:events"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/events",
+        "tsConfig": "libs/backend/events/tsconfig.lib.json",
+        "packageJson": "libs/backend/events/package.json",
+        "main": "libs/backend/events/src/index.ts",
+        "assets": ["libs/backend/events/*.md"]
+      }
+    }
+  }
+}

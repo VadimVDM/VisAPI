@@ -12,6 +12,7 @@ describe('QueueService', () => {
   let defaultQueue: jest.Mocked<Queue>;
   let bulkQueue: jest.Mocked<Queue>;
   let cbbSyncQueue: jest.Mocked<Queue>;
+  let whatsappMessagesQueue: jest.Mocked<Queue>;
 
   const createMockQueue = (): jest.Mocked<Queue> =>
     ({
@@ -33,6 +34,7 @@ describe('QueueService', () => {
     const mockDefaultQueue = createMockQueue();
     const mockBulkQueue = createMockQueue();
     const mockCbbSyncQueue = createMockQueue();
+    const mockWhatsappMessagesQueue = createMockQueue();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +56,10 @@ describe('QueueService', () => {
           useValue: mockCbbSyncQueue,
         },
         {
+          provide: getQueueToken(QUEUE_NAMES.WHATSAPP_MESSAGES),
+          useValue: mockWhatsappMessagesQueue,
+        },
+        {
           provide: ConfigService,
           useValue: {
             queueMaxRetries: 3,
@@ -68,6 +74,7 @@ describe('QueueService', () => {
     defaultQueue = module.get(getQueueToken(QUEUE_NAMES.DEFAULT));
     bulkQueue = module.get(getQueueToken(QUEUE_NAMES.BULK));
     cbbSyncQueue = module.get(getQueueToken(QUEUE_NAMES.CBB_SYNC));
+    whatsappMessagesQueue = module.get(getQueueToken(QUEUE_NAMES.WHATSAPP_MESSAGES));
   });
 
   it('should be defined', () => {
@@ -163,15 +170,17 @@ describe('QueueService', () => {
       defaultQueue.getJobCounts.mockResolvedValue(mockCounts);
       bulkQueue.getJobCounts.mockResolvedValue(mockCounts);
       cbbSyncQueue.getJobCounts.mockResolvedValue(mockCounts);
+      whatsappMessagesQueue.getJobCounts.mockResolvedValue(mockCounts);
 
       criticalQueue.isPaused.mockResolvedValue(false);
       defaultQueue.isPaused.mockResolvedValue(false);
       bulkQueue.isPaused.mockResolvedValue(false);
       cbbSyncQueue.isPaused.mockResolvedValue(false);
+      whatsappMessagesQueue.isPaused.mockResolvedValue(false);
 
       const result = await service.getQueueMetrics();
 
-      expect(result).toHaveLength(4);
+      expect(result).toHaveLength(5);
       expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.CRITICAL,
         counts: {

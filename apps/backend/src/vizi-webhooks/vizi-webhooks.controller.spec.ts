@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ViziWebhooksController } from './vizi-webhooks.controller';
 import { ViziWebhooksService } from './vizi-webhooks.service';
 import { AuthService } from '../auth/auth.service';
@@ -33,6 +34,14 @@ describe('ViziWebhooksController', () => {
       updateOrderProcessing: jest.fn(),
     };
 
+    const mockCommandBus = {
+      execute: jest.fn(),
+    };
+
+    const mockQueryBus = {
+      execute: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ViziWebhooksController],
       providers: [
@@ -55,6 +64,14 @@ describe('ViziWebhooksController', () => {
         {
           provide: OrdersService,
           useValue: mockOrdersService,
+        },
+        {
+          provide: CommandBus,
+          useValue: mockCommandBus,
+        },
+        {
+          provide: QueryBus,
+          useValue: mockQueryBus,
         },
         Reflector,
       ],

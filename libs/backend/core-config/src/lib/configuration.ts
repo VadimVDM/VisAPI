@@ -64,4 +64,12 @@ export default () => ({
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || 'VisAPI <noreply@visanet.app>',
   },
+  whatsapp: {
+    messageDelayMs: parseInt(process.env.WHATSAPP_MESSAGE_DELAY_MS, 10) || 5000,
+    processDelayMs: parseInt(process.env.WHATSAPP_PROCESS_DELAY_MS, 10) || 3000,
+  },
+  workflow: {
+    processingDelayMs: parseInt(process.env.WORKFLOW_PROCESSING_DELAY_MS, 10) || 1000,
+    batchProcessingSize: parseInt(process.env.WORKFLOW_BATCH_PROCESSING_SIZE, 10) || 50,
+  },
 });

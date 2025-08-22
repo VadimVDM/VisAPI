@@ -162,4 +162,22 @@ export class ConfigService {
   get resendFromEmail(): string {
     return this.configService.get<string>('resend.fromEmail');
   }
+
+  // WhatsApp Configuration
+  get whatsappMessageDelayMs(): number {
+    return this.configService.get<number>('whatsapp.messageDelayMs');
+  }
+
+  get whatsappProcessDelayMs(): number {
+    return this.configService.get<number>('whatsapp.processDelayMs');
+  }
+
+  // Workflow Configuration
+  get workflowProcessingDelayMs(): number {
+    return this.configService.get<number>('workflow.processingDelayMs');
+  }
+
+  get workflowBatchProcessingSize(): number {
+    return this.configService.get<number>('workflow.batchProcessingSize');
+  }
 }

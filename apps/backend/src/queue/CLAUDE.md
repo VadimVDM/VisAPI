@@ -32,11 +32,18 @@ Processes incoming webhooks with retry logic.
 
 ## Processors
 
-- `WhatsAppMessageProcessor`: Sends WhatsApp Business templates via CBB API
-- `CBBSyncProcessor`: Syncs orders to CBB contacts
+### Core Processors
+- `WhatsAppMessageProcessor` (273 lines): Sends WhatsApp Business templates via CBB API
+- `CBBSyncProcessor` (138 lines): Orchestrates order-to-CBB contact synchronization
 - `WorkflowProcessor`: Executes workflow steps
 - `WebhookProcessor`: Handles webhook payloads
 - `CronProcessor`: Manages scheduled jobs
+
+### Supporting Services (Refactored August 22, 2025)
+- `WhatsAppTranslationService` (292 lines): Hebrew translations and mappings
+- `WhatsAppTemplateService` (120 lines): Template building and formatting
+- `CBBFieldMapperService` (262 lines): Maps order data to CBB contact fields
+- `CBBSyncOrchestratorService` (305 lines): Handles sync workflow logic
 
 ## Configuration
 

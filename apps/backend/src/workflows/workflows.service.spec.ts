@@ -6,7 +6,7 @@ import { CreateWorkflowDto, UpdateWorkflowDto } from './dto';
 
 describe('WorkflowsService', () => {
   let service: WorkflowsService;
-  // Removed unused: let supabaseService: jest.Mocked<SupabaseService>;
+  let supabaseService: jest.Mocked<SupabaseService>;
 
   const mockSupabaseClient = {
     from: jest.fn(),

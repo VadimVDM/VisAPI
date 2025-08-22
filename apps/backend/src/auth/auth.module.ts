@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ApiKeyService } from './services/api-key.service';
+import { UserAuthService } from './services/user-auth.service';
+import { TokenService } from './services/token.service';
+import { PermissionService } from './services/permission.service';
 import { AuthController } from './auth.controller';
 import { AuthConfirmController } from './auth-confirm.controller';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
@@ -15,11 +19,24 @@ import { MetricsModule } from '../metrics/metrics.module';
   controllers: [AuthController, AuthConfirmController],
   providers: [
     AuthService,
+    ApiKeyService,
+    UserAuthService,
+    TokenService,
+    PermissionService,
     ApiKeyStrategy,
     ApiKeyGuard,
     JwtAuthGuard,
     PermissionsGuard,
   ],
-  exports: [AuthService, ApiKeyGuard, JwtAuthGuard, PermissionsGuard],
+  exports: [
+    AuthService,
+    ApiKeyService,
+    UserAuthService,
+    TokenService,
+    PermissionService,
+    ApiKeyGuard,
+    JwtAuthGuard,
+    PermissionsGuard,
+  ],
 })
 export class AuthModule {}

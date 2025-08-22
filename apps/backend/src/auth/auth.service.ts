@@ -1,32 +1,25 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  BadRequestException,
-} from '@nestjs/common';
-import { SupabaseService } from '@visapi/core-supabase';
-import { ConfigService } from '@visapi/core-config';
-import {
-  ApiKeyRecord,
-  User,
-  RoleRecord,
-  UserRoleRecord,
-  InsertUser,
-  InsertUserRole,
-} from '@visapi/shared-types';
-import {
-  validatePassword,
-  DEFAULT_PASSWORD_REQUIREMENTS,
-} from '@visapi/shared-utils';
-import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { Injectable } from '@nestjs/common';
+import { ApiKeyService } from './services/api-key.service';
+import { UserAuthService } from './services/user-auth.service';
+import { TokenService } from './services/token.service';
+import { PermissionService } from './services/permission.service';
+import { ApiKeyRecord, User, RoleRecord, UserRoleRecord } from '@visapi/shared-types';
 import { AuthUser, Session } from '@supabase/supabase-js';
 
+/**
+ * Main AuthService that orchestrates authentication and authorization
+ * Delegates to specialized services for specific functionality
+ */
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly supabase: SupabaseService,
-    private readonly config: ConfigService,
+    private readonly apiKeyService: ApiKeyService,
+    private readonly userAuthService: UserAuthService,
+    private readonly tokenService: TokenService,
+    private readonly permissionService: PermissionService,
   ) {}
+
+  // API Key Methods - Delegate to ApiKeyService
 
   async createApiKey(
     name: string,
@@ -34,172 +27,32 @@ export class AuthService {
     createdBy: string,
     customPrefix?: string,
   ): Promise<{ key: string; apiKey: ApiKeyRecord }> {
-    // Generate prefix and secret
-    const prefix = customPrefix || this.config.apiKeyPrefix || 'visapi_';
-    const secret = randomBytes(32).toString('hex');
-    const fullKey = `${prefix}${secret}`;
-
-    // Hash only the secret part for storage
-    const hashedSecret = await bcrypt.hash(secret, 12);
-
-    // Calculate expiry date
-    const expiresAt = new Date();
-    expiresAt.setDate(
-      expiresAt.getDate() + (this.config.apiKeyExpiryDays ?? 90),
-    );
-
-    // Store in database
-    const { data, error } = await this.supabase.serviceClient
-      .from('api_keys')
-      .insert({
-        name,
-        prefix,
-        hashed_secret: hashedSecret,
-        scopes,
-        expires_at: expiresAt.toISOString(),
-        created_by: createdBy,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create API key: ${error.message}`);
-    }
-
-    return {
-      key: fullKey,
-      apiKey: data as ApiKeyRecord,
-    };
+    return this.apiKeyService.createApiKey(name, scopes, createdBy, customPrefix);
   }
 
   async validateApiKey(apiKey: string): Promise<ApiKeyRecord | null> {
-    const { prefix, secret } = this.splitApiKey(apiKey);
-    if (!prefix || !secret) {
-      return null;
-    }
-
-    // Find the API key record by prefix
-    const { data, error } = await this.supabase.serviceClient
-      .from('api_keys')
-      .select('*')
-      .eq('prefix', prefix)
-      .single<ApiKeyRecord>();
-
-    if (error || !data) {
-      return null;
-    }
-
-    // Check if expired
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      return null;
-    }
-
-    // Use bcrypt.compare to validate the secret
-    const isValid = await bcrypt.compare(secret, data.hashed_secret);
-    if (!isValid) {
-      return null;
-    }
-
-    // Update last_used_at timestamp
-    await this.supabase.serviceClient
-      .from('api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', data.id);
-
-    return data;
+    return this.apiKeyService.validateApiKey(apiKey);
   }
 
   async listApiKeys(userId?: string): Promise<ApiKeyRecord[]> {
-    let query = this.supabase.serviceClient
-      .from('api_keys')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (userId) {
-      query = query.eq('created_by', userId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to list API keys: ${error.message}`);
-    }
-
-    return (data as ApiKeyRecord[]) || [];
+    return this.apiKeyService.listApiKeys(userId);
   }
 
   async revokeApiKey(keyId: string): Promise<void> {
-    const { error } = await this.supabase.serviceClient
-      .from('api_keys')
-      .delete()
-      .eq('id', keyId);
-
-    if (error) {
-      throw new Error(`Failed to revoke API key: ${error.message}`);
-    }
-  }
-
-  private splitApiKey(apiKey: string): { prefix: string; secret: string } {
-    // Split by the last dot to handle prefixes like "n8n_xxxx.secret"
-    const lastDotIndex = apiKey.lastIndexOf('.');
-
-    if (lastDotIndex === -1) {
-      return { prefix: '', secret: '' };
-    }
-
-    const prefix = apiKey.substring(0, lastDotIndex);
-    const secret = apiKey.substring(lastDotIndex + 1);
-
-    return { prefix, secret };
+    return this.apiKeyService.revokeApiKey(keyId);
   }
 
   checkScopes(apiKey: ApiKeyRecord, requiredScopes: string[]): boolean {
-    if (!requiredScopes.length) {
-      return true;
-    }
-
-    return requiredScopes.every((scope) => apiKey.scopes.includes(scope));
+    return this.apiKeyService.checkScopes(apiKey, requiredScopes);
   }
 
-  // Supabase Auth Methods
+  // User Auth Methods - Delegate to UserAuthService
 
   async signUpWithEmail(
     email: string,
     password: string,
   ): Promise<{ user: AuthUser | null; error: Error | null }> {
-    // Validate email domain
-    if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException(
-        'Email domain not allowed. Only @visanet.com emails are permitted.',
-      );
-    }
-
-    // Validate password strength
-    const passwordValidation = validatePassword(
-      password,
-      DEFAULT_PASSWORD_REQUIREMENTS,
-    );
-    if (!passwordValidation.isValid) {
-      throw new BadRequestException(
-        `Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`,
-      );
-    }
-
-    const { data, error } = await this.supabase.client.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw new BadRequestException(`Registration failed: ${error.message}`);
-    }
-
-    // If signup was successful and user is confirmed, create user record
-    if (data.user && data.user.email_confirmed_at) {
-      await this.createUserRecord(data.user);
-    }
-
-    return { user: data.user, error: error as Error | null };
+    return this.userAuthService.signUpWithEmail(email, password);
   }
 
   async signInWithEmail(
@@ -210,175 +63,71 @@ export class AuthService {
     session: Session | null;
     error: Error | null;
   }> {
-    const { data, error } = await this.supabase.client.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw new UnauthorizedException(`Login failed: ${error.message}`);
-    }
-
-    return {
-      user: data.user,
-      session: data.session,
-      error: error as Error | null,
-    };
+    return this.userAuthService.signInWithEmail(email, password);
   }
 
   async signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
-    // Validate email domain
-    if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException(
-        'Email domain not allowed. Only @visanet.com emails are permitted.',
-      );
-    }
-
-    const { error } = await this.supabase.client.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${this.config.frontendUrl}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      throw new BadRequestException(`Magic link failed: ${error.message}`);
-    }
-
-    return { error: error as Error | null };
+    return this.userAuthService.signInWithMagicLink(email);
   }
 
   async resetPassword(email: string): Promise<{ error: Error | null }> {
-    // Validate email domain
-    if (!this.isValidEmailDomain(email)) {
-      throw new BadRequestException(
-        'Email domain not allowed. Only @visanet.com emails are permitted.',
-      );
-    }
-
-    const { error } = await this.supabase.client.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo: `${this.config.frontendUrl}/auth/reset-password`,
-      },
-    );
-
-    if (error) {
-      throw new BadRequestException(`Password reset failed: ${error.message}`);
-    }
-
-    return { error: error as Error | null };
+    return this.userAuthService.resetPassword(email);
   }
 
   async updatePassword(newPassword: string): Promise<{ error: Error | null }> {
-    // Validate password strength
-    const passwordValidation = validatePassword(
-      newPassword,
-      DEFAULT_PASSWORD_REQUIREMENTS,
-    );
-    if (!passwordValidation.isValid) {
-      throw new BadRequestException(
-        `Password does not meet requirements: ${passwordValidation.feedback.join(', ')}`,
-      );
-    }
-
-    const { error } = await this.supabase.client.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (error) {
-      throw new BadRequestException(`Password update failed: ${error.message}`);
-    }
-
-    return { error: error as Error | null };
+    return this.userAuthService.updatePassword(newPassword);
   }
+
+  async signOut(): Promise<{ error: Error | null }> {
+    return this.userAuthService.signOut();
+  }
+
+  async createUserRecord(authUser: AuthUser): Promise<User> {
+    return this.userAuthService.createUserRecord(authUser);
+  }
+
+  async getUserByAuthId(authUserId: string): Promise<User | null> {
+    return this.userAuthService.getUserByAuthId(authUserId);
+  }
+
+  // Token Methods - Delegate to TokenService
 
   async verifyJWT(
     token: string,
   ): Promise<{ user: AuthUser | null; error: Error | null }> {
-    const { data, error } = await this.supabase.client.auth.getUser(token);
-
-    if (error) {
-      return { user: null, error: error as Error | null };
-    }
-
-    return { user: data.user, error: null };
+    return this.tokenService.verifyJWT(token);
   }
 
-  async signOut(): Promise<{ error: Error | null }> {
-    const { error } = await this.supabase.client.auth.signOut();
-
-    if (error) {
-      throw new BadRequestException(`Sign out failed: ${error.message}`);
-    }
-
-    return { error: error as Error | null };
+  async getSession() {
+    return this.tokenService.getSession();
   }
 
-  // User Management Methods
-
-  async createUserRecord(authUser: AuthUser): Promise<User> {
-    const userData: InsertUser = {
-      email: authUser.email,
-      auth_user_id: authUser.id,
-      role: 'viewer', // Default role
-    };
-
-    const { data, error } = await this.supabase.serviceClient
-      .from('users')
-      .insert(userData)
-      .select()
-      .single<User>();
-
-    if (error) {
-      throw new Error(`Failed to create user record: ${error.message}`);
-    }
-
-    // Assign default role
-    await this.assignDefaultRole(data.id);
-
-    return data;
+  async refreshSession() {
+    return this.tokenService.refreshSession();
   }
 
-  async getUserByAuthId(authUserId: string): Promise<User | null> {
-    const { data, error } = await this.supabase.serviceClient
-      .from('users')
-      .select('*')
-      .eq('auth_user_id', authUserId)
-      .single<User>();
-
-    if (error) {
-      return null;
-    }
-
-    return data;
+  async setSession(accessToken: string, refreshToken: string) {
+    return this.tokenService.setSession(accessToken, refreshToken);
   }
+
+  async getCurrentUser(): Promise<{ user: AuthUser | null; error: Error | null }> {
+    return this.tokenService.getCurrentUser();
+  }
+
+  async verifyOtp(
+    email: string,
+    token: string,
+    type: 'magiclink' | 'recovery',
+  ) {
+    return this.tokenService.verifyOtp(email, token, type);
+  }
+
+  // Permission Methods - Delegate to PermissionService
 
   async getUserWithRoles(
     userId: string,
   ): Promise<(User & { roles: RoleRecord[] }) | null> {
-    const { data, error } = await this.supabase.serviceClient
-      .from('users')
-      .select(
-        `
-        *,
-        user_roles!inner(
-          roles(*)
-        )
-      `,
-      )
-      .eq('id', userId)
-      .single<{ user_roles: { roles: RoleRecord }[] } & User>();
-
-    if (error) {
-      return null;
-    }
-
-    // Transform the nested structure
-    const roles = data.user_roles.map((ur) => ur.roles);
-    const userWithRoles = { ...data, roles };
-
-    return userWithRoles;
+    return this.permissionService.getUserWithRoles(userId);
   }
 
   async assignRole(
@@ -386,66 +135,42 @@ export class AuthService {
     roleId: string,
     assignedBy: string,
   ): Promise<UserRoleRecord> {
-    const userRoleData: InsertUserRole = {
-      user_id: userId,
-      role_id: roleId,
-      assigned_by: assignedBy,
-    };
-
-    const { data, error } = await this.supabase.serviceClient
-      .from('user_roles')
-      .insert(userRoleData)
-      .select()
-      .single<UserRoleRecord>();
-
-    if (error) {
-      throw new Error(`Failed to assign role: ${error.message}`);
-    }
-
-    return data;
+    return this.permissionService.assignRole(userId, roleId, assignedBy);
   }
 
   async removeRole(userId: string, roleId: string): Promise<void> {
-    const { error } = await this.supabase.serviceClient
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId)
-      .eq('role_id', roleId);
-
-    if (error) {
-      throw new Error(`Failed to remove role: ${error.message}`);
-    }
+    return this.permissionService.removeRole(userId, roleId);
   }
 
   async checkPermission(userId: string, permission: string): Promise<boolean> {
-    const userWithRoles = await this.getUserWithRoles(userId);
-    if (!userWithRoles) {
-      return false;
-    }
-
-    return userWithRoles.roles.some(
-      (role) => role.permissions[permission] === true,
-    );
+    return this.permissionService.checkPermission(userId, permission);
   }
 
-  // Helper Methods
-
-  private isValidEmailDomain(email: string): boolean {
-    const allowedDomains = this.config.allowedEmailDomains ?? ['visanet.com'];
-    const emailDomain = email.split('@')[1]?.toLowerCase();
-    return !!emailDomain && allowedDomains.includes(emailDomain);
+  async getUserPermissions(userId: string): Promise<Record<string, boolean>> {
+    return this.permissionService.getUserPermissions(userId);
   }
 
-  private async assignDefaultRole(userId: string): Promise<void> {
-    // Get the 'support' role as default
-    const { data: role } = await this.supabase.serviceClient
-      .from('roles')
-      .select('id')
-      .eq('name', 'support')
-      .single<{ id: string }>();
+  async getAllRoles(): Promise<RoleRecord[]> {
+    return this.permissionService.getAllRoles();
+  }
 
-    if (role) {
-      await this.assignRole(userId, role.id, 'system');
-    }
+  async getRoleById(roleId: string): Promise<RoleRecord | null> {
+    return this.permissionService.getRoleById(roleId);
+  }
+
+  async getRoleByName(name: string): Promise<RoleRecord | null> {
+    return this.permissionService.getRoleByName(name);
+  }
+
+  async getUsersByRole(roleId: string): Promise<User[]> {
+    return this.permissionService.getUsersByRole(roleId);
+  }
+
+  async userHasRole(userId: string, roleId: string): Promise<boolean> {
+    return this.permissionService.userHasRole(userId, roleId);
+  }
+
+  async userHasAnyRole(userId: string, roleIds: string[]): Promise<boolean> {
+    return this.permissionService.userHasAnyRole(userId, roleIds);
   }
 }

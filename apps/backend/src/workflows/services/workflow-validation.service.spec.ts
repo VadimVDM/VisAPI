@@ -1,13 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkflowValidationService } from './workflow-validation.service';
+import { WorkflowSchemaLoaderService } from './workflow-schema-loader.service';
+import { WorkflowValidationEngineService } from './workflow-validation-engine.service';
 import { WorkflowSchema } from '@visapi/shared-types';
 
 describe('WorkflowValidationService', () => {
   let service: WorkflowValidationService;
 
   beforeEach(async () => {
+    const mockSchemaLoader = {
+      loadWorkflowSchema: jest.fn().mockReturnValue({
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          enabled: { type: 'boolean' },
+          triggers: { type: 'array', minItems: 1 },
+          steps: { type: 'array', minItems: 1 },
+        },
+        required: ['name', 'enabled', 'triggers', 'steps'],
+      }),
+    };
+
+    const mockValidationEngine = {
+      validateStepConfig: jest.fn().mockReturnValue({ valid: true }),
+      validateCronExpression: jest.fn().mockReturnValue({ valid: true }),
+      validateUniqueStepIds: jest.fn().mockReturnValue({ valid: true }),
+      validateBusinessRules: jest.fn().mockReturnValue({ valid: true }),
+      validateWorkflowSteps: jest.fn().mockReturnValue({ valid: true }),
+      validateWorkflowTriggers: jest.fn().mockReturnValue({ valid: true }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [WorkflowValidationService],
+      providers: [
+        WorkflowValidationService,
+        {
+          provide: WorkflowSchemaLoaderService,
+          useValue: mockSchemaLoader,
+        },
+        {
+          provide: WorkflowValidationEngineService,
+          useValue: mockValidationEngine,
+        },
+      ],
     }).compile();
 
     service = module.get<WorkflowValidationService>(WorkflowValidationService);

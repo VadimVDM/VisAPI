@@ -7,133 +7,27 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
+import { WhatsAppTemplateService } from '../services/whatsapp-template.service';
 
-// Hebrew translation maps
-const COUNTRY_NAMES_HEBREW: Record<string, string> = {
-  'india': 'הודו',
-  'usa': 'ארה"ב',
-  'us': 'ארה"ב',
-  'united states': 'ארה"ב',
-  'u.s.': 'ארה"ב',
-  'uk': 'בריטניה',
-  'united kingdom': 'בריטניה',
-  'britain': 'בריטניה',
-  'canada': 'קנדה',
-  'israel': 'ישראל',
-  'thailand': 'תאילנד',
-  'south korea': 'דרום קוריאה',
-  'korea': 'קוריאה',
-  'vietnam': 'וייטנאם',
-  'saudi arabia': 'ערב הסעודית',
-  'saudi': 'סעודיה',
-  'indonesia': 'אינדונזיה',
-  'bahrain': 'בחריין',
-  'new zealand': 'ניו זילנד',
-  'cambodia': 'קמבודיה',
-  'schengen': 'אזור שנגן',
-  'schengen area': 'אזור שנגן',
-  'morocco': 'מרוקו',
-  'sri lanka': 'סרי לנקה',
-  'togo': 'טוגו',
-  'china': 'סין',
-  'japan': 'יפן',
-  'singapore': 'סינגפור',
-  'australia': 'אוסטרליה',
-  'brazil': 'ברזיל',
-  'mexico': 'מקסיקו',
-  'argentina': 'ארגנטינה',
-  'chile': 'צ\'ילה',
-  'peru': 'פרו',
-  'colombia': 'קולומביה',
-  'egypt': 'מצרים',
-  'jordan': 'ירדן',
-  'uae': 'איחוד האמירויות',
-  'united arab emirates': 'איחוד האמירויות',
-  'turkey': 'טורקיה',
-  'greece': 'יוון',
-  'cyprus': 'קפריסין',
-  'russia': 'רוסיה',
-  'ukraine': 'אוקראינה',
-  'poland': 'פולין',
-  'germany': 'גרמניה',
-  'france': 'צרפת',
-  'spain': 'ספרד',
-  'italy': 'איטליה',
-  'netherlands': 'הולנד',
-  'belgium': 'בלגיה',
-  'switzerland': 'שוויץ',
-  'austria': 'אוסטריה',
-  'portugal': 'פורטוגל',
-  'sweden': 'שוודיה',
-  'norway': 'נורבגיה',
-  'denmark': 'דנמרק',
-  'finland': 'פינלנד',
-};
-
-const VISA_TYPES_HEBREW: Record<string, string> = {
-  'tourist': 'תיירות',
-  'tourism': 'תיירות',
-  'business': 'עסקים',
-  'student': 'סטודנט',
-  'evisa': 'ויזה אלקטרונית',
-  'e-visa': 'ויזה אלקטרונית',
-  'transit': 'מעבר',
-  'medical': 'רפואית',
-  'work': 'עבודה',
-  'conference': 'כנס',
-  'family': 'משפחה',
-  'pilgrimage': 'עלייה לרגל',
-  'diplomatic': 'דיפלומטית',
-  'official': 'רשמית',
-  'multiple': 'רב כניסות',
-  'single': 'כניסה יחידה',
-};
-
-const VALIDITY_HEBREW: Record<string, string> = {
-  'month': 'חודש',
-  '1month': 'חודש',
-  'year': 'שנה',
-  '1year': 'שנה',
-  '3months': '3 חודשים',
-  '6months': '6 חודשים',
-  '2years': 'שנתיים',
-  '3years': '3 שנים',
-  '5years': '5 שנים',
-  '10years': '10 שנים',
-  '30days': '30 יום',
-  '60days': '60 יום',
-  '90days': '90 יום',
-  '180days': '180 יום',
-  '365days': 'שנה',
-};
-
-// Order data interface matching the database structure
 interface OrderData {
   order_id: string;
-  client_phone: string;
   client_name: string;
   client_email: string;
+  client_phone?: string;
   product_country: string;
   product_doc_type: string;
   product_intent?: string;
-  product_entries?: string;
-  product_validity?: string;
+  visa_quantity?: number;
+  amount?: number;
+  urgency?: string;
   product_days_to_use?: number;
-  visa_quantity: number;
-  urgency: string;
-  amount: number;
-  currency: string;
-  entry_date: string;
-  branch: string;
-  whatsapp_alerts_enabled: boolean;
   whatsapp_confirmation_sent?: boolean;
-  whatsapp_confirmation_sent_at?: string;
-  whatsapp_message_id?: string;
-  cbb_contact_id?: string;
+  whatsapp_status_update_sent?: boolean;
+  whatsapp_document_ready_sent?: boolean;
 }
 
 @Injectable()
-@Processor('whatsapp-messages')
+@Processor('WHATSAPP_MESSAGES')
 export class WhatsAppMessageProcessor extends WorkerHost {
   private readonly logger = new Logger(WhatsAppMessageProcessor.name);
 
@@ -141,73 +35,37 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
-    @InjectMetric('whatsapp_messages_sent')
+    private readonly templateService: WhatsAppTemplateService,
+    @InjectMetric('visapi_whatsapp_messages_sent_total')
     private readonly messagesSentCounter: Counter<string>,
-    @InjectMetric('whatsapp_messages_failed')
+    @InjectMetric('visapi_whatsapp_messages_failed_total')
     private readonly messagesFailedCounter: Counter<string>,
-    @InjectMetric('whatsapp_message_duration')
+    @InjectMetric('visapi_whatsapp_message_duration_seconds')
     private readonly messageDurationHistogram: Histogram<string>,
   ) {
     super();
   }
 
   async process(job: Job<WhatsAppMessageJobData>): Promise<any> {
-    const { orderId, contactId, messageType } = job.data;
     const startTime = Date.now();
+    const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
-    this.logger.log(`Processing WhatsApp ${messageType} for order: ${orderId}`);
+    this.logger.log(`Processing WhatsApp message job ${job.id}`, {
+      order_id: orderId,
+      contact_id: contactId,
+      message_type: messageType,
+    });
 
     try {
-      // Fetch order details
-      const order = await this.getOrderByOrderId(orderId);
-      if (!order) {
-        throw new Error(`Order ${orderId} not found`);
+      // Validate required fields
+      if (!orderId || !contactId) {
+        throw new Error('Missing required fields: orderId and contactId are required');
       }
 
-      // Check if already sent (idempotency)
-      if (messageType === 'order_confirmation' && order.whatsapp_confirmation_sent) {
-        this.logger.log(`WhatsApp confirmation already sent for order ${orderId}`);
-        return {
-          status: 'skipped',
-          reason: 'already_sent',
-          orderId,
-        };
-      }
-
-      // Verify WhatsApp alerts are enabled
-      if (!order.whatsapp_alerts_enabled) {
-        this.logger.log(`WhatsApp alerts disabled for order ${orderId}`);
-        return {
-          status: 'skipped',
-          reason: 'alerts_disabled',
-          orderId,
-        };
-      }
-
-      // Only send for IL branch orders
-      if (order.branch?.toLowerCase() !== 'il') {
-        this.logger.log(`Skipping WhatsApp for non-IL branch order ${orderId} (branch: ${order.branch})`);
-        return {
-          status: 'skipped',
-          reason: 'non_il_branch',
-          orderId,
-        };
-      }
-
-      // Send the message based on type
-      let result: any;
-      
-      if (messageType === 'order_confirmation') {
-        // Use the templated message for order confirmations
-        const orderData = this.prepareOrderConfirmationData(order);
-        this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${orderId}`);
-        result = await this.cbbService.sendOrderConfirmation(contactId, orderData);
-      } else {
-        // For other message types, we'll need to use appropriate templates
-        // For now, log a warning that these need template implementation
+      // Check if message type has a template
+      if (!this.templateService.hasTemplate(messageType)) {
         this.logger.warn(`Message type '${messageType}' needs template implementation. Skipping for now.`);
         
-        // Return early for unsupported message types
         return {
           status: 'skipped',
           orderId,
@@ -217,10 +75,29 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         };
       }
 
-      // Update order with WhatsApp tracking info
-      if (messageType === 'order_confirmation') {
-        await this.updateOrderWhatsAppStatus(orderId, result.message_id || 'sent');
+      // Fetch order details
+      const order = await this.getOrderByOrderId(orderId);
+      if (!order) {
+        throw new Error(`Order ${orderId} not found`);
       }
+
+      // Check for duplicate messages
+      if (await this.isMessageAlreadySent(order, messageType)) {
+        this.logger.log(`${messageType} already sent for order ${orderId}, skipping`);
+        return {
+          status: 'skipped',
+          orderId,
+          contactId,
+          messageType,
+          reason: 'Already sent'
+        };
+      }
+
+      // Send the appropriate message
+      const result = await this.sendMessage(order, contactId, messageType);
+
+      // Update order with WhatsApp tracking info
+      await this.updateOrderWhatsAppStatus(orderId, messageType, result.message_id || 'sent');
 
       // Log success
       this.logger.log(`WhatsApp ${messageType} sent successfully for order ${orderId}`, {
@@ -283,234 +160,56 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     }
   }
 
-  private prepareOrderConfirmationData(order: OrderData): {
-    customerName: string;
-    country: string;
-    countryFlag: string;
-    orderNumber: string;
-    visaType: string;
-    applicantCount: string;
-    paymentAmount: string;
-    processingDays: string;
-  } {
-    // Get Hebrew translations
-    const countryHebrew = this.getCountryNameHebrew(order.product_country);
-    const countryFlag = this.getCountryFlag(order.product_country);
-    const visaTypeHebrew = this.getVisaTypeHebrew(order.product_doc_type, order.product_intent);
-    const processingDays = this.calculateProcessingDays(order);
+  /**
+   * Send a WhatsApp message based on the message type
+   */
+  private async sendMessage(
+    order: OrderData,
+    contactId: string,
+    messageType: string
+  ): Promise<any> {
+    switch (messageType) {
+      case 'order_confirmation':
+        const orderData = this.templateService.prepareOrderConfirmationData(order);
+        this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`);
+        return await this.cbbService.sendOrderConfirmation(contactId, orderData);
 
-    // Return the data object for the template
-    return {
-      customerName: order.client_name,
-      country: countryHebrew,
-      countryFlag: countryFlag,
-      orderNumber: order.order_id,
-      visaType: visaTypeHebrew,
-      applicantCount: String(order.visa_quantity || 1),
-      paymentAmount: String(order.amount || 0),
-      processingDays: String(processingDays)
-    };
+      case 'status_update':
+        // For future implementation with template
+        const statusMessage = this.templateService.buildStatusUpdateMessage(order);
+        this.logger.warn('Status update template not yet implemented, message prepared but not sent:', statusMessage);
+        throw new Error('Status update template not yet implemented');
+
+      case 'document_ready':
+        // For future implementation with template
+        const documentMessage = this.templateService.buildDocumentReadyMessage(order);
+        this.logger.warn('Document ready template not yet implemented, message prepared but not sent:', documentMessage);
+        throw new Error('Document ready template not yet implemented');
+
+      default:
+        throw new Error(`Unknown message type: ${messageType}`);
+    }
   }
 
-  private buildStatusUpdateMessage(order: OrderData): string {
-    // Placeholder for status update message
-    const countryHebrew = this.getCountryNameHebrew(order.product_country);
-    
-    return `שלום ${order.client_name},
-
-עדכון לגבי הזמנה ${order.order_id} - ויזה ל${countryHebrew}:
-
-הבקשה שלך בטיפול והכל מתקדם כמתוכנן ✅
-
-נעדכן אותך ברגע שיהיו חדשות.
-
-*צוות ויזה.נט* 🛂`;
+  /**
+   * Check if a message has already been sent for this order
+   */
+  private async isMessageAlreadySent(order: OrderData, messageType: string): Promise<boolean> {
+    switch (messageType) {
+      case 'order_confirmation':
+        return order.whatsapp_confirmation_sent === true;
+      case 'status_update':
+        return order.whatsapp_status_update_sent === true;
+      case 'document_ready':
+        return order.whatsapp_document_ready_sent === true;
+      default:
+        return false;
+    }
   }
 
-  private buildDocumentReadyMessage(order: OrderData): string {
-    // Placeholder for document ready message
-    const countryHebrew = this.getCountryNameHebrew(order.product_country);
-    
-    return `שלום ${order.client_name},
-
-חדשות טובות! 🎉
-
-הויזה שלך ל${countryHebrew} מוכנה!
-*מספר הזמנה*: ${order.order_id}
-
-אנחנו שולחים לך את המסמכים למייל ${order.client_email}
-
-תודה שבחרת בויזה.נט ונסיעה טובה! ✈️`;
-  }
-
-  private getCountryNameHebrew(country: string): string {
-    const normalizedCountry = country?.toLowerCase().trim();
-    return COUNTRY_NAMES_HEBREW[normalizedCountry] || country;
-  }
-
-  private getCountryFlag(country: string): string {
-    // Map of country names to flag emojis
-    const normalizedCountry = country?.toLowerCase().trim();
-    
-    const countryFlags: Record<string, string> = {
-      'india': '🇮🇳',
-      'usa': '🇺🇸',
-      'us': '🇺🇸',
-      'united states': '🇺🇸',
-      'u.s.': '🇺🇸',
-      'uk': '🇬🇧',
-      'united kingdom': '🇬🇧',
-      'britain': '🇬🇧',
-      'canada': '🇨🇦',
-      'israel': '🇮🇱',
-      'thailand': '🇹🇭',
-      'south korea': '🇰🇷',
-      'korea': '🇰🇷',
-      'vietnam': '🇻🇳',
-      'saudi arabia': '🇸🇦',
-      'saudi': '🇸🇦',
-      'indonesia': '🇮🇩',
-      'bahrain': '🇧🇭',
-      'new zealand': '🇳🇿',
-      'cambodia': '🇰🇭',
-      'schengen': '🇪🇺',
-      'schengen area': '🇪🇺',
-      'morocco': '🇲🇦',
-      'sri lanka': '🇱🇰',
-      'togo': '🇹🇬',
-      'china': '🇨🇳',
-      'japan': '🇯🇵',
-      'singapore': '🇸🇬',
-      'australia': '🇦🇺',
-      'brazil': '🇧🇷',
-      'mexico': '🇲🇽',
-      'argentina': '🇦🇷',
-      'chile': '🇨🇱',
-      'peru': '🇵🇪',
-      'colombia': '🇨🇴',
-      'egypt': '🇪🇬',
-      'jordan': '🇯🇴',
-      'uae': '🇦🇪',
-      'united arab emirates': '🇦🇪',
-      'turkey': '🇹🇷',
-      'greece': '🇬🇷',
-      'cyprus': '🇨🇾',
-      'russia': '🇷🇺',
-      'ukraine': '🇺🇦',
-      'poland': '🇵🇱',
-      'germany': '🇩🇪',
-      'france': '🇫🇷',
-      'spain': '🇪🇸',
-      'italy': '🇮🇹',
-      'netherlands': '🇳🇱',
-      'belgium': '🇧🇪',
-      'switzerland': '🇨🇭',
-      'austria': '🇦🇹',
-      'portugal': '🇵🇹',
-      'sweden': '🇸🇪',
-      'norway': '🇳🇴',
-      'denmark': '🇩🇰',
-      'finland': '🇫🇮',
-    };
-    
-    return countryFlags[normalizedCountry] || '';
-  }
-
-  private getVisaTypeHebrew(docType: string, intent?: string): string {
-    // Combine doc type and intent for more accurate translation
-    const normalizedDocType = docType?.toLowerCase().trim();
-    const normalizedIntent = intent?.toLowerCase().trim();
-
-    // First check if we have a specific intent translation
-    if (normalizedIntent && VISA_TYPES_HEBREW[normalizedIntent]) {
-      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent];
-      
-      // Check validity if it's part of the doc type
-      if (normalizedDocType?.includes('month') || normalizedDocType?.includes('year')) {
-        const validity = this.extractValidity(normalizedDocType);
-        const validityHebrew = VALIDITY_HEBREW[validity] || validity;
-        return `${intentHebrew} ${validityHebrew}`;
-      }
-      
-      return intentHebrew;
-    }
-
-    // Fall back to doc type translation
-    if (VISA_TYPES_HEBREW[normalizedDocType]) {
-      return VISA_TYPES_HEBREW[normalizedDocType];
-    }
-
-    // Try to extract type and validity separately
-    for (const [key, value] of Object.entries(VISA_TYPES_HEBREW)) {
-      if (normalizedDocType?.includes(key)) {
-        // Check if there's also a validity period
-        const validity = this.extractValidity(normalizedDocType);
-        if (validity && VALIDITY_HEBREW[validity]) {
-          return `${value} ${VALIDITY_HEBREW[validity]}`;
-        }
-        return value;
-      }
-    }
-
-    // Default fallback
-    return docType || 'ויזה';
-  }
-
-  private extractValidity(text: string): string {
-    const normalizedText = text?.toLowerCase().trim();
-    
-    // Check for common validity patterns
-    if (normalizedText?.includes('3month') || normalizedText?.includes('3 month')) {
-      return '3months';
-    }
-    if (normalizedText?.includes('6month') || normalizedText?.includes('6 month')) {
-      return '6months';
-    }
-    if (normalizedText?.includes('year')) {
-      return 'year';
-    }
-    if (normalizedText?.includes('month')) {
-      return 'month';
-    }
-    
-    return '';
-  }
-
-  private calculateProcessingDays(order: OrderData): number {
-    // Calculate processing time based on urgency and product type
-    const isUrgent = order.urgency === 'urgent' || order.urgency === 'express';
-    
-    // Default processing times by country (in business days)
-    const defaultProcessingTimes: Record<string, number> = {
-      'india': 3,
-      'usa': 5,
-      'uk': 5,
-      'canada': 7,
-      'thailand': 2,
-      'vietnam': 3,
-      'schengen': 10,
-      'china': 7,
-      'japan': 5,
-      'australia': 5,
-      'default': 3,
-    };
-
-    const countryNormalized = order.product_country?.toLowerCase().trim();
-    let baseDays = defaultProcessingTimes[countryNormalized] || defaultProcessingTimes['default'];
-
-    // Reduce time for urgent processing
-    if (isUrgent) {
-      baseDays = Math.max(1, Math.floor(baseDays / 2));
-    }
-
-    // Use product_days_to_use if available and reasonable
-    if (order.product_days_to_use && order.product_days_to_use > 0 && order.product_days_to_use <= 30) {
-      baseDays = order.product_days_to_use;
-    }
-
-    return baseDays;
-  }
-
+  /**
+   * Get order by order ID
+   */
   private async getOrderByOrderId(orderId: string): Promise<OrderData | null> {
     const { data, error } = await this.supabaseService.serviceClient
       .from('orders')
@@ -526,15 +225,38 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     return data;
   }
 
-  private async updateOrderWhatsAppStatus(orderId: string, messageId: string) {
+  /**
+   * Update order with WhatsApp message status
+   */
+  private async updateOrderWhatsAppStatus(
+    orderId: string,
+    messageType: string,
+    messageId: string
+  ): Promise<void> {
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Set specific fields based on message type
+    switch (messageType) {
+      case 'order_confirmation':
+        updateData.whatsapp_confirmation_sent = true;
+        updateData.whatsapp_confirmation_sent_at = new Date().toISOString();
+        updateData.whatsapp_message_id = messageId;
+        break;
+      case 'status_update':
+        updateData.whatsapp_status_update_sent = true;
+        updateData.whatsapp_status_update_sent_at = new Date().toISOString();
+        break;
+      case 'document_ready':
+        updateData.whatsapp_document_ready_sent = true;
+        updateData.whatsapp_document_ready_sent_at = new Date().toISOString();
+        break;
+    }
+
     const { error } = await this.supabaseService.serviceClient
       .from('orders')
-      .update({
-        whatsapp_confirmation_sent: true,
-        whatsapp_confirmation_sent_at: new Date().toISOString(),
-        whatsapp_message_id: messageId,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('order_id', orderId);
 
     if (error) {
@@ -545,7 +267,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       throw error;
     } else {
       this.logger.log(
-        `Updated WhatsApp status for order ${orderId}: sent=true, message_id=${messageId}`
+        `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`
       );
     }
   }

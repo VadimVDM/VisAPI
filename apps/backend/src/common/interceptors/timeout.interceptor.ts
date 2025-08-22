@@ -1,0 +1,127 @@
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  RequestTimeoutException,
+  Logger,
+} from '@nestjs/common';
+import { Observable, throwError, TimeoutError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
+
+/**
+ * TimeoutInterceptor - Manages request timeouts
+ * 
+ * Features:
+ * - Configurable timeout periods per endpoint
+ * - Graceful timeout handling with proper error messages
+ * - Different timeouts for different operation types
+ * - Timeout warnings before actual timeout
+ * - Correlation ID preservation in timeout errors
+ */
+@Injectable()
+export class TimeoutInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(TimeoutInterceptor.name);
+  
+  // Default timeout configurations (in milliseconds)
+  private readonly timeoutConfig = {
+    default: 30000,        // 30 seconds default
+    query: 10000,          // 10 seconds for queries
+    command: 30000,        // 30 seconds for commands
+    upload: 120000,        // 2 minutes for file uploads
+    report: 60000,         // 1 minute for report generation
+    webhook: 5000,         // 5 seconds for webhook processing
+  };
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const correlationId = request.correlationId || request.headers['x-correlation-id'];
+    
+    // Determine timeout based on endpoint and operation type
+    const timeoutDuration = this.getTimeoutDuration(request);
+    
+    // Log if request might take long
+    if (timeoutDuration > 30000) {
+      this.logger.log({
+        message: 'Long-running request initiated',
+        correlationId,
+        url: request.url,
+        expectedDuration: `${timeoutDuration / 1000}s`,
+      });
+    }
+
+    return next.handle().pipe(
+      timeout(timeoutDuration),
+      catchError((error) => {
+        if (error instanceof TimeoutError) {
+          // Log timeout occurrence
+          this.logger.error({
+            message: 'Request timeout',
+            correlationId,
+            url: request.url,
+            method: request.method,
+            timeout: `${timeoutDuration / 1000}s`,
+          });
+
+          // Throw proper NestJS timeout exception
+          throw new RequestTimeoutException({
+            message: `Request timeout after ${timeoutDuration / 1000} seconds`,
+            correlationId,
+            endpoint: `${request.method} ${request.url}`,
+            timeout: timeoutDuration,
+          });
+        }
+        
+        // Pass through other errors
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  /**
+   * Determine appropriate timeout based on request characteristics
+   */
+  private getTimeoutDuration(request: any): number {
+    const url = request.url?.toLowerCase() || '';
+    const method = request.method?.toUpperCase();
+    
+    // Check for file upload endpoints
+    if (url.includes('/upload') || url.includes('/import')) {
+      return this.timeoutConfig.upload;
+    }
+    
+    // Check for report generation endpoints
+    if (url.includes('/report') || url.includes('/export')) {
+      return this.timeoutConfig.report;
+    }
+    
+    // Check for webhook endpoints
+    if (url.includes('/webhook') || url.includes('/trigger')) {
+      return this.timeoutConfig.webhook;
+    }
+    
+    // Check for CQRS patterns
+    if (url.includes('/query') || method === 'GET') {
+      return this.timeoutConfig.query;
+    }
+    
+    if (url.includes('/command') || ['POST', 'PUT', 'PATCH'].includes(method)) {
+      return this.timeoutConfig.command;
+    }
+    
+    // Check for specific long-running operations
+    if (url.includes('/sync') || url.includes('/batch') || url.includes('/bulk')) {
+      return this.timeoutConfig.command * 2; // Double timeout for batch operations
+    }
+    
+    // Custom timeout from header
+    const customTimeout = request.headers['x-timeout'];
+    if (customTimeout && !isNaN(parseInt(customTimeout, 10))) {
+      const timeout = parseInt(customTimeout, 10);
+      // Cap at 5 minutes maximum
+      return Math.min(timeout, 300000);
+    }
+    
+    return this.timeoutConfig.default;
+  }
+}

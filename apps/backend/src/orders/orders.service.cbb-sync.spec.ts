@@ -1,17 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { OrdersService } from './orders.service';
-import { SupabaseService } from '@visapi/core-supabase';
-import { QueueService } from '../queue/queue.service';
-import { ConfigService } from '@visapi/core-config';
 import { ViziWebhookDto } from '@visapi/visanet-types';
-import { QUEUE_NAMES } from '@visapi/shared-types';
 
-describe('OrdersService - CBB Sync Integration', () => {
+describe('OrdersService - CQRS Integration', () => {
   let service: OrdersService;
-  let supabaseService: jest.Mocked<SupabaseService>;
-  let queueService: jest.Mocked<QueueService>;
-  let configService: jest.Mocked<ConfigService>;
+  let commandBus: { execute: jest.Mock };
+  let queryBus: { execute: jest.Mock };
 
   const mockWebhookData: ViziWebhookDto = {
     order: {
@@ -62,38 +58,19 @@ describe('OrdersService - CBB Sync Integration', () => {
   };
 
   beforeEach(async () => {
-    // Create mock implementations
-    const mockSupabaseClient = {
-      from: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      single: jest
-        .fn()
-        .mockResolvedValue({ data: { id: 'order-id-123' }, error: null }),
-      eq: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
+    commandBus = {
+      execute: jest.fn().mockResolvedValue('order-id-123'),
     };
 
-    supabaseService = {
-      client: mockSupabaseClient,
-      serviceClient: mockSupabaseClient,
-    } as jest.Mocked<SupabaseService>;
-
-    queueService = {
-      addJob: jest.fn().mockResolvedValue({ id: 'job-123' }),
-    } as jest.Mocked<QueueService>;
-
-    configService = {
-      cbbSyncEnabled: true,
-      cbbSyncDelayMs: 2000,
-    } as jest.Mocked<ConfigService>;
+    queryBus = {
+      execute: jest.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
-        { provide: SupabaseService, useValue: supabaseService },
-        { provide: QueueService, useValue: queueService },
-        { provide: ConfigService, useValue: configService },
+        { provide: CommandBus, useValue: commandBus },
+        { provide: QueryBus, useValue: queryBus },
       ],
     }).compile();
 
@@ -110,317 +87,130 @@ describe('OrdersService - CBB Sync Integration', () => {
     jest.clearAllMocks();
   });
 
-  describe('CBB Sync Triggering', () => {
-    it('should queue CBB sync for ALL orders when sync is enabled', async () => {
+  describe('CQRS Command Execution', () => {
+    it('should execute CreateOrderCommand via CommandBus', async () => {
       // Act
-      await service.createOrder(mockWebhookData);
+      const result = await service.createOrder(mockWebhookData);
 
       // Assert
-      expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CBB_SYNC,
-        'sync-contact',
-        { orderId: 'IL250819GB16' },
-        {
-          delay: 2000,
-          attempts: 3,
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
-      );
-    });
-
-    it('should queue CBB sync even when WhatsApp alerts are disabled', async () => {
-      // Arrange - Order with WhatsApp alerts disabled
-      const webhookWithoutWhatsApp = {
-        ...mockWebhookData,
-        form: {
-          ...mockWebhookData.form,
-          client: {
-            ...mockWebhookData.form.client,
-            whatsappAlertsEnabled: false,
-          },
-        },
-      };
-
-      // Act
-      await service.createOrder(webhookWithoutWhatsApp);
-
-      // Assert - Should STILL queue CBB sync (ALL orders sync)
-      expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CBB_SYNC,
-        'sync-contact',
-        { orderId: 'IL250819GB16' },
-        {
-          delay: 2000,
-          attempts: 3,
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
-      );
-    });
-
-    it('should not queue CBB sync when sync is disabled in config', async () => {
-      // Arrange
-      configService.cbbSyncEnabled = false;
-
-      // Act
-      await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(queueService.addJob).not.toHaveBeenCalled();
-    });
-
-    it('should use default delay when cbbSyncDelayMs is not configured', async () => {
-      // Arrange
-      configService.cbbSyncDelayMs = undefined;
-
-      // Act
-      await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CBB_SYNC,
-        'sync-contact',
-        { orderId: 'IL250819GB16' },
+      expect(commandBus.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          delay: 2000, // Default delay
+          webhookData: mockWebhookData,
+          correlationId: undefined,
+        }),
+      );
+      expect(result).toBe('order-id-123');
+    });
+
+    it('should execute CreateOrderCommand with correlation ID when provided', async () => {
+      // Act
+      const result = await service.createOrder(mockWebhookData, 'test-correlation-123');
+
+      // Assert
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          webhookData: mockWebhookData,
+          correlationId: 'test-correlation-123',
+        }),
+      );
+      expect(result).toBe('order-id-123');
+    });
+
+    it('should handle command bus errors gracefully', async () => {
+      // Arrange
+      commandBus.execute.mockRejectedValue(new Error('Command execution failed'));
+
+      // Act & Assert
+      await expect(service.createOrder(mockWebhookData)).rejects.toThrow('Command execution failed');
+      expect(commandBus.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe('syncOrderToCBB', () => {
+    it('should execute SyncOrderToCBBCommand via CommandBus', async () => {
+      // Arrange
+      commandBus.execute.mockResolvedValue(undefined);
+
+      // Act
+      await service.syncOrderToCBB('order-123', 'IL', true, 'correlation-456');
+
+      // Assert
+      expect(commandBus.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: 'order-123',
+          branch: 'IL',
+          whatsappAlertsEnabled: true,
+          correlationId: 'correlation-456',
         }),
       );
     });
 
-    it('should use configured delay when cbbSyncDelayMs is set', async () => {
+    it('should handle sync command errors gracefully', async () => {
       // Arrange
-      configService.cbbSyncDelayMs = 5000;
+      commandBus.execute.mockRejectedValue(new Error('Sync failed'));
+
+      // Act & Assert
+      await expect(service.syncOrderToCBB('order-123', 'IL', true)).rejects.toThrow('Sync failed');
+    });
+  });
+
+  describe('updateOrderProcessing', () => {
+    it('should execute UpdateOrderProcessingCommand via CommandBus', async () => {
+      // Arrange
+      commandBus.execute.mockResolvedValue(undefined);
 
       // Act
-      await service.createOrder(mockWebhookData);
+      await service.updateOrderProcessing('order-123', 'workflow-123', 'job-456', 'correlation-789');
 
       // Assert
-      expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CBB_SYNC,
-        'sync-contact',
-        { orderId: 'IL250819GB16' },
+      expect(commandBus.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          delay: 5000,
+          orderId: 'order-123',
+          workflowId: 'workflow-123',
+          jobId: 'job-456',
+          correlationId: 'correlation-789',
         }),
-      );
-    });
-
-    it('should handle queue failure gracefully and still create order', async () => {
-      // Arrange
-      queueService.addJob.mockRejectedValue(new Error('Queue unavailable'));
-
-      // Act
-      const orderId = await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(orderId).toBe('order-id-123');
-      expect(queueService.addJob).toHaveBeenCalled();
-      // Order should still be created despite queue failure
-      expect(supabaseService.client.from).toHaveBeenCalledWith('orders');
-    });
-
-    it('should handle undefined cbbSyncEnabled as false', async () => {
-      // Arrange
-      (
-        configService as { cbbSyncEnabled: boolean | undefined }
-      ).cbbSyncEnabled = undefined;
-
-      // Act
-      await service.createOrder(mockWebhookData);
-
-      // Assert
-      // cbbSyncEnabled !== false evaluates to true for undefined, so sync will be queued
-      expect(queueService.addJob).toHaveBeenCalled();
-    });
-
-    it('should properly transform phone number for CBB sync', async () => {
-      // Arrange
-      const webhookWithDifferentPhone = {
-        ...mockWebhookData,
-        form: {
-          ...mockWebhookData.form,
-          client: {
-            ...mockWebhookData.form.client,
-            phone: { code: '+1', number: '555-123-4567' },
-          },
-        },
-      };
-
-      // Act
-      await service.createOrder(webhookWithDifferentPhone);
-
-      // Assert
-      expect(supabaseService.client.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          client_phone: '15551234567', // Cleaned phone number
-        }),
-      );
-    });
-
-    it('should queue sync for different urgency levels', async () => {
-      // Test standard urgency
-      const standardWebhook = {
-        ...mockWebhookData,
-        form: { ...mockWebhookData.form, urgency: 'standard' },
-      };
-      await service.createOrder(standardWebhook);
-
-      // Test express urgency
-      const expressWebhook = {
-        ...mockWebhookData,
-        form: { ...mockWebhookData.form, urgency: 'express' },
-      };
-      await service.createOrder(expressWebhook);
-
-      // Assert both triggered sync
-      expect(queueService.addJob).toHaveBeenCalledTimes(2);
-    });
-
-    it('should handle missing client phone gracefully', async () => {
-      // Arrange
-      const webhookWithoutPhone = {
-        ...mockWebhookData,
-        form: {
-          ...mockWebhookData.form,
-          client: {
-            ...mockWebhookData.form.client,
-            phone: undefined,
-          },
-        },
-      };
-
-      // Act
-      await service.createOrder(webhookWithoutPhone);
-
-      // Assert - order should be created with fallback phone
-      expect(supabaseService.client.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          client_phone: '0000000000', // Fallback phone
-        }),
-      );
-      // Sync will still be triggered for ALL orders
-      // The CBB processor will handle the invalid phone gracefully
-      expect(queueService.addJob).toHaveBeenCalled();
-    });
-
-    it('should handle duplicate order with existing CBB sync', async () => {
-      // Arrange
-      let callCount = 0;
-
-      supabaseService.client.from = jest.fn().mockImplementation(() => {
-        callCount++;
-
-        if (callCount === 1) {
-          // First call - insert attempt that fails with duplicate
-          return {
-            insert: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: { code: '23505', message: 'Duplicate order_id' },
-            }),
-          };
-        } else {
-          // Second call - fetch existing order
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: { id: 'existing-order-id' },
-              error: null,
-            }),
-          };
-        }
-      });
-
-      // Act
-      const orderId = await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(orderId).toBe('existing-order-id');
-      // Should not queue another sync for duplicate order
-      expect(queueService.addJob).not.toHaveBeenCalled();
-    });
-
-    it('should include all required job options for CBB sync', async () => {
-      // Act
-      await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(queueService.addJob).toHaveBeenCalledWith(
-        QUEUE_NAMES.CBB_SYNC,
-        'sync-contact',
-        { orderId: 'IL250819GB16' },
-        {
-          delay: 2000,
-          attempts: 3,
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
       );
     });
   });
 
-  describe('Phone Number Transformation', () => {
-    it('should transform phone object to string format', async () => {
-      // Act
-      await service.createOrder(mockWebhookData);
-
-      // Assert
-      expect(supabaseService.client.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          client_phone: '447700900123',
-        }),
-      );
-    });
-
-    it('should handle phone as string', async () => {
+  describe('getOrders', () => {
+    it('should execute GetOrdersQuery via QueryBus', async () => {
       // Arrange
-      const webhookWithStringPhone = {
-        ...mockWebhookData,
-        form: {
-          ...mockWebhookData.form,
-          client: {
-            ...mockWebhookData.form.client,
-            phone: '+447700900123' as unknown,
-          },
-        },
-      };
+      const mockOrders = [{ id: 'order-1' }, { id: 'order-2' }];
+      queryBus.execute.mockResolvedValue(mockOrders);
 
       // Act
-      await service.createOrder(webhookWithStringPhone);
+      const result = await service.getOrders({ branch: 'IL' }, { page: 1, limit: 10 });
 
       // Assert
-      expect(supabaseService.client.insert).toHaveBeenCalledWith(
+      expect(queryBus.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          client_phone: '447700900123',
+          filters: { branch: 'IL' },
+          pagination: { page: 1, limit: 10 },
         }),
       );
+      expect(result).toEqual(mockOrders);
     });
+  });
 
-    it('should clean phone numbers with special characters', async () => {
+  describe('getOrderById', () => {
+    it('should execute GetOrderByIdQuery via QueryBus', async () => {
       // Arrange
-      const webhookWithFormattedPhone = {
-        ...mockWebhookData,
-        form: {
-          ...mockWebhookData.form,
-          client: {
-            ...mockWebhookData.form.client,
-            phone: { code: '+44', number: '(7700) 900-123' },
-          },
-        },
-      };
+      const mockOrder = { id: 'order-123', order_id: 'IL250819GB16' };
+      queryBus.execute.mockResolvedValue(mockOrder);
 
       // Act
-      await service.createOrder(webhookWithFormattedPhone);
+      const result = await service.getOrderById('order-123');
 
       // Assert
-      expect(supabaseService.client.insert).toHaveBeenCalledWith(
+      expect(queryBus.execute).toHaveBeenCalledWith(
         expect.objectContaining({
-          client_phone: '447700900123',
+          orderId: 'order-123',
+          includeRelations: false,
         }),
       );
+      expect(result).toEqual(mockOrder);
     });
   });
 });
