@@ -6,10 +6,12 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
+import { ConfigService } from '@visapi/core-config';
 import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
@@ -18,7 +20,7 @@ async function bootstrap() {
 
   // Enable CORS for your frontend
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    origin: configService.corsOrigin,
     credentials: true,
   });
 
@@ -49,7 +51,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  const port = configService.port;
   Logger.log(`Attempting to start server on port ${port}...`);
 
   try {
@@ -63,12 +65,12 @@ async function bootstrap() {
     );
 
     // Log environment info for debugging
-    Logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    Logger.log(`Environment: ${configService.nodeEnv}`);
     Logger.log(
-      `REDIS_URL: ${process.env.REDIS_URL ? '[REDACTED]' : 'NOT SET'}`,
+      `REDIS_URL: ${configService.redisUrl ? '[REDACTED]' : 'NOT SET'}`,
     );
     Logger.log(
-      `DATABASE_URL: ${process.env.DATABASE_URL ? '[REDACTED]' : 'NOT SET'}`,
+      `DATABASE_URL: ${configService.databaseUrl ? '[REDACTED]' : 'NOT SET'}`,
     );
   } catch (error) {
     Logger.error(

@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
@@ -18,6 +19,8 @@ import { AuthUser, Session } from '@supabase/supabase-js';
  */
 @Injectable()
 export class UserAuthService {
+  private readonly logger = new Logger(UserAuthService.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
@@ -254,7 +257,7 @@ export class UserAuthService {
         });
 
       if (error) {
-        console.error('Failed to assign default role:', error);
+        this.logger.error('Failed to assign default role:', error);
       }
     }
   }

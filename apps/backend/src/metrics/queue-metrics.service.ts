@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { MetricsService } from './metrics.service';
@@ -6,6 +6,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class QueueMetricsService implements OnModuleInit {
+  private readonly logger = new Logger(QueueMetricsService.name);
+
   constructor(
     @InjectQueue('critical') private readonly criticalQueue: Queue,
     @InjectQueue('default') private readonly defaultQueue: Queue,
@@ -46,7 +48,7 @@ export class QueueMetricsService implements OnModuleInit {
         this.metricsService.setQueueDepth(name, 'delayed', delayed);
       } catch (error) {
         // Log error but don't crash the metrics collection
-        console.error(`Failed to collect metrics for queue ${name}:`, error);
+        this.logger.error(`Failed to collect metrics for queue ${name}:`, error);
       }
     }
   }

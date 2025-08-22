@@ -3,6 +3,12 @@ export default () => ({
     env: process.env.NODE_ENV || 'development',
   },
   port: parseInt(process.env.PORT, 10) || 3000,
+  git: {
+    sha: process.env.GIT_SHA,
+  },
+  build: {
+    number: process.env.BUILD_NUMBER,
+  },
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3001'],
   },
@@ -11,6 +17,7 @@ export default () => ({
   },
   redis: {
     url: process.env.REDIS_URL,
+    publicUrl: process.env.REDIS_PUBLIC_URL,
   },
   supabase: {
     url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,

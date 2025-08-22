@@ -7,6 +7,7 @@ import { AuthService } from '../auth/auth.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
+import { IdempotencyService } from '@visapi/util-redis';
 
 describe('ViziWebhooksController', () => {
   let controller: ViziWebhooksController;
@@ -32,6 +33,11 @@ describe('ViziWebhooksController', () => {
     const mockOrdersService = {
       createOrder: jest.fn(),
       updateOrderProcessing: jest.fn(),
+    };
+
+    const mockIdempotencyService = {
+      get: jest.fn(),
+      set: jest.fn(),
     };
 
     const mockCommandBus = {
@@ -64,6 +70,10 @@ describe('ViziWebhooksController', () => {
         {
           provide: OrdersService,
           useValue: mockOrdersService,
+        },
+        {
+          provide: IdempotencyService,
+          useValue: mockIdempotencyService,
         },
         {
           provide: CommandBus,

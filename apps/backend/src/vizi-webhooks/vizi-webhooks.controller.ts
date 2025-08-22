@@ -22,7 +22,7 @@ import { ViziWebhooksService } from './vizi-webhooks.service';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
-// import { IdempotencyService } from '@visapi/util-redis';
+import { IdempotencyService } from '@visapi/util-redis';
 
 @Controller('v1/webhooks/vizi')
 @ApiTags('Vizi Webhooks')
@@ -32,7 +32,7 @@ export class ViziWebhooksController {
   constructor(
     private readonly viziWebhooksService: ViziWebhooksService,
     private readonly ordersService: OrdersService,
-    // private readonly idempotencyService: IdempotencyService,
+    private readonly idempotencyService: IdempotencyService,
     private readonly logService: LogService,
   ) {
     this.logger = new Logger(ViziWebhooksController.name);
@@ -166,14 +166,13 @@ export class ViziWebhooksController {
     });
 
     // Check idempotency if key provided
-    // TODO: Implement idempotency when IdempotencyService is updated
-    // if (idempotencyKey) {
-    //   const cached = await this.idempotencyService.get(idempotencyKey);
-    //   if (cached) {
-    //     this.logger.log(`Returning cached response for idempotency key: ${idempotencyKey}`);
-    //     return cached;
-    //   }
-    // }
+    if (idempotencyKey) {
+      const cached = await this.idempotencyService.get(idempotencyKey);
+      if (cached) {
+        this.logger.log(`Returning cached response for idempotency key: ${idempotencyKey}`);
+        return cached;
+      }
+    }
 
     try {
       // Validate webhook payload based on country
@@ -233,17 +232,10 @@ export class ViziWebhooksController {
         correlationId,
       );
 
-      // Update order with processing results (only if additional workflows were queued)
-      if (result.status === 'queued') {
-        // TODO: Update order with workflow processing info when workflows exist
-        // await this.ordersService.updateOrderProcessing(order?.id as string, workflowId, jobId);
-      }
-
       // Store result for idempotency
-      // TODO: Implement idempotency when IdempotencyService is updated
-      // if (idempotencyKey) {
-      //   await this.idempotencyService.set(idempotencyKey, result, 86400); // 24 hours
-      // }
+      if (idempotencyKey) {
+        await this.idempotencyService.set(idempotencyKey, result, 86400); // 24 hours
+      }
 
       // Log success WITH FULL WEBHOOK DATA
       await this.logService.createLog({

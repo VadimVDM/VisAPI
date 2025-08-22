@@ -195,4 +195,18 @@ export class IdempotencyService {
       this.logger.warn(`Failed to clear idempotency key ${key}:`, error);
     }
   }
+
+  /**
+   * Public method to get cached result for an idempotency key
+   */
+  async get(key: string): Promise<any> {
+    return this.checkIdempotency(key);
+  }
+
+  /**
+   * Public method to store result for an idempotency key
+   */
+  async set(key: string, result: any, ttl: number = 3600): Promise<void> {
+    return this.storeResult(key, result, ttl);
+  }
 }

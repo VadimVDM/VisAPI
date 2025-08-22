@@ -1,9 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { ConfigService } from '@visapi/core-config';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get()
   getData() {
@@ -29,8 +33,8 @@ export class AppController {
   version() {
     return {
       version: '0.5.0',
-      commit: process.env.GIT_SHA || 'local',
-      build: process.env.BUILD_NUMBER || 'local',
+      commit: this.configService.get('git.sha') || 'local',
+      build: this.configService.get('build.number') || 'local',
     };
   }
 }

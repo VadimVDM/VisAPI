@@ -5,6 +5,11 @@ import { ConfigService as NestConfigService } from '@nestjs/config';
 export class ConfigService {
   constructor(private configService: NestConfigService) {}
 
+  // Generic get method for accessing any config value
+  get<T = any>(propertyPath: string): T {
+    return this.configService.get<T>(propertyPath);
+  }
+
   get nodeEnv(): string {
     return this.configService.get<string>('node.env');
   }

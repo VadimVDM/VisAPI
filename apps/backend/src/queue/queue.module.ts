@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@visapi/core-config';
 import { QueueService } from './queue.service';
@@ -27,6 +27,7 @@ import {
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
+        const logger = new Logger('QueueModule');
         const redisUrl = configService.redisUrl;
 
         if (!redisUrl || redisUrl === 'h') {
@@ -44,20 +45,20 @@ import {
 
         // Railway Redis URL handling - ALWAYS use public URL if available
         // The internal .railway.internal URLs don't work reliably
-        const publicRedisUrl = process.env.REDIS_PUBLIC_URL;
+        const publicRedisUrl = configService.get('redis.publicUrl');
         const effectiveRedisUrl = publicRedisUrl || redisUrl;
         
         // Log which URL we're using (without exposing sensitive data)
         const isInternalUrl = redisUrl.includes('.railway.internal');
         const isUsingPublic = !!publicRedisUrl && effectiveRedisUrl === publicRedisUrl;
-        console.log(
-          `[BullMQ] Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL`,
+        logger.log(
+          `Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL`,
         );
         
         // Additional logging for debugging
         if (isInternalUrl && !publicRedisUrl) {
-          console.warn(
-            '[BullMQ] WARNING: Using internal Railway URL without public URL fallback - this may fail!'
+          logger.warn(
+            'Using internal Railway URL without public URL fallback - this may fail!'
           );
         }
 
@@ -74,14 +75,14 @@ import {
             lazyConnect: true, // Don't connect immediately
             retryStrategy: (times: number) => {
               if (times > 10) {
-                console.error(
-                  '[BullMQ] Redis connection failed after 10 retries',
+                logger.error(
+                  'Redis connection failed after 10 retries',
                 );
                 return null;
               }
               const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s
-              console.log(
-                `[BullMQ] Retrying Redis connection in ${delay}ms (attempt ${times})`,
+              logger.log(
+                `Retrying Redis connection in ${delay}ms (attempt ${times})`,
               );
               return delay;
             },
