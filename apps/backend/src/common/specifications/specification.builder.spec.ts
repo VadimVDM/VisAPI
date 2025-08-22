@@ -115,8 +115,13 @@ describe('OrderSpecificationBuilder', () => {
       // Assert
       expect(query).toEqual({
         $or: [
-          { branch: 'IL' },
-          { $or: [{ branch: 'US' }, { branch: 'UK' }] },
+          {
+            $or: [
+              { branch: 'IL' },
+              { branch: 'US' },
+            ],
+          },
+          { branch: 'UK' },
         ],
       });
     });

@@ -2,19 +2,33 @@ import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { GetOrdersQuery } from './get-orders.query';
 import { OrdersRepository } from '@visapi/backend-repositories';
+import { CacheService } from '@visapi/backend-cache';
 
 /**
  * Handler for GetOrdersQuery
- * Retrieves filtered and paginated orders
+ * Retrieves filtered and paginated orders with intelligent caching
  */
 @QueryHandler(GetOrdersQuery)
 export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
   private readonly logger = new Logger(GetOrdersHandler.name);
 
-  constructor(private readonly ordersRepository: OrdersRepository) {}
+  constructor(
+    private readonly ordersRepository: OrdersRepository,
+    private readonly cacheService: CacheService,
+  ) {}
 
   async execute(query: GetOrdersQuery): Promise<{ data: any[]; total: number }> {
     const { filters = {}, pagination = {} } = query;
+    
+    // Generate cache key based on query parameters
+    const cacheKey = this.cacheService.generateKey('GetOrders', [filters, pagination]);
+    
+    // Try to get from cache first
+    const cached = await this.cacheService.get<{ data: any[]; total: number }>(cacheKey);
+    if (cached) {
+      this.logger.debug(`Cache hit for orders query: ${cacheKey}`);
+      return cached;
+    }
     
     // Build where clause from filters
     const where: any = {};
@@ -64,8 +78,13 @@ export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
       this.ordersRepository.count(where),
     ]);
 
-    this.logger.debug(`Retrieved ${data.length} orders out of ${total} total`);
+    const result = { data, total };
+    
+    // Cache the result for 60 seconds (short TTL for frequently changing data)
+    await this.cacheService.set(cacheKey, result, 60);
+    
+    this.logger.debug(`Retrieved ${data.length} orders out of ${total} total (cached)`);
 
-    return { data, total };
+    return result;
   }
 }

@@ -195,20 +195,20 @@ describe('LoggingInterceptor', () => {
       // Arrange
       const warnSpy = jest.spyOn((interceptor as unknown as InterceptorWithLogger).logger, 'warn');
       
-      // Simulate slow request by delaying the response
-      mockCallHandler.handle = jest.fn().mockImplementation(() => {
-        return new Promise(resolve => {
-          setTimeout(() => resolve(of({ success: true })), 1100);
-        }).then(obs => obs);
-      });
-
       // Mock Date.now to simulate time passing
       const originalDateNow = Date.now;
-      let currentTime = originalDateNow();
+      let startTime = originalDateNow();
+      let callCount = 0;
       Date.now = jest.fn(() => {
-        currentTime += 1100;
-        return currentTime;
+        // First call is at start, second call is at end
+        if (callCount++ === 0) {
+          return startTime;
+        }
+        return startTime + 1100; // Simulate 1100ms elapsed
       });
+
+      // Return observable directly
+      mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
       interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({

@@ -22,12 +22,15 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { CacheModule } from '@visapi/backend-cache';
+import { CacheManagementModule } from '../cache/cache.module';
+import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     ConfigModule,
     CacheModule.forRoot({ isGlobal: true }),
+    CacheManagementModule,
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'debug',
@@ -65,6 +68,10 @@ import { CacheModule } from '@visapi/backend-cache';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter,
