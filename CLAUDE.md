@@ -64,6 +64,7 @@ Essential information for working with the VisAPI project. Updated: August 22, 2
 - ✅ Specification pattern for complex query building (August 22, 2025)
 - ✅ CBB contact synchronization fixed with OrderSyncSaga implementation (August 22, 2025)
 - ✅ Automatic WhatsApp order confirmations for IL branch orders (August 22, 2025)
+- ✅ Railway deployment errors resolved - date handling and database column fixes (August 23, 2025)
 
 ## Project Structure
 
@@ -902,6 +903,12 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 2. **Lighthouse CI in GitHub Actions**: Temporarily disabled due to Next.js 15 compatibility
 3. **NX Peer Dependencies**: Minor @nx/linter version mismatch - non-blocking
 4. **Next.js 15 Html Import Error**: Known Next.js v15 issue during static page generation - doesn't affect runtime (July 18, 2025)
+
+20. **CBB Sync Trigger**: Orders now automatically trigger CBB sync via OrderSyncSaga after creation
+21. **CQRS Event Flow**: CreateOrderHandler publishes OrderCreatedForSync event, caught by OrderSyncSaga
+22. **Date Handling in Queries**: Always pass ISO strings to Query objects, not Date objects
+23. **Database Column Names**: Use `order_status` not `status`, branch values are lowercase ('il', 'us', 'uk')
+24. **BaseRepository Date Queries**: Use $gte/$lte operators for date range queries in where clauses
 
 ---
 
