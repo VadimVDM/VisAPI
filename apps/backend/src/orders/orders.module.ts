@@ -9,7 +9,6 @@ import { QueueModule } from '../queue/queue.module';
 import { ConfigModule } from '@visapi/core-config';
 import { RepositoriesModule } from '@visapi/backend-repositories';
 import { EventsModule } from '@visapi/backend-events';
-import { CacheModule } from '@visapi/backend-cache';
 import { CommandHandlers } from './commands';
 import { QueryHandlers } from './queries';
 
@@ -21,7 +20,6 @@ import { QueryHandlers } from './queries';
     ConfigModule,
     RepositoriesModule,
     EventsModule,
-    CacheModule,
   ],
   providers: [
     OrdersService,

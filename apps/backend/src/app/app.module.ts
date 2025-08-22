@@ -21,11 +21,13 @@ import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { CacheModule } from '@visapi/backend-cache';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     ConfigModule,
+    CacheModule.forRoot({ isGlobal: true }),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.LOG_LEVEL || 'debug',
