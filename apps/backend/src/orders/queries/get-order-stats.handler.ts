@@ -21,7 +21,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
     const { period, branch, startDate, endDate } = query;
     
     // Build cache key
-    const cacheKey = `stats:orders:${period}:${branch || 'all'}:${startDate?.toISOString() || 'start'}:${endDate?.toISOString() || 'end'}`;
+    const cacheKey = `stats:orders:${period}:${branch || 'all'}:${startDate || 'start'}:${endDate || 'end'}`;
     
     // Check cache
     const cached = await this.cacheService.get(cacheKey);
@@ -80,7 +80,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
   private groupByStatus(orders: any[]): Record<string, number> {
     return orders.reduce((acc, order) => {
-      const status = order.status || 'pending';
+      const status = order.order_status || 'pending';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {});
@@ -88,7 +88,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
   private groupByVisaType(orders: any[]): Record<string, number> {
     return orders.reduce((acc, order) => {
-      const visaType = order.visa_type || 'unknown';
+      const visaType = order.product_doc_type || 'unknown';
       acc[visaType] = (acc[visaType] || 0) + 1;
       return acc;
     }, {});

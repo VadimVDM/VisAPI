@@ -58,7 +58,23 @@ export abstract class BaseRepository<T> {
     if (options?.where) {
       Object.entries(options.where).forEach(([key, value]) => {
         if (value !== undefined) {
-          query = query.eq(key, value);
+          // Handle date range operators
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            if (value.$gte !== undefined) {
+              query = query.gte(key, value.$gte);
+            }
+            if (value.$lte !== undefined) {
+              query = query.lte(key, value.$lte);
+            }
+            if (value.$gt !== undefined) {
+              query = query.gt(key, value.$gt);
+            }
+            if (value.$lt !== undefined) {
+              query = query.lt(key, value.$lt);
+            }
+          } else {
+            query = query.eq(key, value);
+          }
         }
       });
     }
@@ -247,7 +263,23 @@ export abstract class BaseRepository<T> {
     if (where) {
       Object.entries(where).forEach(([key, value]) => {
         if (value !== undefined) {
-          query = query.eq(key, value);
+          // Handle date range operators
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            if (value.$gte !== undefined) {
+              query = query.gte(key, value.$gte);
+            }
+            if (value.$lte !== undefined) {
+              query = query.lte(key, value.$lte);
+            }
+            if (value.$gt !== undefined) {
+              query = query.gt(key, value.$gt);
+            }
+            if (value.$lt !== undefined) {
+              query = query.lt(key, value.$lt);
+            }
+          } else {
+            query = query.eq(key, value);
+          }
         }
       });
     }

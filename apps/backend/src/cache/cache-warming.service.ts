@@ -69,7 +69,7 @@ export class CacheWarmingService implements OnModuleInit {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       await this.queryBus.execute(
-        new GetOrderStatsQuery('day', undefined, today, tomorrow),
+        new GetOrderStatsQuery('day', undefined, today.toISOString(), tomorrow.toISOString()),
       );
 
       // Warm this week's stats
@@ -77,14 +77,14 @@ export class CacheWarmingService implements OnModuleInit {
       weekStart.setDate(today.getDate() - today.getDay());
       
       await this.queryBus.execute(
-        new GetOrderStatsQuery('week', undefined, weekStart, tomorrow),
+        new GetOrderStatsQuery('week', undefined, weekStart.toISOString(), tomorrow.toISOString()),
       );
 
       // Warm this month's stats
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       
       await this.queryBus.execute(
-        new GetOrderStatsQuery('month', undefined, monthStart, tomorrow),
+        new GetOrderStatsQuery('month', undefined, monthStart.toISOString(), tomorrow.toISOString()),
       );
 
       this.logger.debug('Order statistics cache warmed');
@@ -105,12 +105,12 @@ export class CacheWarmingService implements OnModuleInit {
 
       // Warm pending orders
       await this.queryBus.execute(
-        new GetOrdersQuery({ status: 'pending' }, { page: 1, limit: 20 }),
+        new GetOrdersQuery({ orderStatus: 'pending' }, { page: 1, limit: 20 }),
       );
 
-      // Warm unprocessed orders
+      // Warm paid orders
       await this.queryBus.execute(
-        new GetOrdersQuery({ status: 'unprocessed' }, { page: 1, limit: 20 }),
+        new GetOrdersQuery({ orderStatus: 'paid' }, { page: 1, limit: 20 }),
       );
 
       this.logger.debug('Recent orders cache warmed');
@@ -124,7 +124,7 @@ export class CacheWarmingService implements OnModuleInit {
    */
   private async warmOrdersByBranch(): Promise<void> {
     try {
-      const branches = ['IL', 'US', 'UK']; // Main branches
+      const branches = ['il', 'us', 'uk']; // Main branches (lowercase as stored in db)
 
       await Promise.all(
         branches.map(branch =>

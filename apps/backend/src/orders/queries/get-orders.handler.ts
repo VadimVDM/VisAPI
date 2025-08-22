@@ -37,8 +37,8 @@ export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
       where.branch = filters.branch;
     }
     
-    if (filters.status) {
-      where.status = filters.status;
+    if (filters.orderStatus) {
+      where.order_status = filters.orderStatus;
     }
     
     if (filters.clientEmail) {

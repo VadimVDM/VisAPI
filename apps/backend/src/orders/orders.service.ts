@@ -80,7 +80,12 @@ export class OrdersService {
     startDate?: Date,
     endDate?: Date,
   ): Promise<any> {
-    const query = new GetOrderStatsQuery(period, branch, startDate, endDate);
+    const query = new GetOrderStatsQuery(
+      period,
+      branch,
+      startDate?.toISOString(),
+      endDate?.toISOString(),
+    );
     return await this.queryBus.execute(query);
   }
 
@@ -126,12 +131,12 @@ export class OrdersService {
     const queryFilters: any = {};
     
     if (filters.status) {
-      queryFilters.status = filters.status;
+      queryFilters.orderStatus = filters.status;
     }
     
     if (filters.from_date || filters.to_date) {
-      queryFilters.startDate = filters.from_date ? new Date(filters.from_date) : undefined;
-      queryFilters.endDate = filters.to_date ? new Date(filters.to_date) : undefined;
+      queryFilters.startDate = filters.from_date || undefined;
+      queryFilters.endDate = filters.to_date || undefined;
     }
 
     const pagination = {
