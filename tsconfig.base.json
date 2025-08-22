@@ -18,6 +18,7 @@
       "@visapi/backend-cache": ["libs/backend/cache/src/index.ts"],
       "@visapi/backend-core-cbb": ["libs/backend/core-cbb/src/index.ts"],
       "@visapi/backend-events": ["libs/backend/events/src/index.ts"],
+      "@visapi/backend-http-types": ["libs/backend/http-types/src/index.ts"],
       "@visapi/backend-logging": ["libs/backend/logging/src/index.ts"],
       "@visapi/backend-repositories": [
         "libs/backend/repositories/src/index.ts"

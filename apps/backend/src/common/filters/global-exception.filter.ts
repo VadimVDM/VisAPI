@@ -8,6 +8,17 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+// Extended Request type with correlationId
+interface RequestWithCorrelationId extends Request {
+  correlationId?: string;
+}
+
+// Type for exception response
+interface ExceptionResponse {
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
 /**
  * Problem Details interface (RFC 7807)
  */
@@ -38,7 +49,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     // Extract correlation ID
-    const correlationId = (request as any).correlationId || 
+    const correlationId = (request as RequestWithCorrelationId).correlationId || 
                          request.headers['x-correlation-id'] as string;
 
     // Determine status and message
@@ -54,7 +65,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+        const responseObj = exceptionResponse as ExceptionResponse;
         message = responseObj.message || message;
         errors = responseObj.errors;
       }
@@ -89,7 +100,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status,
       detail: message,
       instance: request.url,
-      correlationId,
+      correlationId: correlationId || undefined,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,

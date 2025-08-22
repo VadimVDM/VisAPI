@@ -7,10 +7,6 @@ import {
   InsertUserRole,
 } from '@visapi/shared-types';
 
-interface UserRoleWithUser {
-  users: User;
-}
-
 /**
  * Service for handling authorization and permission management
  * Manages roles, permissions, and access control
@@ -199,7 +195,7 @@ export class PermissionService {
     type UserRoleWithUserData = { users: User | null };
     const typedData = data as UserRoleWithUserData[] | null;
     
-    return typedData?.map((ur) => ur.users).filter(Boolean) as User[] || [];
+    return typedData?.map((ur) => ur.users).filter((user): user is User => user !== null) || [];
   }
 
   /**

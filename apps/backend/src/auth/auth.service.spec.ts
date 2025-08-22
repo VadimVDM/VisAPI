@@ -88,6 +88,7 @@ describe('AuthService', () => {
       const result = await service.validateApiKey('vapi_test.secret123');
 
       expect(result).toEqual(mockApiKey);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(apiKeyService.validateApiKey).toHaveBeenCalledWith('vapi_test.secret123');
     });
 
@@ -97,6 +98,7 @@ describe('AuthService', () => {
       const result = await service.validateApiKey('invalid_key');
 
       expect(result).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(apiKeyService.validateApiKey).toHaveBeenCalledWith('invalid_key');
     });
   });
@@ -121,6 +123,7 @@ describe('AuthService', () => {
       const result = service.checkScopes(mockApiKey, ['webhooks:trigger']);
 
       expect(result).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(apiKeyService.checkScopes).toHaveBeenCalledWith(mockApiKey, ['webhooks:trigger']);
     });
   });
@@ -148,6 +151,7 @@ describe('AuthService', () => {
       const result = await service.createApiKey('test-key', ['webhooks:trigger'], 'user-123');
 
       expect(result).toEqual(mockResult);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(apiKeyService.createApiKey).toHaveBeenCalledWith('test-key', ['webhooks:trigger'], 'user-123', undefined);
     });
   });

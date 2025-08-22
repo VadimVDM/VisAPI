@@ -18,7 +18,7 @@ export class CacheWarmingService implements OnModuleInit {
     private readonly cacheService: CacheService,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     // Warm cache on startup (delayed to avoid startup bottleneck)
     setTimeout(() => {
       this.warmCache().catch(error => {

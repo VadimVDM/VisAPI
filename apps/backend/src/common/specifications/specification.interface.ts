@@ -1,3 +1,5 @@
+import { QueryObject } from './specification.base';
+
 /**
  * Specification Pattern Interface
  * Enables building complex queries through composition
@@ -26,7 +28,7 @@ export interface ISpecification<T> {
   /**
    * Convert to a query object for database operations
    */
-  toQuery(): any;
+  toQuery(): QueryObject;
 
   /**
    * Get a description of what this specification checks

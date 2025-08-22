@@ -1,4 +1,5 @@
 import { OrderSpecificationBuilder, OrderSpecificationFactory } from './specification.builder';
+import type { QueryObject } from './specification.base';
 
 describe('OrderSpecificationBuilder', () => {
   let builder: OrderSpecificationBuilder;
@@ -10,7 +11,7 @@ describe('OrderSpecificationBuilder', () => {
   describe('Single Specifications', () => {
     it('should build specification for branch filter', () => {
       // Act
-      const query = builder.withBranch('IL').toQuery();
+      const query: QueryObject = builder.withBranch('IL').toQuery();
 
       // Assert
       expect(query).toEqual({ branch: 'IL' });
@@ -18,7 +19,7 @@ describe('OrderSpecificationBuilder', () => {
 
     it('should build specification for status filter', () => {
       // Act
-      const query = builder.withStatus('processed').toQuery();
+      const query: QueryObject = builder.withStatus('processed').toQuery();
 
       // Assert
       expect(query).toEqual({ status: 'processed' });
@@ -26,7 +27,7 @@ describe('OrderSpecificationBuilder', () => {
 
     it('should build specification for minimum amount', () => {
       // Act
-      const query = builder.withMinAmount(5000).toQuery();
+      const query: QueryObject = builder.withMinAmount(5000).toQuery();
 
       // Assert
       expect(query).toEqual({ amount: { $gte: 5000 } });
@@ -38,7 +39,7 @@ describe('OrderSpecificationBuilder', () => {
       const endDate = new Date('2025-01-31');
 
       // Act
-      const query = builder.withinDateRange(startDate, endDate).toQuery();
+      const query: QueryObject = builder.withinDateRange(startDate, endDate).toQuery();
 
       // Assert
       expect(query).toEqual({
@@ -53,7 +54,7 @@ describe('OrderSpecificationBuilder', () => {
   describe('Composite Specifications with AND logic', () => {
     it('should combine multiple specifications with AND logic', () => {
       // Act
-      const query = builder
+      const query: QueryObject = builder
         .withBranch('IL')
         .withStatus('pending')
         .withMinAmount(1000)
@@ -73,7 +74,7 @@ describe('OrderSpecificationBuilder', () => {
       const endDate = new Date('2025-01-31');
 
       // Act
-      const query = builder
+      const query: QueryObject = builder
         .withBranch('US')
         .withinDateRange(startDate, endDate)
         .withWhatsAppEnabled()
@@ -110,7 +111,7 @@ describe('OrderSpecificationBuilder', () => {
 
     it('should handle multiple branches with OR logic', () => {
       // Act
-      const query = builder.withBranches(['IL', 'US', 'UK']).toQuery();
+      const query: QueryObject = builder.withBranches(['IL', 'US', 'UK']).toQuery();
 
       // Assert
       expect(query).toEqual({
@@ -134,7 +135,7 @@ describe('OrderSpecificationBuilder', () => {
 
       // Act
       builder.reset();
-      const query = builder.toQuery();
+      const query: QueryObject = builder.toQuery();
 
       // Assert
       expect(query).toEqual({});
@@ -162,7 +163,7 @@ describe('OrderSpecificationFactory', () => {
     it('should create specification for today\'s orders', () => {
       // Act
       const spec = OrderSpecificationFactory.todaysOrders();
-      const query = spec.toQuery();
+      const query: QueryObject = spec.toQuery();
 
       // Assert
       expect(query.created_at).toBeDefined();
@@ -179,7 +180,7 @@ describe('OrderSpecificationFactory', () => {
     it('should create specification for high-value orders', () => {
       // Act
       const spec = OrderSpecificationFactory.highValueOrders(15000);
-      const query = spec.toQuery();
+      const query: QueryObject = spec.toQuery();
 
       // Assert
       expect(query).toEqual({
@@ -190,7 +191,7 @@ describe('OrderSpecificationFactory', () => {
     it('should create specification for orders needing attention', () => {
       // Act
       const spec = OrderSpecificationFactory.needingAttention();
-      const query = spec.toQuery();
+      const query: QueryObject = spec.toQuery();
 
       // Assert
       expect(query.processed_at).toBeNull();
@@ -201,7 +202,7 @@ describe('OrderSpecificationFactory', () => {
     it('should create specification for pending processing', () => {
       // Act
       const spec = OrderSpecificationFactory.pendingProcessing();
-      const query = spec.toQuery();
+      const query: QueryObject = spec.toQuery();
 
       // Assert
       expect(query).toEqual({

@@ -1,0 +1,19 @@
+{
+  "name": "backend-http-types",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/http-types/src",
+  "projectType": "library",
+  "tags": ["scope:backend", "types"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/http-types",
+        "main": "libs/backend/http-types/src/index.ts",
+        "tsConfig": "libs/backend/http-types/tsconfig.lib.json",
+        "assets": []
+      }
+    }
+  }
+}

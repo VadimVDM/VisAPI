@@ -1,8 +1,9 @@
 import { LoggingInterceptor } from './logging.interceptor';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
+import { EnhancedRequest, EnhancedResponse } from '@visapi/backend-http-types';
 
-interface MockRequest {
+type MockRequest = Partial<EnhancedRequest> & {
   method: string;
   url: string;
   ip: string;
@@ -12,17 +13,17 @@ interface MockRequest {
   user?: { id: string };
   correlationId?: string;
   connection?: { remoteAddress: string };
-}
+};
 
-interface MockResponse {
+type MockResponse = Partial<EnhancedResponse> & {
   statusCode: number;
   setHeader: jest.Mock;
-}
+};
 
 interface MockExecutionContext extends Partial<ExecutionContext> {
   switchToHttp: () => {
-    getRequest: () => MockRequest;
-    getResponse: () => MockResponse;
+    getRequest: <T = MockRequest>() => T;
+    getResponse: <T = MockResponse>() => T;
   };
 }
 
@@ -42,8 +43,8 @@ interface LogCall {
 interface InterceptorWithLogger {
   logger: {
     log: jest.Mock;
-    error: jest.Mock;
     warn: jest.Mock;
+    error: jest.Mock;
   };
 }
 
@@ -181,9 +182,16 @@ describe('LoggingInterceptor', () => {
         next: () => {
           // Assert
           const logCall = logSpy.mock.calls[0][0] as LogCall;
-          expect(logCall.body.user.name).toBe('Test User');
-          expect(logCall.body.user.credentials.password).toBe('[REDACTED]');
-          expect(logCall.body.user.credentials.apiSecret).toBe('[REDACTED]');
+          const userData = logCall.body.user as {
+            name: string;
+            credentials: {
+              password: string;
+              apiSecret: string;
+            };
+          };
+          expect(userData.name).toBe('Test User');
+          expect(userData.credentials.password).toBe('[REDACTED]');
+          expect(userData.credentials.apiSecret).toBe('[REDACTED]');
           done();
         },
       });
@@ -197,7 +205,7 @@ describe('LoggingInterceptor', () => {
       
       // Mock Date.now to simulate time passing
       const originalDateNow = Date.now;
-      let startTime = originalDateNow();
+      const startTime = originalDateNow();
       let callCount = 0;
       Date.now = jest.fn(() => {
         // First call is at start, second call is at end
@@ -217,7 +225,9 @@ describe('LoggingInterceptor', () => {
           expect(warnSpy).toHaveBeenCalledWith(
             expect.objectContaining({
               message: 'Slow request detected',
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               correlationId: expect.any(String),
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               responseTime: expect.stringContaining('ms'),
             }),
           );
@@ -247,7 +257,9 @@ describe('LoggingInterceptor', () => {
           expect(errorSpy).toHaveBeenCalledWith(
             expect.objectContaining({
               message: 'Request failed',
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               correlationId: expect.any(String),
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               error: expect.objectContaining({
                 name: 'Error',
                 message: 'Test error',

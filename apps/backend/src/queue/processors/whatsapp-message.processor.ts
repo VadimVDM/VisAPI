@@ -26,6 +26,31 @@ interface OrderData {
   whatsapp_document_ready_sent?: boolean;
 }
 
+interface ProcessResult {
+  status: 'success' | 'skipped';
+  orderId: string;
+  contactId: string;
+  messageType: string;
+  messageId?: string;
+  reason?: string;
+}
+
+interface SendMessageResult {
+  message_id?: string;
+  status?: string;
+}
+
+interface OrderUpdateData {
+  updated_at: string;
+  whatsapp_confirmation_sent?: boolean;
+  whatsapp_confirmation_sent_at?: string;
+  whatsapp_message_id?: string;
+  whatsapp_status_update_sent?: boolean;
+  whatsapp_status_update_sent_at?: string;
+  whatsapp_document_ready_sent?: boolean;
+  whatsapp_document_ready_sent_at?: string;
+}
+
 @Injectable()
 @Processor('WHATSAPP_MESSAGES')
 export class WhatsAppMessageProcessor extends WorkerHost {
@@ -46,7 +71,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<WhatsAppMessageJobData>): Promise<any> {
+  async process(job: Job<WhatsAppMessageJobData>): Promise<ProcessResult> {
     const startTime = Date.now();
     const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
@@ -167,7 +192,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     order: OrderData,
     contactId: string,
     messageType: string
-  ): Promise<any> {
+  ): Promise<SendMessageResult> {
     switch (messageType) {
       case 'order_confirmation':
         const orderData = this.templateService.prepareOrderConfirmationData(order);
@@ -233,7 +258,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     messageType: string,
     messageId: string
   ): Promise<void> {
-    const updateData: any = {
+    const updateData: OrderUpdateData = {
       updated_at: new Date().toISOString(),
     };
 

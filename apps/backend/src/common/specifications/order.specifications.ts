@@ -1,4 +1,4 @@
-import { Specification } from './specification.base';
+import { Specification, QueryObject } from './specification.base';
 
 /**
  * Order entity interface for specifications
@@ -29,7 +29,7 @@ export class OrderByBranchSpecification extends Specification<Order> {
     return order.branch === this.branch;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return { branch: this.branch };
   }
 
@@ -50,7 +50,7 @@ export class OrderByStatusSpecification extends Specification<Order> {
     return order.status === this.status;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return { status: this.status };
   }
 
@@ -75,7 +75,7 @@ export class OrderByDateRangeSpecification extends Specification<Order> {
     return orderDate >= this.startDate && orderDate <= this.endDate;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return {
       created_at: {
         $gte: this.startDate,
@@ -101,7 +101,7 @@ export class OrderByMinAmountSpecification extends Specification<Order> {
     return (order.amount || 0) >= this.minAmount;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return {
       amount: { $gte: this.minAmount },
     };
@@ -120,7 +120,7 @@ export class OrderWithWhatsAppEnabledSpecification extends Specification<Order> 
     return order.whatsapp_alerts_enabled === true;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return { whatsapp_alerts_enabled: true };
   }
 
@@ -137,7 +137,7 @@ export class UnprocessedOrderSpecification extends Specification<Order> {
     return !order.processed_at;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return {
       processed_at: null,
     };
@@ -160,7 +160,7 @@ export class OrderByClientEmailSpecification extends Specification<Order> {
     return order.client_email === this.email;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return { client_email: this.email };
   }
 
@@ -181,7 +181,7 @@ export class OrderByVisaTypeSpecification extends Specification<Order> {
     return order.visa_type === this.visaType;
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return { visa_type: this.visaType };
   }
 
@@ -206,7 +206,7 @@ export class HighPriorityOrderSpecification extends Specification<Order> {
     return isPriorityBranch && (isHighAmount || hasWhatsApp);
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     return {
       $and: [
         { branch: { $in: this.priorityBranches } },

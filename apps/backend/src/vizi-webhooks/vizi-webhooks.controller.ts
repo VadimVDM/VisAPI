@@ -99,7 +99,7 @@ export class ViziWebhooksController {
         !validProcessors.includes(order.payment_processor as string)
       ) {
         this.logger.warn(
-          `Invalid payment processor: ${order.payment_processor as string}, defaulting to stripe`,
+          `Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`,
         );
         order.payment_processor = 'stripe';
       }
@@ -108,7 +108,7 @@ export class ViziWebhooksController {
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
       if (order?.status && !validStatuses.includes(order.status as string)) {
         this.logger.warn(
-          `Invalid order status: ${order.status as string}, defaulting to active`,
+          `Invalid order status: ${String(order.status)}, defaulting to active`,
         );
         order.status = 'active';
       }
@@ -201,7 +201,7 @@ export class ViziWebhooksController {
 
         this.logger.error(
           `Failed to save order ${order?.id ? String(order.id) : 'unknown'} to database: ${JSON.stringify(errorDetails)}`,
-          err.stack as string,
+          typeof err.stack === 'string' ? err.stack : undefined,
         );
 
         // Log the failed order creation with full details

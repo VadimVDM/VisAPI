@@ -1,6 +1,17 @@
 import { ISpecification } from './specification.interface';
 
 /**
+ * Type for database query objects
+ * Supports MongoDB-style query operators
+ */
+export type QueryObject = {
+  [key: string]: unknown;
+  $and?: QueryObject[];
+  $or?: QueryObject[];
+  $not?: QueryObject;
+};
+
+/**
  * Abstract base class for specifications
  * Provides default implementations for logical operations
  */
@@ -15,7 +26,7 @@ export abstract class Specification<T> implements ISpecification<T> {
    * Convert to database query
    * Must be implemented by concrete specifications
    */
-  abstract toQuery(): any;
+  abstract toQuery(): QueryObject;
 
   /**
    * Get human-readable description
@@ -62,13 +73,13 @@ export class AndSpecification<T> extends Specification<T> {
     return this.left.isSatisfiedBy(entity) && this.right.isSatisfiedBy(entity);
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     const leftQuery = this.left.toQuery();
     const rightQuery = this.right.toQuery();
 
     // Merge queries with AND logic
     if (leftQuery.$and || rightQuery.$and) {
-      const conditions = [];
+      const conditions: QueryObject[] = [];
       
       if (leftQuery.$and) {
         conditions.push(...leftQuery.$and);
@@ -108,7 +119,7 @@ export class OrSpecification<T> extends Specification<T> {
     return this.left.isSatisfiedBy(entity) || this.right.isSatisfiedBy(entity);
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     const leftQuery = this.left.toQuery();
     const rightQuery = this.right.toQuery();
 
@@ -134,11 +145,11 @@ export class NotSpecification<T> extends Specification<T> {
     return !this.specification.isSatisfiedBy(entity);
   }
 
-  toQuery(): any {
+  toQuery(): QueryObject {
     const query = this.specification.toQuery();
     
     // Convert to NOT query
-    const notQuery: any = {};
+    const notQuery: QueryObject = {};
     
     for (const key in query) {
       if (key === '$or' || key === '$and') {

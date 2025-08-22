@@ -33,8 +33,8 @@ export class AppController {
   version() {
     return {
       version: '0.5.0',
-      commit: this.configService.get('git.sha') || 'local',
-      build: this.configService.get('build.number') || 'local',
+      commit: this.configService.get<string>('git.sha') || 'local',
+      build: this.configService.get<string>('build.number') || 'local',
     };
   }
 }
