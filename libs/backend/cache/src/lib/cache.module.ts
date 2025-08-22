@@ -16,7 +16,8 @@ export class CacheModule {
     const redisProvider = {
       provide: Redis,
       useFactory: (configService: ConfigService) => {
-        const redisUrl = configService.redisUrl;
+        // Use public URL if available (for Railway), otherwise use standard URL
+        const redisUrl = process.env.REDIS_PUBLIC_URL || configService.redisUrl;
         if (!redisUrl) {
           throw new Error('Redis URL not configured');
         }
