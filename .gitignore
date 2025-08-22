@@ -216,8 +216,13 @@ TODO.md
 NOTES.md
 
 # API Keys and Secrets
-*api-key*
-*api_key*
+# More specific patterns to avoid catching source files
+*.api-key
+*.api_key
+api-key.txt
+api_key.txt
+.api-key*
+.api_key*
 *.secret
 *.key
 *-secret.*
