@@ -186,7 +186,7 @@ export class PermissionService {
       .from('user_roles')
       .select(
         `
-        users(*)
+        users!user_roles_user_id_fkey(*)
       `,
       )
       .eq('role_id', roleId);
@@ -195,7 +195,11 @@ export class PermissionService {
       throw new Error(`Failed to fetch users by role: ${error.message}`);
     }
 
-    return data?.map((ur: UserRoleWithUser) => ur.users).filter(Boolean) || [];
+    // Type the response properly
+    type UserRoleWithUserData = { users: User | null };
+    const typedData = data as UserRoleWithUserData[] | null;
+    
+    return typedData?.map((ur) => ur.users).filter(Boolean) as User[] || [];
   }
 
   /**

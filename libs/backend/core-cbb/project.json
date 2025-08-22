@@ -1,9 +1,9 @@
 {
-  "name": "backend-core-cgb",
+  "name": "backend-core-cbb",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/backend/core-cgb/src",
+  "sourceRoot": "libs/backend/core-cbb/src",
   "projectType": "library",
-  "tags": [],
-  "// targets": "to see all targets run: nx show project backend-core-cgb --web",
+  "tags": ["scope:backend"],
+  "// targets": "to see all targets run: nx show project backend-core-cbb --web",
   "targets": {}
 }

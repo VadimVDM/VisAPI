@@ -143,14 +143,21 @@ export type Database = {
           payment_processor: string
           processed_at: string | null
           product_country: string
+          product_days_to_use: number | null
           product_doc_name: string | null
           product_doc_type: string | null
+          product_entries: string | null
+          product_intent: string | null
           product_name: string
+          product_validity: string | null
           updated_at: string | null
           urgency: string | null
           visa_quantity: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
+          whatsapp_confirmation_sent: boolean | null
+          whatsapp_confirmation_sent_at: string | null
+          whatsapp_message_id: string | null
           workflow_id: string | null
         }
         Insert: {
@@ -193,14 +200,21 @@ export type Database = {
           payment_processor: string
           processed_at?: string | null
           product_country: string
+          product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
+          product_entries?: string | null
+          product_intent?: string | null
           product_name: string
+          product_validity?: string | null
           updated_at?: string | null
           urgency?: string | null
           visa_quantity?: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
+          whatsapp_confirmation_sent?: boolean | null
+          whatsapp_confirmation_sent_at?: string | null
+          whatsapp_message_id?: string | null
           workflow_id?: string | null
         }
         Update: {
@@ -243,14 +257,21 @@ export type Database = {
           payment_processor?: string
           processed_at?: string | null
           product_country?: string
+          product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
+          product_entries?: string | null
+          product_intent?: string | null
           product_name?: string
+          product_validity?: string | null
           updated_at?: string | null
           urgency?: string | null
           visa_quantity?: number | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
+          whatsapp_confirmation_sent?: boolean | null
+          whatsapp_confirmation_sent_at?: string | null
+          whatsapp_message_id?: string | null
           workflow_id?: string | null
         }
         Relationships: []

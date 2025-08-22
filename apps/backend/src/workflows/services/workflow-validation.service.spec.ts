@@ -14,20 +14,208 @@ describe('WorkflowValidationService', () => {
         properties: {
           name: { type: 'string' },
           enabled: { type: 'boolean' },
-          triggers: { type: 'array', minItems: 1 },
-          steps: { type: 'array', minItems: 1 },
+          triggers: { 
+            type: 'array', 
+            minItems: 1,
+            items: {
+              type: 'object',
+              required: ['type', 'config'],
+              properties: {
+                type: {
+                  type: 'string',
+                  enum: ['webhook', 'cron', 'manual']
+                },
+                config: { type: 'object' }
+              }
+            }
+          },
+          steps: { 
+            type: 'array', 
+            minItems: 1,
+            items: {
+              type: 'object',
+              required: ['id', 'type', 'config'],
+              properties: {
+                id: { type: 'string' },
+                type: {
+                  type: 'string',
+                  enum: ['slack.send', 'whatsapp.send', 'pdf.generate', 'email.send']
+                },
+                config: {
+                  type: 'object',
+                  properties: {
+                    contact: {
+                      type: 'string',
+                      pattern: '^\\+[1-9]\\d{1,14}$'
+                    },
+                    channel: { type: 'string' },
+                    recipient: { 
+                      type: 'string',
+                      format: 'email'
+                    },
+                    template: { type: 'string' },
+                    message: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
         },
         required: ['name', 'enabled', 'triggers', 'steps'],
       }),
     };
 
     const mockValidationEngine = {
-      validateStepConfig: jest.fn().mockReturnValue({ valid: true }),
-      validateCronExpression: jest.fn().mockReturnValue({ valid: true }),
-      validateUniqueStepIds: jest.fn().mockReturnValue({ valid: true }),
-      validateBusinessRules: jest.fn().mockReturnValue({ valid: true }),
-      validateWorkflowSteps: jest.fn().mockReturnValue({ valid: true }),
-      validateWorkflowTriggers: jest.fn().mockReturnValue({ valid: true }),
+      validateStepConfig: jest.fn((stepType, config) => {
+        // Validate unknown step types
+        const validStepTypes = ['slack.send', 'whatsapp.send', 'pdf.generate', 'email.send'];
+        if (!validStepTypes.includes(stepType)) {
+          return {
+            valid: false,
+            errors: [`Unknown step type: ${stepType}`],
+          };
+        }
+        
+        // Validate required fields
+        const requiredFields: Record<string, string[]> = {
+          'slack.send': ['channel'],
+          'whatsapp.send': ['contact'],
+          'pdf.generate': ['template'],
+          'email.send': ['recipient'],
+        };
+        
+        const required = requiredFields[stepType] || [];
+        const missing = required.filter((field) => !config[field]);
+        if (missing.length > 0) {
+          return {
+            valid: false,
+            errors: missing.map((field) => `Missing required field: ${field}`),
+          };
+        }
+        
+        // Validate phone format for whatsapp
+        if (stepType === 'whatsapp.send' && config.contact) {
+          const phoneRegex = /^\+[1-9]\d{1,14}$/;
+          if (!phoneRegex.test(config.contact as string)) {
+            return {
+              valid: false,
+              errors: ['Invalid phone number format. Use E.164 format (e.g., +1234567890)'],
+            };
+          }
+        }
+        
+        // Validate email format for email.send
+        if (stepType === 'email.send' && config.recipient) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(config.recipient as string)) {
+            return {
+              valid: false,
+              errors: ['Invalid email format'],
+            };
+          }
+        }
+        
+        return { valid: true };
+      }),
+      validateCronExpression: jest.fn((expression) => {
+        // Basic validation for cron expressions
+        if (!expression || typeof expression !== 'string') {
+          return {
+            valid: false,
+            errors: ['Cron expression must be a non-empty string'],
+          };
+        }
+        
+        const fields = expression.trim().split(/\s+/);
+        if (fields.length !== 5) {
+          return {
+            valid: false,
+            errors: ['Cron expression must have exactly 5 fields'],
+          };
+        }
+        
+        // Validate minute field (0-59)
+        const minute = parseInt(fields[0]);
+        if (fields[0] !== '*' && !fields[0].includes('/') && !fields[0].includes(',') && !fields[0].includes('-')) {
+          if (isNaN(minute) || minute < 0 || minute > 59) {
+            return {
+              valid: false,
+              errors: [`Invalid minute value: ${fields[0]}`],
+            };
+          }
+        }
+        
+        return { valid: true };
+      }),
+      validateUniqueStepIds: jest.fn((steps) => {
+        const ids = steps.map((step: { id: string }) => step.id);
+        const uniqueIds = new Set(ids);
+        
+        if (ids.length !== uniqueIds.size) {
+          const duplicates = ids.filter((id: string, index: number) => ids.indexOf(id) !== index);
+          return {
+            valid: false,
+            errors: [`Duplicate step IDs found: ${duplicates.join(', ')}`],
+          };
+        }
+        
+        return { valid: true };
+      }),
+      validateBusinessRules: jest.fn((workflow) => {
+        if (!workflow.triggers || workflow.triggers.length === 0) {
+          return {
+            valid: false,
+            errors: ['Workflow must have at least one trigger'],
+          };
+        }
+        if (!workflow.steps || workflow.steps.length === 0) {
+          return {
+            valid: false,
+            errors: ['Workflow must have at least one step'],
+          };
+        }
+        return { valid: true };
+      }),
+      validateWorkflowSteps: jest.fn(function(workflow) {
+        // Use the arrow function to access the mocked validateUniqueStepIds
+        const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(workflow.steps);
+        if (!uniqueIdResult.valid) {
+          return uniqueIdResult;
+        }
+        
+        // Validate each step configuration
+        for (const step of workflow.steps) {
+          const stepResult = mockValidationEngine.validateStepConfig(step.type, step.config);
+          if (!stepResult.valid) {
+            return {
+              valid: false,
+              errors: stepResult.errors?.map(
+                (error: string) => `Step ${step.id}: ${error}`,
+              ),
+            };
+          }
+        }
+        
+        return { valid: true };
+      }),
+      validateWorkflowTriggers: jest.fn((workflow) => {
+        for (const trigger of workflow.triggers) {
+          if (trigger.type === 'cron' && trigger.config.schedule) {
+            const cronResult = mockValidationEngine.validateCronExpression(
+              trigger.config.schedule,
+            );
+            if (!cronResult.valid) {
+              return {
+                valid: false,
+                errors: cronResult.errors?.map(
+                  (error: string) => `Cron trigger: ${error}`,
+                ),
+              };
+            }
+          }
+        }
+        return { valid: true };
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({

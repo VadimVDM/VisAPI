@@ -124,8 +124,6 @@ export class CBBSyncProcessor extends WorkerHost {
     error: unknown,
     startTime: number,
   ): Promise<void> {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
     this.logger.error(`CBB sync failed for order ${orderId}:`, error);
 
     // Update metrics
