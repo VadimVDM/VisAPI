@@ -9,8 +9,14 @@ import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
 import helmet from 'helmet';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
+import { ErrorFilter } from './common/utils/error-filter';
 
 async function bootstrap() {
+  // Install error filter in production to suppress known non-critical errors
+  if (process.env.NODE_ENV === 'production') {
+    ErrorFilter.install();
+  }
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const globalPrefix = 'api';
