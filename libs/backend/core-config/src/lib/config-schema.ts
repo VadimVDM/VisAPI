@@ -32,11 +32,10 @@ export const EnvSchema = z.object({
   // Redis configuration
   REDIS_URL: z.string()
     .refine((url) => {
-      if (process.env.NODE_ENV === 'production') {
-        return url.startsWith('rediss://') || url.startsWith('redis://');
-      }
-      return url.startsWith('redis://');
-    }, 'Production Redis URL must use TLS (rediss://)')
+      // Accept both redis:// and rediss:// in all environments
+      // Railway internal connections are secure without TLS
+      return url.startsWith('redis://') || url.startsWith('rediss://');
+    }, 'Redis URL must start with redis:// or rediss://')
     .optional(),
   REDIS_PUBLIC_URL: z.string().url().optional(),
   
@@ -173,9 +172,9 @@ export function validateProductionEnv(config: EnvSchema): void {
     
     if (!config.REDIS_URL) {
       errors.push('REDIS_URL is required in production');
-    } else if (!config.REDIS_URL.startsWith('rediss://')) {
-      errors.push('REDIS_URL must use TLS (rediss://) in production');
     }
+    // Railway internal Redis connections are secure without TLS
+    // Both redis:// (internal) and rediss:// (external) are acceptable
     
     if (!config.JWT_SECRET) {
       errors.push('JWT_SECRET is required in production');
