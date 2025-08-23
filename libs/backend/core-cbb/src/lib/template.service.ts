@@ -163,15 +163,20 @@ export class TemplateService {
     ];
 
     for (const mapping of templateMappings) {
-      const flowId = this.configService.get<string>(mapping.env);
-      if (flowId) {
-        const parsedFlowId = parseInt(flowId, 10);
-        if (!isNaN(parsedFlowId)) {
-          this.templateMappings.set(mapping.name, parsedFlowId);
-          this.logger.debug(`Mapped template ${mapping.name} to flow ${parsedFlowId}`);
-        } else {
-          this.logger.warn(`Invalid flow ID for ${mapping.env}: ${flowId}`);
+      try {
+        const flowId = this.configService.get<string>(mapping.env);
+        if (flowId) {
+          const parsedFlowId = parseInt(flowId, 10);
+          if (!isNaN(parsedFlowId)) {
+            this.templateMappings.set(mapping.name, parsedFlowId);
+            this.logger.debug(`Mapped template ${mapping.name} to flow ${parsedFlowId}`);
+          } else {
+            this.logger.warn(`Invalid flow ID for ${mapping.env}: ${flowId}`);
+          }
         }
+      } catch (error) {
+        // Template mapping is optional, skip if not configured
+        this.logger.debug(`Template mapping ${mapping.env} not configured, skipping`);
       }
     }
 

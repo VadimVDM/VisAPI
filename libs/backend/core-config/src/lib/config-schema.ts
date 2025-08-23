@@ -84,6 +84,13 @@ export const EnvSchema = z.object({
   CBB_SYNC_CONCURRENCY: z.string().default('5').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(20)),
   CBB_SYNC_DELAY_MS: z.string().default('2000').transform((val) => parseInt(val, 10)).pipe(z.number().min(100)),
   
+  // CBB Template mappings (optional)
+  CBB_TEMPLATE_VISA_APPROVED: z.string().optional(),
+  CBB_TEMPLATE_VISA_REJECTED: z.string().optional(),
+  CBB_TEMPLATE_DOCUMENT_REQUEST: z.string().optional(),
+  CBB_TEMPLATE_APPOINTMENT_REMINDER: z.string().optional(),
+  CBB_TEMPLATE_STATUS_UPDATE: z.string().optional(),
+  
   // Slack integration
   SLACK_WEBHOOK_URL: z.string().url().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
@@ -270,6 +277,12 @@ export function getValidatedConfig() {
       syncBatchSize: env.CBB_SYNC_BATCH_SIZE,
       syncConcurrency: env.CBB_SYNC_CONCURRENCY,
       syncDelayMs: env.CBB_SYNC_DELAY_MS,
+      // Template mappings (optional)
+      templateVisaApproved: env.CBB_TEMPLATE_VISA_APPROVED,
+      templateVisaRejected: env.CBB_TEMPLATE_VISA_REJECTED,
+      templateDocumentRequest: env.CBB_TEMPLATE_DOCUMENT_REQUEST,
+      templateAppointmentReminder: env.CBB_TEMPLATE_APPOINTMENT_REMINDER,
+      templateStatusUpdate: env.CBB_TEMPLATE_STATUS_UPDATE,
     },
     slack: {
       webhookUrl: env.SLACK_WEBHOOK_URL || '',
