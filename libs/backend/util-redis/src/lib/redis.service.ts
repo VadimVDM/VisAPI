@@ -24,7 +24,7 @@ export class RedisService {
     } else {
       // Smart Redis URL handling for Railway deployments
       // Use public URL if provided via REDIS_PUBLIC_URL, otherwise use REDIS_URL
-      const publicRedisUrl = process.env.REDIS_PUBLIC_URL;
+      const publicRedisUrl = process.env['REDIS_PUBLIC_URL'];
       const effectiveRedisUrl = publicRedisUrl || redisUrl;
       
       // Log which URL we're using (without exposing sensitive data)

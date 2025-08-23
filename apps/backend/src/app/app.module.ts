@@ -34,9 +34,9 @@ import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
     CacheManagementModule,
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.LOG_LEVEL || 'debug',
+        level: process.env['LOG_LEVEL'] || 'debug',
         transport:
-          process.env.NODE_ENV !== 'production'
+          process.env['NODE_ENV'] !== 'production'
             ? {
                 target: 'pino-pretty',
                 options: {

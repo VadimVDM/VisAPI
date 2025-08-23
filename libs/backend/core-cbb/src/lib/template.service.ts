@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@visapi/core-config';
 import { Flow } from '@visapi/shared-types';
 import { CbbClientService } from './cbb-client.service';
 
@@ -21,7 +21,7 @@ export class TemplateService {
     private readonly cbbClient: CbbClientService,
     private readonly configService: ConfigService
   ) {
-    this.cacheTimeout = this.configService.get<number>('cbb.cacheTimeout') * 1000; // Convert to milliseconds
+    this.cacheTimeout = this.configService.cbbCacheTimeout * 1000; // Convert to milliseconds
     this.initializeTemplateMappings();
   }
 
@@ -76,7 +76,8 @@ export class TemplateService {
       await this.getTemplateFlowId(templateName);
       return true;
     } catch (error) {
-      this.logger.debug(`Template validation failed for ${templateName}:`, error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.debug(`Template validation failed for ${templateName}:`, errorMessage);
       return false;
     }
   }

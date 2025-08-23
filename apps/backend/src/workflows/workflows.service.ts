@@ -147,7 +147,7 @@ export class WorkflowsService {
     return {
       id: workflow.id,
       name: workflow.name,
-      description: workflow.description,
+      description: workflow.description ?? undefined,
       enabled: workflow.enabled,
       variables: schema?.variables || undefined,
       schema: schema,

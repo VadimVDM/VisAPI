@@ -97,7 +97,13 @@ export class PermissionService {
     }
 
     return userWithRoles.roles.some(
-      (role) => role.permissions[permission] === true,
+      (role) => {
+        const perms = role.permissions;
+        if (typeof perms === 'object' && perms !== null && !Array.isArray(perms)) {
+          return perms[permission] === true;
+        }
+        return false;
+      },
     );
   }
 
@@ -113,12 +119,15 @@ export class PermissionService {
     // Merge all permissions from all roles
     const permissions: Record<string, boolean> = {};
     userWithRoles.roles.forEach((role) => {
-      Object.entries(role.permissions).forEach(([key, value]) => {
-        // If any role grants the permission, it's granted
-        if (value === true) {
-          permissions[key] = true;
-        }
-      });
+      const perms = role.permissions;
+      if (typeof perms === 'object' && perms !== null && !Array.isArray(perms)) {
+        Object.entries(perms).forEach(([key, value]) => {
+          // If any role grants the permission, it's granted
+          if (value === true) {
+            permissions[key] = true;
+          }
+        });
+      }
     });
 
     return permissions;

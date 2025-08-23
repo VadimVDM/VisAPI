@@ -65,14 +65,15 @@ export class WhatsAppWebhookController {
 
       return challenge;
     } catch (error) {
-      this.logger.error(`Webhook verification failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Webhook verification failed: ${errorMessage}`);
 
       await this.trackWebhookEvent({
         method: 'GET',
         status: 'failed',
         details: {
           mode: query['hub.mode'],
-          error: error.message,
+          error: errorMessage,
         },
       });
 

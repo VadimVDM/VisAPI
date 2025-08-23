@@ -189,7 +189,7 @@ export class UserAuthService {
    */
   async createUserRecord(authUser: AuthUser): Promise<User> {
     const userData: InsertUser = {
-      email: authUser.email,
+      email: authUser.email || '',
       auth_user_id: authUser.id,
       role: 'viewer', // Default role
     };

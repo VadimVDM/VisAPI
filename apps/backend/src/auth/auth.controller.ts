@@ -16,25 +16,25 @@ import { JwtAuthGuard } from './guards/jwt.guard';
 import { User } from '@visapi/shared-types';
 
 export class SignUpDto {
-  email: string;
-  password: string;
+  email!: string;
+  password!: string;
 }
 
 export class SignInDto {
-  email: string;
-  password: string;
+  email!: string;
+  password!: string;
 }
 
 export class MagicLinkDto {
-  email: string;
+  email!: string;
 }
 
 export class ResetPasswordDto {
-  email: string;
+  email!: string;
 }
 
 export class UpdatePasswordDto {
-  newPassword: string;
+  newPassword!: string;
 }
 
 @Controller('auth')
@@ -170,7 +170,7 @@ export class AuthController {
     const { user, error } = await this.authService.verifyJWT(token);
 
     if (error || !user) {
-      throw new BadRequestException(error.message || 'Invalid token');
+      throw new BadRequestException(error?.message || 'Invalid token');
     }
 
     return {

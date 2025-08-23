@@ -193,9 +193,9 @@ export class CacheMetricsService {
     metric: Counter<string> | Gauge<string>,
     labels: Record<string, string>
   ): Promise<number> {
-    const metrics = await register.getSingleMetricAsString(metric.name);
-    // Parse the metric value (simplified - in production use proper parsing)
-    const value = 0; // This would need proper implementation
+    // Get the metric value directly from the metric object
+    // This is a simplified implementation - in production, use proper Prometheus client methods
+    const value = 0; // This would need proper implementation based on the metric type
     return value;
   }
 

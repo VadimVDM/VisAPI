@@ -89,7 +89,7 @@ export class ApiKeyService {
     }
 
     // Use bcrypt.compare to validate the secret
-    const isValid = await bcrypt.compare(secret, data.hashed_secret);
+    const isValid = await bcrypt.compare(secret, data.hashed_secret || '');
     if (!isValid) {
       return null;
     }

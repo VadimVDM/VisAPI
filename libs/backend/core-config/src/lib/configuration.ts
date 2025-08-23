@@ -9,7 +9,8 @@ export default () => {
     return getValidatedConfig();
   } catch (error) {
     // Log the error details for debugging
-    console.error('❌ Configuration validation failed:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Configuration validation failed:', errorMessage);
     
     // In development, provide helpful error message
     if (process.env.NODE_ENV !== 'production') {

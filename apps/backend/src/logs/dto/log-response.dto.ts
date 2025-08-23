@@ -31,27 +31,30 @@ export class LogEntryDto {
     description: 'Associated workflow ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
     required: false,
+    nullable: true,
   })
-  workflow_id?: string;
+  workflow_id?: string | null;
 
   @ApiProperty({
     description: 'Associated job ID',
     example: 'job_12345',
     required: false,
+    nullable: true,
   })
-  job_id?: string;
+  job_id?: string | null;
 
   @ApiProperty({
     description: 'Whether PII was redacted from this log entry',
     example: false,
+    nullable: true,
   })
-  pii_redacted: boolean;
+  pii_redacted!: boolean | null;
 
   @ApiProperty({
     description: 'Log creation timestamp',
     example: '2025-07-15T10:30:00Z',
   })
-  created_at: string;
+  created_at!: string;
 }
 
 export class PaginatedLogsDto {
@@ -59,31 +62,31 @@ export class PaginatedLogsDto {
     description: 'Array of log entries',
     type: [LogEntryDto],
   })
-  logs: LogEntryDto[];
+  logs!: LogEntryDto[];
 
   @ApiProperty({
     description: 'Total number of logs matching the filters',
     example: 250,
   })
-  total: number;
+  total!: number;
 
   @ApiProperty({
     description: 'Current offset',
     example: 0,
   })
-  offset: number;
+  offset!: number;
 
   @ApiProperty({
     description: 'Number of results per page',
     example: 50,
   })
-  limit: number;
+  limit!: number;
 
   @ApiProperty({
     description: 'Whether there are more results available',
     example: true,
   })
-  has_more: boolean;
+  has_more!: boolean;
 }
 
 export class LogStatsDto {
@@ -91,23 +94,23 @@ export class LogStatsDto {
     description: 'Total number of logs',
     example: 1500,
   })
-  total: number;
+  total!: number;
 
   @ApiProperty({
     description: 'Log count by level',
     example: { debug: 500, info: 800, warn: 150, error: 50 },
   })
-  by_level: Record<string, number>;
+  by_level!: Record<string, number>;
 
   @ApiProperty({
     description: 'Number of logs with PII redacted',
     example: 45,
   })
-  with_pii: number;
+  with_pii!: number;
 
   @ApiProperty({
     description: 'Number of logs in the last 24 hours',
     example: 125,
   })
-  recent_count: number;
+  recent_count!: number;
 }

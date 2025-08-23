@@ -49,7 +49,7 @@ export class PdfGeneratorService {
 
       // Use Chrome/Chromium executable path based on environment
       const executablePath =
-        process.env.PUPPETEER_EXECUTABLE_PATH || process.platform === 'darwin'
+        process.env['PUPPETEER_EXECUTABLE_PATH'] || process.platform === 'darwin'
           ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
           : process.platform === 'win32'
             ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
@@ -94,7 +94,7 @@ export class PdfGeneratorService {
 
       // Upload to storage
       const filename = `${templateName}-${Date.now()}.pdf`;
-      const storagePath = `${(data.workflowId as string) || 'general'}/${jobId}/${filename}`;
+      const storagePath = `${(data['workflowId'] as string) || 'general'}/${jobId}/${filename}`;
 
       const uploadResult = await this.storageService.uploadFile(
         storagePath,
@@ -109,7 +109,7 @@ export class PdfGeneratorService {
         jobId,
         filename,
         publicUrl: uploadResult.publicUrl,
-        signedUrl: uploadResult.signedUrl,
+        signedUrl: uploadResult.signedUrl || '',
         size: pdfBuffer.length,
       };
 
@@ -230,7 +230,7 @@ export class PdfGeneratorService {
           jobId,
           filename,
           publicUrl: uploadResult.publicUrl,
-          signedUrl: uploadResult.signedUrl,
+          signedUrl: uploadResult.signedUrl || '',
           size: pdfBuffer.length,
         };
 

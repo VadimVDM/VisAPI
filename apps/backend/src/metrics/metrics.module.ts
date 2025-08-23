@@ -19,7 +19,7 @@ import { metricsProviders } from './metrics.providers';
       },
       defaultLabels: {
         app: 'visapi',
-        version: process.env.npm_package_version || 'unknown',
+        version: process.env['npm_package_version'] || 'unknown',
       },
     }),
   ],

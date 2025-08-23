@@ -18,7 +18,7 @@ export interface LogRecord {
   metadata: any;
   workflow_id: string | null;
   job_id: string | null;
-  pii_redacted: boolean;
+  pii_redacted: boolean | null;
   created_at: string;
 }
 

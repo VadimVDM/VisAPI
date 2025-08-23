@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 
 // Set test environment
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 // Reduce console noise during tests
 const originalConsoleLog = console.log;
@@ -17,7 +17,7 @@ const originalConsoleError = console.error;
 
 beforeAll(() => {
   // Suppress console logs during tests unless DEBUG is set
-  if (!process.env.DEBUG_TESTS) {
+  if (!process.env['DEBUG_TESTS']) {
     console.log = jest.fn();
     console.error = jest.fn();
   }

@@ -69,10 +69,10 @@ export class CbbClientService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService
   ) {
-    this.baseURL = this.configService.get<string>('cbb.apiUrl');
-    this.apiKey = this.configService.get<string>('cbb.apiKey');
-    this.timeout = this.configService.get<number>('cbb.timeout');
-    this.retryAttempts = this.configService.get<number>('cbb.retryAttempts');
+    this.baseURL = this.configService.get<string>('cbb.apiUrl') ?? '';
+    this.apiKey = this.configService.get<string>('cbb.apiKey') ?? '';
+    this.timeout = this.configService.get<number>('cbb.timeout') ?? 30000;
+    this.retryAttempts = this.configService.get<number>('cbb.retryAttempts') ?? 3;
 
     if (!this.apiKey) {
       this.logger.warn('CBB_API_KEY not configured - WhatsApp messages will fail');
@@ -385,8 +385,8 @@ export class CbbClientService {
       return {
         id: data.id,
         phone: data.phone,
-        name: data.name,
-        email: data.email,
+        name: data.name ?? '',
+        email: data.email ?? '',
         hasWhatsApp: true,
         customFields: data.cufs,
         createdAt: new Date().toISOString(),
@@ -435,7 +435,7 @@ export class CbbClientService {
       ...options.headers,
     };
 
-    let lastError: Error;
+    let lastError: Error = new Error('All retry attempts failed');
 
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
@@ -446,8 +446,8 @@ export class CbbClientService {
           url,
           headers,
           timeout: this.timeout,
-          ...(options.data && { data: options.data }),
-          ...(options.params && { params: options.params }),
+          ...(options.data ? { data: options.data } : {}),
+          ...(options.params ? { params: options.params } : {}),
         };
 
         const response = await firstValueFrom(this.httpService.request<T>(config));
@@ -466,20 +466,22 @@ export class CbbClientService {
 
         return response;
       } catch (error) {
-        lastError = error;
+        const errorInstance = error instanceof Error ? error : new Error(String(error));
+        lastError = errorInstance;
         
-        if (error.response) {
-          const status = error.response.status;
-          const message = error.response.data?.error || error.response.data?.message || error.message;
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as any;
+          const status = axiosError.response?.status;
+          const message = axiosError.response?.data?.error || axiosError.response?.data?.message || errorInstance.message;
           
           // Don't retry on client errors (400-499)
           if (status >= 400 && status < 500) {
-            throw new CbbApiError(message, status, error.response.data);
+            throw new CbbApiError(message, status, axiosError.response?.data);
           }
           
           this.logger.warn(`CBB API ${method} ${endpoint} failed (attempt ${attempt}): ${status} ${message}`);
         } else {
-          this.logger.warn(`CBB API ${method} ${endpoint} failed (attempt ${attempt}): ${error.message}`);
+          this.logger.warn(`CBB API ${method} ${endpoint} failed (attempt ${attempt}): ${errorInstance.message}`);
         }
 
         // Wait before retry (exponential backoff)

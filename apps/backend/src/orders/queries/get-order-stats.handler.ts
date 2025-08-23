@@ -117,6 +117,9 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
         case 'year':
           key = String(date.getFullYear());
           break;
+        default:
+          key = date.toISOString().split('T')[0]; // Default to day format
+          break;
       }
       
       grouped[key] = (grouped[key] || 0) + 1;

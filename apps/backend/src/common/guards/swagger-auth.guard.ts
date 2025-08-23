@@ -23,17 +23,17 @@ export class SwaggerAuthGuard implements CanActivate {
   private readonly swaggerPassword: string;
   private readonly validApiKeys: Set<string>;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(configService: ConfigService) {
     this.isProduction = configService.nodeEnv === 'production';
     
     // Get Swagger auth credentials from config
     // These would be added to the config schema
-    this.swaggerUsername = process.env.SWAGGER_USERNAME || 'admin';
-    this.swaggerPassword = process.env.SWAGGER_PASSWORD || '';
+    this.swaggerUsername = process.env['SWAGGER_USERNAME'] || 'admin';
+    this.swaggerPassword = process.env['SWAGGER_PASSWORD'] || '';
     
     // You could also check against valid API keys from database
     // For now, we'll use a simple environment variable
-    const swaggerApiKeys = process.env.SWAGGER_API_KEYS?.split(',') || [];
+    const swaggerApiKeys = process.env['SWAGGER_API_KEYS']?.split(',') || [];
     this.validApiKeys = new Set(swaggerApiKeys);
   }
 
@@ -76,9 +76,9 @@ export class SwaggerAuthGuard implements CanActivate {
  */
 export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const isProduction = configService.nodeEnv === 'production';
-  const swaggerUsername = process.env.SWAGGER_USERNAME || 'admin';
-  const swaggerPassword = process.env.SWAGGER_PASSWORD || '';
-  const swaggerApiKeys = new Set(process.env.SWAGGER_API_KEYS?.split(',') || []);
+  const swaggerUsername = process.env['SWAGGER_USERNAME'] || 'admin';
+  const swaggerPassword = process.env['SWAGGER_PASSWORD'] || '';
+  const swaggerApiKeys = new Set(process.env['SWAGGER_API_KEYS']?.split(',') || []);
 
   return (req: Request, res: any, next: any) => {
     // Allow unrestricted access in development/test

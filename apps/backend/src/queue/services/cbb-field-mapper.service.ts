@@ -7,26 +7,26 @@ interface OrderData {
   client_name: string;
   client_email: string;
   product_country: string;
-  product_doc_type: string;
-  product_intent?: string;
-  product_entries?: string;
-  product_validity?: string;
-  product_days_to_use?: number;
-  visa_quantity: number;
-  urgency: string;
+  product_doc_type: string | null;
+  product_intent?: string | null;
+  product_entries?: string | null;
+  product_validity?: string | null;
+  product_days_to_use?: number | null;
+  visa_quantity: number | null;
+  urgency: string | null;
   amount: number;
   currency: string;
-  entry_date: string;
+  entry_date: string | null;
   branch: string;
   form_id: string;
   webhook_received_at: string;
-  whatsapp_alerts_enabled: boolean;
+  whatsapp_alerts_enabled: boolean | null;
   applicants_data?: any;
-  cbb_synced?: boolean;
-  cbb_contact_id?: string;
-  whatsapp_confirmation_sent?: boolean;
-  whatsapp_confirmation_sent_at?: string;
-  whatsapp_message_id?: string;
+  cbb_synced?: boolean | null;
+  cbb_contact_id?: string | null;
+  whatsapp_confirmation_sent?: boolean | null;
+  whatsapp_confirmation_sent_at?: string | null;
+  whatsapp_message_id?: string | null;
 }
 
 /**
@@ -69,14 +69,14 @@ export class CBBFieldMapperService {
    * Map order data to CBB contact format
    */
   mapOrderToContact(order: OrderData): CBBContactData {
-    const isUrgent = this.isOrderUrgent(order.urgency);
-    const orderDateUnix = this.convertDateToUnix(order.entry_date, order.order_id);
+    const isUrgent = this.isOrderUrgent(order.urgency ?? 'normal');
+    const orderDateUnix = this.convertDateToUnix(order.entry_date ?? '', order.order_id);
     const gender = this.extractGender(order.applicants_data, order.order_id);
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
     const visaValidityDays = this.calculateVisaValidityDays(
-      order.product_validity,
-      order.product_days_to_use,
+      order.product_validity ?? undefined,
+      order.product_days_to_use ?? undefined,
     );
 
     // Use actual product data from the order

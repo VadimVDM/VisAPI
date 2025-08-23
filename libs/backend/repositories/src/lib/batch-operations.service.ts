@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { CacheEvict } from '@visapi/backend-cache';
+import { Database } from '@visapi/shared-types';
 
 interface BatchUpdateItem<T> {
   id: string;
@@ -61,14 +62,21 @@ export class BatchOperationsService {
           WHERE id IN (${batch.map(u => `'${u.id}'`).join(',')})
         `;
 
-        const { error } = await this.supabase.rpc('exec_sql', { query });
-        
-        if (error) {
-          this.logger.error('Batch API key update failed', error);
-          failed += batch.length;
-        } else {
-          success += batch.length;
+        // Use individual updates since exec_sql may not be available
+        for (const update of batch) {
+          const { error: updateError } = await this.supabase
+            .from('api_keys')
+            .update({ last_used_at: update.timestamp })
+            .eq('id', update.id);
+            
+          if (updateError) {
+            this.logger.error(`Failed to update API key ${update.id}`, updateError);
+            failed++;
+          } else {
+            success++;
+          }
         }
+        // Errors are handled individually above
       } catch (error) {
         this.logger.error('Batch API key update error', error);
         failed += batch.length;
@@ -297,7 +305,7 @@ export class BatchOperationsService {
    * Generic batch update operation
    */
   async batchUpdate<T>(
-    tableName: string,
+    tableName: keyof Database['public']['Tables'],
     updates: BatchUpdateItem<T>[],
     batchSize = 100,
   ): Promise<{ success: number; failed: number }> {

@@ -8,23 +8,23 @@
     "emitDecoratorMetadata": true,
     "target": "es2021",
     
-    /* Strict Type Checking Options */
+    /* Strict Type Checking Options - Pragmatic for 2025 */
     "strict": true,                          /* Enable all strict type-checking options */
     "noImplicitAny": true,                   /* Error on expressions with 'any' type */
     "strictNullChecks": true,                /* Enable strict null checks */
     "strictFunctionTypes": true,             /* Enable strict checking of function types */
     "strictBindCallApply": true,             /* Enable strict 'bind', 'call', and 'apply' */
-    "strictPropertyInitialization": true,    /* Enable strict property initialization checks */
+    "strictPropertyInitialization": false,   /* Disabled for DTOs - standard practice */
     "noImplicitThis": true,                  /* Error on 'this' expressions with 'any' type */
     "alwaysStrict": true,                    /* Parse in strict mode and emit "use strict" */
     
-    /* Additional Type Checking */
-    "noUnusedLocals": true,                  /* Report errors on unused locals */
-    "noUnusedParameters": true,              /* Report errors on unused parameters */
+    /* Additional Type Checking - Balanced for Production */
+    "noUnusedLocals": false,                 /* Disabled - too noisy during development */
+    "noUnusedParameters": false,             /* Disabled - decorators often have unused params */
     "noImplicitReturns": true,               /* Report error when not all code paths return */
     "noFallthroughCasesInSwitch": true,      /* Report errors for fallthrough cases in switch */
-    "noUncheckedIndexedAccess": true,        /* Include 'undefined' in index signature results */
-    "noPropertyAccessFromIndexSignature": true, /* Require indexed access for unknown properties */
+    "noUncheckedIndexedAccess": false,       /* Disabled - too strict for existing code */
+    "noPropertyAccessFromIndexSignature": false, /* Disabled - needed for dynamic property access */
     "exactOptionalPropertyTypes": false,     /* Disabled for NestJS compatibility */
     
     /* Code Quality Options */

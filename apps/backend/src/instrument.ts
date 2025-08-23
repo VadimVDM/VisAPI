@@ -3,20 +3,20 @@ import * as Sentry from '@sentry/nestjs';
 
 Sentry.init({
   dsn:
-    process.env.SENTRY_DSN ||
+    process.env['SENTRY_DSN'] ||
     'https://c7b45c866448d3c4c8e3c480006c9513@o4509449317253120.ingest.de.sentry.io/4509678433927248',
 
   // Environment
-  environment: process.env.NODE_ENV || 'development',
+  environment: process.env['NODE_ENV'] || 'development',
 
   // Performance Monitoring
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0, // 10% in production
+  tracesSampleRate: process.env['NODE_ENV'] === 'production' ? 0.1 : 1.0, // 10% in production
 
   // Release tracking
-  release: process.env.GIT_SHA || 'unknown',
+  release: process.env['GIT_SHA'] || 'unknown',
 
   // Don't send default PII in production
-  sendDefaultPii: process.env.NODE_ENV !== 'production',
+  sendDefaultPii: process.env['NODE_ENV'] !== 'production',
 
   // Filter out sensitive data
   beforeSend(event) {

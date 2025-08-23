@@ -114,13 +114,15 @@ export class TranslationService {
     urgency?: string;
   }): TranslationResult {
     const countryKey = (data.country || '').toLowerCase().replace(/\s+/g, '_');
+    const countryLower = data.country?.toLowerCase() ?? '';
     const country = this.countryTranslations[countryKey] || 
-                   this.countryTranslations[data.country?.toLowerCase()] || 
+                   this.countryTranslations[countryLower] || 
                    { hebrew: data.country || 'לא ידוע', flag: '🌍' };
 
     const visaTypeKey = (data.docType || data.intent || 'tourist').toLowerCase();
+    const intentLower = data.intent?.toLowerCase() ?? '';
     const visaType = this.visaTypeTranslations[visaTypeKey] || 
-                    this.visaTypeTranslations[data.intent?.toLowerCase() || ''] ||
+                    this.visaTypeTranslations[intentLower] ||
                     data.docType || 
                     'ויזת תייר';
 

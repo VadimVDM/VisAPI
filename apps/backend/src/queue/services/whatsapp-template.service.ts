@@ -6,12 +6,12 @@ interface OrderData {
   client_name: string;
   client_email: string;
   product_country: string;
-  product_doc_type: string;
-  product_intent?: string;
-  visa_quantity?: number;
+  product_doc_type: string | null;
+  product_intent?: string | null;
+  visa_quantity?: number | null;
   amount?: number;
-  urgency?: string;
-  product_days_to_use?: number;
+  urgency?: string | null;
+  product_days_to_use?: number | null;
 }
 
 export interface OrderConfirmationData {
@@ -39,13 +39,13 @@ export class WhatsAppTemplateService {
     const countryHebrew = this.translationService.getCountryNameHebrew(order.product_country);
     const countryFlag = this.translationService.getCountryFlag(order.product_country);
     const visaTypeHebrew = this.translationService.getVisaTypeHebrew(
-      order.product_doc_type,
-      order.product_intent
+      order.product_doc_type ?? 'tourist',
+      order.product_intent ?? undefined
     );
     const processingDays = this.translationService.calculateProcessingDays(
       order.product_country,
-      order.urgency,
-      order.product_days_to_use
+      order.urgency ?? undefined,
+      order.product_days_to_use ?? undefined
     );
 
     // Return the data object for the template

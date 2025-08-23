@@ -154,6 +154,14 @@ export class CronSeederService implements OnModuleInit {
     for (const trigger of cronTriggers) {
       try {
         const schedule = trigger.config.schedule;
+        if (!schedule) {
+          this.logger.warn(
+            { workflowId: workflow.id, trigger: trigger.type },
+            'Skipping cron trigger with missing schedule',
+          );
+          continue;
+        }
+
         const timezone =
           typeof trigger.config.timezone === 'string'
             ? trigger.config.timezone
@@ -279,14 +287,14 @@ export class CronSeederService implements OnModuleInit {
       for (const job of repeatableJobs) {
         if (job.name === JOB_NAMES.PROCESS_WORKFLOW && job.next) {
           // Extract workflowId from job key or options
-          const workflowId = job.key.split(':').pop() || 'unknown';
+          const workflowId = job.key.split(':').pop() ?? 'unknown';
           const nextRun = new Date(job.next);
           const now = new Date();
           const drift = nextRun.getTime() - now.getTime();
 
           metrics.push({
             workflowId,
-            schedule: job.pattern,
+            schedule: job.pattern ?? 'unknown',
             nextRun,
             drift: Math.abs(drift),
           });

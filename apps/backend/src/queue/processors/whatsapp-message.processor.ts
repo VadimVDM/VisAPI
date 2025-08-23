@@ -15,15 +15,15 @@ interface OrderData {
   client_email: string;
   client_phone?: string;
   product_country: string;
-  product_doc_type: string;
-  product_intent?: string;
-  visa_quantity?: number;
+  product_doc_type: string | null;
+  product_intent?: string | null;
+  visa_quantity?: number | null;
   amount?: number;
-  urgency?: string;
-  product_days_to_use?: number;
-  whatsapp_confirmation_sent?: boolean;
-  whatsapp_status_update_sent?: boolean;
-  whatsapp_document_ready_sent?: boolean;
+  urgency?: string | null;
+  product_days_to_use?: number | null;
+  whatsapp_confirmation_sent?: boolean | null;
+  whatsapp_status_update_sent?: boolean | null;
+  whatsapp_document_ready_sent?: boolean | null;
 }
 
 interface ProcessResult {

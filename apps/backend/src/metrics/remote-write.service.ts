@@ -236,7 +236,7 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
 
       // Add app and version labels
       labels.app = 'visapi';
-      labels.version = process.env.npm_package_version || 'unknown';
+      labels.version = process.env['npm_package_version'] || 'unknown';
 
       // Create TimeSeries entry
       timeSeries.push({

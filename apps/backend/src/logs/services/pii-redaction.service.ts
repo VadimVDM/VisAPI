@@ -9,7 +9,7 @@ export interface PiiRedactionResult {
 @Injectable()
 export class PiiRedactionService {
   // PII detection patterns - ordered by specificity to avoid conflicts
-  private readonly patterns = {
+  private readonly patterns: { [key: string]: { regex: RegExp; replacement: string; name: string } } = {
     // Process credit cards first (more specific)
     creditCard: {
       regex: /\b(?:\d{4}[-.\s]?){3}\d{4}\b/g,

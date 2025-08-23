@@ -14,7 +14,7 @@ export const EnvSchema = z.object({
   NODE_ENV: NodeEnv.default('development'),
   
   // Server configuration
-  PORT: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(65535)).default('3000'),
+  PORT: z.string().default('3000').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(65535)),
   
   // Build metadata
   GIT_SHA: z.string().optional(),
@@ -22,9 +22,9 @@ export const EnvSchema = z.object({
   
   // CORS configuration
   CORS_ORIGIN: z.string()
+    .default('http://localhost:3001')
     .transform((val) => val.split(',').map(origin => origin.trim()))
-    .pipe(z.array(z.string().url().or(z.string().regex(/^http:\/\/localhost:\d+$/))))
-    .default('http://localhost:3001'),
+    .pipe(z.array(z.string().url().or(z.string().regex(/^http:\/\/localhost:\d+$/)))),
   
   // Database configuration (required in production)
   DATABASE_URL: z.string().url().optional(),
@@ -50,24 +50,24 @@ export const EnvSchema = z.object({
   // Authentication configuration
   JWT_SECRET: z.string().min(32).optional(),
   API_KEY_PREFIX: z.string().default('visapi_'),
-  API_KEY_EXPIRY_DAYS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(365)).default('90'),
+  API_KEY_EXPIRY_DAYS: z.string().default('90').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(365)),
   ALLOWED_EMAIL_DOMAINS: z.string()
+    .default('visanet.app')
     .transform((val) => val.split(',').map(domain => domain.trim()))
-    .pipe(z.array(z.string().regex(/^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,}$/i)))
-    .default('visanet.app'),
+    .pipe(z.array(z.string().regex(/^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,}$/i))),
   
   // Frontend configuration
   FRONTEND_URL: z.string().url().default('http://localhost:3001'),
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   
   // Rate limiting configuration
-  API_RATE_LIMIT_BURST: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1)).default('200'),
-  API_RATE_LIMIT_SUSTAINED: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1)).default('2'),
+  API_RATE_LIMIT_BURST: z.string().default('200').transform((val) => parseInt(val, 10)).pipe(z.number().min(1)),
+  API_RATE_LIMIT_SUSTAINED: z.string().default('2').transform((val) => parseInt(val, 10)).pipe(z.number().min(1)),
   
   // Queue configuration
-  QUEUE_CONCURRENCY: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(100)).default('10'),
-  QUEUE_MAX_RETRIES: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0).max(10)).default('3'),
-  QUEUE_RETRY_DELAY: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(100)).default('5000'),
+  QUEUE_CONCURRENCY: z.string().default('10').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(100)),
+  QUEUE_MAX_RETRIES: z.string().default('3').transform((val) => parseInt(val, 10)).pipe(z.number().min(0).max(10)),
+  QUEUE_RETRY_DELAY: z.string().default('5000').transform((val) => parseInt(val, 10)).pipe(z.number().min(100)),
   
   // Logging configuration
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('debug'),
@@ -76,29 +76,29 @@ export const EnvSchema = z.object({
   // CBB integration
   CBB_API_URL: z.string().url().default('https://app.chatgptbuilder.io/api'),
   CBB_API_KEY: z.string().optional(),
-  CBB_TIMEOUT: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1000).max(120000)).default('30000'),
-  CBB_RETRY_ATTEMPTS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0).max(5)).default('3'),
-  CBB_CACHE_TIMEOUT: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0)).default('3600'),
-  CBB_SYNC_ENABLED: z.string().transform((val) => val === 'true').default('false'),
-  CBB_SYNC_DRY_RUN: z.string().transform((val) => val === 'true').default('false'),
-  CBB_SYNC_BATCH_SIZE: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(100)).default('10'),
-  CBB_SYNC_CONCURRENCY: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(20)).default('5'),
-  CBB_SYNC_DELAY_MS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(100)).default('2000'),
+  CBB_TIMEOUT: z.string().default('30000').transform((val) => parseInt(val, 10)).pipe(z.number().min(1000).max(120000)),
+  CBB_RETRY_ATTEMPTS: z.string().default('3').transform((val) => parseInt(val, 10)).pipe(z.number().min(0).max(5)),
+  CBB_CACHE_TIMEOUT: z.string().default('3600').transform((val) => parseInt(val, 10)).pipe(z.number().min(0)),
+  CBB_SYNC_ENABLED: z.string().default('false').transform((val) => val === 'true'),
+  CBB_SYNC_DRY_RUN: z.string().default('false').transform((val) => val === 'true'),
+  CBB_SYNC_BATCH_SIZE: z.string().default('10').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(100)),
+  CBB_SYNC_CONCURRENCY: z.string().default('5').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(20)),
+  CBB_SYNC_DELAY_MS: z.string().default('2000').transform((val) => parseInt(val, 10)).pipe(z.number().min(100)),
   
   // Slack integration
   SLACK_WEBHOOK_URL: z.string().url().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
   SLACK_DEFAULT_CHANNEL: z.string().default('#alerts'),
-  SLACK_ENABLED: z.string().transform((val) => val === 'true').default('false'),
+  SLACK_ENABLED: z.string().default('false').transform((val) => val === 'true'),
   
   // Resend email service
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().or(z.string().regex(/^.+\s<.+@.+>$/)).default('VisAPI <noreply@visanet.app>'),
   
   // WhatsApp configuration
-  WHATSAPP_MESSAGE_DELAY_MS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0)).default('5000'),
-  WHATSAPP_PROCESS_DELAY_MS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0)).default('3000'),
+  WHATSAPP_MESSAGE_DELAY_MS: z.string().default('5000').transform((val) => parseInt(val, 10)).pipe(z.number().min(0)),
+  WHATSAPP_PROCESS_DELAY_MS: z.string().default('3000').transform((val) => parseInt(val, 10)).pipe(z.number().min(0)),
   
   // WhatsApp Business API (Meta) configuration
   WABA_PHONE_NUMBER_ID: z.string().optional(),
@@ -109,21 +109,21 @@ export const EnvSchema = z.object({
   WABA_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
   
   // Workflow configuration
-  WORKFLOW_PROCESSING_DELAY_MS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(0)).default('1000'),
-  WORKFLOW_BATCH_PROCESSING_SIZE: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(1000)).default('50'),
+  WORKFLOW_PROCESSING_DELAY_MS: z.string().default('1000').transform((val) => parseInt(val, 10)).pipe(z.number().min(0)),
+  WORKFLOW_BATCH_PROCESSING_SIZE: z.string().default('50').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(1000)),
   
   // Grafana monitoring
-  GRAFANA_REMOTE_WRITE_ENABLED: z.string().transform((val) => val === 'true').default('false'),
+  GRAFANA_REMOTE_WRITE_ENABLED: z.string().default('false').transform((val) => val === 'true'),
   GRAFANA_PROMETHEUS_URL: z.string().url().optional(),
   GRAFANA_PROMETHEUS_USERNAME: z.string().optional(),
   GRAFANA_PROMETHEUS_PASSWORD: z.string().optional(),
-  GRAFANA_PUSH_INTERVAL_MS: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1000)).default('30000'),
+  GRAFANA_PUSH_INTERVAL_MS: z.string().default('30000').transform((val) => parseInt(val, 10)).pipe(z.number().min(1000)),
   
   // Sentry error tracking (optional, no default DSN)
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_ENVIRONMENT: z.string().optional(),
   SENTRY_RELEASE: z.string().optional(),
-  SENTRY_TRACES_SAMPLE_RATE: z.string().transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)).default('0.1'),
+  SENTRY_TRACES_SAMPLE_RATE: z.string().default('0.1').transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)),
   
   // Swagger documentation security
   SWAGGER_USERNAME: z.string().default('admin'),

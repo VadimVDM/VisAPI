@@ -8,7 +8,7 @@ export class CreateApiKeyDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Array of permission scopes',
@@ -18,5 +18,5 @@ export class CreateApiKeyDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  scopes: string[];
+  scopes!: string[];
 }

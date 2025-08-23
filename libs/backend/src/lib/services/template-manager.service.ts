@@ -71,7 +71,7 @@ export class TemplateManagerService {
         this.templateCache.set(cacheKey, {
           ...template,
           usage_count: 0,
-          last_used: null,
+          last_used: undefined,
           performance_metrics: {
             delivery_rate: 0,
             read_rate: 0,
@@ -317,7 +317,7 @@ export class TemplateManagerService {
 
     const template = templates[0];
 
-    if (template.components.some((c) => c.type === 'body' && c.parameters?.length > 5)) {
+    if (template.components.some((c) => c.type === 'body' && (c.parameters?.length ?? 0) > 5)) {
       suggestions.push({
         type: 'content',
         description: 'Reduce number of variables for better readability',
