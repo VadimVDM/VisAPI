@@ -62,7 +62,8 @@ Modern layered architecture with enterprise design patterns:
 ### Orders Module
 - Vizi webhook processing
 - Order validation and transformation
-- CBB synchronization
+- Translation service for Hebrew localization
+- CBB synchronization via OrderSyncSaga
 - WhatsApp notifications
 
 ### Queue Module
@@ -96,4 +97,11 @@ Modern layered architecture with enterprise design patterns:
 - Queue-based async processing
 - Prometheus metrics collection
 
-Last Updated: August 22, 2025
+### WhatsApp Integration (In Progress)
+- Direct Meta WhatsApp Business API module
+- HMAC-SHA256 webhook signature verification
+- Template management and quality monitoring
+- Conversation-based pricing tracking
+- Parallel operation with CBB
+
+Last Updated: August 23, 2025

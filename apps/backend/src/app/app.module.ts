@@ -24,6 +24,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { CacheModule } from '@visapi/backend-cache';
 import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
+import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { GlobalExceptionFilter } from '../common/filters/global-exception.filter
     MetricsModule,
     SlackModule,
     EmailModule,
+    WhatsAppWebhooksModule,
   ],
   controllers: [AppController],
   providers: [

@@ -100,7 +100,17 @@ These variables are for the backend NestJS application and must be kept secret.
 | Variable                           | Description                                        | Required |
 | ---------------------------------- | -------------------------------------------------- | -------- |
 | `CBB_API_URL`                      | WhatsApp API endpoint (ChatGPT Builder)            | ✅       |
-| `CBB_API_KEY`                      | WhatsApp API key                                   | ✅       |
+| `CBB_API_KEY`                      | WhatsApp API key (CBB)                             | ✅       |
+| **WhatsApp Business API (Direct Meta Integration)** |                                |          |
+| `WABA_PHONE_NUMBER_ID`             | Meta WhatsApp phone number ID                      | ⏳       |
+| `WABA_BUSINESS_ID`                 | Meta WhatsApp Business ID                          | ⏳       |
+| `WABA_ACCESS_TOKEN`                | Meta permanent access token                        | ⏳       |
+| `WABA_WEBHOOK_SECRET`              | Webhook signature verification secret              | ⏳       |
+| `WABA_APP_SECRET`                  | Meta app secret                                    | ⏳       |
+| `WABA_WEBHOOK_VERIFY_TOKEN`        | Webhook verification token                         | ⏳       |
+| `WABA_API_VERSION`                 | Meta API version (default: v23.0)                  | ❌       |
+| `WHATSAPP_DASHBOARD_ENABLED`       | Enable WhatsApp dashboard (default: false)         | ❌       |
+| `WHATSAPP_ENABLE_FORWARDING`       | Forward webhooks to Zapier (default: true)        | ❌       |
 | `RESEND_API_KEY`                   | Resend API key for sending emails                  | ✅       |
 | `NOREPLY_EMAIL`                    | The "From" address for system emails               | ✅       |
 | `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD` | Set to `true` in production to use system Chromium | ✅       |
@@ -155,10 +165,20 @@ These variables are for the backend NestJS application and must be kept secret.
 2.  Create a new API key with appropriate permissions.
 3.  Verify your sending domain.
 
-### ChatGPT Builder (WhatsApp)
+### ChatGPT Builder (WhatsApp CBB)
 
 1.  Go to your dashboard: `https://app.chatgptbuilder.io/dashboard`
 2.  Find and copy your API key.
+
+### Meta WhatsApp Business API (Direct Integration)
+
+1.  Create Meta App: `https://developers.facebook.com/apps`
+2.  Add WhatsApp product to your app
+3.  Configure webhook URL: `https://api.visanet.app/api/v1/webhooks/whatsapp`
+4.  Get Phone Number ID from WhatsApp > API Setup
+5.  Generate permanent access token in Access Tokens section
+6.  Create webhook secret for signature verification
+7.  Subscribe to webhook fields: messages, messages.status, message_template_status_update
 
 ### Grafana Cloud (Monitoring)
 

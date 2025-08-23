@@ -2,10 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 import { Json } from '@visapi/shared-types';
 import { CreateOrderData } from '@visapi/backend-repositories';
+import { TranslationService } from './translation.service';
 
 @Injectable()
 export class OrderTransformerService {
   private readonly logger = new Logger(OrderTransformerService.name);
+
+  constructor(private readonly translationService: TranslationService) {}
 
   /**
    * Transform Vizi webhook data to order format
@@ -24,6 +27,14 @@ export class OrderTransformerService {
     const otherFiles = { ...applicantFiles };
     delete otherFiles.face;
     delete otherFiles.passport;
+
+    // Get translations for Hebrew fields
+    const translations = this.translationService.translateOrderData({
+      country: form.product?.country || form.country,
+      docType: form.product?.docType,
+      intent: form.product?.intent,
+      urgency: form.urgency,
+    });
 
     // Transform the data
     const orderData: CreateOrderData = {
@@ -53,6 +64,13 @@ export class OrderTransformerService {
       product_entries: form.product?.entries || 'single',
       product_validity: form.product?.validity || 'month',
       product_days_to_use: form.product?.days_to_use || 30,
+
+      // Translation fields (stored for optimization)
+      product_country_hebrew: translations.countryHebrew,
+      product_country_flag: translations.countryFlag,
+      visa_type_hebrew: translations.visaTypeHebrew,
+      processing_days_hebrew: translations.processingDays,
+      urgency_hebrew: translations.urgencyHebrew,
 
       // Visa details
       visa_quantity: form.quantity || 1,

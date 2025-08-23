@@ -114,6 +114,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Log the error
     this.logError(exception, problemDetails);
 
+    // Set correlation headers for client debugging
+    if (correlationId) {
+      response.setHeader('X-Request-Id', correlationId);
+      response.setHeader('X-Correlation-Id', correlationId);
+    }
+
     // Send response
     response
       .status(status)

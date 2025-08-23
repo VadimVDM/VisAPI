@@ -1,82 +1,23 @@
-export default () => ({
-  node: {
-    env: process.env.NODE_ENV || 'development',
-  },
-  port: parseInt(process.env.PORT, 10) || 3000,
-  git: {
-    sha: process.env.GIT_SHA,
-  },
-  build: {
-    number: process.env.BUILD_NUMBER,
-  },
-  cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3001'],
-  },
-  database: {
-    url: process.env.DATABASE_URL,
-  },
-  redis: {
-    url: process.env.REDIS_URL,
-    publicUrl: process.env.REDIS_PUBLIC_URL,
-  },
-  supabase: {
-    url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    anonKey:
-      process.env.SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  },
-  auth: {
-    jwtSecret: process.env.JWT_SECRET,
-    apiKeyPrefix: process.env.API_KEY_PREFIX || 'visapi_',
-    apiKeyExpiryDays: parseInt(process.env.API_KEY_EXPIRY_DAYS, 10) || 90,
-    allowedEmailDomains: process.env.ALLOWED_EMAIL_DOMAINS?.split(',') || ['visanet.app'],
-  },
-  frontend: {
-    url: process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
-  },
-  rateLimit: {
-    burst: parseInt(process.env.API_RATE_LIMIT_BURST, 10) || 200,
-    sustained: parseInt(process.env.API_RATE_LIMIT_SUSTAINED, 10) || 2,
-  },
-  queue: {
-    concurrency: parseInt(process.env.QUEUE_CONCURRENCY, 10) || 10,
-    maxRetries: parseInt(process.env.QUEUE_MAX_RETRIES, 10) || 3,
-    retryDelay: parseInt(process.env.QUEUE_RETRY_DELAY, 10) || 5000,
-  },
-  logging: {
-    level: process.env.LOG_LEVEL || 'debug',
-    format: process.env.LOG_FORMAT || 'json',
-  },
-  cbb: {
-    apiUrl: process.env.CBB_API_URL || 'https://app.chatgptbuilder.io/api',
-    apiKey: process.env.CBB_API_KEY || '',
-    timeout: parseInt(process.env.CBB_TIMEOUT, 10) || 30000,
-    retryAttempts: parseInt(process.env.CBB_RETRY_ATTEMPTS, 10) || 3,
-    cacheTimeout: parseInt(process.env.CBB_CACHE_TIMEOUT, 10) || 3600,
-    syncEnabled: process.env.CBB_SYNC_ENABLED === 'true',
-    syncDryRun: process.env.CBB_SYNC_DRY_RUN === 'true',
-    syncBatchSize: parseInt(process.env.CBB_SYNC_BATCH_SIZE, 10) || 10,
-    syncConcurrency: parseInt(process.env.CBB_SYNC_CONCURRENCY, 10) || 5,
-    syncDelayMs: parseInt(process.env.CBB_SYNC_DELAY_MS, 10) || 2000,
-  },
-  slack: {
-    webhookUrl: process.env.SLACK_WEBHOOK_URL || '',
-    botToken: process.env.SLACK_BOT_TOKEN || '',
-    signingSecret: process.env.SLACK_SIGNING_SECRET || '',
-    defaultChannel: process.env.SLACK_DEFAULT_CHANNEL || '#alerts',
-    enabled: process.env.SLACK_ENABLED === 'true',
-  },
-  resend: {
-    apiKey: process.env.RESEND_API_KEY || '',
-    fromEmail: process.env.RESEND_FROM_EMAIL || 'VisAPI <noreply@visanet.app>',
-  },
-  whatsapp: {
-    messageDelayMs: parseInt(process.env.WHATSAPP_MESSAGE_DELAY_MS, 10) || 5000,
-    processDelayMs: parseInt(process.env.WHATSAPP_PROCESS_DELAY_MS, 10) || 3000,
-  },
-  workflow: {
-    processingDelayMs: parseInt(process.env.WORKFLOW_PROCESSING_DELAY_MS, 10) || 1000,
-    batchProcessingSize: parseInt(process.env.WORKFLOW_BATCH_PROCESSING_SIZE, 10) || 50,
-  },
-});
+import { getValidatedConfig } from './config-schema';
+
+/**
+ * Get validated configuration with Zod schema validation
+ * This ensures all environment variables are properly typed and validated
+ */
+export default () => {
+  try {
+    return getValidatedConfig();
+  } catch (error) {
+    // Log the error details for debugging
+    console.error('❌ Configuration validation failed:', error.message);
+    
+    // In development, provide helpful error message
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('\n💡 Tip: Check your .env file and ensure all required variables are set correctly.');
+      console.error('   You can reference .env.example for the complete list of variables.\n');
+    }
+    
+    // Re-throw to prevent app from starting with invalid config
+    throw error;
+  }
+};

@@ -1,6 +1,6 @@
 # CLAUDE.md - VisAPI Project Guide
 
-Essential information for working with the VisAPI project. Updated: August 22, 2025
+Essential information for working with the VisAPI project. Updated: August 23, 2025
 
 ## Project Overview
 
@@ -65,6 +65,15 @@ Essential information for working with the VisAPI project. Updated: August 22, 2
 - ✅ CBB contact synchronization fixed with OrderSyncSaga implementation (August 22, 2025)
 - ✅ Automatic WhatsApp order confirmations for IL branch orders (August 22, 2025)
 - ✅ Railway deployment errors resolved - date handling and database column fixes (August 23, 2025)
+- ✅ WhatsApp Business API integration foundation - Module structure, types, and services (August 23, 2025)
+- ✅ Translation service optimization - Hebrew translations stored at order creation (August 23, 2025)
+- ✅ Webhook signature verification - HMAC-SHA256 implementation for Meta webhooks (August 23, 2025)
+- ✅ Zod-based environment validation - Strict config validation with helpful error messages (August 23, 2025)
+- ✅ TypeScript strict mode enabled - Full type safety with comprehensive checking (August 23, 2025)
+- ✅ Modern build system with tsup - esbuild-powered builds for faster compilation (August 23, 2025)
+- ✅ Enhanced cache metrics - Prometheus metrics for hit/miss ratios and compression (August 23, 2025)
+- ✅ Correlation ID tracking - X-Request-Id/X-Correlation-Id headers for request tracing (August 23, 2025)
+- ✅ Swagger documentation security - Authentication required in production environment (August 23, 2025)
 
 ## Project Structure
 
@@ -79,10 +88,11 @@ VisAPI/
 │   │   └── ui-components/ # Reusable UI components
 │   ├── backend/           # Backend-specific libraries
 │   │   ├── repositories/  # Repository pattern for data access
-│   │   ├── cache/         # Redis caching with decorators
+│   │   ├── cache/         # Redis caching with metrics and compression
 │   │   ├── events/        # Domain event system with audit logging
 │   │   ├── core-cbb/      # WhatsApp CBB API integration
-│   │   ├── core-config/   # Configuration management
+│   │   ├── whatsapp-business/ # Direct Meta WhatsApp Business API (in progress)
+│   │   ├── core-config/   # Configuration with Zod validation
 │   │   ├── core-supabase/ # Database and storage services
 │   │   ├── email-service/ # Email templates and Resend integration
 │   │   ├── logging/       # Structured logging with PII redaction
@@ -242,6 +252,8 @@ For a detailed breakdown of all core tables (`users`, `api_keys`, `workflows`, `
 ```
 POST /api/v1/triggers/{key}         # Webhook trigger with idempotency
 POST /api/v1/webhooks/vizi/orders   # Vizi webhook endpoint for visa orders
+GET  /api/v1/webhooks/whatsapp      # WhatsApp webhook verification (Meta)
+POST /api/v1/webhooks/whatsapp      # WhatsApp webhook events (Meta)
 GET  /api/v1/workflows              # List workflows
 POST /api/v1/workflows              # Create workflow
 GET  /api/v1/logs                   # Paginated logs with filters
@@ -418,7 +430,9 @@ Use these tools:
 ### Connector Types
 
 1. **Slack:** SDK wrapper for notifications
-2. **WhatsApp:** CBB API integration with WhatsApp Business templates for order confirmations
+2. **WhatsApp (Hybrid Architecture):**
+   - **CBB:** Handles all message sending and dashboard UI (production)
+   - **WABA Direct:** Receives webhooks for delivery tracking (in progress - 63% complete)
 3. **PDF Generator:** Puppeteer-based PDF generation with Supabase Storage
 4. **Email System:** Enterprise email service with Resend SDK and branded templates
 5. **Image Processing:** Sharp for transformations
@@ -859,8 +873,9 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - **Key Generation**: Use `node scripts/create-vizi-api-key.js` to create new Vizi API keys
 - **Testing**: Use `test-vizi-webhook.js` to test webhook processing locally or against production
 
-### WhatsApp CBB Integration Notes:
+### WhatsApp Integration Notes:
 
+#### CBB Integration (Current Production):
 - **Library**: Use `@visapi/backend-core-cbb` for all WhatsApp operations via CBB API
 - **Authentication**: CBB uses `X-ACCESS-TOKEN` header, not Authorization Bearer
 - **Contact IDs**: CBB uses phone numbers as contact IDs (e.g., "972507758758")
@@ -871,6 +886,17 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 - **Hebrew Support**: Full Hebrew translations for countries, visa types, and processing times
 - **IL Branch Only**: Order confirmations only sent for IL branch with `whatsapp_alerts_enabled=true`
 - **Database Tracking**: Track message status with `whatsapp_confirmation_sent` columns
+
+#### WhatsApp Business API (Hybrid Architecture):
+- **Library**: Use `@visapi/backend-whatsapp-business` for webhook receiving only
+- **Module Location**: `libs/backend/whatsapp-business/` (63% complete)
+- **Architecture**: Hybrid - CBB sends messages, WABA receives delivery webhooks
+- **Webhook Verification**: HMAC-SHA256 signature verification for Meta webhooks
+- **Translation Service**: Hebrew translations stored at order creation time
+- **Database Tables**: New tables for webhook events, templates, messages, conversations
+- **No Message Processor**: Continue using CBB for all message sending
+- **Dashboard**: Continue using CBB dashboard (no custom UI needed)
+- **Status**: Foundation complete, webhook receiving pending Meta credentials
 
 ### Common Fixes:
 
@@ -914,4 +940,4 @@ For deeper dives into specific technical implementations, see the `docs/` direct
 
 **Last Updated:** August 23, 2025
 **Version:** v1.0.0 - Production Ready  
-**Status:** Production stable with automatic CBB sync and WhatsApp order confirmations operational
+**Status:** Production stable with hybrid WhatsApp architecture (CBB sending + WABA webhooks 63% complete)

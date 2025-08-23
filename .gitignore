@@ -234,3 +234,6 @@ secrets.txt
 
 # Gemini AI settings (contains API tokens)
 .gemini/
+
+# Examples folder
+examples/

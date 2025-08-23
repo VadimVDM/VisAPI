@@ -1,0 +1,452 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  Body,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import { SupabaseService } from '@visapi/core-supabase';
+import {
+  WebhookVerifierService,
+  DeliveryTrackerService,
+  TemplateManagerService,
+  WebhookEvent,
+  WebhookVerifyDto,
+} from '@visapi/backend-whatsapp-business';
+import { firstValueFrom } from 'rxjs';
+import { v4 as uuidv4 } from 'uuid';
+
+@ApiTags('WhatsApp Webhooks')
+@Controller('v1/webhooks/whatsapp')
+export class WhatsAppWebhookController {
+  private readonly logger = new Logger(WhatsAppWebhookController.name);
+  private readonly zapierWebhookUrl: string;
+  private readonly slackWebhookUrl: string;
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
+    private readonly supabaseService: SupabaseService,
+    private readonly webhookVerifier: WebhookVerifierService,
+    private readonly deliveryTracker: DeliveryTrackerService,
+    private readonly templateManager: TemplateManagerService,
+  ) {
+    this.zapierWebhookUrl = this.configService.get('ZAPIER_WEBHOOK_URL', '');
+    this.slackWebhookUrl = this.configService.get('SLACK_WEBHOOK_URL', '');
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Verify WhatsApp webhook' })
+  @ApiResponse({ status: 200, description: 'Webhook verified' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async verifyWebhook(@Query() query: WebhookVerifyDto): Promise<string> {
+    this.logger.log('WhatsApp webhook verification request received');
+
+    try {
+      const challenge = this.webhookVerifier.verifyWebhookChallenge(query);
+
+      await this.trackWebhookEvent({
+        method: 'GET',
+        status: 'verified',
+        challenge,
+        details: {
+          mode: query['hub.mode'],
+          verified: true,
+        },
+      });
+
+      return challenge;
+    } catch (error) {
+      this.logger.error(`Webhook verification failed: ${error.message}`);
+
+      await this.trackWebhookEvent({
+        method: 'GET',
+        status: 'failed',
+        details: {
+          mode: query['hub.mode'],
+          error: error.message,
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Receive WhatsApp webhook events' })
+  @ApiResponse({ status: 200, description: 'Webhook processed' })
+  @ApiResponse({ status: 401, description: 'Invalid signature' })
+  async receiveWebhook(
+    @Body() body: WebhookEvent,
+    @Headers() headers: any,
+  ): Promise<{ status: string }> {
+    const eventId = uuidv4();
+    this.logger.log(`Received WhatsApp webhook event ${eventId}`);
+
+    try {
+      const signature = headers['x-hub-signature-256'];
+      const timestamp = headers['x-hub-timestamp'] || Date.now().toString();
+
+      const isValidSignature = await this.webhookVerifier.verifyWebhookSignature(
+        JSON.stringify(body),
+        signature,
+        timestamp,
+      );
+
+      if (!isValidSignature && this.configService.get('NODE_ENV') === 'production') {
+        this.logger.error('Invalid webhook signature');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+
+      const eventType = this.webhookVerifier.extractEventType(body);
+
+      await this.trackWebhookEvent({
+        id: eventId,
+        method: 'POST',
+        status: 'received',
+        timestamp: new Date(),
+        event_type: eventType,
+        payload: body,
+        signature_verified: isValidSignature,
+        processing_status: 'processing',
+      });
+
+      for (const entry of body.entry || []) {
+        for (const change of entry.changes || []) {
+          await this.processWebhookChange(change, eventId);
+        }
+      }
+
+      if (this.zapierWebhookUrl) {
+        await this.forwardToZapier(body, eventId);
+      }
+
+      await this.updateWebhookEventStatus(eventId, 'processed');
+
+      return { status: 'success' };
+    } catch (error: any) {
+      this.logger.error(`Error processing webhook: ${error.message}`, error);
+
+      await this.updateWebhookEventStatus(eventId, 'failed', error.message);
+
+      if (this.slackWebhookUrl) {
+        await this.sendSlackAlert('Webhook Processing Failed', {
+          eventId,
+          error: error.message,
+          eventType: this.webhookVerifier.extractEventType(body),
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  private async processWebhookChange(change: any, eventId: string): Promise<void> {
+    const { field, value } = change;
+
+    switch (field) {
+      case 'messages':
+        await this.processMessageWebhook(value, eventId);
+        break;
+
+      case 'message_template_status_update':
+        await this.processTemplateStatusWebhook(value, eventId);
+        break;
+
+      case 'account_update':
+        await this.processAccountUpdateWebhook(value, eventId);
+        break;
+
+      case 'business_capability_update':
+        await this.processBusinessCapabilityWebhook(value, eventId);
+        break;
+
+      default:
+        this.logger.warn(`Unknown webhook field: ${field}`);
+    }
+  }
+
+  private async processMessageWebhook(value: any, eventId: string): Promise<void> {
+    const statuses = value.statuses || [];
+
+    for (const status of statuses) {
+      this.logger.log(`Processing message status: ${status.id} - ${status.status}`);
+
+      const messageStatus = {
+        id: status.id,
+        status: status.status,
+        timestamp: new Date(status.timestamp * 1000),
+        recipient: status.recipient_id,
+        conversationId: status.conversation?.id,
+        conversationCategory: status.conversation?.category,
+        pricingModel: status.pricing?.pricing_model,
+        isBillable: status.pricing?.billable,
+        error: status.errors?.[0],
+      };
+
+      this.deliveryTracker.updateMessageStatus(messageStatus as any);
+
+      await this.updateMessageInDatabase(messageStatus);
+
+      if (status.status === 'failed' && this.slackWebhookUrl) {
+        await this.sendSlackAlert('WhatsApp Message Failed', {
+          messageId: status.id,
+          recipient: status.recipient_id,
+          error: status.errors?.[0],
+        });
+      }
+    }
+
+    const messages = value.messages || [];
+    for (const message of messages) {
+      this.logger.log(`Received incoming message ${message.id} from ${message.from}`);
+      
+      await this.trackIncomingMessage({
+        message_id: message.id,
+        phone_number: message.from,
+        event_type: 'incoming_message',
+        details: {
+          type: message.type,
+          text: message.text?.body,
+          timestamp: message.timestamp,
+        },
+      });
+    }
+  }
+
+  private async processTemplateStatusWebhook(value: any, eventId: string): Promise<void> {
+    this.logger.log(`Template status update: ${value.message_template_name} - ${value.event}`);
+
+    const templateUpdate = {
+      template_name: value.message_template_name,
+      language: value.message_template_language,
+      status: value.event,
+      reason: value.reason,
+    };
+
+    const { data: existingTemplate } = await this.supabaseService.serviceClient
+      .from('whatsapp_templates')
+      .select('*')
+      .eq('template_name', templateUpdate.template_name)
+      .eq('language', templateUpdate.language)
+      .single();
+
+    if (existingTemplate) {
+      await this.supabaseService.serviceClient
+        .from('whatsapp_templates')
+        .update({
+          status: templateUpdate.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('template_name', templateUpdate.template_name)
+        .eq('language', templateUpdate.language);
+    } else {
+      await this.supabaseService.serviceClient
+        .from('whatsapp_templates')
+        .insert({
+          template_name: templateUpdate.template_name,
+          language: templateUpdate.language,
+          status: templateUpdate.status,
+          components: [], // Required field, will be updated when syncing from Meta
+          updated_at: new Date().toISOString(),
+        });
+    }
+
+    if (templateUpdate.status === 'REJECTED' && this.slackWebhookUrl) {
+      await this.sendSlackAlert('WhatsApp Template Rejected', templateUpdate);
+    }
+
+    await this.templateManager.syncTemplatesFromMeta();
+  }
+
+  private async processAccountUpdateWebhook(value: any, eventId: string): Promise<void> {
+    this.logger.log(`Account update received: ${JSON.stringify(value)}`);
+
+    if (value.ban_info) {
+      this.logger.error('WhatsApp account banned!', value.ban_info);
+      
+      if (this.slackWebhookUrl) {
+        await this.sendSlackAlert('CRITICAL: WhatsApp Account Banned', value.ban_info);
+      }
+    }
+  }
+
+  private async processBusinessCapabilityWebhook(value: any, eventId: string): Promise<void> {
+    this.logger.log(`Business capability update: ${JSON.stringify(value)}`);
+
+    if (value.max_daily_conversation_per_phone) {
+      this.logger.log(`Daily conversation limit updated: ${value.max_daily_conversation_per_phone}`);
+    }
+
+    if (value.max_phone_numbers_per_business) {
+      this.logger.log(`Phone number limit updated: ${value.max_phone_numbers_per_business}`);
+    }
+  }
+
+  private async updateMessageInDatabase(status: any): Promise<void> {
+    try {
+      const updates: any = {
+        status: status.status,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (status.status === 'delivered') {
+        updates.delivered_at = status.timestamp;
+      } else if (status.status === 'read') {
+        updates.read_at = status.timestamp;
+      } else if (status.status === 'failed') {
+        updates.failed_at = status.timestamp;
+        updates.failure_reason = status.error?.message || 'Unknown error';
+      }
+
+      if (status.conversationId) {
+        updates.conversation_id = status.conversationId;
+        updates.conversation_category = status.conversationCategory;
+        updates.pricing_model = status.pricingModel;
+        updates.is_billable = status.isBillable;
+      }
+
+      await this.supabaseService.serviceClient.from('whatsapp_messages')
+        .update(updates)
+        .eq('message_id', status.id);
+
+      if (status.status === 'delivered' || status.status === 'read' || status.status === 'failed') {
+        const message = await this.supabaseService.serviceClient.from('whatsapp_messages')
+          .select('order_id')
+          .eq('message_id', status.id)
+          .single();
+
+        if (message.data?.order_id) {
+          const orderUpdate: any = {};
+          
+          if (status.status === 'delivered') {
+            orderUpdate.whatsapp_delivered_at = status.timestamp;
+          } else if (status.status === 'read') {
+            orderUpdate.whatsapp_read_at = status.timestamp;
+          } else if (status.status === 'failed') {
+            orderUpdate.whatsapp_failed_at = status.timestamp;
+            orderUpdate.whatsapp_failure_reason = status.error?.message || 'Unknown error';
+          }
+
+          await this.supabaseService.serviceClient.from('orders')
+            .update(orderUpdate)
+            .eq('order_id', message.data.order_id);
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`Failed to update message in database: ${error.message}`);
+    }
+  }
+
+  private async trackWebhookEvent(data: any): Promise<void> {
+    try {
+      await this.supabaseService.serviceClient.from('whatsapp_webhook_events').insert(data);
+    } catch (error: any) {
+      this.logger.error(`Failed to track webhook event: ${error.message}`);
+    }
+  }
+
+  private async trackIncomingMessage(data: any): Promise<void> {
+    try {
+      await this.supabaseService.serviceClient.from('whatsapp_webhook_events').insert({
+        method: 'POST',
+        status: 'received',
+        event_type: data.event_type,
+        message_id: data.message_id,
+        phone_number: data.phone_number,
+        details: data.details,
+        created_at: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to track incoming message: ${error.message}`);
+    }
+  }
+
+  private async updateWebhookEventStatus(
+    eventId: string,
+    status: string,
+    error?: string,
+  ): Promise<void> {
+    try {
+      const update: any = {
+        processing_status: status,
+      };
+
+      if (error) {
+        update.details = { error };
+      }
+
+      await this.supabaseService.serviceClient.from('whatsapp_webhook_events')
+        .update(update)
+        .eq('id', eventId);
+    } catch (error: any) {
+      this.logger.error(`Failed to update webhook event status: ${error.message}`);
+    }
+  }
+
+  private async forwardToZapier(body: any, eventId: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.httpService.post(this.zapierWebhookUrl, {
+          ...body,
+          visapi_event_id: eventId,
+          visapi_timestamp: new Date().toISOString(),
+        }),
+      );
+
+      await this.supabaseService.serviceClient.from('whatsapp_webhook_events')
+        .update({ forwarded_to_zapier: true })
+        .eq('id', eventId);
+
+      this.logger.log(`Webhook forwarded to Zapier for event ${eventId}`);
+    } catch (error: any) {
+      this.logger.error(`Failed to forward to Zapier: ${error.message}`);
+    }
+  }
+
+  private async sendSlackAlert(title: string, data: any): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.httpService.post(this.slackWebhookUrl, {
+          text: title,
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: title,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '```' + JSON.stringify(data, null, 2) + '```',
+              },
+            },
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: `Timestamp: ${new Date().toISOString()}`,
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    } catch (error: any) {
+      this.logger.error(`Failed to send Slack alert: ${error.message}`);
+    }
+  }
+}
