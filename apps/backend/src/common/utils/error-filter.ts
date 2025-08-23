@@ -26,6 +26,7 @@ export class ErrorFilter {
   static install(): void {
     const originalError = console.error;
     const originalWarn = console.warn;
+    const originalLog = console.log;
 
     console.error = (...args: any[]) => {
       const message = args.map(arg => 
@@ -47,6 +48,22 @@ export class ErrorFilter {
       if (!this.shouldSuppress(message)) {
         originalWarn.apply(console, args);
       }
+    };
+
+    // Also filter console.log since NestJS might use it for warnings
+    console.log = (...args: any[]) => {
+      const message = args.map(arg => 
+        typeof arg === 'string' ? arg : 
+        arg?.message || arg?.toString() || JSON.stringify(arg)
+      ).join(' ');
+
+      // Only suppress if it contains warning patterns
+      if (message.includes('LegacyRouteConverter') || 
+          message.includes('Unsupported route path')) {
+        return;
+      }
+
+      originalLog.apply(console, args);
     };
   }
 }
