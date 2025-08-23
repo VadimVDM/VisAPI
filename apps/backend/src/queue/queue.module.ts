@@ -31,14 +31,17 @@ import {
         const redisUrl = configService.redisUrl;
 
         if (!redisUrl || redisUrl === 'h') {
-          // Return a config that will fail gracefully
+          // Return a config that will fail gracefully WITHOUT attempting connection
+          logger.warn('Redis URL not configured - queue functionality disabled');
           return {
             connection: {
-              host: 'localhost',
+              host: 'disabled.invalid',
               port: 6379,
               maxRetriesPerRequest: 0,
               retryStrategy: () => null,
               enableOfflineQueue: false,
+              lazyConnect: true,
+              enableReadyCheck: false,
             },
           };
         }

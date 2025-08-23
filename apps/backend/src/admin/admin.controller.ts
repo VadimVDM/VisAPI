@@ -19,7 +19,7 @@ export class AdminController {
   }
 
   @ApiExcludeEndpoint()
-  @All('*')
+  @All(':path(*)')
   handleAllQueueSubPaths(
     @Req() req: Request,
     @Res() res: Response,
