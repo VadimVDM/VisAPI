@@ -572,8 +572,9 @@ export class ViziWebhooksController {
       );
 
       // Return formatted result based on sync result
-      const isSuccess = result.status === 'success';
-      const message = isSuccess
+      // Consider both 'success' and 'no_whatsapp' as successful operations
+      const isSuccess = result.status === 'success' || result.status === 'no_whatsapp';
+      const message = result.status === 'success'
         ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
         : result.status === 'no_whatsapp'
           ? 'CBB contact synced but WhatsApp not available'
