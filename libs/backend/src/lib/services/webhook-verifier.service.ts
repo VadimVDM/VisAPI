@@ -55,13 +55,14 @@ export class WebhookVerifierService {
     }
 
     try {
-      const timestampStr = timestamp || Date.now().toString();
-      
+      // Meta's webhook signature is calculated as: sha256=HMAC-SHA256(payload, app_secret)
+      // No timestamp is included in the signature calculation
       const expectedSignature = crypto
         .createHmac('sha256', this.webhookSecret)
-        .update(timestampStr + payload)
+        .update(payload)
         .digest('hex');
 
+      // Remove 'sha256=' prefix if present
       const providedSignature = signature.replace('sha256=', '');
 
       const isValid = crypto.timingSafeEqual(
@@ -70,7 +71,9 @@ export class WebhookVerifierService {
       );
 
       if (!isValid) {
-        this.logger.error('Webhook signature verification failed');
+        this.logger.error(`Webhook signature verification failed`);
+        this.logger.debug(`Expected: sha256=${expectedSignature}`);
+        this.logger.debug(`Received: ${signature}`);
       } else {
         this.logger.log('Webhook signature verified successfully');
       }
