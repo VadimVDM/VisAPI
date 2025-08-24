@@ -102,10 +102,14 @@ Modern layered architecture with enterprise design patterns:
 #### Hybrid Architecture
 - **CBB for Sending**: All messages sent through CBB API/Dashboard
 - **Meta for Receiving**: All delivery events received via Meta webhooks
+- **Zapier Forwarding**: Raw webhook payloads forwarded unchanged
 
-#### Webhook Endpoints
-- `GET /api/v1/webhooks/whatsapp` - Webhook verification
-- `POST /api/v1/webhooks/whatsapp` - Receive all Meta events
+#### Webhook Configuration
+- **Endpoint**: `https://api.visanet.app/api/v1/webhooks/whatsapp`
+- **GET**: Webhook verification with verify token
+- **POST**: Receive all Meta events with signature verification
+- **Verify Token**: `Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U`
+- **Signature**: HMAC-SHA256 using `WABA_WEBHOOK_SECRET`
 
 #### Template Management
 - `POST /api/v1/whatsapp/templates/sync` - Manual sync from Meta
@@ -114,13 +118,21 @@ Modern layered architecture with enterprise design patterns:
 - Automatic synchronization every hour (configurable)
 
 #### Features
-- HMAC-SHA256 webhook signature verification
-- Captures ALL events for phone number: 1182477616994327
-- Stores events in `whatsapp_webhook_events` table
-- Tracks delivery status: sent → delivered → read → failed
-- Handles incoming customer messages
-- Template status monitoring
-- Conversation-based pricing tracking
+- ✅ HMAC-SHA256 webhook signature verification
+- ✅ Captures ALL events for phone number: 1182477616994327
+- ✅ Stores events in `whatsapp_webhook_events` table
+- ✅ Tracks delivery status: sent → delivered → read → failed
+- ✅ Handles incoming customer messages
+- ✅ Template status monitoring
+- ✅ Conversation-based pricing tracking
+- ✅ Zapier webhook forwarding (raw payload)
+
+#### Business Rules for Processing Times
+- Database function `calculate_processing_days()` determines processing time
+- Automatic calculation via trigger on order insert/update
+- Configurable rules in `processing_rules` table with audit trail
+- Default: 3 days, Morocco: 5 days, Vietnam: 7 days, Urgent: 1 day
+- Fallback logic in `WhatsAppTranslationService` when DB unavailable
 
 ## Architecture Review Implementation (August 23, 2025)
 
@@ -178,19 +190,20 @@ Modern layered architecture with enterprise design patterns:
 | Template Sync | `/api/v1/whatsapp/templates` | ✅ | 10 templates |
 | Build | `pnpm build:backend` | ✅ | Success |
 
-### Recent Fixes (August 24, 2025)
+### Recent Fixes (August 25, 2025)
 
 1. **WhatsApp Integration** ✅ - Fully operational with Meta webhooks
-2. **TypeScript Strict Mode** ✅ - All errors resolved
-3. **Health Check** ✅ - Fixed Redis configuration issues
-4. **Module Dependencies** ✅ - Added AuthModule to WhatsApp module
+2. **Webhook Signature Verification** ✅ - HMAC-SHA256 validation working
+3. **Zapier Forwarding** ✅ - Raw webhook payloads forwarded correctly
+4. **TypeScript Strict Mode** ✅ - All errors resolved
+5. **Health Check** ✅ - Fixed Redis configuration issues
 
-### Files Modified (August 24, 2025)
+### Files Modified (August 25, 2025)
 
-- `src/webhooks/whatsapp-webhook.controller.ts` - WhatsApp webhook handler
+- `src/webhooks/whatsapp-webhook.controller.ts` - Cleaned up debugging logs
+- `libs/backend/src/lib/services/webhook-verifier.service.ts` - Simplified signature verification
 - `src/whatsapp/whatsapp-management.controller.ts` - Template management
 - `src/webhooks/whatsapp-webhooks.module.ts` - Added AuthModule
-- `src/queue/queue.module.ts` - Fixed Redis public URL handling
 - `libs/backend/whatsapp-business/*` - Complete WABA module
 
-Last Updated: August 24, 2025
+Last Updated: August 25, 2025

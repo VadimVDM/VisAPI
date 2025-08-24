@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@visapi/core-config';
 
 /**
@@ -80,7 +80,7 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const swaggerPassword = process.env['SWAGGER_PASSWORD'] || '';
   const swaggerApiKeys = new Set(process.env['SWAGGER_API_KEYS']?.split(',') || []);
 
-  return (req: Request, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     // Allow unrestricted access in development/test
     if (!isProduction) {
       return next();

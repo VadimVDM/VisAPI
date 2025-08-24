@@ -115,6 +115,7 @@ WhatsApp Business API requires this specific template format:
 'visa_country': '877737'
 'visa_type': '527249'
 'OrderNumber': '459752'
+'order_days': '271948'  // Processing days (number only)
 // ... see fieldIdMap for complete list
 ```
 

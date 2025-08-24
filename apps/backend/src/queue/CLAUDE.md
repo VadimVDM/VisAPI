@@ -39,11 +39,11 @@ Processes incoming webhooks with retry logic.
 - `WebhookProcessor`: Handles webhook payloads
 - `CronProcessor`: Manages scheduled jobs
 
-### Supporting Services (Refactored August 22, 2025)
-- `WhatsAppTranslationService` (292 lines): Hebrew translations and mappings
-- `WhatsAppTemplateService` (120 lines): Template building and formatting
-- `CBBFieldMapperService` (262 lines): Maps order data to CBB contact fields
-- `CBBSyncOrchestratorService` (305 lines): Handles sync workflow logic
+### Supporting Services (Updated August 25, 2025)
+- `WhatsAppTranslationService` (323 lines): Hebrew translations with database-driven processing times
+- `WhatsAppTemplateService` (130 lines): Template building and formatting
+- `CBBFieldMapperService` (301 lines): Maps order data to CBB contact fields including `order_days`
+- `CBBSyncOrchestratorService` (328 lines): Handles sync workflow logic
 
 ## Configuration
 
@@ -61,4 +61,19 @@ WhatsApp processor includes complete Hebrew translations for:
 - Validity periods (month, year, etc.)
 - Processing time messages
 
-Last Updated: August 22, 2025
+## Business Rules Engine
+
+Processing times are now database-driven (August 25, 2025):
+- **Database Function**: `calculate_processing_days()` in PostgreSQL
+- **Automatic Trigger**: Calculates on order insert/update
+- **Configuration Table**: `processing_rules` with JSON conditions/actions
+- **Audit Trail**: `processing_rules_audit` tracks all changes
+- **Default Rules**:
+  - Standard: 3 business days (all countries)
+  - Morocco: 5 business days
+  - Vietnam: 7 business days
+  - Urgent: 1 business day (overrides country)
+- **CBB Integration**: Maps to `order_days` field (ID: 271948)
+- **Fallback Logic**: Service includes hardcoded fallback when DB unavailable
+
+Last Updated: August 25, 2025

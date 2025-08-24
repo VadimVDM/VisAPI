@@ -16,10 +16,7 @@ export class WebhookVerifierService {
                          this.configService.get('WABA_APP_SECRET', '');
     
     if (!this.webhookSecret) {
-      this.logger.warn('⚠️ WABA_WEBHOOK_SECRET not configured - webhook signature verification will fail');
-      this.logger.warn('Please set WABA_WEBHOOK_SECRET to your Meta App Secret from: https://developers.facebook.com/apps/YOUR_APP_ID/settings/basic/');
-    } else {
-      this.logger.log(`✅ Webhook secret configured (length: ${this.webhookSecret.length})`);
+      this.logger.warn('WABA_WEBHOOK_SECRET not configured - webhook signature verification disabled');
     }
   }
 
@@ -28,15 +25,11 @@ export class WebhookVerifierService {
     const token = query['hub.verify_token'];
     const challenge = query['hub.challenge'];
 
-    this.logger.log(`Webhook verification attempt - Mode: ${mode}, Token: ${token?.substring(0, 10)}...`);
-
     if (mode !== 'subscribe') {
-      this.logger.error(`Invalid hub.mode: ${mode}`);
       throw new UnauthorizedException('Invalid hub.mode');
     }
 
     if (token !== this.verifyToken) {
-      this.logger.error('Invalid verify token');
       throw new UnauthorizedException('Invalid verify token');
     }
 
@@ -49,23 +42,19 @@ export class WebhookVerifierService {
     signature: string | undefined,
     timestamp?: string,
   ): Promise<boolean> {
-    // If no webhook secret is configured, skip verification (development only)
+    // If no webhook secret is configured, skip verification
     if (!this.webhookSecret) {
-      this.logger.warn('⚠️ WABA_WEBHOOK_SECRET not configured - skipping signature verification');
-      this.logger.warn('This is INSECURE and should only be used for development/debugging');
-      return true; // Allow webhook through for debugging
+      return true;
     }
 
     // If no signature provided but secret is configured, reject
     if (!signature) {
       this.logger.error('Missing webhook signature in request headers');
-      this.logger.debug('Expected header: X-Hub-Signature-256');
       return false;
     }
 
     try {
       // Meta's webhook signature is calculated as: sha256=HMAC-SHA256(payload, app_secret)
-      // No timestamp is included in the signature calculation
       const expectedSignature = crypto
         .createHmac('sha256', this.webhookSecret)
         .update(payload)
@@ -74,27 +63,13 @@ export class WebhookVerifierService {
       // Remove 'sha256=' prefix if present
       const providedSignature = signature.replace('sha256=', '');
 
-      // Both signatures must be valid hex strings of same length
-      let isValid = false;
-      try {
-        isValid = crypto.timingSafeEqual(
-          Buffer.from(providedSignature, 'hex'),
-          Buffer.from(expectedSignature, 'hex'),
-        );
-      } catch (bufferError) {
-        this.logger.error(`Signature buffer comparison error: ${bufferError instanceof Error ? bufferError.message : String(bufferError)}`);
-        this.logger.debug(`Provided signature length: ${providedSignature.length}`);
-        this.logger.debug(`Expected signature length: ${expectedSignature.length}`);
-        return false;
-      }
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(providedSignature, 'hex'),
+        Buffer.from(expectedSignature, 'hex'),
+      );
 
       if (!isValid) {
-        this.logger.error(`Webhook signature verification failed`);
-        this.logger.debug(`Expected: sha256=${expectedSignature}`);
-        this.logger.debug(`Received: ${signature}`);
-        this.logger.debug(`Secret length: ${this.webhookSecret.length} chars`);
-      } else {
-        this.logger.log('✅ Webhook signature verified successfully');
+        this.logger.error('Webhook signature verification failed');
       }
 
       return isValid;

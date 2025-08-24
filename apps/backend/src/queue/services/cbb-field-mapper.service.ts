@@ -1,6 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CBBContactData } from '@visapi/shared-types';
 
+interface PassportData {
+  sex?: 'm' | 'f';
+  [key: string]: unknown;
+}
+
+interface ApplicantData {
+  passport?: PassportData;
+  [key: string]: unknown;
+}
+
 interface OrderData {
   order_id: string;
   client_phone: string;
@@ -21,7 +31,7 @@ interface OrderData {
   form_id: string;
   webhook_received_at: string;
   whatsapp_alerts_enabled: boolean | null;
-  applicants_data?: any;
+  applicants_data?: ApplicantData[];
   cbb_synced?: boolean | null;
   cbb_contact_id?: string | null;
   whatsapp_confirmation_sent?: boolean | null;
@@ -196,7 +206,7 @@ export class CBBFieldMapperService {
   /**
    * Extract gender from applicant passport data
    */
-  private extractGender(applicantsData: any, orderId: string): string | undefined {
+  private extractGender(applicantsData: ApplicantData[] | undefined, orderId: string): string | undefined {
     if (!applicantsData || !Array.isArray(applicantsData) || !applicantsData[0]) {
       return undefined;
     }

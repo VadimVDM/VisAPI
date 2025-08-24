@@ -1,12 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ViziWebhookDto } from '@visapi/visanet-types';
+import { OrderRecord } from '@visapi/backend-repositories';
 import { CreateOrderCommand } from './commands/create-order.command';
 import { SyncOrderToCBBCommand } from './commands/sync-order-to-cbb.command';
 import { UpdateOrderProcessingCommand } from './commands/update-order-processing.command';
 import { GetOrderByIdQuery } from './queries/get-order-by-id.query';
 import { GetOrdersQuery } from './queries/get-orders.query';
 import { GetOrderStatsQuery } from './queries/get-order-stats.query';
+
+export interface OrderStats {
+  totalOrders: number;
+  totalAmount: number;
+  averageAmount: number;
+  statusCounts: Record<string, number>;
+  branchCounts: Record<string, number>;
+  countryCounts: Record<string, number>;
+  period: string;
+  [key: string]: unknown;
+}
 
 /**
  * OrdersService - Main service for order management
@@ -53,7 +65,7 @@ export class OrdersService {
    * Get an order by ID
    * Delegates to GetOrderByIdQuery via CQRS
    */
-  async getOrderById(orderId: string, includeRelations = false): Promise<any> {
+  async getOrderById(orderId: string, includeRelations = false): Promise<OrderRecord | null> {
     const query = new GetOrderByIdQuery(orderId, includeRelations);
     return await this.queryBus.execute(query);
   }
@@ -63,9 +75,21 @@ export class OrdersService {
    * Delegates to GetOrdersQuery via CQRS
    */
   async getOrders(
-    filters?: any,
-    pagination?: any,
-  ): Promise<{ data: any[]; total: number }> {
+    filters?: {
+      branch?: string;
+      orderStatus?: string;
+      startDate?: string;
+      endDate?: string;
+      clientEmail?: string;
+      whatsappEnabled?: boolean;
+    },
+    pagination?: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<{ data: OrderRecord[]; total: number }> {
     const query = new GetOrdersQuery(filters, pagination);
     return await this.queryBus.execute(query);
   }
@@ -79,7 +103,7 @@ export class OrdersService {
     branch?: string,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<any> {
+  ): Promise<OrderStats> {
     const query = new GetOrderStatsQuery(
       period,
       branch,

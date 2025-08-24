@@ -142,7 +142,10 @@ export type Database = {
           payment_id: string
           payment_processor: string
           processed_at: string | null
+          processing_days: number | null
+          processing_days_calculated_at: string | null
           processing_days_hebrew: string | null
+          processing_rule_id: string | null
           product_country: string
           product_country_flag: string | null
           product_country_hebrew: string | null
@@ -208,7 +211,10 @@ export type Database = {
           payment_id: string
           payment_processor: string
           processed_at?: string | null
+          processing_days?: number | null
+          processing_days_calculated_at?: string | null
           processing_days_hebrew?: string | null
+          processing_rule_id?: string | null
           product_country: string
           product_country_flag?: string | null
           product_country_hebrew?: string | null
@@ -274,7 +280,10 @@ export type Database = {
           payment_id?: string
           payment_processor?: string
           processed_at?: string | null
+          processing_days?: number | null
+          processing_days_calculated_at?: string | null
           processing_days_hebrew?: string | null
+          processing_rule_id?: string | null
           product_country?: string
           product_country_flag?: string | null
           product_country_hebrew?: string | null
@@ -301,7 +310,95 @@ export type Database = {
           whatsapp_read_at?: string | null
           workflow_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "orders_processing_rule_id_fkey"
+            columns: ["processing_rule_id"]
+            isOneToOne: false
+            referencedRelation: "processing_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processing_rules: {
+        Row: {
+          actions: Json
+          conditions: Json
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          actions: Json
+          conditions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
         Relationships: []
+      }
+      processing_rules_audit: {
+        Row: {
+          action: string
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          rule_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          rule_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          rule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_rules_audit_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "processing_rules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roles: {
         Row: {
@@ -737,6 +834,15 @@ export type Database = {
           inserted_count: number
           skipped_count: number
         }[]
+      }
+      calculate_processing_days: {
+        Args: {
+          p_country: string
+          p_order_amount?: number
+          p_urgency?: string
+          p_visa_type?: string
+        }
+        Returns: number
       }
       check_user_permission: {
         Args: { p_action: string; p_resource: string; p_user_id: string }

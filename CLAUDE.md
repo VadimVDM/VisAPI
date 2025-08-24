@@ -17,6 +17,7 @@ Essential reference for AI assistants. Updated: August 23, 2025
 - ✅ **WhatsApp messaging** via CBB API with Hebrew support
 - ✅ **WhatsApp Business API webhooks** receiving all Meta events
 - ✅ **Template synchronization** with automatic hourly sync from Meta
+- ✅ **Zapier forwarding** of all Meta webhooks in raw format
 - ✅ **CQRS architecture** with repository pattern
 - ✅ **TypeScript strict mode** fully enabled
 - ✅ **16 test suites passing** (100% success rate)
@@ -126,12 +127,29 @@ GET  /api/v1/queue/metrics           # Queue status
 - Dashboard at CBB for manual sending
 
 ### Webhook Receiving (Meta WABA)
-- All delivery tracking via Meta webhooks
-- HMAC-SHA256 signature verification
-- Receives ALL events for phone number ID: 1182477616994327
-- Captures events from CBB dashboard, API, and customer replies
-- Automatic template synchronization every hour
-- Stores events in `whatsapp_webhook_events` table
+- **Endpoint**: `https://api.visanet.app/api/v1/webhooks/whatsapp`
+- **Verification**: HMAC-SHA256 signature using `WABA_WEBHOOK_SECRET`
+- **Verify Token**: `Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U`
+- **Phone Number ID**: 1182477616994327
+- **Events Captured**:
+  - Message delivery status (sent, delivered, read, failed)
+  - Template status updates (approved, rejected)
+  - Incoming customer messages
+  - Account updates and alerts
+- **Storage**: All events in `whatsapp_webhook_events` table
+- **Zapier Forwarding**: Raw webhook payloads forwarded unchanged
+
+### Business Rules Engine (Processing Times)
+- **Database-driven configuration** via `processing_rules` table
+- **Automatic calculation** on order insert/update via trigger
+- **Default rules**:
+  - Standard: 3 business days (all countries)
+  - Morocco: 5 business days
+  - Vietnam: 7 business days
+  - Urgent: 1 business day (overrides country rules)
+- **Audit trail** in `processing_rules_audit` table
+- **Fallback logic** when database unavailable
+- **CBB field**: `order_days` (ID: 271948)
 
 ## Environment Variables
 
@@ -156,10 +174,13 @@ CBB_API_BASE_URL=https://...
 CBB_ACCESS_TOKEN=...
 
 # WhatsApp Meta Business API
-WABA_PHONE_NUMBER_ID=...
+WABA_PHONE_NUMBER_ID=1182477616994327
 WABA_ACCESS_TOKEN=...
-WABA_WEBHOOK_SECRET=...
-WABA_APP_SECRET=...
+WABA_WEBHOOK_SECRET=<Meta App Secret from developers.facebook.com>
+WABA_VERIFY_TOKEN=Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U
+
+# Zapier Webhook
+ZAPIER_WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/...
 ```
 
 ## Troubleshooting
@@ -220,5 +241,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.0.1 Production
-**Last Updated**: August 24, 2025
+**Version**: v1.0.3 Production
+**Last Updated**: August 25, 2025

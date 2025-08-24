@@ -27,7 +27,8 @@ async function bootstrap() {
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+    const expressInstance = app.getHttpAdapter().getInstance() as { set: (key: string, value: number) => void };
+    expressInstance.set('trust proxy', 1);
     Logger.log('Trust proxy enabled for production environment');
   }
 

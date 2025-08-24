@@ -62,31 +62,31 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<ApiResponse<T>> {
-    const request = context.switchToHttp().getRequest() as {
+    const request = context.switchToHttp().getRequest<{
       correlationId?: string;
       headers: { 'x-correlation-id'?: string };
-    };
+    }>();
     const correlationId = request.correlationId || request.headers['x-correlation-id'];
 
     return next.handle().pipe(
       map((data): ApiResponse<T> => {
         // Handle paginated responses
         if (this.isPaginatedResponse(data)) {
-          return this.createPaginatedResponse(data, correlationId) as unknown as ApiResponse<T>;
+          return this.createPaginatedResponse(data, correlationId) as ApiResponse<T>;
         }
 
         // Handle error responses
         if (this.isErrorResponse(data)) {
-          return this.createErrorResponse(data, correlationId) as unknown as ApiResponse<T>;
+          return this.createErrorResponse(data, correlationId) as ApiResponse<T>;
         }
 
         // Handle null/undefined responses
         if (data === null || data === undefined) {
-          return this.createEmptyResponse(correlationId) as unknown as ApiResponse<T>;
+          return this.createEmptyResponse(correlationId) as ApiResponse<T>;
         }
 
         // Standard success response
-        return this.createSuccessResponse(data, correlationId);
+        return this.createSuccessResponse(data as T, correlationId);
       }),
     );
   }
