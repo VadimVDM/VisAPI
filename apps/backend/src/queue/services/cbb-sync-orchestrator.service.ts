@@ -5,6 +5,7 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { QueueService } from '../queue.service';
 import { CBBFieldMapperService } from './cbb-field-mapper.service';
+import { CBBSyncMetricsService } from './cbb-sync-metrics.service';
 
 interface OrderData {
   order_id: string;
@@ -48,58 +49,157 @@ export class CBBSyncOrchestratorService {
     private readonly logService: LogService,
     private readonly queueService: QueueService,
     private readonly fieldMapper: CBBFieldMapperService,
+    private readonly metricsService: CBBSyncMetricsService,
   ) {}
 
   /**
-   * Main sync orchestration method
+   * Main sync orchestration method with enhanced error handling
    */
   async syncOrderToCBB(orderId: string): Promise<CBBContactSyncResult> {
     this.logger.log(`Starting CBB contact sync for order: ${orderId}`);
+    
+    // Start metrics tracking
+    const endTimer = this.metricsService.startSync();
 
     // 1. Fetch order details
     const order = await this.getOrderByOrderId(orderId);
     if (!order) {
+      const duration = endTimer();
+      this.metricsService.recordSyncComplete('failed', 'skipped', 'unknown', duration);
+      this.metricsService.recordSyncError('order_not_found', 'unknown');
       throw new Error(`Order ${orderId} not found`);
     }
 
-    // 2. Check if already synced
-    if (order.cbb_synced === true) {
-      this.logger.log(`Order ${orderId} already synced`);
+    const branch = order.branch || 'unknown';
+    
+    // 2. Update sync attempt tracking
+    await this.updateSyncAttempt(orderId);
+    this.metricsService.recordSyncAttempt(branch);
+
+    // 3. Check if already synced
+    if (order.cbb_synced === true && order.cbb_contact_id) {
+      this.logger.log(`Order ${orderId} already synced with contact ${order.cbb_contact_id}`);
+      const duration = endTimer();
+      this.metricsService.recordSyncComplete('success', 'skipped', branch, duration);
       return {
         status: 'success',
         action: 'skipped',
-        contactId: order.cbb_contact_id ?? undefined,
+        contactId: order.cbb_contact_id,
       };
     }
 
-    // 3. Prepare contact data
-    const contactData = this.fieldMapper.mapOrderToContact(order);
+    try {
+      // 4. Prepare contact data
+      const contactData = this.fieldMapper.mapOrderToContact(order);
 
-    // 4. Create or update contact
-    const { contact, isNewContact } = await this.createOrUpdateContact(
-      order.client_phone,
-      contactData,
-      orderId,
-    );
+      // 5. Create or update contact with error handling
+      const { contact, isNewContact, error } = await this.createOrUpdateContactSafe(
+        order.client_phone,
+        contactData,
+        orderId,
+      );
 
-    // 5. Validate WhatsApp availability
-    const hasWhatsApp = await this.cbbService.validateWhatsApp(order.client_phone);
+      if (error) {
+        // Log the error but don't fail completely
+        await this.recordSyncError(orderId, error);
+        
+        // If contact creation failed, we can't continue
+        if (!contact) {
+          throw new Error(`Failed to create/update contact: ${error}`);
+        }
+        
+        // If we have a contact but with errors (e.g., field update failed), continue
+        this.logger.warn(
+          `Partial sync success for order ${orderId}: contact ${contact.id} created/found but with errors: ${error}`,
+        );
+      }
 
-    // 6. Update order with results
-    await this.updateOrderCBBStatus(orderId, contact.id, true);
+      // 6. Validate WhatsApp availability
+      let hasWhatsApp = false;
+      try {
+        hasWhatsApp = await this.cbbService.validateWhatsApp(order.client_phone);
+        this.metricsService.recordWhatsAppAvailability(hasWhatsApp, branch);
+      } catch (whatsappError) {
+        this.logger.warn(
+          `WhatsApp validation failed for ${order.client_phone}: ${(whatsappError as Error).message}`,
+        );
+        this.metricsService.recordWhatsAppAvailability(false, branch);
+        // Continue without WhatsApp
+      }
 
-    // 7. Queue WhatsApp confirmation if applicable
-    await this.queueWhatsAppConfirmation(order, contact.id, hasWhatsApp);
+      // 7. Update order with results
+      await this.updateOrderCBBStatus(orderId, contact?.id, true, error);
 
-    // 8. Log success
-    await this.logSyncSuccess(order, contact.id, isNewContact, hasWhatsApp);
+      // 8. Queue WhatsApp confirmation if applicable
+      if (contact && !error) {
+        await this.queueWhatsAppConfirmation(order, contact.id, hasWhatsApp);
+      }
 
-    return {
-      status: hasWhatsApp ? 'success' : 'no_whatsapp',
-      action: isNewContact ? 'created' : 'updated',
-      contactId: contact.id,
-      hasWhatsApp,
-    };
+      // 9. Log success
+      await this.logSyncSuccess(order, contact?.id, isNewContact, hasWhatsApp);
+
+      // Record metrics
+      const duration = endTimer();
+      const status = error ? 'partial' : (hasWhatsApp ? 'success' : 'success');
+      const action = isNewContact ? 'created' : 'updated';
+      this.metricsService.recordSyncComplete(status, action, branch, duration);
+
+      return {
+        status: hasWhatsApp ? 'success' : 'no_whatsapp',
+        action: isNewContact ? 'created' : 'updated',
+        contactId: contact?.id,
+        hasWhatsApp,
+      };
+    } catch (error) {
+      // Record the error and re-throw
+      const duration = endTimer();
+      const errorType = this.categorizeError(error);
+      this.metricsService.recordSyncComplete('failed', 'skipped', branch, duration);
+      this.metricsService.recordSyncError(errorType, branch);
+      await this.recordSyncError(orderId, (error as Error).message);
+      throw error;
+    }
+  }
+
+  /**
+   * Create or update CBB contact with safe error handling
+   */
+  private async createOrUpdateContactSafe(
+    phoneNumber: string,
+    contactData: any,
+    orderId: string,
+  ): Promise<{ contact: any; isNewContact: boolean; error?: string }> {
+    try {
+      const result = await this.createOrUpdateContact(phoneNumber, contactData, orderId);
+      return { ...result, error: undefined };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to create/update contact for order ${orderId}: ${errorMessage}`,
+        error,
+      );
+      
+      // Try to at least get the contact if it exists
+      try {
+        const existingContact = await this.cbbService.getContactById(phoneNumber);
+        if (existingContact) {
+          return {
+            contact: existingContact,
+            isNewContact: false,
+            error: `Found existing contact but update failed: ${errorMessage}`,
+          };
+        }
+      } catch (fetchError) {
+        // Even fetching failed
+        this.logger.error(`Could not even fetch contact ${phoneNumber}:`, fetchError);
+      }
+      
+      return {
+        contact: null,
+        isNewContact: false,
+        error: errorMessage,
+      };
+    }
   }
 
   /**
@@ -112,6 +212,7 @@ export class CBBSyncOrchestratorService {
   ): Promise<{ contact: any; isNewContact: boolean }> {
     // Check if contact exists
     let contact = await this.cbbService.getContactById(phoneNumber);
+    this.metricsService.recordContactOperation('fetch', contact ? 'success' : 'failed');
     
     if (contact) {
       // CBB API limitation: Can only update custom fields, not basic fields
@@ -129,14 +230,26 @@ export class CBBSyncOrchestratorService {
       }
 
       // Update custom fields only
-      contact = await this.cbbService.updateContactComplete(contactData);
-      this.logger.log(`Updated CBB contact custom fields for order ${orderId}`);
+      try {
+        contact = await this.cbbService.updateContactComplete(contactData);
+        this.metricsService.recordContactOperation('update', 'success');
+        this.logger.log(`Updated CBB contact custom fields for order ${orderId}`);
+      } catch (updateError) {
+        this.metricsService.recordContactOperation('update', 'failed');
+        throw updateError;
+      }
       
       return { contact, isNewContact: false };
     } else {
       // Create new contact
-      contact = await this.cbbService.createContactWithFields(contactData);
-      this.logger.log(`Created new CBB contact for order ${orderId}`);
+      try {
+        contact = await this.cbbService.createContactWithFields(contactData);
+        this.metricsService.recordContactOperation('create', 'success');
+        this.logger.log(`Created new CBB contact for order ${orderId}`);
+      } catch (createError) {
+        this.metricsService.recordContactOperation('create', 'failed');
+        throw createError;
+      }
       
       return { contact, isNewContact: true };
     }
@@ -297,20 +410,104 @@ export class CBBSyncOrchestratorService {
   }
 
   /**
+   * Update sync attempt tracking
+   */
+  private async updateSyncAttempt(orderId: string): Promise<void> {
+    // First get current value
+    const { data: order } = await this.supabaseService.serviceClient
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+    
+    const currentAttempts = (order as any)?.cbb_sync_attempts || 0;
+    
+    const { error } = await this.supabaseService.serviceClient
+      .from('orders')
+      .update({
+        cbb_sync_attempts: currentAttempts + 1,
+        cbb_sync_last_attempt_at: new Date().toISOString(),
+      } as any)
+      .eq('order_id', orderId);
+
+    if (error) {
+      this.logger.warn(`Failed to update sync attempt for order ${orderId}:`, error);
+    }
+  }
+
+  /**
+   * Record sync error in database
+   */
+  private async recordSyncError(orderId: string, errorMessage: string): Promise<void> {
+    // First get current error count
+    const { data: order } = await this.supabaseService.serviceClient
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+    
+    const currentErrorCount = (order as any)?.cbb_sync_error_count || 0;
+    
+    const { error } = await this.supabaseService.serviceClient
+      .from('orders')
+      .update({
+        cbb_sync_last_error: errorMessage.substring(0, 500), // Limit error message length
+        cbb_sync_error_count: currentErrorCount + 1,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('order_id', orderId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to record sync error for order ${orderId}:`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Categorize error type for metrics
+   */
+  private categorizeError(error: unknown): string {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    
+    if (message.includes('timeout')) return 'timeout';
+    if (message.includes('network')) return 'network';
+    if (message.includes('unauthorized') || message.includes('401')) return 'auth';
+    if (message.includes('rate limit') || message.includes('429')) return 'rate_limit';
+    if (message.includes('not found') || message.includes('404')) return 'not_found';
+    if (message.includes('validation') || message.includes('invalid')) return 'validation';
+    if (message.includes('database') || message.includes('supabase')) return 'database';
+    if (message.includes('cbb') || message.includes('api')) return 'api_error';
+    
+    return 'unknown';
+  }
+
+  /**
    * Update order with CBB sync status
    */
   private async updateOrderCBBStatus(
     orderId: string,
-    contactId: string,
+    contactId: string | null,
     synced: boolean,
+    errorMessage?: string,
   ): Promise<void> {
+    const updateData: any = {
+      cbb_contact_id: contactId,
+      cbb_synced: synced,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Clear error fields on success
+    if (synced && !errorMessage) {
+      updateData.cbb_sync_last_error = null;
+    } else if (errorMessage) {
+      updateData.cbb_sync_last_error = errorMessage.substring(0, 500);
+    }
+
     const { error } = await this.supabaseService.serviceClient
       .from('orders')
-      .update({
-        cbb_contact_id: contactId,
-        cbb_synced: synced,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('order_id', orderId);
 
     if (error) {

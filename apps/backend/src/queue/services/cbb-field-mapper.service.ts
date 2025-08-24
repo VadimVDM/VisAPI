@@ -174,7 +174,8 @@ export class CBBFieldMapperService {
    * Determine if order is urgent
    */
   private isOrderUrgent(urgency: string): boolean {
-    return urgency === 'urgent' || urgency === 'express';
+    const urgentValues = ['urgent', 'express', 'few_hours', 'next_day', 'rush', 'priority'];
+    return urgentValues.includes(urgency.toLowerCase());
   }
 
   /**

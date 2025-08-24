@@ -81,7 +81,8 @@ export class OrderTransformerService {
           }
         )?.date,
       ),
-      urgency: form.urgency || 'standard',
+      urgency: this.normalizeUrgency(form.urgency),
+      is_urgent: this.isUrgentOrder(form.urgency),
       file_transfer_method: (form as unknown as Record<string, unknown>)
         .fileTransferMethod as string | undefined,
 
@@ -245,6 +246,53 @@ export class OrderTransformerService {
       eu: 'EUR',
     };
     return currencyMap[country?.toLowerCase()] || 'USD';
+  }
+
+  /**
+   * Normalize urgency value to standard format
+   * Maps various urgency values to standardized ones
+   */
+  private normalizeUrgency(urgency: string | undefined): string {
+    if (!urgency) {
+      return 'standard';
+    }
+
+    const normalized = urgency.toLowerCase().trim();
+    
+    // Map common variations to standard values
+    switch (normalized) {
+      case 'none':
+      case 'normal':
+      case 'regular':
+      case 'standard':
+        return 'standard';
+      
+      case 'urgent':
+      case 'express':
+      case 'rush':
+      case 'priority':
+      case 'next_day':
+      case 'few_hours':
+        return 'urgent';
+      
+      default:
+        this.logger.warn(
+          `Unknown urgency value '${urgency}', defaulting to 'standard'`,
+        );
+        return 'standard';
+    }
+  }
+
+  /**
+   * Determine if order is urgent
+   */
+  private isUrgentOrder(urgency: string | undefined): boolean {
+    if (!urgency) {
+      return false;
+    }
+    
+    const urgentValues = ['urgent', 'express', 'few_hours', 'next_day', 'rush', 'priority'];
+    return urgentValues.includes(urgency.toLowerCase().trim());
   }
 
   /**

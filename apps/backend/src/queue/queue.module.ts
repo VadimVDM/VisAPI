@@ -11,6 +11,7 @@ import { WhatsAppTranslationService } from './services/whatsapp-translation.serv
 import { WhatsAppTemplateService } from './services/whatsapp-template.service';
 import { CBBFieldMapperService } from './services/cbb-field-mapper.service';
 import { CBBSyncOrchestratorService } from './services/cbb-sync-orchestrator.service';
+import { CBBSyncMetricsService } from './services/cbb-sync-metrics.service';
 import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -153,6 +154,7 @@ import {
     WhatsAppTemplateService,
     CBBFieldMapperService,
     CBBSyncOrchestratorService,
+    CBBSyncMetricsService,
     // CBB Sync Metrics
     makeCounterProvider({
       name: 'cbb_sync_total',

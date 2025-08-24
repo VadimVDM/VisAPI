@@ -47,7 +47,7 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
 
     try {
       // Create order in repository
-      const order = await this.ordersRepository.create(sanitizedData as CreateOrderData);
+      const order = await this.ordersRepository.create(sanitizedData);
       
       this.logger.log(`[${correlationId}] Order created successfully: ${order.id}`);
 
@@ -72,9 +72,13 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
       });
 
       return order.id;
-    } catch (error: any) {
+    } catch (error) {
       // Handle duplicate orders gracefully
-      if (error.code === '23505' || error.message?.includes('duplicate key')) {
+      const isDuplicateError = error instanceof Error && 
+        (('code' in error && error.code === '23505') || 
+         error.message?.includes('duplicate key'));
+      
+      if (isDuplicateError) {
         this.logger.warn(`[${correlationId}] Order ${sanitizedData.order_id} already exists`);
         
         const existingOrder = await this.ordersRepository.findOne({

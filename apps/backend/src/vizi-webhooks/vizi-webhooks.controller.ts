@@ -76,12 +76,32 @@ export class ViziWebhooksController {
       headers['x-correlation-id'] || headers['x-request-id'];
     const idempotencyKey = headers['x-idempotency-key'];
 
+    // Type guard functions for safer type checking
+    const isRecord = (value: unknown): value is Record<string, unknown> => {
+      return typeof value === 'object' && value !== null && !Array.isArray(value);
+    };
+
+    const hasProperty = <K extends string>(
+      obj: Record<string, unknown>,
+      key: K,
+    ): obj is Record<string, unknown> & Record<K, unknown> => {
+      return key in obj;
+    };
+
     // Transform and validate the webhook data
-    const bodyAsRecord = body as Record<string, unknown>;
+    if (!isRecord(body)) {
+      throw new BadRequestException('Invalid webhook payload format');
+    }
+
+    const bodyAsRecord = body;
+    
+    // Safely access nested properties
+    const order = isRecord(bodyAsRecord.order) ? bodyAsRecord.order : undefined;
+    const form = isRecord(bodyAsRecord.form) ? bodyAsRecord.form : undefined;
+    
     try {
       // Normalize branch to lowercase if present
-      const order = bodyAsRecord.order as Record<string, unknown> | undefined;
-      if (order?.branch && typeof order.branch === 'string') {
+      if (order && hasProperty(order, 'branch') && typeof order.branch === 'string') {
         order.branch = order.branch.toLowerCase();
       }
 
@@ -95,57 +115,62 @@ export class ViziWebhooksController {
         'paybox',
       ];
       if (
-        order?.payment_processor &&
-        !validProcessors.includes(order.payment_processor as string)
+        order &&
+        hasProperty(order, 'payment_processor') &&
+        typeof order.payment_processor === 'string' &&
+        !validProcessors.includes(order.payment_processor)
       ) {
         this.logger.warn(
-          `Invalid payment processor: ${String(order.payment_processor)}, defaulting to stripe`,
+          `Invalid payment processor: ${order.payment_processor}, defaulting to stripe`,
         );
         order.payment_processor = 'stripe';
       }
 
       // Ensure status is valid
       const validStatuses = ['active', 'completed', 'issue', 'canceled'];
-      if (order?.status && !validStatuses.includes(order.status as string)) {
+      if (
+        order &&
+        hasProperty(order, 'status') &&
+        typeof order.status === 'string' &&
+        !validStatuses.includes(order.status)
+      ) {
         this.logger.warn(
-          `Invalid order status: ${String(order.status)}, defaulting to active`,
+          `Invalid order status: ${order.status}, defaulting to active`,
         );
         order.status = 'active';
       }
     } catch (error) {
       this.logger.error(
-        `Error normalizing webhook data: ${(error as Error).message}`,
+        `Error normalizing webhook data: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
 
     // Log incoming webhook with detailed validation info
-    const order = bodyAsRecord.order as Record<string, unknown> | undefined;
-    const form = bodyAsRecord.form as Record<string, unknown> | undefined;
-    const client = form?.client as Record<string, unknown> | undefined;
-    const product = form?.product as Record<string, unknown> | undefined;
-    const phone = client?.phone as Record<string, unknown> | undefined;
-    const applicants = form?.applicants as unknown[] | undefined;
+    const client = form && isRecord(form.client) ? form.client : undefined;
+    const product = form && isRecord(form.product) ? form.product : undefined;
+    const phone = client && isRecord(client.phone) ? client.phone : undefined;
+    const applicants = form && Array.isArray(form.applicants) ? form.applicants : undefined;
 
     const webhookValidation = {
       hasOrder: !!order,
       hasForm: !!form,
-      orderId: order?.id,
-      formId: form?.id,
-      country: form?.country,
+      orderId: order && hasProperty(order, 'id') ? String(order.id) : undefined,
+      formId: form && hasProperty(form, 'id') ? String(form.id) : undefined,
+      country: form && hasProperty(form, 'country') ? String(form.country) : undefined,
       clientData: client
         ? {
-            name: client.name,
-            email: client.email,
+            name: hasProperty(client, 'name') ? String(client.name) : undefined,
+            email: hasProperty(client, 'email') ? String(client.email) : undefined,
             hasPhone: !!phone,
-            phoneCode: phone?.code,
-            phoneNumber: phone?.number,
-            whatsappEnabled: client.whatsappAlertsEnabled,
+            phoneCode: phone && hasProperty(phone, 'code') ? String(phone.code) : undefined,
+            phoneNumber: phone && hasProperty(phone, 'number') ? String(phone.number) : undefined,
+            whatsappEnabled: hasProperty(client, 'whatsappAlertsEnabled') ? Boolean(client.whatsappAlertsEnabled) : false,
           }
         : null,
       productData: product
         ? {
-            name: product.name,
-            country: product.country,
+            name: hasProperty(product, 'name') ? String(product.name) : undefined,
+            country: hasProperty(product, 'country') ? String(product.country) : undefined,
           }
         : null,
       applicantCount: applicants?.length || 0,
@@ -153,7 +178,7 @@ export class ViziWebhooksController {
 
     await this.logService.createLog({
       level: 'info',
-      message: `Vizi webhook received for order ${order?.id ? String(order.id) : 'unknown'}`,
+      message: `Vizi webhook received for order ${webhookValidation.orderId || 'unknown'}`,
       metadata: {
         webhook_type: 'vizi_order',
         validation: webhookValidation,
@@ -187,8 +212,9 @@ export class ViziWebhooksController {
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(webhookData);
+        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
         this.logger.log(
-          `Order saved to database: ${order?.id ? String(order.id) : 'unknown'} (DB ID: ${orderId})`,
+          `Order saved to database: ${orderIdStr} (DB ID: ${orderId})`,
         );
       } catch (error) {
         const err = error as Record<string, unknown>;
@@ -199,19 +225,22 @@ export class ViziWebhooksController {
           stack: err.stack,
         };
 
+        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
         this.logger.error(
-          `Failed to save order ${order?.id ? String(order.id) : 'unknown'} to database: ${JSON.stringify(errorDetails)}`,
+          `Failed to save order ${orderIdStr} to database: ${JSON.stringify(errorDetails)}`,
           typeof err.stack === 'string' ? err.stack : undefined,
         );
 
         // Log the failed order creation with full details
+        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+        const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
         await this.logService.createLog({
           level: 'error',
-          message: `Order creation failed for ${order?.id ? String(order.id) : 'unknown'}`,
+          message: `Order creation failed for ${orderIdStr}`,
           metadata: {
             webhook_type: 'vizi_order',
-            order_id: order?.id,
-            form_id: form?.id,
+            order_id: orderIdStr === 'unknown' ? undefined : orderIdStr,
+            form_id: formIdStr,
             error: errorDetails,
             webhook_data: bodyAsRecord,
             correlationId,
@@ -238,13 +267,15 @@ export class ViziWebhooksController {
       }
 
       // Log success WITH FULL WEBHOOK DATA
+      const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+      const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
       await this.logService.createLog({
         level: 'info',
-        message: `Order ${order?.id ? String(order.id) : 'unknown'} created successfully from Vizi webhook`,
+        message: `Order ${orderIdStr} created successfully from Vizi webhook`,
         metadata: {
           webhook_type: 'vizi_order',
-          order_id: order?.id,
-          form_id: form?.id,
+          order_id: orderIdStr === 'unknown' ? undefined : orderIdStr,
+          form_id: formIdStr,
           order_db_id: orderId,
           result_status: result.status,
           webhook_data: bodyAsRecord, // Save full payload for data recovery
@@ -261,13 +292,15 @@ export class ViziWebhooksController {
         error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
 
+      const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+      const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
       await this.logService.createLog({
         level: 'error',
-        message: `Failed to process Vizi webhook for order ${order?.id ? String(order.id) : 'unknown'}`,
+        message: `Failed to process Vizi webhook for order ${orderIdStr}`,
         metadata: {
           webhook_type: 'vizi_order',
-          order_id: order?.id,
-          form_id: form?.id,
+          order_id: orderIdStr === 'unknown' ? undefined : orderIdStr,
+          form_id: formIdStr,
           error: errorMessage,
           stack: errorStack,
           correlationId,
