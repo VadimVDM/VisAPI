@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { RulesEngineService } from '@visapi/backend-business-rules';
-import { OrderProcessingContext } from '@visapi/shared-types';
+import { Injectable, Logger } from '@nestjs/common';
+import { SupabaseService } from '@visapi/core-supabase';
 
 // Hebrew translation maps
 const COUNTRY_NAMES_HEBREW: Record<string, string> = {
@@ -157,24 +156,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'finland': '🇫🇮',
 };
 
-const DEFAULT_PROCESSING_TIMES: Record<string, number> = {
-  'india': 3,
-  'usa': 5,
-  'uk': 5,
-  'canada': 7,
-  'thailand': 2,
-  'vietnam': 3,
-  'schengen': 10,
-  'china': 7,
-  'japan': 5,
-  'australia': 5,
-  'default': 3,
-};
+// Removed: DEFAULT_PROCESSING_TIMES - now using database-driven rules
 
 @Injectable()
 export class WhatsAppTranslationService {
+  private readonly logger = new Logger(WhatsAppTranslationService.name);
+  
   constructor(
-    private readonly rulesEngine: RulesEngineService,
+    private readonly supabaseService: SupabaseService,
   ) {}
   /**
    * Get Hebrew translation for a country name
@@ -271,8 +260,8 @@ export class WhatsAppTranslationService {
 
   /**
    * Calculate processing days based on country and urgency
-   * Now uses the rules engine for dynamic business rules
-   * Returns a string in format "X-Y" for ranges or "X" for single values
+   * Uses database function for business rules calculation
+   * Returns a string number of days
    */
   async calculateProcessingDays(
     country: string,
@@ -284,13 +273,51 @@ export class WhatsAppTranslationService {
       return String(productDaysToUse);
     }
 
-    // Use rules engine for calculation
-    const context: OrderProcessingContext = {
-      country: country?.toLowerCase().trim(),
-      urgency: urgency?.toLowerCase().trim(),
-    };
+    try {
+      // Call the database function for calculation
+      const { data, error } = await this.supabaseService.serviceClient
+        .rpc('calculate_processing_days' as any, {
+          p_country: country?.toLowerCase().trim() || null,
+          p_urgency: urgency?.toLowerCase().trim() || null,
+        }) as { data: number | null; error: any };
 
-    const result = await this.rulesEngine.calculateProcessingDays(context);
-    return String(result.processing_days);
+      if (error) {
+        this.logger.error('Error calculating processing days:', error);
+        // Fallback to hardcoded logic
+        return this.calculateProcessingDaysFallback(country, urgency);
+      }
+
+      return String(data ?? 3);
+    } catch (error) {
+      this.logger.error('Failed to calculate processing days:', error);
+      // Fallback to hardcoded logic
+      return this.calculateProcessingDaysFallback(country, urgency);
+    }
+  }
+
+  /**
+   * Fallback calculation when database function is unavailable
+   */
+  private calculateProcessingDaysFallback(
+    country: string,
+    urgency?: string
+  ): string {
+    const isUrgent = urgency === 'urgent' || urgency === 'express';
+    
+    // If urgent, always 1 business day
+    if (isUrgent) {
+      return '1';
+    }
+
+    // Country-specific processing times
+    const countryNormalized = country?.toLowerCase().trim();
+    switch (countryNormalized) {
+      case 'morocco':
+        return '5';
+      case 'vietnam':
+        return '7';
+      default:
+        return '3'; // Default for all other countries
+    }
   }
 }

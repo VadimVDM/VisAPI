@@ -82,7 +82,7 @@ export class WebhookVerifierService {
           Buffer.from(expectedSignature, 'hex'),
         );
       } catch (bufferError) {
-        this.logger.error(`Signature buffer comparison error: ${bufferError.message}`);
+        this.logger.error(`Signature buffer comparison error: ${bufferError instanceof Error ? bufferError.message : String(bufferError)}`);
         this.logger.debug(`Provided signature length: ${providedSignature.length}`);
         this.logger.debug(`Expected signature length: ${expectedSignature.length}`);
         return false;

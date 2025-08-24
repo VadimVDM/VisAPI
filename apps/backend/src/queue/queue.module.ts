@@ -15,7 +15,6 @@ import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
 import { LoggingModule } from '@visapi/backend-logging';
-import { BusinessRulesModule } from '@visapi/backend-business-rules';
 import {
   makeCounterProvider,
   makeHistogramProvider,
@@ -144,7 +143,6 @@ import {
     SupabaseModule,
     MetricsModule,
     LoggingModule,
-    BusinessRulesModule,
   ],
   controllers: [QueueController],
   providers: [
