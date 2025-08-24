@@ -7,6 +7,7 @@ import { CacheModule } from '@visapi/backend-cache';
 import { AuthModule } from '../auth/auth.module';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 import { WhatsAppManagementController } from '../whatsapp/whatsapp-management.controller';
+import { MetaRootWebhookController } from './meta-root-webhook.controller';
 import { SlackRateLimiterService } from './slack-rate-limiter.service';
 
 @Module({
@@ -18,8 +19,12 @@ import { SlackRateLimiterService } from './slack-rate-limiter.service';
     CacheModule,
     AuthModule,
   ],
-  controllers: [WhatsAppWebhookController, WhatsAppManagementController],
-  providers: [SlackRateLimiterService],
+  controllers: [
+    WhatsAppWebhookController,
+    WhatsAppManagementController,
+    MetaRootWebhookController,
+  ],
+  providers: [SlackRateLimiterService, WhatsAppWebhookController],
   exports: [SlackRateLimiterService],
 })
 export class WhatsAppWebhooksModule {}
