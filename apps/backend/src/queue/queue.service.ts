@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Job, RepeatableJob } from 'bullmq';
 import {
@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@visapi/core-config';
 
 @Injectable()
-export class QueueService implements OnModuleDestroy {
+export class QueueService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(QueueService.name);
   constructor(
     @InjectQueue(QUEUE_NAMES.CRITICAL) private criticalQueue: Queue,
@@ -208,6 +208,51 @@ export class QueueService implements OnModuleDestroy {
   ): Promise<RepeatableJob[]> {
     const queue = this.getQueue(queueName);
     return queue.getRepeatableJobs();
+  }
+
+  /**
+   * Automatically resume all queues on startup
+   * This prevents queues from staying paused after a restart
+   */
+  async onModuleInit() {
+    this.logger.log('Initializing queue service...');
+
+    const queues = [
+      { name: QUEUE_NAMES.CRITICAL, queue: this.criticalQueue },
+      { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
+      { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
+      { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
+      { name: QUEUE_NAMES.WHATSAPP_MESSAGES, queue: this.whatsappMessagesQueue },
+    ];
+
+    // Clean up old stuck jobs and auto-resume queues
+    for (const { name, queue } of queues) {
+      try {
+        const isPaused = await queue.isPaused();
+        
+        if (isPaused) {
+          await queue.resume();
+          this.logger.log(`Auto-resumed queue: ${name} (was paused)`);
+        }
+
+        // Clean up very old completed/failed jobs (older than 24 hours)
+        const grace = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        await queue.clean(grace, 0, 'completed');
+        await queue.clean(grace, 0, 'failed');
+        
+        // Get current job counts for monitoring
+        const counts = await queue.getJobCounts();
+        if (counts.delayed > 0 || counts.waiting > 0 || counts.active > 0) {
+          this.logger.log(
+            `Queue ${name}: ${counts.active} active, ${counts.waiting} waiting, ${counts.delayed} delayed`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(`Error initializing queue ${name}:`, error);
+      }
+    }
+
+    this.logger.log('Queue service initialized successfully');
   }
 
   /**
