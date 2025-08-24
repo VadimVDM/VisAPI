@@ -48,7 +48,13 @@ import {
 
         // Railway Redis URL handling - ALWAYS use public URL if available
         // The internal .railway.internal URLs don't work reliably
-        const publicRedisUrl = configService.get('redis.publicUrl');
+        let publicRedisUrl: string | undefined;
+        try {
+          publicRedisUrl = configService.get<string>('redis.publicUrl');
+        } catch {
+          // Public URL is optional
+          publicRedisUrl = undefined;
+        }
         const effectiveRedisUrl = publicRedisUrl || redisUrl;
         
         // Log which URL we're using (without exposing sensitive data)

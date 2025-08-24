@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { WhatsAppBusinessModule } from '@visapi/backend-whatsapp-business';
 import { CacheModule } from '@visapi/backend-cache';
+import { AuthModule } from '../auth/auth.module';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 import { WhatsAppManagementController } from '../whatsapp/whatsapp-management.controller';
 import { SlackRateLimiterService } from './slack-rate-limiter.service';
@@ -15,6 +16,7 @@ import { SlackRateLimiterService } from './slack-rate-limiter.service';
     SupabaseModule,
     WhatsAppBusinessModule,
     CacheModule,
+    AuthModule,
   ],
   controllers: [WhatsAppWebhookController, WhatsAppManagementController],
   providers: [SlackRateLimiterService],
