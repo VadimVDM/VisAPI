@@ -21,7 +21,7 @@ Modern layered architecture with enterprise design patterns:
 ## Architecture Patterns
 
 ### CQRS Pattern
-- **Commands**: CreateOrder, SyncOrderToCBB, UpdateOrderProcessing
+- **Commands**: CreateOrder, SyncOrderToCBB, UpdateOrderProcessing, ResyncCBBContact
 - **Queries**: GetOrderById, GetOrders, GetOrderStats
 - CommandBus/QueryBus for clean separation
 
@@ -77,9 +77,11 @@ Modern layered architecture with enterprise design patterns:
 ## Scripts
 
 ### Admin Key Creation
-- `pnpm create-admin-key` - Create admin API key for webhook retrigger operations
+- `pnpm create-admin-key` - Create admin API key for admin operations
 - Script location: `apps/backend/src/scripts/create-admin-api-key.js`
-- Creates system user and API key with full permissions for `/api/v1/webhooks/vizi/retrigger`
+- Creates system user and API key with full permissions for:
+  - `/api/v1/webhooks/vizi/retrigger` - Retrigger order creation
+  - `/api/v1/webhooks/vizi/resync-cbb` - Resync CBB contacts
 - Generates key in format: `vizi_admin_[uuid].[secret]`
 
 ## Testing
@@ -189,20 +191,12 @@ Modern layered architecture with enterprise design patterns:
 | Template Sync | `/api/v1/whatsapp/templates` | ✅ | 10 templates |
 | Build | `pnpm build:backend` | ✅ | Success |
 
-### Recent Fixes (August 25, 2025)
+### Recent Updates (August 24, 2025)
 
-1. **WhatsApp Integration** ✅ - Fully operational with Meta webhooks
-2. **Webhook Signature Verification** ✅ - HMAC-SHA256 validation working
-3. **Zapier Forwarding** ✅ - Raw webhook payloads forwarded correctly
-4. **TypeScript Strict Mode** ✅ - All errors resolved
-5. **Health Check** ✅ - Fixed Redis configuration issues
+1. **CBB Contact Resync API** ✅ - Admin endpoint for manual CBB sync recovery
+2. **WhatsApp Integration** ✅ - Fully operational with Meta webhooks
+3. **Webhook Signature Verification** ✅ - HMAC-SHA256 validation working
+4. **Zapier Forwarding** ✅ - Raw webhook payloads forwarded correctly
+5. **TypeScript Strict Mode** ✅ - All errors resolved
 
-### Files Modified (August 25, 2025)
-
-- `src/webhooks/whatsapp-webhook.controller.ts` - Cleaned up debugging logs
-- `libs/backend/src/lib/services/webhook-verifier.service.ts` - Simplified signature verification
-- `src/whatsapp/whatsapp-management.controller.ts` - Template management
-- `src/webhooks/whatsapp-webhooks.module.ts` - Added AuthModule
-- `libs/backend/whatsapp-business/*` - Complete WABA module
-
-Last Updated: August 25, 2025
+Last Updated: August 24, 2025

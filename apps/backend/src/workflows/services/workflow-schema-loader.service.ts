@@ -19,7 +19,7 @@ export class WorkflowSchemaLoaderService {
     
     // Return cached schema if available
     if (this.schemaCache.has(cacheKey)) {
-      return this.schemaCache.get(cacheKey)!;
+      return this.schemaCache.get(cacheKey);
     }
 
     // Try to load from file system

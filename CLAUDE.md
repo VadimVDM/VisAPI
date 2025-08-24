@@ -85,6 +85,7 @@ pnpm create-admin-key      # Generate admin API key for retrigger ops
 ```
 POST /api/v1/webhooks/vizi/orders     # Vizi webhook
 POST /api/v1/webhooks/vizi/retrigger  # Admin: Retrigger order creation
+POST /api/v1/webhooks/vizi/resync-cbb # Admin: Resync CBB contact
 GET  /api/v1/webhooks/whatsapp        # WhatsApp webhook verification
 POST /api/v1/webhooks/whatsapp        # WhatsApp events from Meta
 POST /api/v1/whatsapp/templates/sync  # Manual template sync

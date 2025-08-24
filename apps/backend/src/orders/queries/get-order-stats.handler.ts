@@ -170,7 +170,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
     const processingTimes = processedOrders.map(order => {
       const created = new Date(order.created_at).getTime();
-      const processed = new Date(order.processed_at!).getTime();
+      const processed = new Date(order.processed_at).getTime();
       return (processed - created) / 1000 / 60; // Convert to minutes
     });
 
