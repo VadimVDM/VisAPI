@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
-import { WhatsAppMessageJobData } from '@visapi/shared-types';
+import { WhatsAppMessageJobData, QUEUE_NAMES } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
@@ -42,7 +42,7 @@ interface SendMessageResult {
 // Removed unused interface - now using whatsapp_messages table
 
 @Injectable()
-@Processor('WHATSAPP_MESSAGES')
+@Processor(QUEUE_NAMES.WHATSAPP_MESSAGES)
 export class WhatsAppMessageProcessor extends WorkerHost {
   private readonly logger = new Logger(WhatsAppMessageProcessor.name);
 
