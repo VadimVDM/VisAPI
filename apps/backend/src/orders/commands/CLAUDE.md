@@ -5,20 +5,24 @@ CQRS command handlers for order operations.
 ## Commands
 
 ### CreateOrderCommand / CreateOrderHandler
+
 - Creates new order from Vizi webhook data
 - Validates and transforms input
 - Publishes `OrderCreatedForSync` event for saga processing
 
-### SyncOrderToCBBCommand / SyncOrderToCBBHandler  
+### SyncOrderToCBBCommand / SyncOrderToCBBHandler
+
 - Triggers CBB contact synchronization
 - Queues sync job with retry logic
 - Optionally queues WhatsApp confirmation
 
 ### UpdateOrderProcessingCommand / UpdateOrderProcessingHandler
+
 - Updates order processing metadata
 - Tracks sync status and timestamps
 
 ### ResyncCBBContactCommand / ResyncCBBContactHandler
+
 - Admin operation for manual CBB resync
 - Validates order exists
 - Uses same sync orchestrator as automatic sync
@@ -27,9 +31,10 @@ CQRS command handlers for order operations.
 ## Usage
 
 Commands are dispatched via CommandBus:
+
 ```typescript
 await this.commandBus.execute(
-  new ResyncCBBContactCommand(orderId, correlationId)
+  new ResyncCBBContactCommand(orderId, correlationId),
 );
 ```
 

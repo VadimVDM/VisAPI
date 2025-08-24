@@ -72,12 +72,19 @@ export class WhatsAppWebhookController {
     // Handle both direct query params and nested object structures
     const normalizedQuery: WebhookVerifyDto = {
       'hub.mode': query['hub.mode'] || query.hub?.mode || query['hub[mode]'],
-      'hub.verify_token': query['hub.verify_token'] || query.hub?.verify_token || query['hub[verify_token]'],
-      'hub.challenge': query['hub.challenge'] || query.hub?.challenge || query['hub[challenge]'],
+      'hub.verify_token':
+        query['hub.verify_token'] ||
+        query.hub?.verify_token ||
+        query['hub[verify_token]'],
+      'hub.challenge':
+        query['hub.challenge'] ||
+        query.hub?.challenge ||
+        query['hub[challenge]'],
     };
 
     try {
-      const challenge = this.webhookVerifier.verifyWebhookChallenge(normalizedQuery);
+      const challenge =
+        this.webhookVerifier.verifyWebhookChallenge(normalizedQuery);
 
       await this.trackWebhookEvent({
         method: 'GET',

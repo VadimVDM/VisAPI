@@ -32,7 +32,7 @@ export class SwaggerAuthGuard implements CanActivate {
     } catch {
       this.swaggerUsername = 'admin';
     }
-    
+
     try {
       this.swaggerPassword = configService.get<string>('swagger.password');
     } catch {
@@ -92,24 +92,24 @@ export class SwaggerAuthGuard implements CanActivate {
  */
 export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const isProduction = configService.isProduction;
-  
+
   // Try to get swagger config, use defaults if not configured
   let swaggerUsername = 'admin';
   let swaggerPassword = 'admin';
   let swaggerApiKeys = new Set<string>();
-  
+
   try {
     swaggerUsername = configService.get<string>('swagger.username');
   } catch {
     // Use default
   }
-  
+
   try {
     swaggerPassword = configService.get<string>('swagger.password');
   } catch {
     // Use default
   }
-  
+
   try {
     const apiKeys = configService.get<string[]>('swagger.apiKeys');
     swaggerApiKeys = new Set(apiKeys);

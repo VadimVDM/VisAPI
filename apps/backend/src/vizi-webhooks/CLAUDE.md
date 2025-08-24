@@ -5,6 +5,7 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
 ## Endpoints
 
 ### Order Processing
+
 - `POST /api/v1/webhooks/vizi/orders` - Receive and process Vizi order webhooks
   - Validates and normalizes incoming data
   - Creates order in database
@@ -14,12 +15,14 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
 ### Admin Operations (Require Admin API Key)
 
 #### Order Retrigger
+
 - `POST /api/v1/webhooks/vizi/retrigger` - Retrigger order creation from stored webhook data
   - Modes: single order or bulk
   - Recovery tool for failed order processing
   - Supports date range filtering
 
 #### CBB Contact Resync
+
 - `POST /api/v1/webhooks/vizi/resync-cbb` - Manually resync CBB contact
   - Find orders by: phone number, order ID, or Vizi order ID
   - Uses same sync logic as automatic processing
@@ -28,6 +31,7 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
 ## Security
 
 All endpoints require API key authentication with appropriate scopes:
+
 - Order webhook: `webhook:vizi` + `logs:write`
 - Admin operations: `webhook:vizi` + `admin`
 

@@ -324,7 +324,9 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     // Get order details for phone number
     const order = await this.getOrderByOrderId(orderId);
     if (!order) {
-      throw new Error(`Order ${orderId} not found for WhatsApp tracking update`);
+      throw new Error(
+        `Order ${orderId} not found for WhatsApp tracking update`,
+      );
     }
 
     const now = new Date().toISOString();
@@ -347,9 +349,9 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
     const { error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
-      .upsert(messageData, { 
+      .upsert(messageData, {
         onConflict: 'order_id,template_name',
-        ignoreDuplicates: false 
+        ignoreDuplicates: false,
       });
 
     if (error) {
