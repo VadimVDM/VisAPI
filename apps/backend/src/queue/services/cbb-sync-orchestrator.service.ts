@@ -72,8 +72,20 @@ export class CBBSyncOrchestratorService {
 
     const branch = order.branch || 'unknown';
     
-    // 2. Check CBB contact record
-    const cbbContact = await this.fieldMapper.getCBBContact(orderId);
+    // 2. Check or create CBB contact record
+    let cbbContact = await this.fieldMapper.getCBBContact(orderId);
+    
+    // If no CBB contact record exists, create it first
+    if (!cbbContact) {
+      this.logger.log(`Creating CBB contact record for order: ${orderId}`);
+      cbbContact = await this.fieldMapper.saveCBBContact(order);
+      if (!cbbContact) {
+        const duration = endTimer();
+        this.metricsService.recordSyncComplete('failed', 'skipped', branch, duration);
+        this.metricsService.recordSyncError('database_create_failed', branch);
+        throw new Error(`Failed to create CBB contact record for order ${orderId}`);
+      }
+    }
     
     // 3. Update sync attempt tracking
     await this.fieldMapper.updateCBBSyncStatus(orderId, {
@@ -95,10 +107,10 @@ export class CBBSyncOrchestratorService {
     }
 
     try {
-      // 4. Prepare contact data
+      // 5. Prepare contact data
       const contactData = this.fieldMapper.mapOrderToContact(order);
 
-      // 5. Create or update contact with error handling
+      // 6. Create or update contact with error handling
       const { contact, isNewContact, error } = await this.createOrUpdateContactSafe(
         order.client_phone,
         contactData,
@@ -120,7 +132,7 @@ export class CBBSyncOrchestratorService {
         );
       }
 
-      // 6. Validate WhatsApp availability
+      // 7. Validate WhatsApp availability
       let hasWhatsApp = false;
       try {
         hasWhatsApp = await this.cbbService.validateWhatsApp(order.client_phone);
@@ -133,19 +145,24 @@ export class CBBSyncOrchestratorService {
         // Continue without WhatsApp
       }
 
-      // 7. Update CBB contact record with results
+      // 8. Update CBB contact record with results
       await this.fieldMapper.updateCBBSyncStatus(orderId, {
         cbb_contact_id: contact?.id,
         cbb_synced: true,
         cbb_sync_last_error: error || undefined
       });
 
-      // 8. Queue WhatsApp confirmation if applicable
+      // 9. Link the order to the CBB contact record
+      if (contact && !error && cbbContact) {
+        await this.updateOrderCBBContactLink(orderId, cbbContact.id);
+      }
+
+      // 10. Queue WhatsApp confirmation if applicable
       if (contact && !error) {
         await this.queueWhatsAppConfirmation(order, contact.id, hasWhatsApp);
       }
 
-      // 9. Log success
+      // 11. Log success
       await this.logSyncSuccess(order, contact?.id, isNewContact, hasWhatsApp);
 
       // Record metrics
@@ -497,6 +514,31 @@ export class CBBSyncOrchestratorService {
     } else {
       this.logger.log(
         `Updated CBB status for order ${orderId}: synced=${synced}, contact_id=${contactId}`,
+      );
+    }
+  }
+
+  /**
+   * Update order with CBB contact UUID link
+   */
+  private async updateOrderCBBContactLink(orderId: string, cbbContactUuid: string): Promise<void> {
+    const { error } = await this.supabaseService.serviceClient
+      .from('orders')
+      .update({ 
+        cbb_contact_uuid: cbbContactUuid,
+        updated_at: new Date().toISOString()
+      })
+      .eq('order_id', orderId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to link order ${orderId} to CBB contact ${cbbContactUuid}:`,
+        error,
+      );
+      // Don't throw error - this is not critical enough to fail the entire sync
+    } else {
+      this.logger.log(
+        `Linked order ${orderId} to CBB contact ${cbbContactUuid}`,
       );
     }
   }

@@ -53,7 +53,10 @@ export class WhatsAppWebhookController {
   @ApiResponse({ status: 200, description: 'Webhook verified' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async verifyWebhook(@Query() query: WebhookVerifyDto): Promise<string> {
-    this.logger.log('WhatsApp webhook verification request received');
+    // Only log in development to reduce production logs
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('WhatsApp webhook verification request received');
+    }
 
     try {
       const challenge = this.webhookVerifier.verifyWebhookChallenge(query);
@@ -97,14 +100,20 @@ export class WhatsAppWebhookController {
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     const eventId = uuidv4();
-    this.logger.log(`Received WhatsApp webhook event ${eventId}`);
+    
+    // Only log event IDs in development to reduce production logs
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(`Received WhatsApp webhook event ${eventId}`);
+    }
 
     try {
       const signature = headers['x-hub-signature-256'];
       const timestamp = headers['x-hub-timestamp'] || Date.now().toString();
 
-      // Log headers for debugging
-      this.logger.debug(`Webhook headers: x-hub-signature-256=${signature ? 'present' : 'missing'}, x-hub-timestamp=${timestamp}`);
+      // Log headers only in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.debug(`Webhook headers: x-hub-signature-256=${signature ? 'present' : 'missing'}, x-hub-timestamp=${timestamp}`);
+      }
 
       // Use raw body for signature verification if available, otherwise fallback to stringified body
       const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(body);
@@ -223,7 +232,10 @@ export class WhatsAppWebhookController {
     const statuses = value.statuses || [];
 
     for (const status of statuses) {
-      this.logger.log(`Processing message status: ${status.id} - ${status.status}`);
+      // Only log individual message processing in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`Processing message status: ${status.id} - ${status.status}`);
+      }
 
       const messageStatus = {
         id: status.id,
@@ -252,7 +264,10 @@ export class WhatsAppWebhookController {
 
     const messages = value.messages || [];
     for (const message of messages) {
-      this.logger.log(`Received incoming message ${message.id} from ${message.from}`);
+      // Only log individual incoming messages in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`Received incoming message ${message.id} from ${message.from}`);
+      }
       
       await this.trackIncomingMessage({
         message_id: message.id,
@@ -459,7 +474,10 @@ export class WhatsAppWebhookController {
         })
         .eq('id', eventId);
 
-      this.logger.log(`Webhook forwarded to Zapier for event ${eventId} - Status: ${response.status}`);
+      // Only log Zapier forwarding in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`Webhook forwarded to Zapier for event ${eventId} - Status: ${response.status}`);
+      }
     } catch (error: any) {
       this.logger.error(`Failed to forward to Zapier: ${error.message}`);
       

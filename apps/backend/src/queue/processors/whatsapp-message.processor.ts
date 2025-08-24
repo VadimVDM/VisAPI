@@ -75,11 +75,14 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     const startTime = Date.now();
     const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
-    this.logger.log(`Processing WhatsApp message job ${job.id}`, {
-      order_id: orderId,
-      contact_id: contactId,
-      message_type: messageType,
-    });
+    // Only log individual job processing in development
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(`Processing WhatsApp message job ${job.id}`, {
+        order_id: orderId,
+        contact_id: contactId,
+        message_type: messageType,
+      });
+    }
 
     try {
       // Validate required fields
@@ -124,11 +127,13 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       // Update order with WhatsApp tracking info
       await this.updateOrderWhatsAppStatus(orderId, messageType, result.message_id || 'sent');
 
-      // Log success
-      this.logger.log(`WhatsApp ${messageType} sent successfully for order ${orderId}`, {
-        contact_id: contactId,
-        message_id: result.message_id,
-      });
+      // Only log success in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`WhatsApp ${messageType} sent successfully for order ${orderId}`, {
+          contact_id: contactId,
+          message_id: result.message_id,
+        });
+      }
 
       await this.logService.createLog({
         level: 'info',
@@ -196,7 +201,12 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     switch (messageType) {
       case 'order_confirmation':
         const orderData = await this.templateService.prepareOrderConfirmationData(order);
-        this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`);
+        
+        // Only log individual sends in development
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`);
+        }
+        
         return await this.cbbService.sendOrderConfirmation(contactId, orderData);
 
       case 'status_update':
@@ -290,7 +300,8 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         error,
       );
       throw error;
-    } else {
+    } else if (process.env.NODE_ENV !== 'production') {
+      // Only log status updates in development
       this.logger.log(
         `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`
       );

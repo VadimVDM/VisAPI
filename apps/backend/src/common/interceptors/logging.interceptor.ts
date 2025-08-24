@@ -70,30 +70,37 @@ export class LoggingInterceptor implements NestInterceptor {
       userId: getUserId(request),
     };
 
-    // Log incoming request
-    const logEntry: LogEntry = {
-      message: 'Incoming request',
-      ...requestMetadata,
-      body: sanitizeData(request.body, this.sensitiveFields),
-      query: sanitizeData(request.query, this.sensitiveFields),
-    };
-    this.logger.log(logEntry);
+    // Only log incoming requests in development or for non-webhook endpoints
+    const isWebhook = requestMetadata.url.includes('/webhooks/');
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    if (!isWebhook || isDevelopment) {
+      const logEntry: LogEntry = {
+        message: 'Incoming request',
+        ...requestMetadata,
+        body: sanitizeData(request.body, this.sensitiveFields),
+        query: sanitizeData(request.query, this.sensitiveFields),
+      };
+      this.logger.log(logEntry);
+    }
 
     return next.handle().pipe(
       tap((data) => {
         const responseTime = Date.now() - startTime;
         
-        // Log successful response
-        const successLog: LogEntry = {
-          message: 'Request completed',
-          correlationId,
-          method: getRequestMethod(request),
-          url: getRequestUrl(request),
-          statusCode: response.statusCode,
-          responseTime: `${responseTime}ms`,
-          responseSize: JSON.stringify(data || {}).length,
-        };
-        this.logger.log(successLog);
+        // Only log successful responses for non-webhooks in production
+        if (!isWebhook || isDevelopment) {
+          const successLog: LogEntry = {
+            message: 'Request completed',
+            correlationId,
+            method: getRequestMethod(request),
+            url: getRequestUrl(request),
+            statusCode: response.statusCode,
+            responseTime: `${responseTime}ms`,
+            responseSize: JSON.stringify(data || {}).length,
+          };
+          this.logger.log(successLog);
+        }
 
         // Add performance warning for slow requests
         if (responseTime > 1000) {
