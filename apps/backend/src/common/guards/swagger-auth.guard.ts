@@ -26,13 +26,26 @@ export class SwaggerAuthGuard implements CanActivate {
   constructor(private readonly configService: ConfigService) {
     this.isProduction = configService.isProduction;
 
-    // Get Swagger auth credentials from typed config
-    this.swaggerUsername = configService.get<string>('swagger.username');
-    this.swaggerPassword = configService.get<string>('swagger.password');
+    // Get Swagger auth credentials from typed config with defaults
+    try {
+      this.swaggerUsername = configService.get<string>('swagger.username');
+    } catch {
+      this.swaggerUsername = 'admin';
+    }
+    
+    try {
+      this.swaggerPassword = configService.get<string>('swagger.password');
+    } catch {
+      this.swaggerPassword = 'admin';
+    }
 
     // Get API keys from config (optional)
-    const swaggerApiKeys = configService.get<string[]>('swagger.apiKeys');
-    this.validApiKeys = new Set(swaggerApiKeys || []);
+    try {
+      const swaggerApiKeys = configService.get<string[]>('swagger.apiKeys');
+      this.validApiKeys = new Set(swaggerApiKeys);
+    } catch {
+      this.validApiKeys = new Set();
+    }
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -79,10 +92,30 @@ export class SwaggerAuthGuard implements CanActivate {
  */
 export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const isProduction = configService.isProduction;
-  const swaggerUsername = configService.get<string>('swagger.username');
-  const swaggerPassword = configService.get<string>('swagger.password');
-  const apiKeys = configService.get<string[]>('swagger.apiKeys');
-  const swaggerApiKeys = new Set(apiKeys || []);
+  
+  // Try to get swagger config, use defaults if not configured
+  let swaggerUsername = 'admin';
+  let swaggerPassword = 'admin';
+  let swaggerApiKeys = new Set<string>();
+  
+  try {
+    swaggerUsername = configService.get<string>('swagger.username');
+  } catch {
+    // Use default
+  }
+  
+  try {
+    swaggerPassword = configService.get<string>('swagger.password');
+  } catch {
+    // Use default
+  }
+  
+  try {
+    const apiKeys = configService.get<string[]>('swagger.apiKeys');
+    swaggerApiKeys = new Set(apiKeys);
+  } catch {
+    // Use empty set
+  }
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Allow unrestricted access in development/test

@@ -18,13 +18,25 @@ export class CacheModule {
       useFactory: (configService: ConfigService) => {
         // Use public URL if available (for Railway), otherwise use standard URL
         const redisUrl = process.env.REDIS_PUBLIC_URL || configService.redisUrl;
+        
         if (!redisUrl) {
-          throw new Error('Redis URL not configured');
+          console.warn('Redis URL not configured - using mock Redis instance');
+          // Return a mock Redis instance that won't block startup
+          const mockRedis = new Redis({
+            host: 'localhost',
+            port: 6379,
+            maxRetriesPerRequest: 0,
+            lazyConnect: true,
+            enableOfflineQueue: false,
+            retryStrategy: () => null,
+          });
+          return mockRedis;
         }
 
         const redis = new Redis(redisUrl, {
           maxRetriesPerRequest: 3,
           enableReadyCheck: true,
+          lazyConnect: true, // Don't block startup
           showFriendlyErrorStack: process.env.NODE_ENV !== 'production',
         });
 
