@@ -59,7 +59,13 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // Attach correlation ID to request and response
     request.correlationId = correlationId;
-    response.setHeader('x-correlation-id', correlationId);
+    // Use Fastify's header() method instead of Express's setHeader()
+    if (response.header) {
+      response.header('x-correlation-id', correlationId);
+    } else if (response.setHeader) {
+      // Fallback for Express (testing/local dev)
+      response.setHeader('x-correlation-id', correlationId);
+    }
 
     // Extract request metadata
     const requestMetadata: RequestMetadata = {
