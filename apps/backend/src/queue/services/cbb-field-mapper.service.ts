@@ -27,6 +27,7 @@ interface OrderData {
   whatsapp_confirmation_sent?: boolean | null;
   whatsapp_confirmation_sent_at?: string | null;
   whatsapp_message_id?: string | null;
+  processing_days?: number | null; // Calculated by business rules engine
 }
 
 /**
@@ -78,13 +79,20 @@ export class CBBFieldMapperService {
       order.product_validity ?? undefined,
       order.product_days_to_use ?? undefined,
     );
+    
+    // Use processing_days from database (calculated by business rules engine)
+    // If not available, calculate based on urgency
+    const processingDays = order.processing_days || this.calculateDefaultProcessingDays(
+      order.product_country,
+      order.urgency ?? 'normal'
+    );
 
     // Use actual product data from the order
     const visaIntent = order.product_intent || 'tourism';
     const visaEntries = order.product_entries || 'single';
 
     this.logger.debug(
-      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityDays} days`,
+      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityDays} days, processing=${processingDays} days`,
     );
 
     return {
@@ -101,6 +109,7 @@ export class CBBFieldMapperService {
         visaEntries,
         visaValidityDays,
         countryFlag,
+        processingDays,
       }),
     };
   }
@@ -117,6 +126,7 @@ export class CBBFieldMapperService {
       visaEntries: string;
       visaValidityDays: string;
       countryFlag: string;
+      processingDays: number;
     },
   ): Record<string, any> {
     return {
@@ -128,6 +138,7 @@ export class CBBFieldMapperService {
 
       // Number fields (type 1)
       visa_quantity: order.visa_quantity || 1,
+      order_days: computed.processingDays, // Processing days for WhatsApp template
 
       // Boolean field (type 4) - CBB expects 1 for true, 0 for false
       order_urgent: computed.isUrgent ? 1 : 0,
@@ -258,6 +269,33 @@ export class CBBFieldMapperService {
         return '180';
       default:
         return '30'; // Default to 30 days
+    }
+  }
+
+  /**
+   * Calculate default processing days based on business rules
+   * This is a fallback when processing_days is not set in the order
+   */
+  private calculateDefaultProcessingDays(
+    country: string,
+    urgency: string
+  ): number {
+    const isUrgent = urgency === 'urgent' || urgency === 'express';
+    
+    // If urgent, always 1 business day
+    if (isUrgent) {
+      return 1;
+    }
+
+    // Country-specific processing times (based on requirements)
+    const countryNormalized = country?.toLowerCase().trim();
+    switch (countryNormalized) {
+      case 'morocco':
+        return 5;
+      case 'vietnam':
+        return 7;
+      default:
+        return 3; // Default for all other countries
     }
   }
 }

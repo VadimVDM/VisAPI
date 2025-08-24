@@ -195,7 +195,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   ): Promise<SendMessageResult> {
     switch (messageType) {
       case 'order_confirmation':
-        const orderData = this.templateService.prepareOrderConfirmationData(order);
+        const orderData = await this.templateService.prepareOrderConfirmationData(order);
         this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`);
         return await this.cbbService.sendOrderConfirmation(contactId, orderData);
 

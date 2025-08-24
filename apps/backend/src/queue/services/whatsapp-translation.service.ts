@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { RulesEngineService } from '@visapi/backend-business-rules';
+import { OrderProcessingContext } from '@visapi/shared-types';
 
 // Hebrew translation maps
 const COUNTRY_NAMES_HEBREW: Record<string, string> = {
@@ -171,6 +173,9 @@ const DEFAULT_PROCESSING_TIMES: Record<string, number> = {
 
 @Injectable()
 export class WhatsAppTranslationService {
+  constructor(
+    private readonly rulesEngine: RulesEngineService,
+  ) {}
   /**
    * Get Hebrew translation for a country name
    */
@@ -266,37 +271,26 @@ export class WhatsAppTranslationService {
 
   /**
    * Calculate processing days based on country and urgency
+   * Now uses the rules engine for dynamic business rules
    * Returns a string in format "X-Y" for ranges or "X" for single values
    */
-  calculateProcessingDays(
+  async calculateProcessingDays(
     country: string,
     urgency?: string,
     productDaysToUse?: number
-  ): string {
-    // Calculate processing time based on urgency and product type
-    const isUrgent = urgency === 'urgent' || urgency === 'express';
-    
-    const countryNormalized = country?.toLowerCase().trim();
-    let baseDays = DEFAULT_PROCESSING_TIMES[countryNormalized] || DEFAULT_PROCESSING_TIMES['default'];
-
-    // Reduce time for urgent processing
-    if (isUrgent) {
-      baseDays = Math.max(1, Math.floor(baseDays / 2));
-    }
-
-    // Use product_days_to_use if available and reasonable
+  ): Promise<string> {
+    // If productDaysToUse is provided and valid, use it directly
     if (productDaysToUse && productDaysToUse > 0 && productDaysToUse <= 30) {
-      baseDays = productDaysToUse;
+      return String(productDaysToUse);
     }
 
-    // Return as a range for standard processing, or exact for urgent
-    if (isUrgent) {
-      return String(baseDays); // Just the number for urgent
-    }
-    
-    // For standard processing, show a range
-    const minDays = baseDays;
-    const maxDays = baseDays + 2; // Add 2 days for buffer
-    return `${minDays}-${maxDays}`;
+    // Use rules engine for calculation
+    const context: OrderProcessingContext = {
+      country: country?.toLowerCase().trim(),
+      urgency: urgency?.toLowerCase().trim(),
+    };
+
+    const result = await this.rulesEngine.calculateProcessingDays(context);
+    return String(result.processing_days);
   }
 }

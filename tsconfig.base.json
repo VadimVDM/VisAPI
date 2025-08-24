@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@visapi/backend-business-rules": ["libs/backend/business-rules/src/index.ts"],
       "@visapi/backend-cache": ["libs/backend/cache/src/index.ts"],
       "@visapi/backend-core-cbb": ["libs/backend/core-cbb/src/index.ts"],
       "@visapi/backend-events": ["libs/backend/events/src/index.ts"],
@@ -23,6 +24,7 @@
       "@visapi/backend-repositories": [
         "libs/backend/repositories/src/index.ts"
       ],
+      "@visapi/backend-util-redis": ["libs/backend/util-redis/src/index.ts"],
       "@visapi/backend-whatsapp-business": ["libs/backend/src/index.ts"],
       "@visapi/core-config": ["libs/backend/core-config/src/index.ts"],
       "@visapi/core-supabase": ["libs/backend/core-supabase/src/index.ts"],

@@ -12,6 +12,7 @@ interface OrderData {
   amount?: number;
   urgency?: string | null;
   product_days_to_use?: number | null;
+  processing_days?: number | null; // Calculated by business rules at order creation
 }
 
 export interface OrderConfirmationData {
@@ -34,7 +35,7 @@ export class WhatsAppTemplateService {
   /**
    * Prepare data for order confirmation template
    */
-  prepareOrderConfirmationData(order: OrderData): OrderConfirmationData {
+  async prepareOrderConfirmationData(order: OrderData): Promise<OrderConfirmationData> {
     // Get Hebrew translations
     const countryHebrew = this.translationService.getCountryNameHebrew(order.product_country);
     const countryFlag = this.translationService.getCountryFlag(order.product_country);
@@ -42,11 +43,19 @@ export class WhatsAppTemplateService {
       order.product_doc_type ?? 'tourist',
       order.product_intent ?? undefined
     );
-    const processingDays = this.translationService.calculateProcessingDays(
-      order.product_country,
-      order.urgency ?? undefined,
-      order.product_days_to_use ?? undefined
-    );
+    
+    // Use processing_days from order if available (calculated at order creation)
+    // Otherwise calculate it dynamically
+    let processingDays: string;
+    if (order.processing_days) {
+      processingDays = String(order.processing_days);
+    } else {
+      processingDays = await this.translationService.calculateProcessingDays(
+        order.product_country,
+        order.urgency ?? undefined,
+        order.product_days_to_use ?? undefined
+      );
+    }
 
     // Return the data object for the template
     return {
@@ -57,7 +66,7 @@ export class WhatsAppTemplateService {
       visaType: visaTypeHebrew,
       applicantCount: String(order.visa_quantity || 1),
       paymentAmount: String(order.amount || 0),
-      processingDays: processingDays // Already a string from translation service
+      processingDays: processingDays // Processing days in business days
     };
   }
 

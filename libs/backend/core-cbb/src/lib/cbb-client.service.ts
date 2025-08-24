@@ -59,6 +59,7 @@ export class CbbClientService {
     'order_urgent': '763048',
     'order_priority': '470125',
     'order_date': '661549',
+    'order_days': '271948', // Processing days for template
     'visa_intent': '837162',
     'visa_entries': '863041',
     'visa_validity': '816014',
