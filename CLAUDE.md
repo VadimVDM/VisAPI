@@ -105,7 +105,6 @@ GET  /api/v1/queue/metrics           # Queue status
 - **orders**: Main order data (streamlined, references other tables)
 - **cbb_contacts**: CBB sync data with language-specific translations
 - **whatsapp_messages**: Complete WhatsApp message lifecycle tracking
-- **orders_with_status**: View joining orders with CBB/WhatsApp status
 
 ### Data Relationships
 - Orders → CBB Contacts (via `cbb_contact_uuid`)

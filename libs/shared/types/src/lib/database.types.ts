@@ -151,13 +151,6 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["order_id"]
           },
-          {
-            foreignKeyName: "cbb_contacts_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: true
-            referencedRelation: "orders_with_status"
-            referencedColumns: ["order_id"]
-          },
         ]
       }
       logs: {
@@ -219,7 +212,6 @@ export type Database = {
           emergency_contact_data: Json | null
           entry_date: string | null
           entry_port: string | null
-          visa_entries: string | null
           extra_data: Json | null
           extra_nationality_data: Json | null
           face_url: string | null
@@ -246,14 +238,15 @@ export type Database = {
           processing_rule_id: string | null
           product_country: string
           product_country_flag: string | null
-          product_days_to_use: number | null
           product_data: Json | null
+          product_days_to_use: number | null
           product_doc_name: string | null
           product_doc_type: string | null
           product_entries: string | null
           product_intent: string | null
           product_validity: string | null
           updated_at: string | null
+          visa_entries: string | null
           visa_quantity: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
@@ -276,7 +269,6 @@ export type Database = {
           emergency_contact_data?: Json | null
           entry_date?: string | null
           entry_port?: string | null
-          visa_entries?: string | null
           extra_data?: Json | null
           extra_nationality_data?: Json | null
           face_url?: string | null
@@ -303,14 +295,15 @@ export type Database = {
           processing_rule_id?: string | null
           product_country: string
           product_country_flag?: string | null
+          product_data?: Json | null
           product_days_to_use?: number | null
           product_doc_name?: string | null
-          product_data?: Json | null
           product_doc_type?: string | null
           product_entries?: string | null
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_entries?: string | null
           visa_quantity?: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
@@ -333,7 +326,6 @@ export type Database = {
           emergency_contact_data?: Json | null
           entry_date?: string | null
           entry_port?: string | null
-          visa_entries?: string | null
           extra_data?: Json | null
           extra_nationality_data?: Json | null
           face_url?: string | null
@@ -360,14 +352,15 @@ export type Database = {
           processing_rule_id?: string | null
           product_country?: string
           product_country_flag?: string | null
+          product_data?: Json | null
           product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
-          product_data?: Json | null
           product_entries?: string | null
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_entries?: string | null
           visa_quantity?: number | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
@@ -731,13 +724,6 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["order_id"]
           },
-          {
-            foreignKeyName: "whatsapp_messages_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders_with_status"
-            referencedColumns: ["order_id"]
-          },
         ]
       }
       whatsapp_template_history: {
@@ -910,93 +896,7 @@ export type Database = {
       }
     }
     Views: {
-      orders_with_status: {
-        Row: {
-          address_data: Json | null
-          amount: number | null
-          applicants_data: Json | null
-          branch: string | null
-          business_data: Json | null
-          cbb_contact_uuid: string | null
-          cbb_language: string | null
-          cbb_sync_attempts: number | null
-          cbb_sync_last_error: string | null
-          client_email: string | null
-          client_name: string | null
-          client_phone: string | null
-          country_name_translated: string | null
-          coupon_data: Json | null
-          created_at: string | null
-          currency: string | null
-          current_cbb_contact_id: string | null
-          domain: string | null
-          emergency_contact_data: Json | null
-          entry_date: string | null
-          entry_port: string | null
-          visa_entries: string | null
-          extra_data: Json | null
-          extra_nationality_data: Json | null
-          face_url: string | null
-          family_data: Json | null
-          file_transfer_method: string | null
-          files_data: Json | null
-          form_id: string | null
-          form_meta_data: Json | null
-          has_cbb_synced: boolean | null
-          has_whatsapp_sent: boolean | null
-          id: string | null
-          is_urgent: boolean | null
-          job_id: string | null
-          latest_whatsapp_message_id: string | null
-          latest_whatsapp_status: string | null
-          military_data: Json | null
-          occupation_data: Json | null
-          order_id: string | null
-          order_status: string | null
-          passport_data: Json | null
-          passport_url: string | null
-          past_travels_data: Json | null
-          payment_id: string | null
-          payment_processor: string | null
-          processed_at: string | null
-          processing_days: number | null
-          processing_days_calculated_at: string | null
-          processing_days_translated: string | null
-          processing_rule_id: string | null
-          product_country: string | null
-          product_country_flag: string | null
-          product_days_to_use: number | null
-          product_doc_name: string | null
-          product_data: Json | null
-          product_doc_type: string | null
-          product_entries: string | null
-          product_intent: string | null
-          product_validity: string | null
-          updated_at: string | null
-          urgency_translated: string | null
-          visa_quantity: number | null
-          visa_type_translated: string | null
-          webhook_received_at: string | null
-          whatsapp_alerts_enabled: boolean | null
-          workflow_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_cbb_contact_uuid_fkey"
-            columns: ["cbb_contact_uuid"]
-            isOneToOne: false
-            referencedRelation: "cbb_contacts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_processing_rule_id_fkey"
-            columns: ["processing_rule_id"]
-            isOneToOne: false
-            referencedRelation: "processing_rules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       backfill_orders_from_logs: {
