@@ -7,12 +7,14 @@ Essential reference for AI assistants. Updated: August 24, 2025
 **VisAPI** - Enterprise workflow automation for Visanet's visa processing operations.
 
 ### Production Environment
+
 - **Frontend**: https://app.visanet.app (Vercel)
 - **Backend**: https://api.visanet.app (Railway)
 - **Database**: Supabase (pangdzwamawwgmvxnwkk)
 - **Redis**: Railway integrated service
 
 ### Current Status
+
 - ✅ **Production stable** with Vizi webhook integration
 - ✅ **Database normalized** - CBB/WhatsApp data in separate tables
 - ✅ **WhatsApp messaging** via CBB API with Hebrew support
@@ -22,6 +24,12 @@ Essential reference for AI assistants. Updated: August 24, 2025
 - ✅ **CQRS architecture** with repository pattern
 - ✅ **TypeScript strict mode** fully enabled
 - ✅ **16 test suites passing** (100% success rate)
+- ✅ **Backend optimizations complete** (August 25, 2025)
+  - Redis caching with decorators implemented
+  - Graceful shutdown hooks added
+  - Docker multi-stage build optimized
+  - Dependencies updated to latest versions
+  - All imports cleaned up
 
 ## Project Structure
 
@@ -42,16 +50,19 @@ VisAPI/
 ## Technology Stack
 
 **Frontend**
+
 - Next.js 15, TypeScript 5.8, Tailwind CSS 4.1
 - Supabase Auth with magic links
 - Recharts for data visualization
 
 **Backend**
+
 - NestJS 11.1 with CQRS pattern
 - BullMQ + Redis for queue processing
 - PostgreSQL 16 (Supabase)
 
 **Infrastructure**
+
 - NX 21.2 monorepo with pnpm
 - Node.js 22 runtime
 - GitHub Actions CI/CD
@@ -107,11 +118,13 @@ GET  /api/v1/queue/metrics           # Queue status
 ## Database Architecture
 
 ### Core Tables
+
 - **orders**: Main order data (streamlined, references other tables)
 - **cbb_contacts**: CBB sync data with language-specific translations
 - **whatsapp_messages**: Complete WhatsApp message lifecycle tracking
 
 ### Data Relationships
+
 - Orders → CBB Contacts (via `cbb_contact_uuid`)
 - Orders → WhatsApp Messages (via `order_id`)
 - CBB Contacts store language-specific content (Hebrew, Russian, English)
@@ -119,17 +132,20 @@ GET  /api/v1/queue/metrics           # Queue status
 ## Development Notes
 
 ### Code Conventions
+
 - TypeScript strict mode enabled
 - ESLint + Prettier formatting
 - Conventional commits
 - Atomic changes with descriptive messages
 
 ### Testing
+
 - Use `pnpm test:backend:serial` for fast tests
 - All tests must pass before deployment
 - Coverage target: >80% backend, >70% frontend
 
 ### Common Patterns
+
 - **Controllers**: `@Controller('v1/resource')` not `@Controller('api/v1/resource')`
 - **Dates**: Pass ISO strings to queries, not Date objects
 - **Types**: Use `@visapi/visanet-types` for Vizi/Visanet types
@@ -139,6 +155,7 @@ GET  /api/v1/queue/metrics           # Queue status
 ## WhatsApp Integration (Hybrid Architecture)
 
 ### Message Sending (CBB)
+
 - All message sending via `@visapi/backend-core-cbb`
 - Uses `X-ACCESS-TOKEN` header
 - Template-based messaging only
@@ -146,6 +163,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - Dashboard at CBB for manual sending
 
 ### Webhook Receiving (Meta WABA)
+
 - **Endpoint**: `https://api.visanet.app/api/v1/webhooks/whatsapp`
 - **Verification**: HMAC-SHA256 signature using `WABA_WEBHOOK_SECRET`
 - **Verify Token**: `Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U`
@@ -159,6 +177,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Zapier Forwarding**: Raw webhook payloads forwarded unchanged
 
 ### Business Rules Engine (Processing Times)
+
 - **Database-driven configuration** via `processing_rules` table
 - **Automatic calculation** on order insert/update via trigger
 - **Default rules**:
@@ -205,6 +224,7 @@ ZAPIER_WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/...
 ## Troubleshooting
 
 ### Build Issues
+
 ```bash
 pnpm clean                 # Clear NX cache
 rm -rf node_modules
@@ -212,18 +232,21 @@ pnpm install
 ```
 
 ### Database Connection
+
 ```bash
 docker-compose logs postgres
 curl -I https://pangdzwamawwgmvxnwkk.supabase.co/health
 ```
 
 ### Redis Connection
+
 ```bash
 redis-cli -h localhost -p 6379 ping
 docker-compose logs redis
 ```
 
 ### Debug Commands
+
 ```bash
 pnpm nx graph              # View dependency graph
 pnpm ps                    # Running processes

@@ -98,8 +98,12 @@ describe('ContactResolverService', () => {
       const apiError = new Error('CBB API unavailable');
       cbbClient.findContactByPhone.mockRejectedValue(apiError);
 
-      await expect(service.resolveContact('+1234567890')).rejects.toThrow(ContactNotFoundError);
-      await expect(service.resolveContact('+1234567890')).rejects.toThrow('Contact not found for phone: +1234567890');
+      await expect(service.resolveContact('+1234567890')).rejects.toThrow(
+        ContactNotFoundError,
+      );
+      await expect(service.resolveContact('+1234567890')).rejects.toThrow(
+        'Contact not found for phone: +1234567890',
+      );
     });
 
     it('should normalize phone numbers correctly', async () => {
@@ -107,11 +111,11 @@ describe('ContactResolverService', () => {
 
       // Test various phone number formats
       const phoneVariations = [
-        '1234567890',       // No country code, 10 digits
-        '11234567890',      // Leading 1, 11 digits
-        '+1234567890',      // Already normalized
-        '(123) 456-7890',   // Formatted US number
-        '+1-123-456-7890',  // International format with dashes
+        '1234567890', // No country code, 10 digits
+        '11234567890', // Leading 1, 11 digits
+        '+1234567890', // Already normalized
+        '(123) 456-7890', // Formatted US number
+        '+1-123-456-7890', // International format with dashes
       ];
 
       for (const phone of phoneVariations) {
@@ -120,7 +124,9 @@ describe('ContactResolverService', () => {
 
       // All variations should be normalized to +1234567890
       phoneVariations.forEach(() => {
-        expect(cbbClient.findContactByPhone).toHaveBeenCalledWith('+1234567890');
+        expect(cbbClient.findContactByPhone).toHaveBeenCalledWith(
+          '+1234567890',
+        );
       });
     });
 
@@ -130,7 +136,9 @@ describe('ContactResolverService', () => {
 
       await service.resolveContact('+447712345678');
 
-      expect(cbbClient.findContactByPhone).toHaveBeenCalledWith('+447712345678');
+      expect(cbbClient.findContactByPhone).toHaveBeenCalledWith(
+        '+447712345678',
+      );
     });
   });
 
@@ -210,9 +218,13 @@ describe('ContactResolverService', () => {
   describe('error handling', () => {
     it('should handle contact creation failures', async () => {
       cbbClient.findContactByPhone.mockResolvedValue(null);
-      cbbClient.createContact.mockRejectedValue(new Error('Contact creation failed'));
+      cbbClient.createContact.mockRejectedValue(
+        new Error('Contact creation failed'),
+      );
 
-      await expect(service.resolveContact('+1234567890')).rejects.toThrow(ContactNotFoundError);
+      await expect(service.resolveContact('+1234567890')).rejects.toThrow(
+        ContactNotFoundError,
+      );
     });
 
     it('should handle malformed phone numbers gracefully', async () => {

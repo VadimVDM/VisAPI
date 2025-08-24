@@ -19,7 +19,7 @@ export class TemplateService {
 
   constructor(
     private readonly cbbClient: CbbClientService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {
     this.cacheTimeout = this.configService.cbbCacheTimeout * 1000; // Convert to milliseconds
     this.initializeTemplateMappings();
@@ -32,19 +32,24 @@ export class TemplateService {
     // Check if we have a configured mapping
     const mappedFlowId = this.templateMappings.get(templateName);
     if (mappedFlowId) {
-      this.logger.debug(`Using mapped flow ID ${mappedFlowId} for template: ${templateName}`);
+      this.logger.debug(
+        `Using mapped flow ID ${mappedFlowId} for template: ${templateName}`,
+      );
       return mappedFlowId;
     }
 
     // Try to find flow by name
     const flows = await this.getFlows();
-    const matchingFlow = flows.find(flow => 
-      flow.name.toLowerCase() === templateName.toLowerCase() ||
-      flow.name.toLowerCase().includes(templateName.toLowerCase())
+    const matchingFlow = flows.find(
+      (flow) =>
+        flow.name.toLowerCase() === templateName.toLowerCase() ||
+        flow.name.toLowerCase().includes(templateName.toLowerCase()),
     );
 
     if (matchingFlow) {
-      this.logger.debug(`Found flow ${matchingFlow.id} for template: ${templateName}`);
+      this.logger.debug(
+        `Found flow ${matchingFlow.id} for template: ${templateName}`,
+      );
       // Cache the mapping for future use
       this.templateMappings.set(templateName, matchingFlow.id);
       return matchingFlow.id;
@@ -58,10 +63,13 @@ export class TemplateService {
    */
   async processTemplateVariables(
     templateName: string,
-    variables: Record<string, any>
+    variables: Record<string, any>,
   ): Promise<any> {
-    this.logger.debug(`Processing variables for template: ${templateName}`, variables);
-    
+    this.logger.debug(
+      `Processing variables for template: ${templateName}`,
+      variables,
+    );
+
     // For now, return variables as-is
     // In the future, this could handle variable transformation,
     // validation, or mapping to CBB flow variables
@@ -76,8 +84,12 @@ export class TemplateService {
       await this.getTemplateFlowId(templateName);
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.debug(`Template validation failed for ${templateName}:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.debug(
+        `Template validation failed for ${templateName}:`,
+        errorMessage,
+      );
       return false;
     }
   }
@@ -87,7 +99,7 @@ export class TemplateService {
    */
   async getFlows(): Promise<Flow[]> {
     const now = Date.now();
-    
+
     // Return cached flows if still valid
     if (this.flowsCache && now < this.flowsCacheExpiry) {
       this.logger.debug('Using cached flows');
@@ -97,22 +109,24 @@ export class TemplateService {
     try {
       this.logger.debug('Fetching flows from CBB API');
       const flows = await this.cbbClient.getFlows();
-      
+
       // Update cache
       this.flowsCache = flows;
       this.flowsCacheExpiry = now + this.cacheTimeout;
-      
-      this.logger.debug(`Cached ${flows.length} flows for ${this.cacheTimeout / 1000} seconds`);
+
+      this.logger.debug(
+        `Cached ${flows.length} flows for ${this.cacheTimeout / 1000} seconds`,
+      );
       return flows;
     } catch (error) {
       this.logger.error('Failed to fetch flows:', error);
-      
+
       // Return cached flows if available, even if expired
       if (this.flowsCache) {
         this.logger.warn('Using expired flows cache due to API error');
         return this.flowsCache;
       }
-      
+
       throw error;
     }
   }
@@ -126,7 +140,7 @@ export class TemplateService {
 
     // Add configured mappings
     for (const [templateName, flowId] of this.templateMappings.entries()) {
-      const flow = flows.find(f => f.id === flowId);
+      const flow = flows.find((f) => f.id === flowId);
       templates.push({
         templateName,
         flowId,
@@ -136,7 +150,9 @@ export class TemplateService {
 
     // Add flows that aren't explicitly mapped
     for (const flow of flows) {
-      const isAlreadyMapped = Array.from(this.templateMappings.values()).includes(flow.id);
+      const isAlreadyMapped = Array.from(
+        this.templateMappings.values(),
+      ).includes(flow.id);
       if (!isAlreadyMapped) {
         templates.push({
           templateName: flow.name.toLowerCase().replace(/\s+/g, '_'),
@@ -158,7 +174,10 @@ export class TemplateService {
       { env: 'CBB_TEMPLATE_VISA_APPROVED', name: 'visa_approved' },
       { env: 'CBB_TEMPLATE_VISA_REJECTED', name: 'visa_rejected' },
       { env: 'CBB_TEMPLATE_DOCUMENT_REQUEST', name: 'document_request' },
-      { env: 'CBB_TEMPLATE_APPOINTMENT_REMINDER', name: 'appointment_reminder' },
+      {
+        env: 'CBB_TEMPLATE_APPOINTMENT_REMINDER',
+        name: 'appointment_reminder',
+      },
       { env: 'CBB_TEMPLATE_STATUS_UPDATE', name: 'status_update' },
     ];
 
@@ -169,18 +188,24 @@ export class TemplateService {
           const parsedFlowId = parseInt(flowId, 10);
           if (!isNaN(parsedFlowId)) {
             this.templateMappings.set(mapping.name, parsedFlowId);
-            this.logger.debug(`Mapped template ${mapping.name} to flow ${parsedFlowId}`);
+            this.logger.debug(
+              `Mapped template ${mapping.name} to flow ${parsedFlowId}`,
+            );
           } else {
             this.logger.warn(`Invalid flow ID for ${mapping.env}: ${flowId}`);
           }
         }
       } catch (error) {
         // Template mapping is optional, skip if not configured
-        this.logger.debug(`Template mapping ${mapping.env} not configured, skipping`);
+        this.logger.debug(
+          `Template mapping ${mapping.env} not configured, skipping`,
+        );
       }
     }
 
-    this.logger.debug(`Initialized ${this.templateMappings.size} template mappings`);
+    this.logger.debug(
+      `Initialized ${this.templateMappings.size} template mappings`,
+    );
   }
 
   /**
@@ -203,9 +228,9 @@ export class TemplateService {
   /**
    * Get cache statistics
    */
-  getCacheStats(): { 
-    flowsCached: boolean; 
-    flowsCount: number; 
+  getCacheStats(): {
+    flowsCached: boolean;
+    flowsCount: number;
     templateMappings: number;
     cacheExpiresIn: number;
   } {

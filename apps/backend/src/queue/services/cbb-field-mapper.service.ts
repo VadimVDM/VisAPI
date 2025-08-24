@@ -237,10 +237,7 @@ export class CBBFieldMapperService {
     // If not available, calculate based on urgency
     const processingDays =
       order.processing_days ||
-      this.calculateDefaultProcessingDays(
-        order.product_country,
-        isUrgent,
-      );
+      this.calculateDefaultProcessingDays(order.product_country, isUrgent);
 
     // Use actual product data from the order
     const visaIntent = order.product_intent || 'tourism';
@@ -312,7 +309,6 @@ export class CBBFieldMapperService {
       Email: order.client_email, // System field ID -12
     };
   }
-
 
   /**
    * Convert date string to Unix timestamp in seconds

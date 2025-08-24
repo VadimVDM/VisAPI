@@ -48,7 +48,7 @@ export class LogsController {
     const result = await this.logService.getLogs(filters);
 
     return {
-      logs: result.logs.map((log: any) => ({
+      logs: result.logs.map((log) => ({
         ...log,
         metadata: log.metadata as Record<string, unknown>,
       })),

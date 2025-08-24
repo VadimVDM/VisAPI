@@ -31,7 +31,7 @@ import {
         const logger = new Logger('QueueModule');
         const redisUrl = configService.redisUrl;
 
-        if (!redisUrl || redisUrl === 'h') {
+        if (!redisUrl) {
           // Return a config that will fail gracefully
           logger.warn(
             'Redis URL not configured - queue functionality disabled',

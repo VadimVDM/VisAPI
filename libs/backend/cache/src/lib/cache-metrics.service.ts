@@ -3,7 +3,7 @@ import { Counter, Histogram, Gauge, register } from 'prom-client';
 
 /**
  * CacheMetricsService - Prometheus metrics for cache operations
- * 
+ *
  * Tracks:
  * - Cache hits/misses by operation and key pattern
  * - Cache operation latency
@@ -16,22 +16,22 @@ export class CacheMetricsService {
   // Cache hit/miss counters
   private readonly cacheHitsCounter: Counter<string>;
   private readonly cacheMissesCounter: Counter<string>;
-  
+
   // Cache operation counters
   private readonly cacheOperationsCounter: Counter<string>;
-  
+
   // Cache operation latency histogram
   private readonly cacheLatencyHistogram: Histogram<string>;
-  
+
   // Cache size gauge
   private readonly cacheSizeGauge: Gauge<string>;
-  
+
   // Cache memory usage gauge
   private readonly cacheMemoryGauge: Gauge<string>;
-  
+
   // Cache evictions counter
   private readonly cacheEvictionsCounter: Counter<string>;
-  
+
   // Hit ratio gauge (calculated)
   private readonly cacheHitRatioGauge: Gauge<string>;
 
@@ -65,7 +65,7 @@ export class CacheMetricsService {
       name: 'visapi_cache_operation_duration_seconds',
       help: 'Cache operation duration in seconds',
       labelNames: ['operation', 'cache_name'],
-      buckets: [0.001, 0.005, 0.010, 0.025, 0.050, 0.100, 0.250, 0.500, 1.0],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
       registers: [register],
     });
 
@@ -112,7 +112,11 @@ export class CacheMetricsService {
   /**
    * Record a cache miss
    */
-  recordMiss(operation: string, keyPrefix: string, cacheName = 'default'): void {
+  recordMiss(
+    operation: string,
+    keyPrefix: string,
+    cacheName = 'default',
+  ): void {
     this.cacheMissesCounter.labels(operation, keyPrefix, cacheName).inc();
   }
 
@@ -122,7 +126,7 @@ export class CacheMetricsService {
   recordOperation(
     operation: string,
     status: 'success' | 'error',
-    cacheName = 'default'
+    cacheName = 'default',
   ): void {
     this.cacheOperationsCounter.labels(operation, status, cacheName).inc();
   }
@@ -133,7 +137,7 @@ export class CacheMetricsService {
   recordLatency(
     operation: string,
     durationMs: number,
-    cacheName = 'default'
+    cacheName = 'default',
   ): void {
     this.cacheLatencyHistogram
       .labels(operation, cacheName)
@@ -168,7 +172,10 @@ export class CacheMetricsService {
   /**
    * Record a cache eviction
    */
-  recordEviction(reason: 'ttl' | 'lru' | 'manual' | 'memory', cacheName = 'default'): void {
+  recordEviction(
+    reason: 'ttl' | 'lru' | 'manual' | 'memory',
+    cacheName = 'default',
+  ): void {
     this.cacheEvictionsCounter.labels(reason, cacheName).inc();
   }
 
@@ -177,12 +184,16 @@ export class CacheMetricsService {
    */
   async updateHitRatio(cacheName = 'default', window = '1m'): Promise<void> {
     // Get current metric values
-    const hits = await this.getMetricValue(this.cacheHitsCounter, { cache_name: cacheName });
-    const misses = await this.getMetricValue(this.cacheMissesCounter, { cache_name: cacheName });
-    
+    const hits = await this.getMetricValue(this.cacheHitsCounter, {
+      cache_name: cacheName,
+    });
+    const misses = await this.getMetricValue(this.cacheMissesCounter, {
+      cache_name: cacheName,
+    });
+
     const total = hits + misses;
     const ratio = total > 0 ? hits / total : 0;
-    
+
     this.cacheHitRatioGauge.labels(cacheName, window).set(ratio);
   }
 
@@ -191,7 +202,7 @@ export class CacheMetricsService {
    */
   private async getMetricValue(
     metric: Counter<string> | Gauge<string>,
-    labels: Record<string, string>
+    labels: Record<string, string>,
   ): Promise<number> {
     // Get the metric value directly from the metric object
     // This is a simplified implementation - in production, use proper Prometheus client methods

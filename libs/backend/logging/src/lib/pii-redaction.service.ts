@@ -9,52 +9,56 @@ export interface PiiRedactionResult {
 @Injectable()
 export class PiiRedactionService {
   // PII detection patterns - ordered by specificity to avoid conflicts
-  private readonly patterns: { [key: string]: { regex: RegExp; replacement: string; name: string } } = {
+  private readonly patterns: {
+    [key: string]: { regex: RegExp; replacement: string; name: string };
+  } = {
     // Process credit cards first (more specific)
     creditCard: {
       regex: /\b(?:\d{4}[-.\s]?){3}\d{4}\b/g,
       replacement: '[CARD_REDACTED]',
-      name: 'credit_card'
+      name: 'credit_card',
     },
     // Process phone numbers after credit cards (less specific)
     phone: {
       regex: /(\s|^)(\+?1?[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
       replacement: '$1[PHONE_REDACTED]',
-      name: 'phone_number'
+      name: 'phone_number',
     },
     email: {
       regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
       replacement: '[EMAIL_REDACTED]',
-      name: 'email'
+      name: 'email',
     },
     ssn: {
       regex: /\b\d{3}-?\d{2}-?\d{4}\b/g,
       replacement: '[SSN_REDACTED]',
-      name: 'ssn'
+      name: 'ssn',
     },
     ipAddress: {
       regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g,
       replacement: '[IP_REDACTED]',
-      name: 'ip_address'
+      name: 'ip_address',
     },
     // Generic patterns for common PII keywords
     address: {
-      regex: /\b\d+\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|court|ct|place|pl)\b/gi,
+      regex:
+        /\b\d+\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|court|ct|place|pl)\b/gi,
       replacement: '[ADDRESS_REDACTED]',
-      name: 'address'
+      name: 'address',
     },
     // API keys and tokens
     apiKey: {
       regex: /\b[A-Za-z0-9]{32,}\b/g,
       replacement: '[API_KEY_REDACTED]',
-      name: 'api_key'
+      name: 'api_key',
     },
     // UUIDs (potential sensitive identifiers)
     uuid: {
-      regex: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      regex:
+        /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
       replacement: '[UUID_REDACTED]',
-      name: 'uuid'
-    }
+      name: 'uuid',
+    },
   };
 
   /**
@@ -65,7 +69,7 @@ export class PiiRedactionService {
       return {
         text: '',
         piiFound: false,
-        redactedFields: []
+        redactedFields: [],
       };
     }
 
@@ -84,18 +88,26 @@ export class PiiRedactionService {
     return {
       text: redactedText,
       piiFound: redactedFields.length > 0,
-      redactedFields
+      redactedFields,
     };
   }
 
   /**
    * Redact PII from an object (recursively)
    */
-  redactPiiFromObject(obj: any): { obj: any; piiFound: boolean; redactedFields: string[] } {
+  redactPiiFromObject(obj: any): {
+    obj: any;
+    piiFound: boolean;
+    redactedFields: string[];
+  } {
     if (!obj || typeof obj !== 'object') {
       if (typeof obj === 'string') {
         const result = this.redactPii(obj);
-        return { obj: result.text, piiFound: result.piiFound, redactedFields: result.redactedFields };
+        return {
+          obj: result.text,
+          piiFound: result.piiFound,
+          redactedFields: result.redactedFields,
+        };
       }
       return { obj, piiFound: false, redactedFields: [] };
     }
@@ -127,7 +139,7 @@ export class PiiRedactionService {
     return {
       obj: redactedObj,
       piiFound: globalPiiFound,
-      redactedFields: [...new Set(globalRedactedFields)]
+      redactedFields: [...new Set(globalRedactedFields)],
     };
   }
 
@@ -139,8 +151,8 @@ export class PiiRedactionService {
       return false;
     }
 
-    return Object.values(this.patterns).some(pattern => 
-      pattern.regex.test(text)
+    return Object.values(this.patterns).some((pattern) =>
+      pattern.regex.test(text),
     );
   }
 
@@ -165,7 +177,7 @@ export class PiiRedactionService {
     this.patterns[name] = {
       regex,
       replacement,
-      name
+      name,
     };
   }
 
@@ -179,7 +191,10 @@ export class PiiRedactionService {
   /**
    * Get all configured patterns
    */
-  getPatterns(): Record<string, { regex: RegExp; replacement: string; name: string }> {
+  getPatterns(): Record<
+    string,
+    { regex: RegExp; replacement: string; name: string }
+  > {
     return { ...this.patterns };
   }
 }

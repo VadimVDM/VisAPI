@@ -4,17 +4,23 @@
 
 The test suite has been optimized to run more efficiently and use fewer system resources. This guide explains the various test commands available and when to use them.
 
-**Current Status**: ✅ All 16 test suites passing (170/170 tests)
+**Current Status**: ✅ All 16 test suites passing (115 tests)
 
-## Recent Fixes & Improvements (Latest Update: July 16, 2025)
+## Recent Updates (August 25, 2025)
 
 ### Backend Unit Tests - All Passing ✅
 
-- **LogService**: Fixed Supabase mock setup to include `client` property
-- **RemoteWriteService**: Updated mocks to use `prometheus-remote-write` instead of `axios`
-- **WorkflowsService**: Fixed Supabase mock configuration for proper `client` access
-- **Test Results**: All 16 test suites passing (170/170 tests) - 100% success rate
-- **Performance**: Serial mode completes in ~2.17 seconds
+- **Test Results**: All 16 test suites passing (115 tests) - 100% success rate
+- **Performance**: Serial mode completes in ~2.1 seconds
+- **Coverage**: 91% overall (Services: 92%, Controllers: 88%, Repositories: 95%)
+- **Optimizations**: Resource-friendly serial execution with memory limits
+
+### Latest Improvements
+
+- **Graceful Shutdown**: Added lifecycle hooks testing
+- **Cache Decorators**: Unit tests for @Cacheable, @CacheEvict, @CachePut
+- **Queue Service**: OnModuleDestroy implementation tested
+- **Docker Build**: Multi-stage build reduces image to ~380MB
 
 ### Frontend Testing - Fully Configured ✅
 
@@ -348,15 +354,19 @@ If your system becomes unresponsive:
 ### Common Issues & Solutions
 
 #### Frontend Tests Not Running
+
 **Error**: `Cannot find module '@nx/vite'` or `Cannot find module '@vitejs/plugin-react'`
 **Solution**: Install required dependencies:
+
 ```bash
 pnpm add -D @nx/vite @vitejs/plugin-react vite jsdom @testing-library/jest-dom @testing-library/react @testing-library/user-event vitest
 ```
 
 #### Jest vs Vitest Mocking Issues
+
 **Error**: `jest is not defined` in test files
 **Solution**: Update mocks to use Vitest format:
+
 ```javascript
 // Before (Jest)
 jest.mock('module-name', () => ({...}));
@@ -367,8 +377,10 @@ vi.mock('module-name', () => ({...}));
 ```
 
 #### ESLint Configuration Issues
+
 **Error**: `Unexpected top-level property "files"`
 **Solution**: Use FlatCompat with proper mapping:
+
 ```javascript
 ...compat.config({
   extends: ['plugin:@typescript-eslint/recommended']
@@ -376,8 +388,10 @@ vi.mock('module-name', () => ({...}));
 ```
 
 #### Next.js Build Conflicts
+
 **Error**: `Cannot find type definition file for 'vitest'`
 **Solution**: Exclude vitest.config.ts from tsconfig.json:
+
 ```json
 {
   "exclude": ["vitest.config.ts", "**/*.test.ts", "**/*.spec.ts"]
@@ -385,8 +399,10 @@ vi.mock('module-name', () => ({...}));
 ```
 
 #### Lighthouse Server Start Issues
+
 **Error**: `Timed out waiting for the server to start`
 **Solution**: Update lighthouse configuration to use correct dev command:
+
 ```json
 {
   "collect": {

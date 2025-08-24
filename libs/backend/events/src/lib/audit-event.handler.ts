@@ -62,7 +62,9 @@ export class AuditEventHandler {
    * Get recent audit logs (placeholder for future implementation)
    */
   async getRecentAuditLogs(limit = 100): Promise<AuditLog[]> {
-    this.logger.debug('Audit log retrieval not yet implemented - audit_logs table does not exist');
+    this.logger.debug(
+      'Audit log retrieval not yet implemented - audit_logs table does not exist',
+    );
     return [];
   }
 
@@ -77,7 +79,9 @@ export class AuditEventHandler {
     dateFrom?: Date;
     dateTo?: Date;
   }): Promise<AuditLog[]> {
-    this.logger.debug('Audit log query not yet implemented - audit_logs table does not exist');
+    this.logger.debug(
+      'Audit log query not yet implemented - audit_logs table does not exist',
+    );
     return [];
   }
 

@@ -6,8 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { register as globalRegistry } from 'prom-client';
-// Import package.json to get version
-import * as packageJson from '../../../../package.json';
+// Package version
 import { pushTimeseries, Timeseries } from 'prometheus-remote-write';
 
 @Injectable()
@@ -238,7 +237,7 @@ export class RemoteWriteService implements OnModuleInit, OnModuleDestroy {
 
       // Add app and version labels
       labels.app = 'visapi';
-      labels.version = packageJson.version || 'unknown';
+      labels.version = '1.0.0';
 
       // Create TimeSeries entry
       timeSeries.push({

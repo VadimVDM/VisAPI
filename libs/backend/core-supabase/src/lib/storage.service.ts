@@ -21,7 +21,7 @@ export class StorageService {
 
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly logger: PinoLogger
+    private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(StorageService.name);
   }
@@ -32,9 +32,13 @@ export class StorageService {
   async uploadFile(
     path: string,
     buffer: Buffer,
-    options: StorageUploadOptions = {}
+    options: StorageUploadOptions = {},
   ): Promise<StorageFile> {
-    const { contentType = 'application/pdf', cacheControl = '3600', upsert = true } = options;
+    const {
+      contentType = 'application/pdf',
+      cacheControl = '3600',
+      upsert = true,
+    } = options;
 
     try {
       // Upload file to storage
@@ -80,7 +84,10 @@ export class StorageService {
         .remove([path]);
 
       if (error) {
-        this.logger.error({ error, path }, 'Failed to delete file from storage');
+        this.logger.error(
+          { error, path },
+          'Failed to delete file from storage',
+        );
         throw error;
       }
 
@@ -94,7 +101,10 @@ export class StorageService {
   /**
    * Create a signed URL for temporary access
    */
-  async createSignedUrl(path: string, expiresIn = this.SIGNED_URL_EXPIRY): Promise<string> {
+  async createSignedUrl(
+    path: string,
+    expiresIn = this.SIGNED_URL_EXPIRY,
+  ): Promise<string> {
     try {
       const { data, error } = await this.supabase.serviceClient.storage
         .from(this.BUCKET_NAME)
@@ -163,7 +173,7 @@ export class StorageService {
         throw error;
       }
 
-      return data.map(file => `${prefix}/${file.name}`);
+      return data.map((file) => `${prefix}/${file.name}`);
     } catch (error) {
       this.logger.error({ error, prefix }, 'Error listing files');
       throw error;

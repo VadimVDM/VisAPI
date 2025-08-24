@@ -118,7 +118,7 @@ export class WorkflowsRepository extends BaseRepository<WorkflowRecord> {
     byTriggerType: Record<string, number>;
   }> {
     const workflows = await this.findMany();
-    
+
     const byTriggerType: Record<string, number> = {};
     workflows.forEach((workflow) => {
       workflow.config.triggers?.forEach((trigger) => {

@@ -4,7 +4,12 @@ import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { AxiosResponse } from 'axios';
 import { CbbClientService, CbbApiError } from './cbb-client.service';
-import { Contact, CreateContactDto, Flow, WHATSAPP_CHANNEL_NAME } from '@visapi/shared-types';
+import {
+  Contact,
+  CreateContactDto,
+  Flow,
+  WHATSAPP_CHANNEL_NAME,
+} from '@visapi/shared-types';
 
 describe('CbbClientService', () => {
   let service: CbbClientService;
@@ -93,7 +98,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/contacts/find_by_custom_field`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
         params: {
@@ -144,7 +149,9 @@ describe('CbbClientService', () => {
 
       httpService.request.mockReturnValue(throwError(() => error));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(
+        CbbApiError,
+      );
     });
   });
 
@@ -174,7 +181,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/contacts`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
         data: createDto,
@@ -205,7 +212,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/contacts/${contactId}/send/text`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
         data: {
@@ -232,7 +239,11 @@ describe('CbbClientService', () => {
 
       httpService.request.mockReturnValue(of(mockResponse));
 
-      const result = await service.sendFileMessage(contactId, fileUrl, fileType);
+      const result = await service.sendFileMessage(
+        contactId,
+        fileUrl,
+        fileType,
+      );
 
       expect(result).toEqual({ success: true, message_id: 'msg_124' });
       expect(httpService.request).toHaveBeenCalledWith({
@@ -240,7 +251,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/contacts/${contactId}/send/file`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
         data: {
@@ -275,7 +286,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/contacts/${contactId}/send/${flowId}`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
       });
@@ -307,7 +318,7 @@ describe('CbbClientService', () => {
         url: `${mockConfig.apiUrl}/accounts/flows`,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${mockConfig.apiKey}`,
+          Authorization: `Bearer ${mockConfig.apiKey}`,
         },
         timeout: mockConfig.timeout,
       });
@@ -346,7 +357,9 @@ describe('CbbClientService', () => {
 
       httpService.request.mockReturnValue(throwError(() => clientError));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(
+        CbbApiError,
+      );
       expect(httpService.request).toHaveBeenCalledTimes(1);
     });
 
@@ -361,14 +374,16 @@ describe('CbbClientService', () => {
 
       httpService.request.mockReturnValue(of(mockResponse));
 
-      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(CbbApiError);
+      await expect(service.findContactByPhone('+1234567890')).rejects.toThrow(
+        CbbApiError,
+      );
     });
   });
 
   describe('configuration validation', () => {
     it('should warn when API key is not configured', () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      
+
       configService.get.mockImplementation((key: string) => {
         if (key === 'cbb.apiKey') return '';
         return mockConfig[key.replace('cbb.', '')];
@@ -378,7 +393,7 @@ describe('CbbClientService', () => {
       new CbbClientService(httpService, configService);
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('CBB_API_KEY not configured')
+        expect.stringContaining('CBB_API_KEY not configured'),
       );
 
       warnSpy.mockRestore();

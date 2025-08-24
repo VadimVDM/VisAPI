@@ -15,13 +15,13 @@ export interface OrderRecord {
   amount: number;
   currency: string;
   order_status: string;
-  
+
   // Client fields
   client_name: string;
   client_email: string;
   client_phone: string;
   whatsapp_alerts_enabled: boolean;
-  
+
   // Product fields
   product_country: string;
   product_doc_type?: string;
@@ -31,20 +31,20 @@ export interface OrderRecord {
   product_validity?: string;
   product_days_to_use?: number;
   product_data?: Json;
-  
+
   // Visa details
   visa_quantity: number;
   file_transfer_method?: string;
-  
+
   // Entry details
   entry_date?: string;
   entry_port?: string;
   visa_entries?: string;
-  
+
   // Document URLs
   face_url?: string;
   passport_url?: string;
-  
+
   // JSON fields
   passport_data?: Json;
   extra_nationality_data?: Json;
@@ -60,7 +60,7 @@ export interface OrderRecord {
   form_meta_data?: Json;
   applicants_data?: Json;
   extra_data?: Json;
-  
+
   // Tracking
   webhook_received_at: string;
   processed_at?: string;
@@ -274,7 +274,10 @@ export class OrdersRepository extends BaseRepository<OrderRecord> {
       query = query.eq('client_phone', filters.client_phone);
     }
     if (filters.whatsapp_alerts_enabled !== undefined) {
-      query = query.eq('whatsapp_alerts_enabled', filters.whatsapp_alerts_enabled);
+      query = query.eq(
+        'whatsapp_alerts_enabled',
+        filters.whatsapp_alerts_enabled,
+      );
     }
     if (filters.whatsapp_confirmation_sent !== undefined) {
       if (filters.whatsapp_confirmation_sent) {

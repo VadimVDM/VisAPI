@@ -51,15 +51,15 @@ export class BatchOperationsService {
     // Process in batches to avoid overwhelming the database
     for (let i = 0; i < updates.length; i += batchSize) {
       const batch = updates.slice(i, i + batchSize);
-      
+
       try {
         // Use a single query with CASE statements for efficiency
         const query = `
           UPDATE api_keys
           SET last_used_at = CASE id
-            ${batch.map(u => `WHEN '${u.id}' THEN '${u.timestamp}'::timestamp`).join('\n')}
+            ${batch.map((u) => `WHEN '${u.id}' THEN '${u.timestamp}'::timestamp`).join('\n')}
           END
-          WHERE id IN (${batch.map(u => `'${u.id}'`).join(',')})
+          WHERE id IN (${batch.map((u) => `'${u.id}'`).join(',')})
         `;
 
         // Use individual updates since exec_sql may not be available
@@ -68,9 +68,12 @@ export class BatchOperationsService {
             .from('api_keys')
             .update({ last_used_at: update.timestamp })
             .eq('id', update.id);
-            
+
           if (updateError) {
-            this.logger.error(`Failed to update API key ${update.id}`, updateError);
+            this.logger.error(
+              `Failed to update API key ${update.id}`,
+              updateError,
+            );
             failed++;
           } else {
             success++;
@@ -83,7 +86,9 @@ export class BatchOperationsService {
       }
     }
 
-    this.logger.log(`Batch API key update: ${success} success, ${failed} failed`);
+    this.logger.log(
+      `Batch API key update: ${success} success, ${failed} failed`,
+    );
     return { success, failed };
   }
 
@@ -105,7 +110,7 @@ export class BatchOperationsService {
 
     for (let i = 0; i < orders.length; i += batchSize) {
       const batch = orders.slice(i, i + batchSize);
-      
+
       try {
         const { data, error } = await this.supabase
           .from('orders')
@@ -113,14 +118,17 @@ export class BatchOperationsService {
             processed_at: new Date().toISOString(),
             workflow_id: batch[0].workflowId, // Assuming same workflow for batch
           })
-          .in('id', batch.map(o => o.orderId))
+          .in(
+            'id',
+            batch.map((o) => o.orderId),
+          )
           .select();
 
         if (error) {
           this.logger.error('Batch order update failed', error);
           failed += batch.length;
         } else {
-          success += (data?.length || 0);
+          success += data?.length || 0;
           failed += batch.length - (data?.length || 0);
         }
       } catch (error) {
@@ -129,7 +137,9 @@ export class BatchOperationsService {
       }
     }
 
-    this.logger.log(`Batch order processing: ${success} success, ${failed} failed`);
+    this.logger.log(
+      `Batch order processing: ${success} success, ${failed} failed`,
+    );
     return { success, failed };
   }
 
@@ -156,12 +166,12 @@ export class BatchOperationsService {
 
     for (let i = 0; i < logs.length; i += batchSize) {
       const batch = logs.slice(i, i + batchSize);
-      
+
       try {
         const { data, error } = await this.supabase
           .from('logs')
           .insert(
-            batch.map(log => ({
+            batch.map((log) => ({
               ...log,
               timestamp: new Date().toISOString(),
             })),
@@ -172,7 +182,7 @@ export class BatchOperationsService {
           this.logger.error('Batch log insert failed', error);
           failed += batch.length;
         } else {
-          success += (data?.length || 0);
+          success += data?.length || 0;
         }
       } catch (error) {
         this.logger.error('Batch log insert error', error);
@@ -197,7 +207,7 @@ export class BatchOperationsService {
     try {
       // WhatsApp confirmation tracking has been moved to a separate table
       // For now, just return success
-      const data = orderIds.map(id => ({ id }));
+      const data = orderIds.map((id) => ({ id }));
       const error = null;
 
       if (error) {
@@ -230,7 +240,7 @@ export class BatchOperationsService {
 
     for (let i = 0; i < updates.length; i += batchSize) {
       const batch = updates.slice(i, i + batchSize);
-      
+
       // Process each item individually since contact IDs are different
       const promises = batch.map(async ({ orderId, contactId }) => {
         try {
@@ -317,7 +327,7 @@ export class BatchOperationsService {
 
     for (let i = 0; i < updates.length; i += batchSize) {
       const batch = updates.slice(i, i + batchSize);
-      
+
       const promises = batch.map(async ({ id, data }) => {
         try {
           const { error } = await this.supabase
@@ -338,7 +348,9 @@ export class BatchOperationsService {
       await Promise.all(promises);
     }
 
-    this.logger.log(`Batch update ${tableName}: ${success} success, ${failed} failed`);
+    this.logger.log(
+      `Batch update ${tableName}: ${success} success, ${failed} failed`,
+    );
     return { success, failed };
   }
 }

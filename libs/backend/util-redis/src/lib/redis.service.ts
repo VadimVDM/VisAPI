@@ -9,7 +9,7 @@ export class RedisService {
 
   constructor(private readonly config: ConfigService) {
     const redisUrl = this.config.redisUrl;
-    
+
     if (!redisUrl || redisUrl === 'h') {
       this.logger.error('Invalid or missing REDIS_URL environment variable');
       // Use a dummy Redis instance that will fail gracefully
@@ -26,29 +26,29 @@ export class RedisService {
       // Use public URL if provided via REDIS_PUBLIC_URL, otherwise use REDIS_URL
       const publicRedisUrl = process.env['REDIS_PUBLIC_URL'];
       const effectiveRedisUrl = publicRedisUrl || redisUrl;
-      
+
       // Log which URL we're using (without exposing sensitive data)
       const isInternalUrl = redisUrl.includes('.railway.internal');
       const isUsingPublic = effectiveRedisUrl === publicRedisUrl;
       this.logger.log(
         `Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL for connection`,
       );
-      
+
       this.redis = new Redis(effectiveRedisUrl, {
         // Connection pool settings
         maxRetriesPerRequest: 3,
         lazyConnect: true,
         enableReadyCheck: true,
-        
+
         // Keep-alive for Railway's persistent connections
         keepAlive: 30000, // 30 seconds
-        
+
         // Connection timeout
         connectTimeout: 10000, // 10 seconds
-        
+
         // Command timeout
         commandTimeout: 5000, // 5 seconds
-        
+
         // Reconnection strategy with exponential backoff
         retryStrategy: (times: number) => {
           if (times > 10) {
@@ -56,39 +56,46 @@ export class RedisService {
             return null; // Stop retrying
           }
           const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s
-          this.logger.warn(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
+          this.logger.warn(
+            `Retrying Redis connection in ${delay}ms (attempt ${times})`,
+          );
           return delay;
         },
-        
+
         // Error handling
         reconnectOnError: (err: Error) => {
-          const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED'];
-          if (targetErrors.some(e => err.message.includes(e))) {
+          const targetErrors = [
+            'READONLY',
+            'ECONNRESET',
+            'ETIMEDOUT',
+            'ECONNREFUSED',
+          ];
+          if (targetErrors.some((e) => err.message.includes(e))) {
             this.logger.warn('Redis reconnecting due to error:', err.message);
             return true; // Reconnect
           }
           return false;
         },
-        
+
         // Performance optimizations
         enableOfflineQueue: true, // Queue commands when disconnected
         autoResubscribe: true, // Auto resubscribe to channels
         autoResendUnfulfilledCommands: true, // Resend commands after reconnect
       });
-      
+
       // Connection event handlers
       this.redis.on('connect', () => {
         this.logger.log('Redis client connected to Railway');
       });
-      
+
       this.redis.on('ready', () => {
         this.logger.log('Redis client ready for commands');
       });
-      
+
       this.redis.on('error', (err) => {
         this.logger.error('Redis client error:', err.message);
       });
-      
+
       this.redis.on('reconnecting', (delay: number) => {
         this.logger.warn(`Redis client reconnecting in ${delay}ms`);
       });

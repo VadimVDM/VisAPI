@@ -36,7 +36,7 @@ export class ResyncCBBContactHandler
       where: { order_id: orderId },
     });
     const order = orders?.[0];
-    
+
     if (!order) {
       throw new NotFoundException(`Order not found with Vizi ID: ${orderId}`);
     }

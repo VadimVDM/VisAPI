@@ -12,7 +12,7 @@
         "main": "libs/backend/email-service/src/index.ts",
         "tsConfig": "libs/backend/email-service/tsconfig.lib.json",
         "assets": ["libs/backend/email-service/*.md"]
-      },
+      }
     },
     "lint": {
       "executor": "@nx/linter:eslint",

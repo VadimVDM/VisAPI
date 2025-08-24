@@ -24,6 +24,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
+import type { Event as SentryEvent, Exception as SentryException } from '@sentry/types';
 import { CacheModule } from '@visapi/backend-cache';
 import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
@@ -43,7 +44,7 @@ if (sentryConfig.dsn) {
         tracesSampleRate: sentryConfig.tracesSampleRate,
         release: sentryConfig.release,
         sendDefaultPii: sentryConfig.environment !== 'production',
-        beforeSend(event: any) {
+        beforeSend(event) {
           // Filter out sensitive headers
           if (event.request?.headers) {
             delete event.request.headers['authorization'];
@@ -52,7 +53,7 @@ if (sentryConfig.dsn) {
           }
           // Filter out sensitive data from error messages
           if (event.exception?.values) {
-            event.exception.values.forEach((exception: any) => {
+            event.exception.values.forEach((exception) => {
               if (exception.value) {
                 exception.value = exception.value
                   .replace(/password=\S+/gi, 'password=[REDACTED]')
@@ -97,15 +98,14 @@ if (sentryConfig.dsn) {
       useFactory: (configService: ConfigService) => ({
         pinoHttp: {
           level: configService.logLevel,
-          transport:
-            !configService.isProduction
-              ? {
-                  target: 'pino-pretty',
-                  options: {
-                    singleLine: true,
-                  },
-                }
-              : undefined,
+          transport: !configService.isProduction
+            ? {
+                target: 'pino-pretty',
+                options: {
+                  singleLine: true,
+                },
+              }
+            : undefined,
         },
       }),
     }),

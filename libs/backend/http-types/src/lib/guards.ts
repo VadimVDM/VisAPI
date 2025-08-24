@@ -67,9 +67,11 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 /**
  * Type guard to check if a value is a plain object (not class instance)
  */
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown> {
   if (!isObject(value)) return false;
-  
+
   // Check if it's a plain object (not a class instance)
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
@@ -80,18 +82,18 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
  */
 export function isSanitizable(value: unknown): value is SanitizableData {
   if (value === null || value === undefined) return true;
-  
+
   const type = typeof value;
   if (type === 'string' || type === 'number' || type === 'boolean') return true;
-  
+
   if (Array.isArray(value)) {
-    return value.every(item => isSanitizable(item));
+    return value.every((item) => isSanitizable(item));
   }
-  
+
   if (isPlainObject(value)) {
-    return Object.values(value).every(val => isSanitizable(val));
+    return Object.values(value).every((val) => isSanitizable(val));
   }
-  
+
   return false;
 }
 
@@ -99,11 +101,13 @@ export function isSanitizable(value: unknown): value is SanitizableData {
  * Type guard to check if a string is a valid HTTP method
  */
 export function isValidHttpMethod(
-  method: unknown
+  method: unknown,
 ): method is 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD' {
   return (
     typeof method === 'string' &&
-    ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'].includes(method)
+    ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'].includes(
+      method,
+    )
   );
 }
 
@@ -112,9 +116,6 @@ export function isValidHttpMethod(
  */
 export function isValidTimeout(value: unknown): value is number {
   return (
-    typeof value === 'number' &&
-    !isNaN(value) &&
-    value > 0 &&
-    value <= 300000 // Max 5 minutes
+    typeof value === 'number' && !isNaN(value) && value > 0 && value <= 300000 // Max 5 minutes
   );
 }

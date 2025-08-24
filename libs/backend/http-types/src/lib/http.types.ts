@@ -61,11 +61,11 @@ export interface EnhancedError extends Error {
 /**
  * Type for data that can be sanitized
  */
-export type SanitizableData = 
-  | string 
-  | number 
-  | boolean 
-  | null 
+export type SanitizableData =
+  | string
+  | number
+  | boolean
+  | null
   | undefined
   | { [key: string]: SanitizableData }
   | SanitizableData[];
@@ -73,11 +73,11 @@ export type SanitizableData =
 /**
  * Type for sanitized data output
  */
-export type SanitizedData = 
-  | string 
-  | number 
-  | boolean 
-  | null 
+export type SanitizedData =
+  | string
+  | number
+  | boolean
+  | null
   | undefined
   | { [key: string]: SanitizedData }
   | SanitizedData[];

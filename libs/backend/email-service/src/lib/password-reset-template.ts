@@ -7,13 +7,17 @@ interface PasswordResetEmailData {
   user_email: string;
 }
 
-export function generatePasswordResetEmail(data: PasswordResetEmailData): { subject: string; html: string; text: string } {
+export function generatePasswordResetEmail(data: PasswordResetEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   // Use our custom domain for password reset links
   const apiDomain = 'https://api.visanet.app';
   const resetUrl = `${apiDomain}/api/v1/auth/confirm?token_hash=${data.token_hash}&type=${data.email_action_type}&redirect_to=${encodeURIComponent(data.redirect_to)}`;
-  
+
   const subject = 'Reset Your VisAPI Password';
-  
+
   const html = `
 <!DOCTYPE html>
 <html>

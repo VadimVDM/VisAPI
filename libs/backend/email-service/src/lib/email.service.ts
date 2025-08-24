@@ -4,7 +4,11 @@ import { generateMagicLinkEmail } from './magic-link-template';
 import { generateWelcomeEmail } from './welcome-template';
 import { generatePasswordResetEmail } from './password-reset-template';
 import { generateEmailVerificationEmail } from './email-verification-template';
-import type { EmailData, SupabaseEmailHookData, EmailSendResult } from './email.types';
+import type {
+  EmailData,
+  SupabaseEmailHookData,
+  EmailSendResult,
+} from './email.types';
 import { sendEmailWithResend, validateEmailData } from './resend-integration';
 
 @Injectable()
@@ -15,14 +19,16 @@ export class EmailService {
   private readonly resendApiKey: string;
 
   constructor(private readonly config: ConfigService) {
-    this.fromEmail = this.config.get<string>('resend.fromEmail') || 'VisAPI <noreply@visanet.app>';
+    this.fromEmail =
+      this.config.get<string>('resend.fromEmail') ||
+      'VisAPI <noreply@visanet.app>';
     this.supabaseUrl = this.config.get<string>('supabase.url') || '';
     this.resendApiKey = this.config.get<string>('resend.apiKey') || '';
-    
+
     if (!this.resendApiKey) {
       throw new Error('RESEND_API_KEY is required for email service');
     }
-    
+
     if (!this.supabaseUrl) {
       throw new Error('SUPABASE_URL is required for email service');
     }
@@ -31,7 +37,9 @@ export class EmailService {
   /**
    * Process Supabase auth hook and send appropriate email
    */
-  async processAuthHook(hookData: SupabaseEmailHookData): Promise<EmailSendResult> {
+  async processAuthHook(
+    hookData: SupabaseEmailHookData,
+  ): Promise<EmailSendResult> {
     try {
       const { user, email_data } = hookData;
       let emailContent: { subject: string; html: string; text: string };
@@ -82,7 +90,7 @@ export class EmailService {
             user_email: user.email,
           });
           // Customize subject for invites
-          emailContent.subject = 'You\'ve been invited to VisAPI';
+          emailContent.subject = "You've been invited to VisAPI";
           break;
 
         case 'email_change':
@@ -99,7 +107,9 @@ export class EmailService {
           break;
 
         default:
-          throw new Error(`Unsupported email action type: ${String(email_data.email_action_type)}`);
+          throw new Error(
+            `Unsupported email action type: ${String(email_data.email_action_type)}`,
+          );
       }
 
       // Send email using our method
@@ -111,13 +121,18 @@ export class EmailService {
         from: this.fromEmail,
       });
 
-      this.logger.log(`Auth email sent successfully to ${user.email} for action: ${email_data.email_action_type}`);
+      this.logger.log(
+        `Auth email sent successfully to ${user.email} for action: ${email_data.email_action_type}`,
+      );
       return result;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to process auth hook: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `Failed to process auth hook: ${errorMessage}`,
+        errorStack,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -128,7 +143,10 @@ export class EmailService {
   /**
    * Send welcome email to new users
    */
-  async sendWelcomeEmail(userEmail: string, userName?: string): Promise<EmailSendResult> {
+  async sendWelcomeEmail(
+    userEmail: string,
+    userName?: string,
+  ): Promise<EmailSendResult> {
     try {
       const emailContent = generateWelcomeEmail({
         user_email: userEmail,
@@ -145,11 +163,14 @@ export class EmailService {
 
       this.logger.log(`Welcome email sent successfully to ${userEmail}`);
       return result;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to send welcome email to ${userEmail}: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `Failed to send welcome email to ${userEmail}: ${errorMessage}`,
+        errorStack,
+      );
       return {
         success: false,
         error: errorMessage,
@@ -162,8 +183,10 @@ export class EmailService {
    */
   async sendEmail(emailData: EmailData): Promise<EmailSendResult> {
     try {
-      this.logger.debug(`Preparing to send email to ${emailData.to} with subject: ${emailData.subject}`);
-      
+      this.logger.debug(
+        `Preparing to send email to ${emailData.to} with subject: ${emailData.subject}`,
+      );
+
       // Validate email data
       const validation = validateEmailData(emailData);
       if (!validation.valid) {
@@ -178,17 +201,21 @@ export class EmailService {
 
       // Send via Resend integration
       const result = await sendEmailWithResend(emailToSend, this.resendApiKey);
-      
+
       if (result.success) {
-        this.logger.log(`Email sent successfully to ${emailData.to}, MessageID: ${result.messageId}`);
+        this.logger.log(
+          `Email sent successfully to ${emailData.to}, MessageID: ${result.messageId}`,
+        );
       } else {
-        this.logger.error(`Email send failed to ${emailData.to}: ${result.error}`);
+        this.logger.error(
+          `Email send failed to ${emailData.to}: ${result.error}`,
+        );
       }
 
       return result;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`Email send failed: ${errorMessage}`, errorStack);
       return {

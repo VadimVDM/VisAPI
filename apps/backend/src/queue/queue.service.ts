@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Job, RepeatableJob } from 'bullmq';
 import {
@@ -9,7 +9,8 @@ import {
 import { ConfigService } from '@visapi/core-config';
 
 @Injectable()
-export class QueueService {
+export class QueueService implements OnModuleDestroy {
+  private readonly logger = new Logger(QueueService.name);
   constructor(
     @InjectQueue(QUEUE_NAMES.CRITICAL) private criticalQueue: Queue,
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
@@ -207,5 +208,39 @@ export class QueueService {
   ): Promise<RepeatableJob[]> {
     const queue = this.getQueue(queueName);
     return queue.getRepeatableJobs();
+  }
+
+  /**
+   * Gracefully shutdown all queues
+   */
+  async onModuleDestroy() {
+    this.logger.log('Starting graceful queue shutdown...');
+
+    const queues = [
+      this.criticalQueue,
+      this.defaultQueue,
+      this.bulkQueue,
+      this.cbbSyncQueue,
+      this.whatsappMessagesQueue,
+    ];
+
+    try {
+      // Pause all queues to stop accepting new jobs
+      await Promise.all(queues.map((queue) => queue.pause()));
+      this.logger.log('All queues paused');
+
+      // Wait for active jobs to complete (max 5 seconds)
+      const shutdownTimeout = setTimeout(() => {
+        this.logger.warn('Queue shutdown timeout reached, forcing close');
+      }, 5000);
+
+      // Close all queue connections
+      await Promise.all(queues.map((queue) => queue.close()));
+      clearTimeout(shutdownTimeout);
+
+      this.logger.log('All queues closed gracefully');
+    } catch (error) {
+      this.logger.error('Error during queue shutdown:', error);
+    }
   }
 }

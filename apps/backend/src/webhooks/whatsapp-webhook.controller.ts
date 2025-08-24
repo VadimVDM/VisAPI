@@ -46,7 +46,8 @@ export class WhatsAppWebhookController {
   ) {
     // Use try-catch since these are optional configs
     try {
-      this.zapierWebhookUrl = this.configService.get<string>('zapier.webhookUrl');
+      this.zapierWebhookUrl =
+        this.configService.get<string>('zapier.webhookUrl');
     } catch {
       this.zapierWebhookUrl = '';
     }

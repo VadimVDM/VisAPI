@@ -5,9 +5,9 @@ import { getValidatedConfig, ValidatedConfig } from './config-schema';
 @Injectable()
 export class ConfigService {
   private cachedConfig?: ValidatedConfig;
-  
+
   constructor(private configService?: NestConfigService) {}
-  
+
   /**
    * Get the full validated configuration object
    * Can be used when ConfigService is instantiated without injection
@@ -26,19 +26,23 @@ export class ConfigService {
       const config = this.getConfig();
       const pathParts = propertyPath.split('.');
       let value: any = config;
-      
+
       for (const part of pathParts) {
         value = value?.[part];
         if (value === undefined) {
-          throw new Error(`Configuration value for '${propertyPath}' is not defined`);
+          throw new Error(
+            `Configuration value for '${propertyPath}' is not defined`,
+          );
         }
       }
       return value as T;
     }
-    
+
     const value = this.configService.get<T>(propertyPath);
     if (value === undefined) {
-      throw new Error(`Configuration value for '${propertyPath}' is not defined`);
+      throw new Error(
+        `Configuration value for '${propertyPath}' is not defined`,
+      );
     }
     return value;
   }
@@ -150,53 +154,53 @@ export class ConfigService {
   get slackEnabled(): boolean {
     return this.get<boolean>('slack.enabled');
   }
-  
+
   // CBB Configuration
   get cbbApiUrl(): string {
     return this.get<string>('cbb.apiUrl');
   }
-  
+
   get cbbApiKey(): string {
     return this.get<string>('cbb.apiKey');
   }
-  
+
   get cbbTimeout(): number {
     return this.get<number>('cbb.timeout');
   }
-  
+
   get cbbRetryAttempts(): number {
     return this.get<number>('cbb.retryAttempts');
   }
-  
+
   get cbbCacheTimeout(): number {
     return this.get<number>('cbb.cacheTimeout');
   }
-  
+
   get cbbSyncEnabled(): boolean {
     return this.get<boolean>('cbb.syncEnabled');
   }
-  
+
   get cbbSyncDryRun(): boolean {
     return this.get<boolean>('cbb.syncDryRun');
   }
-  
+
   get cbbSyncBatchSize(): number {
     return this.get<number>('cbb.syncBatchSize');
   }
-  
+
   get cbbSyncConcurrency(): number {
     return this.get<number>('cbb.syncConcurrency');
   }
-  
+
   get cbbSyncDelayMs(): number {
     return this.get<number>('cbb.syncDelayMs');
   }
-  
+
   // Resend Configuration
   get resendApiKey(): string {
     return this.get<string>('resend.apiKey');
   }
-  
+
   get resendFromEmail(): string {
     return this.get<string>('resend.fromEmail');
   }

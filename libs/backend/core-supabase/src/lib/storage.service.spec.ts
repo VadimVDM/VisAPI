@@ -62,16 +62,18 @@ describe('StorageService', () => {
     it('should upload file successfully', async () => {
       const mockBuffer = Buffer.from('test content');
       const mockPath = 'test/file.pdf';
-      
+
       mockSupabaseService.serviceClient.storage.upload.mockResolvedValue({
         data: { path: mockPath },
         error: null,
       });
-      
-      mockSupabaseService.serviceClient.storage.createSignedUrl.mockResolvedValue({
-        data: { signedUrl: 'https://example.com/signed/test.pdf' },
-        error: null,
-      });
+
+      mockSupabaseService.serviceClient.storage.createSignedUrl.mockResolvedValue(
+        {
+          data: { signedUrl: 'https://example.com/signed/test.pdf' },
+          error: null,
+        },
+      );
 
       const result = await service.uploadFile(mockPath, mockBuffer);
 
@@ -81,15 +83,13 @@ describe('StorageService', () => {
         signedUrl: 'https://example.com/signed/test.pdf',
       });
 
-      expect(mockSupabaseService.serviceClient.storage.upload).toHaveBeenCalledWith(
-        mockPath,
-        mockBuffer,
-        {
-          contentType: 'application/pdf',
-          cacheControl: '3600',
-          upsert: true,
-        }
-      );
+      expect(
+        mockSupabaseService.serviceClient.storage.upload,
+      ).toHaveBeenCalledWith(mockPath, mockBuffer, {
+        contentType: 'application/pdf',
+        cacheControl: '3600',
+        upsert: true,
+      });
     });
 
     it('should handle upload errors', async () => {
@@ -100,7 +100,7 @@ describe('StorageService', () => {
       });
 
       await expect(
-        service.uploadFile('test.pdf', Buffer.from('test'))
+        service.uploadFile('test.pdf', Buffer.from('test')),
       ).rejects.toThrow(mockError);
     });
   });
@@ -112,25 +112,31 @@ describe('StorageService', () => {
       });
 
       await expect(service.deleteFile('test.pdf')).resolves.not.toThrow();
-      
-      expect(mockSupabaseService.serviceClient.storage.remove).toHaveBeenCalledWith(['test.pdf']);
+
+      expect(
+        mockSupabaseService.serviceClient.storage.remove,
+      ).toHaveBeenCalledWith(['test.pdf']);
     });
   });
 
   describe('createSignedUrl', () => {
     it('should create signed URL with default expiry', async () => {
       const mockSignedUrl = 'https://example.com/signed/test.pdf';
-      mockSupabaseService.serviceClient.storage.createSignedUrl.mockResolvedValue({
-        data: { signedUrl: mockSignedUrl },
-        error: null,
-      });
+      mockSupabaseService.serviceClient.storage.createSignedUrl.mockResolvedValue(
+        {
+          data: { signedUrl: mockSignedUrl },
+          error: null,
+        },
+      );
 
       const result = await service.createSignedUrl('test.pdf');
 
       expect(result).toBe(mockSignedUrl);
-      expect(mockSupabaseService.serviceClient.storage.createSignedUrl).toHaveBeenCalledWith(
+      expect(
+        mockSupabaseService.serviceClient.storage.createSignedUrl,
+      ).toHaveBeenCalledWith(
         'test.pdf',
-        86400 // 24 hours
+        86400, // 24 hours
       );
     });
   });

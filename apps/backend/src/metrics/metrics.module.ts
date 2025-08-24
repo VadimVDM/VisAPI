@@ -5,8 +5,6 @@ import { MetricsService } from './metrics.service';
 import { HttpMetricsInterceptor } from './http-metrics.interceptor';
 import { RemoteWriteService } from './remote-write.service';
 import { metricsProviders } from './metrics.providers';
-// Import package.json to get version
-import * as packageJson from '../../../../package.json';
 
 @Module({
   imports: [
@@ -21,7 +19,7 @@ import * as packageJson from '../../../../package.json';
       },
       defaultLabels: {
         app: 'visapi',
-        version: packageJson.version || 'unknown',
+        version: '1.0.0',
       },
     }),
   ],

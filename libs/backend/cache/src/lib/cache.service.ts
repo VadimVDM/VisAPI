@@ -19,7 +19,7 @@ export class CacheService implements OnModuleDestroy {
 
   constructor(
     private readonly redis: Redis,
-    @Optional() private readonly metrics?: CacheMetricsService
+    @Optional() private readonly metrics?: CacheMetricsService,
   ) {}
 
   async onModuleDestroy() {
@@ -32,27 +32,27 @@ export class CacheService implements OnModuleDestroy {
   async get<T>(key: string): Promise<T | null> {
     const timer = this.metrics?.startTimer('get');
     const keyPrefix = this.metrics?.extractKeyPrefix(key) || 'unknown';
-    
+
     try {
       const value = await this.redis.get(key);
-      
+
       if (!value) {
         this.metrics?.recordMiss('get', keyPrefix);
         timer?.();
         return null;
       }
-      
+
       this.metrics?.recordHit('get', keyPrefix);
       this.metrics?.recordOperation('get', 'success');
       timer?.();
-      
+
       // Handle compressed values
       if (value.startsWith('COMPRESSED:')) {
         const compressed = value.slice(11);
         const decompressed = await this.decompress(compressed);
         return JSON.parse(decompressed) as T;
       }
-      
+
       return JSON.parse(value) as T;
     } catch (error) {
       this.logger.error(`Error getting cache key ${key}:`, error);
@@ -67,20 +67,22 @@ export class CacheService implements OnModuleDestroy {
    */
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
     const timer = this.metrics?.startTimer('set');
-    
+
     try {
       let serialized = JSON.stringify(value);
-      
+
       // Compress large values
       if (serialized.length > this.compressionThreshold) {
         const compressed = await this.compress(serialized);
         serialized = `COMPRESSED:${compressed}`;
-        this.logger.debug(`Compressed cache value for key ${key}: ${serialized.length} bytes`);
+        this.logger.debug(
+          `Compressed cache value for key ${key}: ${serialized.length} bytes`,
+        );
       }
-      
+
       const finalTTL = ttl || this.defaultTTL;
       await this.redis.setex(key, finalTTL, serialized);
-      
+
       this.metrics?.recordOperation('set', 'success');
       timer?.();
     } catch (error) {
@@ -111,7 +113,10 @@ export class CacheService implements OnModuleDestroy {
         await this.redis.del(...keys);
       }
     } catch (error) {
-      this.logger.error(`Error deleting cache keys by pattern ${pattern}:`, error);
+      this.logger.error(
+        `Error deleting cache keys by pattern ${pattern}:`,
+        error,
+      );
     }
   }
 
@@ -161,9 +166,7 @@ export class CacheService implements OnModuleDestroy {
    * Generate cache key from parameters
    */
   generateKey(prefix: string, params: any): string {
-    const hash = createHash('md5')
-      .update(JSON.stringify(params))
-      .digest('hex');
+    const hash = createHash('md5').update(JSON.stringify(params)).digest('hex');
     return `${prefix}:${hash}`;
   }
 
@@ -250,7 +253,7 @@ export class CacheService implements OnModuleDestroy {
     const { gzip } = await import('zlib');
     const { promisify } = await import('util');
     const gzipAsync = promisify(gzip);
-    
+
     const compressed = await gzipAsync(Buffer.from(data, 'utf-8'));
     return compressed.toString('base64');
   }
@@ -262,7 +265,7 @@ export class CacheService implements OnModuleDestroy {
     const { gunzip } = await import('zlib');
     const { promisify } = await import('util');
     const gunzipAsync = promisify(gunzip);
-    
+
     const buffer = Buffer.from(data, 'base64');
     const decompressed = await gunzipAsync(buffer);
     return decompressed.toString('utf-8');

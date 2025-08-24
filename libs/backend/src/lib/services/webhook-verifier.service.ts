@@ -10,15 +10,23 @@ export class WebhookVerifierService {
   private readonly webhookSecret: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.verifyToken = this.configService.get('WABA_VERIFY_TOKEN', 'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U');
+    this.verifyToken = this.configService.get(
+      'WABA_VERIFY_TOKEN',
+      'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U',
+    );
     // Meta uses the App Secret from developers.facebook.com for webhook signatures
     // This should be from Settings -> Basic -> App Secret in your Meta app
-    this.webhookSecret = this.configService.get('WABA_APP_SECRET', '') || 
-                         this.configService.get('WABA_WEBHOOK_SECRET', '');
-    
+    this.webhookSecret =
+      this.configService.get('WABA_APP_SECRET', '') ||
+      this.configService.get('WABA_WEBHOOK_SECRET', '');
+
     if (!this.webhookSecret) {
-      this.logger.warn('WABA_APP_SECRET not configured - webhook signature verification disabled');
-      this.logger.warn('Get your App Secret from https://developers.facebook.com -> Your App -> Settings -> Basic');
+      this.logger.warn(
+        'WABA_APP_SECRET not configured - webhook signature verification disabled',
+      );
+      this.logger.warn(
+        'Get your App Secret from https://developers.facebook.com -> Your App -> Settings -> Basic',
+      );
     }
   }
 
@@ -46,13 +54,17 @@ export class WebhookVerifierService {
   ): Promise<boolean> {
     // If no webhook secret is configured, skip verification
     if (!this.webhookSecret) {
-      this.logger.warn('No WABA_APP_SECRET configured - skipping signature verification');
+      this.logger.warn(
+        'No WABA_APP_SECRET configured - skipping signature verification',
+      );
       return true;
     }
 
     // If no signature provided but secret is configured, reject
     if (!signature) {
-      this.logger.error('Missing webhook signature in request headers (x-hub-signature-256)');
+      this.logger.error(
+        'Missing webhook signature in request headers (x-hub-signature-256)',
+      );
       return false;
     }
 
@@ -217,7 +229,9 @@ export class WebhookVerifierService {
         reason: value.reason,
       };
     } catch (error: any) {
-      this.logger.error(`Error extracting template status update: ${error.message}`);
+      this.logger.error(
+        `Error extracting template status update: ${error.message}`,
+      );
       return null;
     }
   }

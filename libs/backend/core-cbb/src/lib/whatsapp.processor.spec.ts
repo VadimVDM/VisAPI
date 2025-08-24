@@ -1,13 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Job } from 'bullmq';
 import { WhatsAppProcessor } from './whatsapp.processor';
-import { WhatsAppJobData, WhatsAppJobResult, Contact } from '@visapi/shared-types';
+import {
+  WhatsAppJobData,
+  WhatsAppJobResult,
+  Contact,
+} from '@visapi/shared-types';
 import {
   CbbClientService,
   ContactResolverService,
   TemplateService,
   CbbApiError,
-  ContactNotFoundError
+  ContactNotFoundError,
 } from '@visapi/backend-core-cbb';
 
 describe('WhatsAppProcessor', () => {
@@ -106,8 +110,13 @@ describe('WhatsAppProcessor', () => {
         timestamp: expect.any(String),
       });
 
-      expect(contactResolver.resolveContact).toHaveBeenCalledWith('+1234567890');
-      expect(cbbClient.sendTextMessage).toHaveBeenCalledWith(123, 'Hello, this is a test message');
+      expect(contactResolver.resolveContact).toHaveBeenCalledWith(
+        '+1234567890',
+      );
+      expect(cbbClient.sendTextMessage).toHaveBeenCalledWith(
+        123,
+        'Hello, this is a test message',
+      );
     });
 
     it('should generate fallback message ID if not provided by API', async () => {
@@ -159,11 +168,16 @@ describe('WhatsAppProcessor', () => {
         timestamp: expect.any(String),
       });
 
-      expect(templateService.getTemplateFlowId).toHaveBeenCalledWith('visa_approved');
-      expect(templateService.processTemplateVariables).toHaveBeenCalledWith('visa_approved', {
-        name: 'John Doe',
-        status: 'approved',
-      });
+      expect(templateService.getTemplateFlowId).toHaveBeenCalledWith(
+        'visa_approved',
+      );
+      expect(templateService.processTemplateVariables).toHaveBeenCalledWith(
+        'visa_approved',
+        {
+          name: 'John Doe',
+          status: 'approved',
+        },
+      );
       expect(cbbClient.sendFlow).toHaveBeenCalledWith(123, 200);
     });
 
@@ -177,7 +191,9 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      templateService.getTemplateFlowId.mockRejectedValue(new Error("Template 'unknown_template' not found"));
+      templateService.getTemplateFlowId.mockRejectedValue(
+        new Error("Template 'unknown_template' not found"),
+      );
       cbbClient.sendTextMessage.mockResolvedValue({
         success: true,
         message_id: 'fallback_msg_789',
@@ -186,7 +202,10 @@ describe('WhatsAppProcessor', () => {
       const result = await processor.process(job);
 
       expect(result.success).toBe(true);
-      expect(cgbClient.sendTextMessage).toHaveBeenCalledWith(123, 'Your visa has been approved!');
+      expect(cgbClient.sendTextMessage).toHaveBeenCalledWith(
+        123,
+        'Your visa has been approved!',
+      );
     });
 
     it('should throw error when template not found and no fallback', async () => {
@@ -199,9 +218,13 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      templateService.getTemplateFlowId.mockRejectedValue(new Error("Template 'unknown_template' not found"));
+      templateService.getTemplateFlowId.mockRejectedValue(
+        new Error("Template 'unknown_template' not found"),
+      );
 
-      await expect(processor.process(job)).rejects.toThrow("Template 'unknown_template' not found");
+      await expect(processor.process(job)).rejects.toThrow(
+        "Template 'unknown_template' not found",
+      );
     });
   });
 
@@ -234,12 +257,17 @@ describe('WhatsAppProcessor', () => {
       expect(cbbClient.sendFileMessage).toHaveBeenCalledWith(
         123,
         'https://example.com/document.pdf',
-        'document'
+        'document',
       );
     });
 
     it('should handle different file types', async () => {
-      const fileTypes: Array<'image' | 'document' | 'video' | 'audio'> = ['image', 'document', 'video', 'audio'];
+      const fileTypes: Array<'image' | 'document' | 'video' | 'audio'> = [
+        'image',
+        'document',
+        'video',
+        'audio',
+      ];
 
       for (const fileType of fileTypes) {
         const jobData: WhatsAppJobData = {
@@ -262,7 +290,7 @@ describe('WhatsAppProcessor', () => {
         expect(cbbClient.sendFileMessage).toHaveBeenCalledWith(
           123,
           `https://example.com/file.${fileType}`,
-          fileType
+          fileType,
         );
       }
     });
@@ -280,7 +308,7 @@ describe('WhatsAppProcessor', () => {
       contactResolver.resolveContact.mockResolvedValue(mockContact);
 
       await expect(processor.process(job)).rejects.toThrow(
-        'No message content provided (missing message, template, or fileUrl)'
+        'No message content provided (missing message, template, or fileUrl)',
       );
     });
 
@@ -292,9 +320,13 @@ describe('WhatsAppProcessor', () => {
 
       const job = createMockJob(jobData);
 
-      contactResolver.resolveContact.mockRejectedValue(new ContactNotFoundError('+invalid'));
+      contactResolver.resolveContact.mockRejectedValue(
+        new ContactNotFoundError('+invalid'),
+      );
 
-      await expect(processor.process(job)).rejects.toThrow(ContactNotFoundError);
+      await expect(processor.process(job)).rejects.toThrow(
+        ContactNotFoundError,
+      );
     });
 
     it('should handle CBB API errors', async () => {
@@ -306,7 +338,9 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Rate limit exceeded', 429));
+      cbbClient.sendTextMessage.mockRejectedValue(
+        new CbbApiError('Rate limit exceeded', 429),
+      );
 
       await expect(processor.process(job)).rejects.toThrow(CbbApiError);
     });
@@ -320,7 +354,9 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Unauthorized', 401));
+      cbbClient.sendTextMessage.mockRejectedValue(
+        new CbbApiError('Unauthorized', 401),
+      );
 
       const result = await processor.process(job);
 
@@ -342,7 +378,9 @@ describe('WhatsAppProcessor', () => {
       const job = createMockJob(jobData);
 
       contactResolver.resolveContact.mockResolvedValue(mockContact);
-      cbbClient.sendTextMessage.mockRejectedValue(new CbbApiError('Internal server error', 500));
+      cbbClient.sendTextMessage.mockRejectedValue(
+        new CbbApiError('Internal server error', 500),
+      );
 
       await expect(processor.process(job)).rejects.toThrow(CbbApiError);
     });
@@ -409,7 +447,8 @@ describe('WhatsAppProcessor', () => {
         },
         {
           error: new ContactNotFoundError('+1234567890'),
-          expected: 'Contact resolution failed: Contact not found for phone: +1234567890',
+          expected:
+            'Contact resolution failed: Contact not found for phone: +1234567890',
         },
         {
           error: new Error('Generic error'),

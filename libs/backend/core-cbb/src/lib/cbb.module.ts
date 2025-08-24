@@ -13,15 +13,7 @@ import { TemplateService } from './template.service';
     }),
     ConfigModule,
   ],
-  providers: [
-    CbbClientService,
-    ContactResolverService,
-    TemplateService,
-  ],
-  exports: [
-    CbbClientService,
-    ContactResolverService,
-    TemplateService,
-  ],
+  providers: [CbbClientService, ContactResolverService, TemplateService],
+  exports: [CbbClientService, ContactResolverService, TemplateService],
 })
 export class CbbModule {}

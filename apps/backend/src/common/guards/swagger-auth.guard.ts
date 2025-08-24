@@ -30,9 +30,9 @@ export class SwaggerAuthGuard implements CanActivate {
     this.swaggerUsername = configService.get<string>('swagger.username');
     this.swaggerPassword = configService.get<string>('swagger.password');
 
-    // Get API keys from config
-    const swaggerApiKeys = configService.get<string[]>('swagger.apiKeys') || [];
-    this.validApiKeys = new Set(swaggerApiKeys);
+    // Get API keys from config (optional)
+    const swaggerApiKeys = configService.get<string[]>('swagger.apiKeys');
+    this.validApiKeys = new Set(swaggerApiKeys || []);
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -81,9 +81,8 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const isProduction = configService.isProduction;
   const swaggerUsername = configService.get<string>('swagger.username');
   const swaggerPassword = configService.get<string>('swagger.password');
-  const swaggerApiKeys = new Set(
-    configService.get<string[]>('swagger.apiKeys') || [],
-  );
+  const apiKeys = configService.get<string[]>('swagger.apiKeys');
+  const swaggerApiKeys = new Set(apiKeys || []);
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Allow unrestricted access in development/test

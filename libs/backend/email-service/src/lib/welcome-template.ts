@@ -3,11 +3,15 @@ interface WelcomeEmailData {
   user_name?: string;
 }
 
-export function generateWelcomeEmail(data: WelcomeEmailData): { subject: string; html: string; text: string } {
+export function generateWelcomeEmail(data: WelcomeEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const userName = data.user_name || data.user_email.split('@')[0];
-  
+
   const subject = 'Welcome to VisAPI - Your Account is Ready!';
-  
+
   const html = `
 <!DOCTYPE html>
 <html>

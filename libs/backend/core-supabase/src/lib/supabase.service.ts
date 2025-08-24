@@ -12,7 +12,7 @@ export class SupabaseService {
     // Client for public operations (using anon key)
     this.supabase = createClient<Database>(
       this.config.supabaseUrl,
-      this.config.supabaseAnonKey
+      this.config.supabaseAnonKey,
     );
 
     // Client for service operations (using service role key)
@@ -24,7 +24,7 @@ export class SupabaseService {
           autoRefreshToken: false,
           persistSession: false,
         },
-      }
+      },
     );
   }
 

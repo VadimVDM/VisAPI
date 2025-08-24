@@ -54,10 +54,11 @@ export class TemplateManagerService {
           `${this.baseUrl}/${this.businessId}/message_templates`,
           {
             headers: {
-              'Authorization': `Bearer ${this.accessToken}`,
+              Authorization: `Bearer ${this.accessToken}`,
             },
             params: {
-              fields: 'id,name,language,status,category,components,quality_score,rejected_reason',
+              fields:
+                'id,name,language,status,category,components,quality_score,rejected_reason',
               limit: 100,
             },
           },
@@ -88,7 +89,10 @@ export class TemplateManagerService {
 
       return templates;
     } catch (error: any) {
-      this.logger.error(`Failed to sync templates from Meta: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to sync templates from Meta: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -98,12 +102,12 @@ export class TemplateManagerService {
     category?: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY',
   ): Promise<Template[]> {
     const templates = Array.from(this.templateCache.values());
-    
+
     return templates.filter((template) => {
       const isApproved = template.status === 'APPROVED';
       const matchesLanguage = !language || template.language === language;
       const matchesCategory = !category || template.category === category;
-      
+
       return isApproved && matchesLanguage && matchesCategory;
     });
   }
@@ -112,7 +116,11 @@ export class TemplateManagerService {
     templateName: string,
     variables: Record<string, any>,
   ): Promise<EnhancedValidationResult> {
-    const errors: Array<{ field: string; message: string; suggestion?: string }> = [];
+    const errors: Array<{
+      field: string;
+      message: string;
+      suggestion?: string;
+    }> = [];
     const warnings: Array<{ field: string; message: string }> = [];
 
     const templates = Array.from(this.templateCache.values()).filter(
@@ -188,7 +196,10 @@ export class TemplateManagerService {
     };
   }
 
-  async getTemplate(name: string, language: string): Promise<EnhancedTemplate | null> {
+  async getTemplate(
+    name: string,
+    language: string,
+  ): Promise<EnhancedTemplate | null> {
     const cacheKey = `${name}_${language}`;
     const cached = this.templateCache.get(cacheKey);
 
@@ -207,7 +218,7 @@ export class TemplateManagerService {
           `${this.baseUrl}/${this.businessId}/template_analytics`,
           {
             headers: {
-              'Authorization': `Bearer ${this.accessToken}`,
+              Authorization: `Bearer ${this.accessToken}`,
             },
             params: {
               template_names: templateName,
@@ -229,14 +240,18 @@ export class TemplateManagerService {
         };
       }
 
-      const deliveryRate = data.sent > 0 ? (data.delivered / data.sent) * 100 : 0;
-      const readRate = data.delivered > 0 ? (data.read / data.delivered) * 100 : 0;
+      const deliveryRate =
+        data.sent > 0 ? (data.delivered / data.sent) * 100 : 0;
+      const readRate =
+        data.delivered > 0 ? (data.read / data.delivered) * 100 : 0;
       const blockRate = data.sent > 0 ? (data.blocked / data.sent) * 100 : 0;
 
       const recommendations: string[] = [];
 
       if (deliveryRate < 90) {
-        recommendations.push('Improve delivery rate by verifying phone numbers');
+        recommendations.push(
+          'Improve delivery rate by verifying phone numbers',
+        );
       }
       if (readRate < 50) {
         recommendations.push('Enhance message content to increase engagement');
@@ -245,7 +260,9 @@ export class TemplateManagerService {
         recommendations.push('Review message frequency and content relevance');
       }
       if (data.quality_score < 7) {
-        recommendations.push('Consider revising template content for better quality score');
+        recommendations.push(
+          'Consider revising template content for better quality score',
+        );
       }
 
       return {
@@ -280,7 +297,10 @@ export class TemplateManagerService {
           severity: 'high',
           recommendation: 'Review and resubmit template with corrections',
         });
-      } else if (template.correct_category && template.correct_category !== template.category) {
+      } else if (
+        template.correct_category &&
+        template.correct_category !== template.category
+      ) {
         report.warning_templates++;
         report.details.push({
           template_name: template.name,
@@ -318,7 +338,11 @@ export class TemplateManagerService {
 
     const template = templates[0];
 
-    if (template.components.some((c) => c.type === 'body' && (c.parameters?.length ?? 0) > 5)) {
+    if (
+      template.components.some(
+        (c) => c.type === 'body' && (c.parameters?.length ?? 0) > 5,
+      )
+    ) {
       suggestions.push({
         type: 'content',
         description: 'Reduce number of variables for better readability',
@@ -347,7 +371,8 @@ export class TemplateManagerService {
 
     suggestions.push({
       type: 'timing',
-      description: 'Send messages during business hours (9 AM - 6 PM recipient time)',
+      description:
+        'Send messages during business hours (9 AM - 6 PM recipient time)',
       expected_impact: 'Higher read rates and engagement',
       implementation_difficulty: 'easy',
     });
@@ -372,7 +397,7 @@ export class TemplateManagerService {
           `${this.baseUrl}/${this.businessId}/template_analytics`,
           {
             headers: {
-              'Authorization': `Bearer ${this.accessToken}`,
+              Authorization: `Bearer ${this.accessToken}`,
             },
             params: {
               template_names: templateName,
@@ -396,9 +421,14 @@ export class TemplateManagerService {
         avg_time_to_reply: 0,
       };
 
-      const deliveryRate = metrics.total_sent > 0 ? (metrics.delivered / metrics.total_sent) * 100 : 0;
-      const readRate = metrics.delivered > 0 ? (metrics.read / metrics.delivered) * 100 : 0;
-      const engagementRate = metrics.read > 0 ? (metrics.replied / metrics.read) * 100 : 0;
+      const deliveryRate =
+        metrics.total_sent > 0
+          ? (metrics.delivered / metrics.total_sent) * 100
+          : 0;
+      const readRate =
+        metrics.delivered > 0 ? (metrics.read / metrics.delivered) * 100 : 0;
+      const engagementRate =
+        metrics.read > 0 ? (metrics.replied / metrics.read) * 100 : 0;
 
       return {
         template_name: templateName,
@@ -411,19 +441,26 @@ export class TemplateManagerService {
         },
       };
     } catch (error: any) {
-      this.logger.error(`Failed to get template performance metrics: ${error.message}`);
+      this.logger.error(
+        `Failed to get template performance metrics: ${error.message}`,
+      );
       throw error;
     }
   }
 
-  private determineComplianceStatus(template: Template): 'compliant' | 'warning' | 'violation' {
+  private determineComplianceStatus(
+    template: Template,
+  ): 'compliant' | 'warning' | 'violation' {
     if (template.status === 'REJECTED') {
       return 'violation';
     }
     if (template.quality_score && template.quality_score < 5) {
       return 'warning';
     }
-    if (template.correct_category && template.correct_category !== template.category) {
+    if (
+      template.correct_category &&
+      template.correct_category !== template.category
+    ) {
       return 'warning';
     }
     return 'compliant';

@@ -59,7 +59,11 @@ export abstract class BaseRepository<T> {
       Object.entries(options.where).forEach(([key, value]) => {
         if (value !== undefined) {
           // Handle date range operators
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            !Array.isArray(value)
+          ) {
             if (value.$gte !== undefined) {
               query = query.gte(key, value.$gte);
             }
@@ -110,7 +114,10 @@ export abstract class BaseRepository<T> {
   /**
    * Find a single record matching criteria
    */
-  async findOne(where: Record<string, any>, options?: FindOneOptions): Promise<T | null> {
+  async findOne(
+    where: Record<string, any>,
+    options?: FindOneOptions,
+  ): Promise<T | null> {
     let query = this.supabase
       .from(this.tableName)
       .select(options?.select || '*');
@@ -191,10 +198,7 @@ export abstract class BaseRepository<T> {
   /**
    * Update multiple records matching criteria
    */
-  async updateMany(
-    where: Record<string, any>,
-    data: Partial<T>,
-  ): Promise<T[]> {
+  async updateMany(where: Record<string, any>, data: Partial<T>): Promise<T[]> {
     let query = this.supabase.from(this.tableName).update(data);
 
     Object.entries(where).forEach(([key, value]) => {
@@ -264,7 +268,11 @@ export abstract class BaseRepository<T> {
       Object.entries(where).forEach(([key, value]) => {
         if (value !== undefined) {
           // Handle date range operators
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            !Array.isArray(value)
+          ) {
             if (value.$gte !== undefined) {
               query = query.gte(key, value.$gte);
             }

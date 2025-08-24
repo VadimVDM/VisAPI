@@ -8,9 +8,7 @@ export class ContactResolverService {
   private readonly contactCache = new Map<string, Contact>();
   private readonly cacheTimeout: number;
 
-  constructor(
-    private readonly cbbClient: CbbClientService
-  ) {
+  constructor(private readonly cbbClient: CbbClientService) {
     this.cacheTimeout = 3600000; // 1 hour in milliseconds
   }
 
@@ -19,7 +17,7 @@ export class ContactResolverService {
    */
   async resolveContact(phone: string): Promise<Contact> {
     const normalizedPhone = this.normalizePhoneNumber(phone);
-    
+
     // Check cache first
     const cachedContact = this.getCachedContact(normalizedPhone);
     if (cachedContact) {
@@ -30,20 +28,27 @@ export class ContactResolverService {
     try {
       // Try to find existing contact
       let contact = await this.cbbClient.findContactByPhone(normalizedPhone);
-      
+
       if (!contact) {
-        this.logger.debug(`Contact not found for ${normalizedPhone}, creating new contact`);
+        this.logger.debug(
+          `Contact not found for ${normalizedPhone}, creating new contact`,
+        );
         contact = await this.createNewContact(normalizedPhone);
       } else {
-        this.logger.debug(`Found existing contact ${contact.id} for phone: ${normalizedPhone}`);
+        this.logger.debug(
+          `Found existing contact ${contact.id} for phone: ${normalizedPhone}`,
+        );
       }
 
       // Cache the result
       this.setCachedContact(normalizedPhone, contact);
-      
+
       return contact;
     } catch (error) {
-      this.logger.error(`Failed to resolve contact for phone ${normalizedPhone}:`, error);
+      this.logger.error(
+        `Failed to resolve contact for phone ${normalizedPhone}:`,
+        error,
+      );
       throw new ContactNotFoundError(normalizedPhone);
     }
   }
@@ -73,7 +78,7 @@ export class ContactResolverService {
   private normalizePhoneNumber(phone: string): string {
     // Remove all non-digit characters
     let normalized = phone.replace(/\D/g, '');
-    
+
     // Add + prefix if not present
     if (!normalized.startsWith('+')) {
       // If number doesn't start with country code, assume US (+1)
@@ -105,7 +110,7 @@ export class ContactResolverService {
   private getCachedContact(phone: string): Contact | null {
     const cacheKey = `contact:${phone}`;
     const cached = this.contactCache.get(cacheKey);
-    
+
     if (cached && this.isCacheValid(cached)) {
       return cached;
     }
@@ -127,9 +132,9 @@ export class ContactResolverService {
       ...contact,
       _cached_at: Date.now(),
     };
-    
+
     this.contactCache.set(cacheKey, contactWithTimestamp as Contact);
-    
+
     // Clean up old cache entries periodically
     if (this.contactCache.size > 1000) {
       this.cleanupExpiredCache();
@@ -142,8 +147,8 @@ export class ContactResolverService {
   private isCacheValid(contact: any): boolean {
     const cachedAt = contact._cached_at;
     if (!cachedAt) return false;
-    
-    return (Date.now() - cachedAt) < this.cacheTimeout;
+
+    return Date.now() - cachedAt < this.cacheTimeout;
   }
 
   /**
@@ -155,14 +160,16 @@ export class ContactResolverService {
 
     for (const [key, contact] of this.contactCache.entries()) {
       const cachedAt = (contact as any)._cached_at;
-      if (!cachedAt || (now - cachedAt) >= this.cacheTimeout) {
+      if (!cachedAt || now - cachedAt >= this.cacheTimeout) {
         this.contactCache.delete(key);
         removedCount++;
       }
     }
 
     if (removedCount > 0) {
-      this.logger.debug(`Cleaned up ${removedCount} expired contact cache entries`);
+      this.logger.debug(
+        `Cleaned up ${removedCount} expired contact cache entries`,
+      );
     }
   }
 

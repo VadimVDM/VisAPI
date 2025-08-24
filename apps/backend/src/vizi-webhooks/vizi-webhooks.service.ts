@@ -487,13 +487,15 @@ export class ViziWebhooksService {
   ): Promise<ViziWebhookDto | null> {
     const supabase = this.supabaseService.client;
 
-    // Simple approach: get recent logs and filter in memory
-    // Supabase JS doesn't handle complex JSONB queries well
+    // Use indexed queries for efficient server-side filtering
+    // First try to find by order_id in metadata
     const { data, error } = await supabase
       .from('logs')
       .select('metadata')
+      .eq('metadata->order_id', orderId)
+      .eq('metadata->webhook_type', 'vizi_order')
       .order('created_at', { ascending: false })
-      .limit(500); // Get recent logs
+      .limit(10); // Much smaller limit due to indexed query
 
     if (error || !data || data.length === 0) {
       this.logger.warn(`No logs found when searching for order ${orderId}`);
@@ -529,9 +531,11 @@ export class ViziWebhooksService {
   ): Promise<Array<{ orderId: string; webhookData: ViziWebhookDto }>> {
     const supabase = this.supabaseService.client;
 
-    // Simpler approach: just get ALL logs and filter in memory
-    // Supabase JS client doesn't handle nested JSONB filtering well
-    let query = supabase.from('logs').select('metadata, created_at');
+    // Use indexed query for efficient server-side filtering
+    let query = supabase
+      .from('logs')
+      .select('metadata, created_at')
+      .eq('metadata->webhook_type', 'vizi_order');
 
     // Add date filters if provided
     if (startDate) {

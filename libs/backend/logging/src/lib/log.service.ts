@@ -47,7 +47,7 @@ export class LogService {
 
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly piiRedactionService: PiiRedactionService
+    private readonly piiRedactionService: PiiRedactionService,
   ) {}
 
   /**
@@ -57,24 +57,27 @@ export class LogService {
     try {
       // Skip PII redaction if explicitly requested (for webhook data recovery)
       const skipRedaction = logEntry.skipPiiRedaction === true;
-      
+
       // Redact PII from message (unless skipped)
-      const messageResult = skipRedaction 
+      const messageResult = skipRedaction
         ? { text: logEntry.message, piiFound: false, redactedFields: [] }
         : this.piiRedactionService.redactPii(logEntry.message);
-      
+
       // Combine metadata with correlation_id if present
       const combinedMetadata = {
         ...logEntry.metadata,
-        ...(logEntry.correlation_id && { correlation_id: logEntry.correlation_id })
+        ...(logEntry.correlation_id && {
+          correlation_id: logEntry.correlation_id,
+        }),
       };
-      
+
       // Redact PII from metadata (unless skipped)
-      const metadataResult = Object.keys(combinedMetadata).length > 0
-        ? (skipRedaction 
+      const metadataResult =
+        Object.keys(combinedMetadata).length > 0
+          ? skipRedaction
             ? { obj: combinedMetadata, piiFound: false, redactedFields: [] }
-            : this.piiRedactionService.redactPiiFromObject(combinedMetadata))
-        : { obj: null, piiFound: false, redactedFields: [] };
+            : this.piiRedactionService.redactPiiFromObject(combinedMetadata)
+          : { obj: null, piiFound: false, redactedFields: [] };
 
       // Determine if any PII was found
       const piiFound = messageResult.piiFound || metadataResult.piiFound;
@@ -91,8 +94,7 @@ export class LogService {
       };
 
       // Store in database using serviceClient for proper write permissions
-      const { error } = await this.supabase
-        .serviceClient
+      const { error } = await this.supabase.serviceClient
         .from('logs')
         .insert(logData);
 
@@ -110,7 +112,6 @@ export class LogService {
           jobId: logEntry.job_id,
         });
       }
-
     } catch (error) {
       this.logger.error('Error creating log entry:', error);
       // Don't throw - we don't want logging failures to break the application
@@ -132,8 +133,7 @@ export class LogService {
       offset = 0,
     } = filters;
 
-    let query = this.supabase
-      .serviceClient
+    let query = this.supabase.serviceClient
       .from('logs')
       .select('*', { count: 'exact' });
 
@@ -186,8 +186,7 @@ export class LogService {
    * Get logs by workflow ID
    */
   async getLogsByWorkflow(workflowId: string): Promise<LogRecord[]> {
-    const { data, error } = await this.supabase
-      .serviceClient
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .select('*')
       .eq('workflow_id', workflowId)
@@ -205,8 +204,7 @@ export class LogService {
    * Get logs by job ID
    */
   async getLogsByJob(jobId: string): Promise<LogRecord[]> {
-    const { data, error } = await this.supabase
-      .serviceClient
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .select('*')
       .eq('job_id', jobId)
@@ -229,10 +227,10 @@ export class LogService {
     withPii: number;
     recentCount: number;
   }> {
-    const { data: totalData, error: totalError } = await this.supabase
-      .serviceClient
-      .from('logs')
-      .select('level, pii_redacted', { count: 'exact' });
+    const { data: totalData, error: totalError } =
+      await this.supabase.serviceClient
+        .from('logs')
+        .select('level, pii_redacted', { count: 'exact' });
 
     if (totalError) {
       this.logger.error('Failed to fetch log stats:', totalError);
@@ -243,7 +241,7 @@ export class LogService {
     const byLevel: Record<string, number> = {};
     let withPii = 0;
 
-    totalData?.forEach(log => {
+    totalData?.forEach((log) => {
       byLevel[log.level] = (byLevel[log.level] || 0) + 1;
       if (log.pii_redacted) {
         withPii++;
@@ -254,11 +252,11 @@ export class LogService {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const { data: recentData, error: recentError } = await this.supabase
-      .serviceClient
-      .from('logs')
-      .select('id', { count: 'exact' })
-      .gte('created_at', yesterday.toISOString());
+    const { data: recentData, error: recentError } =
+      await this.supabase.serviceClient
+        .from('logs')
+        .select('id', { count: 'exact' })
+        .gte('created_at', yesterday.toISOString());
 
     if (recentError) {
       this.logger.warn('Failed to fetch recent logs count:', recentError);
@@ -279,8 +277,7 @@ export class LogService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    const { data, error } = await this.supabase
-      .serviceClient
+    const { data, error } = await this.supabase.serviceClient
       .from('logs')
       .delete()
       .lt('created_at', cutoffDate.toISOString());
@@ -290,10 +287,16 @@ export class LogService {
       throw new Error('Failed to prune old logs');
     }
 
-    const deletedCount = data ? (Array.isArray(data) ? (data as any[]).length : 0) : 0;
-    
-    this.logger.log(`Pruned ${deletedCount} logs older than ${olderThanDays} days`);
-    
+    const deletedCount = data
+      ? Array.isArray(data)
+        ? (data as any[]).length
+        : 0
+      : 0;
+
+    this.logger.log(
+      `Pruned ${deletedCount} logs older than ${olderThanDays} days`,
+    );
+
     return { deleted: deletedCount };
   }
 
@@ -308,7 +311,7 @@ export class LogService {
       job_id?: string;
       correlation_id?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<void> {
     await this.createLog({
       level,

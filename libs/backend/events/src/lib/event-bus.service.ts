@@ -35,10 +35,7 @@ export class EventBusService {
         `Published event: ${event.eventType} with ID: ${event.eventId}`,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to publish event ${event.eventType}:`,
-        error,
-      );
+      this.logger.error(`Failed to publish event ${event.eventType}:`, error);
       throw error;
     }
   }
@@ -60,16 +57,13 @@ export class EventBusService {
       this.eventHandlers.set(eventType, []);
     }
     this.eventHandlers.get(eventType)!.push(handler);
-    
+
     // Also register with EventEmitter2
     this.eventEmitter.on(eventType, async (event: DomainEvent) => {
       try {
         await handler.handle(event);
       } catch (error) {
-        this.logger.error(
-          `Handler failed for event ${eventType}:`,
-          error,
-        );
+        this.logger.error(`Handler failed for event ${eventType}:`, error);
       }
     });
   }
@@ -87,9 +81,7 @@ export class EventBusService {
   /**
    * Subscribe to all events
    */
-  subscribeToAll(
-    callback: (event: DomainEvent) => Promise<void>,
-  ): void {
+  subscribeToAll(callback: (event: DomainEvent) => Promise<void>): void {
     this.eventEmitter.on('domain.*', callback);
   }
 

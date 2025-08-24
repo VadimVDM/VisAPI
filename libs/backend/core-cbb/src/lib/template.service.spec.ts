@@ -12,7 +12,11 @@ describe('TemplateService', () => {
   const mockFlows: Flow[] = [
     { id: 100, name: 'Welcome Flow', description: 'Welcome new users' },
     { id: 200, name: 'Visa Approved', description: 'Notify visa approval' },
-    { id: 300, name: 'Document Request', description: 'Request additional documents' },
+    {
+      id: 300,
+      name: 'Document Request',
+      description: 'Request additional documents',
+    },
     { id: 400, name: 'Status Update', description: 'General status update' },
   ];
 
@@ -25,8 +29,8 @@ describe('TemplateService', () => {
       get: jest.fn((key: string) => {
         const config: Record<string, any> = {
           'cbb.cacheTimeout': 3600, // 1 hour
-          'CBB_TEMPLATE_VISA_APPROVED': '200',
-          'CBB_TEMPLATE_DOCUMENT_REQUEST': '300',
+          CBB_TEMPLATE_VISA_APPROVED: '200',
+          CBB_TEMPLATE_DOCUMENT_REQUEST: '300',
         };
         return config[key];
       }),
@@ -83,8 +87,10 @@ describe('TemplateService', () => {
     });
 
     it('should throw error when template not found', async () => {
-      await expect(service.getTemplateFlowId('nonexistent_template')).rejects.toThrow(
-        "Template 'nonexistent_template' not found in available flows"
+      await expect(
+        service.getTemplateFlowId('nonexistent_template'),
+      ).rejects.toThrow(
+        "Template 'nonexistent_template' not found in available flows",
       );
     });
   });
@@ -160,13 +166,19 @@ describe('TemplateService', () => {
   describe('processTemplateVariables', () => {
     it('should process template variables', async () => {
       const variables = { name: 'John Doe', status: 'approved' };
-      const result = await service.processTemplateVariables('visa_approved', variables);
-      
+      const result = await service.processTemplateVariables(
+        'visa_approved',
+        variables,
+      );
+
       expect(result).toEqual(variables);
     });
 
     it('should handle empty variables', async () => {
-      const result = await service.processTemplateVariables('visa_approved', {});
+      const result = await service.processTemplateVariables(
+        'visa_approved',
+        {},
+      );
       expect(result).toEqual({});
     });
   });
@@ -180,7 +192,7 @@ describe('TemplateService', () => {
       const templates = await service.getAvailableTemplates();
 
       expect(templates).toHaveLength(4);
-      
+
       // Should include configured mappings
       expect(templates).toContainEqual({
         templateName: 'visa_approved',
@@ -212,7 +224,7 @@ describe('TemplateService', () => {
 
     it('should allow adding new template mappings', () => {
       service.setTemplateMapping('custom_template', 999);
-      
+
       const stats = service.getCacheStats();
       expect(stats.templateMappings).toBeGreaterThan(2); // Should have at least the 2 configured + 1 added
     });

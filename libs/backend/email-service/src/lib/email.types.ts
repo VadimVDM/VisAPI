@@ -16,7 +16,12 @@ export interface SupabaseEmailHookData {
     token: string;
     token_hash: string;
     redirect_to: string;
-    email_action_type: 'signup' | 'magic_link' | 'recovery' | 'invite' | 'email_change';
+    email_action_type:
+      | 'signup'
+      | 'magic_link'
+      | 'recovery'
+      | 'invite'
+      | 'email_change';
     site_url: string;
     token_new?: string;
     token_hash_new?: string;

@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { WebhookEvent, EnhancedMessageStatus, ConversationCategory } from '../types/whatsapp.types';
+import {
+  WebhookEvent,
+  EnhancedMessageStatus,
+  ConversationCategory,
+} from '../types/whatsapp.types';
 
 export interface MessageTrackingData {
   orderId?: string;
@@ -60,7 +64,7 @@ export class DeliveryTrackerService {
 
   updateMessageStatus(status: EnhancedMessageStatus): void {
     const tracking = this.messageTracking.get(status.id);
-    
+
     if (!tracking) {
       this.logger.warn(`No tracking found for message ${status.id}`);
       this.messageTracking.set(status.id, {
@@ -75,7 +79,7 @@ export class DeliveryTrackerService {
     this.logger.log(`Updating message ${status.id} status to ${status.status}`);
 
     tracking.status = status.status;
-    
+
     switch (status.status) {
       case 'delivered':
         tracking.deliveredAt = status.timestamp;
@@ -127,7 +131,7 @@ export class DeliveryTrackerService {
 
   private processMessageWebhook(value: any): void {
     const statuses = value.statuses || [];
-    
+
     for (const status of statuses) {
       const messageId = status.id;
       const tracking = this.messageTracking.get(messageId);
@@ -153,18 +157,25 @@ export class DeliveryTrackerService {
 
     const messages = value.messages || [];
     for (const message of messages) {
-      this.logger.log(`Received incoming message ${message.id} from ${message.from}`);
+      this.logger.log(
+        `Received incoming message ${message.id} from ${message.from}`,
+      );
     }
   }
 
-  private mapWebhookStatus(status: string): 'queued' | 'sent' | 'delivered' | 'read' | 'failed' {
-    const statusMap: Record<string, 'queued' | 'sent' | 'delivered' | 'read' | 'failed'> = {
-      'accepted': 'queued',
-      'sent': 'sent',
-      'delivered': 'delivered',
-      'read': 'read',
-      'failed': 'failed',
-      'deleted': 'failed',
+  private mapWebhookStatus(
+    status: string,
+  ): 'queued' | 'sent' | 'delivered' | 'read' | 'failed' {
+    const statusMap: Record<
+      string,
+      'queued' | 'sent' | 'delivered' | 'read' | 'failed'
+    > = {
+      accepted: 'queued',
+      sent: 'sent',
+      delivered: 'delivered',
+      read: 'read',
+      failed: 'failed',
+      deleted: 'failed',
     };
 
     return statusMap[status.toLowerCase()] || 'queued';
@@ -178,7 +189,9 @@ export class DeliveryTrackerService {
     isBillable: boolean,
     expiresAt?: Date,
   ): void {
-    this.logger.log(`Tracking conversation ${conversationId} for ${phoneNumber}`);
+    this.logger.log(
+      `Tracking conversation ${conversationId} for ${phoneNumber}`,
+    );
 
     this.conversationTracking.set(conversationId, {
       conversationId,
@@ -195,13 +208,15 @@ export class DeliveryTrackerService {
     return this.messageTracking.get(messageId);
   }
 
-  getConversationTracking(conversationId: string): ConversationData | undefined {
+  getConversationTracking(
+    conversationId: string,
+  ): ConversationData | undefined {
     return this.conversationTracking.get(conversationId);
   }
 
   getMessagesByOrder(orderId: string): MessageTrackingData[] {
     const messages: MessageTrackingData[] = [];
-    
+
     for (const tracking of this.messageTracking.values()) {
       if (tracking.orderId === orderId) {
         messages.push(tracking);
@@ -213,7 +228,7 @@ export class DeliveryTrackerService {
 
   getMessagesByPhone(phoneNumber: string): MessageTrackingData[] {
     const messages: MessageTrackingData[] = [];
-    
+
     for (const tracking of this.messageTracking.values()) {
       if (tracking.phoneNumber === phoneNumber) {
         messages.push(tracking);
@@ -225,7 +240,7 @@ export class DeliveryTrackerService {
 
   getFailedMessages(since?: Date): MessageTrackingData[] {
     const messages: MessageTrackingData[] = [];
-    
+
     for (const tracking of this.messageTracking.values()) {
       if (tracking.status === 'failed') {
         if (!since || (tracking.failedAt && tracking.failedAt >= since)) {
@@ -293,7 +308,7 @@ export class DeliveryTrackerService {
 
     for (const conversation of this.conversationTracking.values()) {
       byCategory[conversation.category]++;
-      
+
       if (conversation.isBillable) {
         billable++;
       } else {
@@ -316,12 +331,17 @@ export class DeliveryTrackerService {
       }
     }
 
-    for (const [conversationId, conversation] of this.conversationTracking.entries()) {
+    for (const [
+      conversationId,
+      conversation,
+    ] of this.conversationTracking.entries()) {
       if (conversation.createdAt < olderThan) {
         this.conversationTracking.delete(conversationId);
       }
     }
 
-    this.logger.log(`Cleared tracking data older than ${olderThan.toISOString()}`);
+    this.logger.log(
+      `Cleared tracking data older than ${olderThan.toISOString()}`,
+    );
   }
 }

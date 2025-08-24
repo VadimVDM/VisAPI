@@ -4,14 +4,17 @@ import type { EmailData, EmailSendResult } from './email.types';
 /**
  * Send email using Resend Node.js SDK
  */
-export async function sendEmailWithResend(emailData: EmailData, apiKey: string): Promise<EmailSendResult> {
+export async function sendEmailWithResend(
+  emailData: EmailData,
+  apiKey: string,
+): Promise<EmailSendResult> {
   try {
     // Initialize Resend client
     const resend = new Resend(apiKey);
 
     // Extract email from "Name <email>" format for Resend
     const fromEmail = emailData.from || 'VisAPI <noreply@visanet.app>';
-    
+
     // Resend supports "Name <email>" format directly
     // But we should ensure the email domain is verified in Resend
 
@@ -25,14 +28,15 @@ export async function sendEmailWithResend(emailData: EmailData, apiKey: string):
     });
 
     if (error) {
-      throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`);
+      throw new Error(
+        `Resend API error: ${error.message || JSON.stringify(error)}`,
+      );
     }
 
     return {
       success: true,
       messageId: data?.id || `resend-${Date.now()}`,
     };
-
   } catch (error) {
     return {
       success: false,
@@ -44,7 +48,10 @@ export async function sendEmailWithResend(emailData: EmailData, apiKey: string):
 /**
  * Validate email data before sending
  */
-export function validateEmailData(emailData: EmailData): { valid: boolean; error?: string } {
+export function validateEmailData(emailData: EmailData): {
+  valid: boolean;
+  error?: string;
+} {
   if (!emailData.to) {
     return { valid: false, error: 'Recipient email is required' };
   }
@@ -63,7 +70,10 @@ export function validateEmailData(emailData: EmailData): { valid: boolean; error
     return { valid: false, error: `Invalid recipient email: ${emailData.to}` };
   }
 
-  if (emailData.from && !emailRegex.test(emailData.from.replace(/.*<(.+)>.*/, '$1'))) {
+  if (
+    emailData.from &&
+    !emailRegex.test(emailData.from.replace(/.*<(.+)>.*/, '$1'))
+  ) {
     // Extract email from "Name <email>" format
     const fromEmail = emailData.from.match(/<(.+)>/)?.[1] || emailData.from;
     if (!emailRegex.test(fromEmail)) {

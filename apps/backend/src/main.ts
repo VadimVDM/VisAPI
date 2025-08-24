@@ -91,6 +91,35 @@ async function bootstrap() {
 
   SwaggerModule.setup('api/docs', app, document);
 
+  // Enable graceful shutdown hooks
+  app.enableShutdownHooks();
+
+  // Register shutdown handlers
+  const shutdown = async (signal: string) => {
+    Logger.log(`Received ${signal}, starting graceful shutdown...`);
+
+    try {
+      // Give ongoing requests 10 seconds to complete
+      const shutdownTimeout = setTimeout(() => {
+        Logger.error('Graceful shutdown timeout, forcing exit');
+        process.exit(1);
+      }, 10000);
+
+      await app.close();
+      clearTimeout(shutdownTimeout);
+
+      Logger.log('Graceful shutdown completed');
+      process.exit(0);
+    } catch (error) {
+      Logger.error('Error during graceful shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  // Handle termination signals
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+
   const port = configService.port;
   Logger.log(`Attempting to start server on port ${port}...`);
 

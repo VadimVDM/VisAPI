@@ -32,7 +32,7 @@ export class WorkflowsService {
       },
     };
 
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.serviceClient
       .from('workflows')
       .insert(
         workflowData as Database['public']['Tables']['workflows']['Insert'],
@@ -97,7 +97,7 @@ export class WorkflowsService {
       };
     }
 
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.serviceClient
       .from('workflows')
       .update(updateData)
       .eq('id', id)
@@ -114,7 +114,7 @@ export class WorkflowsService {
   }
 
   async remove(id: string): Promise<void> {
-    const { error } = await this.supabase.client
+    const { error } = await this.supabase.serviceClient
       .from('workflows')
       .delete()
       .eq('id', id);

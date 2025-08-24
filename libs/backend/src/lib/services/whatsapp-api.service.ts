@@ -29,17 +29,37 @@ export class WhatsAppApiService {
       phoneNumberId: this.configService.get('WABA_PHONE_NUMBER_ID', ''),
       businessId: this.configService.get('WABA_BUSINESS_ID', ''),
       accessToken: this.configService.get('WABA_ACCESS_TOKEN', ''),
-      verifyToken: this.configService.get('WABA_VERIFY_TOKEN', 'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U'),
+      verifyToken: this.configService.get(
+        'WABA_VERIFY_TOKEN',
+        'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U',
+      ),
       apiVersion: this.configService.get('WABA_API_VERSION', 'v23.0'),
       webhookSecret: this.configService.get('WABA_WEBHOOK_SECRET', ''),
       appSecret: this.configService.get('WABA_APP_SECRET', ''),
-      webhookEndpoint: this.configService.get('WABA_WEBHOOK_ENDPOINT', '/api/v1/webhooks/whatsapp'),
-      businessVerificationRequired: this.configService.get('WABA_BUSINESS_VERIFICATION_REQUIRED', 'true') === 'true',
-      enableFlows: this.configService.get('WABA_ENABLE_FLOWS', 'true') === 'true',
-      enableCatalogMessaging: this.configService.get('WABA_ENABLE_CATALOG_MESSAGING', 'true') === 'true',
-      conversationTrackingEnabled: this.configService.get('WABA_CONVERSATION_TRACKING_ENABLED', 'true') === 'true',
-      templateQualityMonitoring: this.configService.get('WABA_TEMPLATE_QUALITY_MONITORING', 'true') === 'true',
-      automatedTemplateSyncInterval: parseInt(this.configService.get('WABA_AUTOMATED_TEMPLATE_SYNC_INTERVAL', '3600'), 10),
+      webhookEndpoint: this.configService.get(
+        'WABA_WEBHOOK_ENDPOINT',
+        '/api/v1/webhooks/whatsapp',
+      ),
+      businessVerificationRequired:
+        this.configService.get(
+          'WABA_BUSINESS_VERIFICATION_REQUIRED',
+          'true',
+        ) === 'true',
+      enableFlows:
+        this.configService.get('WABA_ENABLE_FLOWS', 'true') === 'true',
+      enableCatalogMessaging:
+        this.configService.get('WABA_ENABLE_CATALOG_MESSAGING', 'true') ===
+        'true',
+      conversationTrackingEnabled:
+        this.configService.get('WABA_CONVERSATION_TRACKING_ENABLED', 'true') ===
+        'true',
+      templateQualityMonitoring:
+        this.configService.get('WABA_TEMPLATE_QUALITY_MONITORING', 'true') ===
+        'true',
+      automatedTemplateSyncInterval: parseInt(
+        this.configService.get('WABA_AUTOMATED_TEMPLATE_SYNC_INTERVAL', '3600'),
+        10,
+      ),
     };
 
     this.baseUrl = `https://graph.facebook.com/${this.config.apiVersion}`;
@@ -54,9 +74,9 @@ export class WhatsAppApiService {
   ): Promise<MessageResponse> {
     try {
       const cleanPhoneNumber = this.cleanPhoneNumber(phoneNumber);
-      
+
       const components: TemplateComponent[] = [];
-      
+
       if (parameters.length > 0) {
         components.push({
           type: 'body',
@@ -82,7 +102,9 @@ export class WhatsAppApiService {
         (payload as any).conversation_category = conversationCategory;
       }
 
-      this.logger.log(`Sending template message to ${cleanPhoneNumber} using template ${templateName}`);
+      this.logger.log(
+        `Sending template message to ${cleanPhoneNumber} using template ${templateName}`,
+      );
 
       const response = await firstValueFrom(
         this.httpService.post<MessageResponse>(
@@ -90,22 +112,30 @@ export class WhatsAppApiService {
           payload,
           {
             headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
+              Authorization: `Bearer ${this.config.accessToken}`,
               'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      this.logger.log(`Message sent successfully: ${response.data.messages[0]?.id}`);
+      this.logger.log(
+        `Message sent successfully: ${response.data.messages[0]?.id}`,
+      );
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Failed to send template message: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to send template message: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
 
-  async sendTextMessage(phoneNumber: string, text: string): Promise<MessageResponse> {
+  async sendTextMessage(
+    phoneNumber: string,
+    text: string,
+  ): Promise<MessageResponse> {
     try {
       const cleanPhoneNumber = this.cleanPhoneNumber(phoneNumber);
 
@@ -128,17 +158,22 @@ export class WhatsAppApiService {
           payload,
           {
             headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
+              Authorization: `Bearer ${this.config.accessToken}`,
               'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      this.logger.log(`Text message sent successfully: ${response.data.messages[0]?.id}`);
+      this.logger.log(
+        `Text message sent successfully: ${response.data.messages[0]?.id}`,
+      );
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Failed to send text message: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to send text message: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -146,21 +181,18 @@ export class WhatsAppApiService {
   async getMessageStatus(messageId: string): Promise<EnhancedMessageStatus> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(
-          `${this.baseUrl}/${messageId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
-            },
-            params: {
-              fields: 'id,status,timestamp,recipient_id,conversation,pricing',
-            },
+        this.httpService.get(`${this.baseUrl}/${messageId}`, {
+          headers: {
+            Authorization: `Bearer ${this.config.accessToken}`,
           },
-        ),
+          params: {
+            fields: 'id,status,timestamp,recipient_id,conversation,pricing',
+          },
+        }),
       );
 
       const data = response.data;
-      
+
       return {
         id: data.id,
         status: this.mapMessageStatus(data.status),
@@ -172,7 +204,10 @@ export class WhatsAppApiService {
         isBillable: data.pricing?.billable,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to get message status: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to get message status: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -192,7 +227,7 @@ export class WhatsAppApiService {
           formData,
           {
             headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
+              Authorization: `Bearer ${this.config.accessToken}`,
             },
           },
         ),
@@ -201,7 +236,10 @@ export class WhatsAppApiService {
       this.logger.log(`Media uploaded successfully: ${response.data.id}`);
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Failed to upload media: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to upload media: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -209,14 +247,11 @@ export class WhatsAppApiService {
   async downloadMedia(mediaId: string): Promise<Buffer> {
     try {
       const mediaUrlResponse = await firstValueFrom(
-        this.httpService.get(
-          `${this.baseUrl}/${mediaId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
-            },
+        this.httpService.get(`${this.baseUrl}/${mediaId}`, {
+          headers: {
+            Authorization: `Bearer ${this.config.accessToken}`,
           },
-        ),
+        }),
       );
 
       const mediaUrl = mediaUrlResponse.data.url;
@@ -224,7 +259,7 @@ export class WhatsAppApiService {
       const mediaResponse = await firstValueFrom(
         this.httpService.get(mediaUrl, {
           headers: {
-            'Authorization': `Bearer ${this.config.accessToken}`,
+            Authorization: `Bearer ${this.config.accessToken}`,
           },
           responseType: 'arraybuffer',
         }),
@@ -232,7 +267,10 @@ export class WhatsAppApiService {
 
       return Buffer.from(mediaResponse.data);
     } catch (error: any) {
-      this.logger.error(`Failed to download media: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to download media: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -240,17 +278,15 @@ export class WhatsAppApiService {
   async getBusinessInfo(): Promise<BusinessInfo> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(
-          `${this.baseUrl}/${this.config.businessId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
-            },
-            params: {
-              fields: 'id,name,vertical,verification_status,message_template_namespace,messaging_limit_tier,quality_rating,status',
-            },
+        this.httpService.get(`${this.baseUrl}/${this.config.businessId}`, {
+          headers: {
+            Authorization: `Bearer ${this.config.accessToken}`,
           },
-        ),
+          params: {
+            fields:
+              'id,name,vertical,verification_status,message_template_namespace,messaging_limit_tier,quality_rating,status',
+          },
+        }),
       );
 
       return {
@@ -258,13 +294,17 @@ export class WhatsAppApiService {
         name: response.data.name,
         vertical: response.data.vertical,
         verification_status: response.data.verification_status,
-        message_template_limit: response.data.message_template_namespace?.limit || 0,
+        message_template_limit:
+          response.data.message_template_namespace?.limit || 0,
         messaging_limit_tier: response.data.messaging_limit_tier,
         quality_rating: response.data.quality_rating,
         status: response.data.status,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to get business info: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to get business info: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
@@ -276,7 +316,7 @@ export class WhatsAppApiService {
           `${this.baseUrl}/${this.config.businessId}/template_analytics`,
           {
             headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
+              Authorization: `Bearer ${this.config.accessToken}`,
             },
             params: {
               template_names: templateName,
@@ -298,21 +338,26 @@ export class WhatsAppApiService {
         last_updated: new Date(analytics.updated_at),
       };
     } catch (error: any) {
-      this.logger.error(`Failed to get template analytics: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to get template analytics: ${error.message}`,
+        error.response?.data,
+      );
       throw error;
     }
   }
 
-  async getConversationInfo(phoneNumber: string): Promise<ConversationInfo | null> {
+  async getConversationInfo(
+    phoneNumber: string,
+  ): Promise<ConversationInfo | null> {
     try {
       const cleanPhoneNumber = this.cleanPhoneNumber(phoneNumber);
-      
+
       const response = await firstValueFrom(
         this.httpService.get(
           `${this.baseUrl}/${this.config.phoneNumberId}/conversations`,
           {
             headers: {
-              'Authorization': `Bearer ${this.config.accessToken}`,
+              Authorization: `Bearer ${this.config.accessToken}`,
             },
             params: {
               fields: 'id,origin,category,expiration_timestamp,pricing',
@@ -324,12 +369,14 @@ export class WhatsAppApiService {
 
       if (response.data.data && response.data.data.length > 0) {
         const conversation = response.data.data[0];
-        
+
         return {
           id: conversation.id,
           origin: conversation.origin,
           category: conversation.category as ConversationCategory,
-          expiration_timestamp: new Date(conversation.expiration_timestamp * 1000),
+          expiration_timestamp: new Date(
+            conversation.expiration_timestamp * 1000,
+          ),
           is_billable: conversation.pricing?.billable || false,
           pricing_model: conversation.pricing?.pricing_model || 'CBP',
         };
@@ -337,14 +384,17 @@ export class WhatsAppApiService {
 
       return null;
     } catch (error: any) {
-      this.logger.error(`Failed to get conversation info: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `Failed to get conversation info: ${error.message}`,
+        error.response?.data,
+      );
       return null;
     }
   }
 
   private cleanPhoneNumber(phoneNumber: string): string {
     let cleaned = phoneNumber.replace(/[\s\-\(\)\+]/g, '');
-    
+
     if (!cleaned.startsWith('972')) {
       if (cleaned.startsWith('0')) {
         cleaned = '972' + cleaned.substring(1);
@@ -356,14 +406,19 @@ export class WhatsAppApiService {
     return cleaned;
   }
 
-  private mapMessageStatus(status: string): 'queued' | 'sent' | 'delivered' | 'read' | 'failed' {
-    const statusMap: Record<string, 'queued' | 'sent' | 'delivered' | 'read' | 'failed'> = {
-      'accepted': 'queued',
-      'sent': 'sent',
-      'delivered': 'delivered',
-      'read': 'read',
-      'failed': 'failed',
-      'deleted': 'failed',
+  private mapMessageStatus(
+    status: string,
+  ): 'queued' | 'sent' | 'delivered' | 'read' | 'failed' {
+    const statusMap: Record<
+      string,
+      'queued' | 'sent' | 'delivered' | 'read' | 'failed'
+    > = {
+      accepted: 'queued',
+      sent: 'sent',
+      delivered: 'delivered',
+      read: 'read',
+      failed: 'failed',
+      deleted: 'failed',
     };
 
     return statusMap[status.toLowerCase()] || 'queued';

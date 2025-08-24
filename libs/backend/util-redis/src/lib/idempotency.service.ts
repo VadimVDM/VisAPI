@@ -10,7 +10,7 @@ export interface RedisClient {
     value: string,
     mode?: string,
     duration?: number,
-    flag?: string
+    flag?: string,
   ): Promise<string | null>;
   setex(key: string, seconds: number, value: string): Promise<string>;
   del(key: string): Promise<number>;
@@ -43,7 +43,7 @@ export class IdempotencyService {
   private async storeResult(
     key: string,
     result: any,
-    ttl: number = 3600
+    ttl: number = 3600,
   ): Promise<void> {
     try {
       await this.redis.setex(
@@ -53,13 +53,13 @@ export class IdempotencyService {
           result,
           timestamp: Date.now(),
           status: 'completed',
-        })
+        }),
       );
       this.logger.debug(`Stored idempotent result for key: ${key}`);
     } catch (error) {
       this.logger.warn(
         `Failed to store idempotent result for key ${key}:`,
-        error
+        error,
       );
     }
   }
@@ -70,7 +70,7 @@ export class IdempotencyService {
   async checkAndExecute<T>(
     key: string,
     executor: () => Promise<T>,
-    ttl: number = 3600
+    ttl: number = 3600,
   ): Promise<T> {
     const lockKey = `idempotent:${key}:lock`;
     const resultKey = `idempotent:${key}:result`;
@@ -90,7 +90,7 @@ export class IdempotencyService {
       lockId,
       'PX',
       300000,
-      'NX'
+      'NX',
     );
 
     if (lockAcquired !== 'OK') {
@@ -122,20 +122,23 @@ export class IdempotencyService {
   /**
    * Mark an operation as in progress to prevent concurrent execution
    */
-  private async markInProgress(key: string, ttl: number = 300): Promise<boolean> {
+  private async markInProgress(
+    key: string,
+    ttl: number = 300,
+  ): Promise<boolean> {
     try {
       const success = await this.redis.set(
         `idempotent:${key}:lock`,
         'processing',
         'PX',
         ttl * 1000,
-        'NX'
+        'NX',
       );
       return success === 'OK';
     } catch (error) {
       this.logger.warn(
         `Failed to mark operation as in progress for key ${key}:`,
-        error
+        error,
       );
       return false;
     }
@@ -146,7 +149,7 @@ export class IdempotencyService {
    */
   private async waitForResult(
     resultKey: string,
-    maxWaitMs: number
+    maxWaitMs: number,
   ): Promise<void> {
     const startTime = Date.now();
     let delay = 100; // Start with 100ms delay
