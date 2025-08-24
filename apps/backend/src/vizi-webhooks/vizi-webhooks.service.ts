@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ViziWebhookDto,
@@ -11,6 +11,8 @@ import { WorkflowsService } from '../workflows/workflows.service';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { v4 as uuidv4 } from 'uuid';
+import { RetriggerOrdersDto, RetriggerResultDto, RetriggerMode } from './dto/retrigger-orders.dto';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class ViziWebhooksService {
@@ -22,6 +24,7 @@ export class ViziWebhooksService {
     private readonly workflowsService: WorkflowsService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   async processViziOrder(
@@ -176,5 +179,232 @@ export class ViziWebhooksService {
     // Add handlers for other countries as needed
     // For now, return the form as-is for other countries
     return { ...baseData, ...form } as Record<string, unknown>;
+  }
+
+  async retriggerOrders(dto: RetriggerOrdersDto): Promise<RetriggerResultDto> {
+    const result: RetriggerResultDto = {
+      successful: 0,
+      failed: 0,
+      skipped: 0,
+      details: [],
+    };
+
+    // Get webhook data based on mode
+    let webhookPayloads: Array<{ orderId: string; webhookData: ViziWebhookDto }> = [];
+
+    if (dto.mode === RetriggerMode.SINGLE) {
+      if (!dto.orderId) {
+        throw new BadRequestException('orderId is required for single mode');
+      }
+      const payload = await this.getWebhookDataForOrder(dto.orderId);
+      if (payload) {
+        webhookPayloads.push({ orderId: dto.orderId, webhookData: payload });
+      } else {
+        result.failed++;
+        result.details.push({
+          orderId: dto.orderId,
+          status: 'failed',
+          error: 'No webhook data found for this order',
+        });
+      }
+    } else if (dto.mode === RetriggerMode.BULK) {
+      if (dto.orderIds && dto.orderIds.length > 0) {
+        // Bulk by order IDs
+        for (const orderId of dto.orderIds) {
+          const payload = await this.getWebhookDataForOrder(orderId);
+          if (payload) {
+            webhookPayloads.push({ orderId, webhookData: payload });
+          } else {
+            result.failed++;
+            result.details.push({
+              orderId,
+              status: 'failed',
+              error: 'No webhook data found',
+            });
+          }
+        }
+      } else if (dto.startDate || dto.endDate) {
+        // Bulk by date range
+        const payloads = await this.getWebhookDataByDateRange(dto.startDate, dto.endDate);
+        webhookPayloads = payloads;
+      } else {
+        throw new BadRequestException(
+          'Either orderIds or date range (startDate/endDate) is required for bulk mode',
+        );
+      }
+    }
+
+    // Process each webhook payload
+    for (const { orderId, webhookData } of webhookPayloads) {
+      try {
+        // Check if order should be skipped
+        if (dto.skipProcessed) {
+          const orderExists = await this.checkOrderExists(orderId);
+          if (orderExists) {
+            result.skipped++;
+            result.details.push({
+              orderId,
+              status: 'skipped',
+              message: 'Order already exists in database',
+            });
+            continue;
+          }
+        }
+
+        // Create correlation ID for tracking
+        const correlationId = `retrigger-${orderId}-${Date.now()}`;
+
+        // Log the retrigger attempt
+        await this.logService.createLog({
+          level: 'info',
+          message: `Retriggering order ${orderId}`,
+          metadata: {
+            orderId,
+            retrigger: true,
+            correlationId,
+            source: 'retrigger',
+          },
+          correlation_id: correlationId,
+        });
+
+        // Save order to database
+        await this.ordersService.createOrder(webhookData);
+
+        // Process the webhook
+        await this.processViziOrder(webhookData, correlationId);
+
+        result.successful++;
+        result.details.push({
+          orderId,
+          status: 'success',
+          message: 'Order retriggered successfully',
+        });
+
+        this.logger.log(`Successfully retriggered order ${orderId}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        result.failed++;
+        result.details.push({
+          orderId,
+          status: 'failed',
+          error: errorMessage,
+        });
+
+        this.logger.error(`Failed to retrigger order ${orderId}: ${errorMessage}`);
+
+        await this.logService.createLog({
+          level: 'error',
+          message: `Failed to retrigger order ${orderId}`,
+          metadata: {
+            orderId,
+            error: errorMessage,
+            retrigger: true,
+            source: 'retrigger',
+          },
+        });
+      }
+    }
+
+    // Log summary
+    await this.logService.createLog({
+      level: 'info',
+      message: 'Retrigger operation completed',
+      metadata: {
+        successful: result.successful,
+        failed: result.failed,
+        skipped: result.skipped,
+        mode: dto.mode,
+        source: 'retrigger',
+      },
+    });
+
+    return result;
+  }
+
+  private async getWebhookDataForOrder(orderId: string): Promise<ViziWebhookDto | null> {
+    const supabase = this.supabaseService.client;
+    
+    // Query logs for webhook data with this order ID
+    const { data, error } = await supabase
+      .from('logs')
+      .select('metadata')
+      .or(`metadata->webhook_data->order->id.eq.${orderId},metadata->order_id.eq.${orderId}`)
+      .in('metadata->webhook_type', ['vizi_order'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      this.logger.warn(`No webhook data found for order ${orderId}`);
+      return null;
+    }
+
+    const metadata = data[0].metadata as Record<string, any>;
+    const webhookData = metadata?.webhook_data;
+    if (!webhookData) {
+      this.logger.warn(`Webhook data is empty for order ${orderId}`);
+      return null;
+    }
+
+    return webhookData as ViziWebhookDto;
+  }
+
+  private async getWebhookDataByDateRange(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<Array<{ orderId: string; webhookData: ViziWebhookDto }>> {
+    const supabase = this.supabaseService.client;
+    
+    let query = supabase
+      .from('logs')
+      .select('metadata')
+      .eq('metadata->webhook_type', 'vizi_order')
+      .not('metadata->webhook_data', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error || !data) {
+      this.logger.error(`Failed to fetch webhook data by date range: ${error?.message}`);
+      return [];
+    }
+
+    const results: Array<{ orderId: string; webhookData: ViziWebhookDto }> = [];
+    
+    for (const log of data) {
+      const metadata = log.metadata as Record<string, any>;
+      const webhookData = metadata?.webhook_data as ViziWebhookDto;
+      const orderId = webhookData?.order?.id || metadata?.order_id;
+      
+      if (webhookData && orderId) {
+        results.push({ orderId, webhookData });
+      }
+    }
+
+    this.logger.log(`Found ${results.length} webhook payloads in date range`);
+    return results;
+  }
+
+  private async checkOrderExists(orderId: string): Promise<boolean> {
+    const supabase = this.supabaseService.client;
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('order_id', orderId)
+      .limit(1);
+
+    if (error) {
+      this.logger.error(`Failed to check if order exists: ${error.message}`);
+      return false;
+    }
+
+    return data && data.length > 0;
   }
 }

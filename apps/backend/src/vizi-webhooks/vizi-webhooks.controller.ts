@@ -23,6 +23,7 @@ import { ViziWebhookDto } from '@visapi/visanet-types';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
 import { IdempotencyService } from '@visapi/util-redis';
+import { RetriggerOrdersDto, RetriggerResultDto } from './dto/retrigger-orders.dto';
 
 @Controller('v1/webhooks/vizi')
 @ApiTags('Vizi Webhooks')
@@ -304,6 +305,90 @@ export class ViziWebhooksController {
           stack: errorStack,
           correlationId,
           source: 'webhook',
+        },
+        correlation_id: correlationId,
+      });
+
+      throw error;
+    }
+  }
+
+  @Post('retrigger')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('webhook:vizi', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retrigger order creation from stored webhook data',
+    description:
+      'Retriggers order creation for single or multiple orders using previously stored webhook data. Useful for recovery scenarios.',
+  })
+  @ApiBearerAuth('api-key')
+  @ApiBody({
+    type: RetriggerOrdersDto,
+    description: 'Retrigger configuration',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Retrigger operation completed',
+    type: RetriggerResultDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid retrigger parameters',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions',
+  })
+  async retriggerOrders(
+    @Body() dto: RetriggerOrdersDto,
+    @Headers() headers: Record<string, string>,
+  ): Promise<RetriggerResultDto> {
+    const correlationId =
+      headers['x-correlation-id'] || headers['x-request-id'] || `retrigger-${Date.now()}`;
+
+    this.logger.log(
+      `Starting retrigger operation: mode=${dto.mode}, correlationId=${correlationId}`,
+    );
+
+    // Log the retrigger request
+    await this.logService.createLog({
+      level: 'info',
+      message: 'Retrigger operation initiated',
+      metadata: {
+        mode: dto.mode,
+        orderId: dto.orderId,
+        orderIds: dto.orderIds,
+        startDate: dto.startDate,
+        endDate: dto.endDate,
+        skipProcessed: dto.skipProcessed,
+        source: 'retrigger',
+      },
+      correlation_id: correlationId,
+    });
+
+    try {
+      const result = await this.viziWebhooksService.retriggerOrders(dto);
+
+      this.logger.log(
+        `Retrigger operation completed: successful=${result.successful}, failed=${result.failed}, skipped=${result.skipped}`,
+      );
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      await this.logService.createLog({
+        level: 'error',
+        message: 'Retrigger operation failed',
+        metadata: {
+          error: errorMessage,
+          mode: dto.mode,
+          source: 'retrigger',
         },
         correlation_id: correlationId,
       });
