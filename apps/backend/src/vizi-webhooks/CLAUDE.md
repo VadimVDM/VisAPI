@@ -28,6 +28,14 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
   - Uses same sync logic as automatic processing
   - Returns sync status and WhatsApp availability
 
+#### WhatsApp Notification Retrigger
+
+- `POST /api/v1/webhooks/vizi/retrigger-whatsapp` - Manually retrigger WhatsApp order confirmation
+  - Find orders by: phone number, order ID, or Vizi order ID
+  - Validates CBB sync status before sending
+  - Force flag to override already-sent checks
+  - Uses exact same message flow as automatic processing
+
 ## Security
 
 All endpoints require API key authentication with appropriate scopes:
