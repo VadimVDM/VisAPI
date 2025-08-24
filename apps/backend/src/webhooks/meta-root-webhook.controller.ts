@@ -16,19 +16,22 @@ import { Request } from 'express';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 
 /**
- * Root-level webhook controller for Meta/WhatsApp
- * This handles webhooks at the root path (/) for compatibility with Meta's webhook configuration
- * It simply forwards all requests to the main WhatsApp webhook controller
+ * Alternative webhook controller for Meta/WhatsApp  
+ * Provides additional endpoints for Meta webhook compatibility at /api/v1/webhooks/meta
+ * The main webhook endpoint remains at /api/v1/webhooks/whatsapp
+ * 
+ * Note: This controller was originally designed to handle root-level webhooks but
+ * was moved to avoid conflicts with AppController's GET /api route
  */
 @ApiExcludeController() // Hide from Swagger docs
-@Controller() // No path = root controller
+@Controller('v1/webhooks/meta') // Alternative path for Meta webhooks
 export class MetaRootWebhookController {
   private readonly logger = new Logger(MetaRootWebhookController.name);
 
   constructor(private readonly whatsappController: WhatsAppWebhookController) {}
 
   @Get()
-  async handleRootGet(@Query() query: any): Promise<string> {
+  async handleMetaGet(@Query() query: any): Promise<string> {
     // Check if this is a webhook verification request
     if (
       query['hub.mode'] &&
@@ -36,7 +39,7 @@ export class MetaRootWebhookController {
       query['hub.challenge']
     ) {
       this.logger.log(
-        'Root webhook verification request received, forwarding to WhatsApp controller',
+        'Meta webhook verification request received, forwarding to WhatsApp controller',
       );
       return this.whatsappController.verifyWebhook(query);
     }
@@ -57,8 +60,8 @@ export class MetaRootWebhookController {
     <div class="status">✅ Server is running and ready to receive webhooks</div>
     <p>Webhook endpoints:</p>
     <ul>
-        <li>GET / - Root webhook verification (Meta compatible)</li>
-        <li>POST / - Root webhook receiver (Meta compatible)</li>
+        <li>GET /api/v1/webhooks/meta - Meta webhook verification</li>
+        <li>POST /api/v1/webhooks/meta - Meta webhook receiver</li>
         <li>GET /api/v1/webhooks/whatsapp - API webhook verification</li>
         <li>POST /api/v1/webhooks/whatsapp - API webhook receiver</li>
     </ul>
@@ -68,13 +71,13 @@ export class MetaRootWebhookController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleRootPost(
+  async handleMetaPost(
     @Body() body: any,
     @Headers() headers: any,
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     this.logger.log(
-      'Root webhook POST received, forwarding to WhatsApp controller',
+      'Meta webhook POST received, forwarding to WhatsApp controller',
     );
     return this.whatsappController.receiveWebhook(body, headers, req);
   }

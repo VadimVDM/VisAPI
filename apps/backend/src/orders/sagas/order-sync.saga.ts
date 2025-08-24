@@ -3,17 +3,7 @@ import { Saga, ICommand } from '@nestjs/cqrs';
 import { Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { SyncOrderToCBBCommand } from '../commands/sync-order-to-cbb.command';
-
-/**
- * Event emitted when an order is created and needs sync
- */
-interface OrderCreatedForSyncEvent {
-  type: 'OrderCreatedForSync';
-  orderId: string;
-  branch: string;
-  whatsappEnabled: boolean;
-  correlationId?: string;
-}
+import { OrderCreatedForSyncEvent } from '../events/order-created-for-sync.event';
 
 /**
  * OrderSyncSaga - Listens to order events and triggers sync processes
@@ -31,7 +21,7 @@ export class OrderSyncSaga {
     return events$.pipe(
       filter(
         (event): event is OrderCreatedForSyncEvent =>
-          event?.type === 'OrderCreatedForSync',
+          event instanceof OrderCreatedForSyncEvent,
       ),
       map(
         (event) =>

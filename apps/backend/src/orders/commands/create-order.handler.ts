@@ -6,6 +6,7 @@ import { EventBusService, OrderCreatedEvent } from '@visapi/backend-events';
 import { OrderTransformerService } from '../services/order-transformer.service';
 import { OrderValidatorService } from '../services/order-validator.service';
 import { OrderSyncService } from '../services/order-sync.service';
+import { OrderCreatedForSyncEvent } from '../events/order-created-for-sync.event';
 
 /**
  * Handler for CreateOrderCommand
@@ -66,13 +67,15 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
         ),
       );
 
-      // Trigger async processes through events
-      this.eventBus.publish({
-        type: 'OrderCreatedForSync',
-        orderId: order.order_id,
-        branch: order.branch,
-        whatsappEnabled: order.whatsapp_alerts_enabled,
-      });
+      // Trigger async processes through events using proper event class
+      this.eventBus.publish(
+        new OrderCreatedForSyncEvent(
+          order.order_id,
+          order.branch,
+          order.whatsapp_alerts_enabled,
+          correlationId,
+        ),
+      );
 
       return order.id;
     } catch (error) {
