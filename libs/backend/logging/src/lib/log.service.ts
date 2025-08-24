@@ -9,6 +9,7 @@ export interface LogEntry {
   workflow_id?: string;
   job_id?: string;
   correlation_id?: string;
+  skipPiiRedaction?: boolean; // Add flag to skip PII redaction for sensitive recovery data
 }
 
 export interface LogRecord {
@@ -50,12 +51,17 @@ export class LogService {
   ) {}
 
   /**
-   * Create a new log entry with PII redaction
+   * Create a new log entry with optional PII redaction
    */
   async createLog(logEntry: LogEntry): Promise<void> {
     try {
-      // Redact PII from message
-      const messageResult = this.piiRedactionService.redactPii(logEntry.message);
+      // Skip PII redaction if explicitly requested (for webhook data recovery)
+      const skipRedaction = logEntry.skipPiiRedaction === true;
+      
+      // Redact PII from message (unless skipped)
+      const messageResult = skipRedaction 
+        ? { text: logEntry.message, piiFound: false, redactedFields: [] }
+        : this.piiRedactionService.redactPii(logEntry.message);
       
       // Combine metadata with correlation_id if present
       const combinedMetadata = {
@@ -63,9 +69,11 @@ export class LogService {
         ...(logEntry.correlation_id && { correlation_id: logEntry.correlation_id })
       };
       
-      // Redact PII from metadata
+      // Redact PII from metadata (unless skipped)
       const metadataResult = Object.keys(combinedMetadata).length > 0
-        ? this.piiRedactionService.redactPiiFromObject(combinedMetadata)
+        ? (skipRedaction 
+            ? { obj: combinedMetadata, piiFound: false, redactedFields: [] }
+            : this.piiRedactionService.redactPiiFromObject(combinedMetadata))
         : { obj: null, piiFound: false, redactedFields: [] };
 
       // Determine if any PII was found
@@ -82,9 +90,9 @@ export class LogService {
         created_at: new Date().toISOString(),
       };
 
-      // Store in database using client property
+      // Store in database using serviceClient for proper write permissions
       const { error } = await this.supabase
-        .client
+        .serviceClient
         .from('logs')
         .insert(logData);
 
@@ -125,7 +133,7 @@ export class LogService {
     } = filters;
 
     let query = this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .select('*', { count: 'exact' });
 
@@ -179,7 +187,7 @@ export class LogService {
    */
   async getLogsByWorkflow(workflowId: string): Promise<LogRecord[]> {
     const { data, error } = await this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .select('*')
       .eq('workflow_id', workflowId)
@@ -198,7 +206,7 @@ export class LogService {
    */
   async getLogsByJob(jobId: string): Promise<LogRecord[]> {
     const { data, error } = await this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .select('*')
       .eq('job_id', jobId)
@@ -222,7 +230,7 @@ export class LogService {
     recentCount: number;
   }> {
     const { data: totalData, error: totalError } = await this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .select('level, pii_redacted', { count: 'exact' });
 
@@ -247,7 +255,7 @@ export class LogService {
     yesterday.setDate(yesterday.getDate() - 1);
 
     const { data: recentData, error: recentError } = await this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .select('id', { count: 'exact' })
       .gte('created_at', yesterday.toISOString());
@@ -272,7 +280,7 @@ export class LogService {
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
     const { data, error } = await this.supabase
-      .client
+      .serviceClient
       .from('logs')
       .delete()
       .lt('created_at', cutoffDate.toISOString());

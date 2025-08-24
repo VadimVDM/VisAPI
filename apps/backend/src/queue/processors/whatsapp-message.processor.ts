@@ -8,6 +8,7 @@ import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 import { WhatsAppTemplateService } from '../services/whatsapp-template.service';
+import { ConfigService } from '@visapi/core-config';
 
 interface OrderData {
   order_id: string;
@@ -61,6 +62,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
     private readonly templateService: WhatsAppTemplateService,
+    private readonly configService: ConfigService,
     @InjectMetric('visapi_whatsapp_messages_sent_total')
     private readonly messagesSentCounter: Counter<string>,
     @InjectMetric('visapi_whatsapp_messages_failed_total')
@@ -76,7 +78,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
     // Only log individual job processing in development
-    if (process.env.NODE_ENV !== 'production') {
+    if (!this.configService.isProduction) {
       this.logger.log(`Processing WhatsApp message job ${job.id}`, {
         order_id: orderId,
         contact_id: contactId,
@@ -138,7 +140,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       );
 
       // Only log success in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (!this.configService.isProduction) {
         this.logger.log(
           `WhatsApp ${messageType} sent successfully for order ${orderId}`,
           {
@@ -227,7 +229,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
           await this.templateService.prepareOrderConfirmationData(order);
 
         // Only log individual sends in development
-        if (process.env.NODE_ENV !== 'production') {
+        if (!this.configService.isProduction) {
           this.logger.log(
             `Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`,
           );
@@ -340,7 +342,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         error,
       );
       throw error;
-    } else if (process.env.NODE_ENV !== 'production') {
+    } else if (!this.configService.isProduction) {
       // Only log status updates in development
       this.logger.log(
         `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`,

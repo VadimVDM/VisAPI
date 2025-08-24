@@ -47,9 +47,9 @@ export class PdfGeneratorService {
     if (!this.browser) {
       this.logger.info('Launching Puppeteer browser');
 
-      // Use Chrome/Chromium executable path based on environment
+      // Use Chrome/Chromium executable path based on platform
+      // Allow override via PUPPETEER_EXECUTABLE_PATH environment variable if needed
       const executablePath =
-        process.env['PUPPETEER_EXECUTABLE_PATH'] ||
         process.platform === 'darwin'
           ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
           : process.platform === 'win32'

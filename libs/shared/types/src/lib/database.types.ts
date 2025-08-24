@@ -77,6 +77,7 @@ export type Database = {
           country_name_translated: string | null
           created_at: string | null
           id: string
+          is_urgent: boolean | null
           language_code: string | null
           order_days: number | null
           order_id: string
@@ -85,8 +86,6 @@ export type Database = {
           product_country: string | null
           product_doc_type: string | null
           updated_at: string | null
-          urgency: string | null
-          urgency_translated: string | null
           visa_type_translated: string | null
         }
         Insert: {
@@ -104,6 +103,7 @@ export type Database = {
           country_name_translated?: string | null
           created_at?: string | null
           id?: string
+          is_urgent?: boolean | null
           language_code?: string | null
           order_days?: number | null
           order_id: string
@@ -112,8 +112,6 @@ export type Database = {
           product_country?: string | null
           product_doc_type?: string | null
           updated_at?: string | null
-          urgency?: string | null
-          urgency_translated?: string | null
           visa_type_translated?: string | null
         }
         Update: {
@@ -131,6 +129,7 @@ export type Database = {
           country_name_translated?: string | null
           created_at?: string | null
           id?: string
+          is_urgent?: boolean | null
           language_code?: string | null
           order_days?: number | null
           order_id?: string
@@ -139,8 +138,6 @@ export type Database = {
           product_country?: string | null
           product_doc_type?: string | null
           updated_at?: string | null
-          urgency?: string | null
-          urgency_translated?: string | null
           visa_type_translated?: string | null
         }
         Relationships: [

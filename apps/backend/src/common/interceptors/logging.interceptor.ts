@@ -24,6 +24,7 @@ import {
   getRequestMethod,
   getRequestUrl,
 } from '@visapi/backend-http-types';
+import { ConfigService } from '@visapi/core-config';
 
 /**
  * LoggingInterceptor - Enterprise-grade request/response logging
@@ -45,6 +46,8 @@ export class LoggingInterceptor implements NestInterceptor {
     'authorization',
     'x-api-key',
   ];
+
+  constructor(private readonly configService: ConfigService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<EnhancedRequest>();
@@ -70,7 +73,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // Only log incoming requests in development or for non-webhook endpoints
     const isWebhook = requestMetadata.url.includes('/webhooks/');
-    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const isDevelopment = !this.configService.isProduction;
 
     if (!isWebhook || isDevelopment) {
       const logEntry: LogEntry = {

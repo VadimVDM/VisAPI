@@ -23,17 +23,15 @@ export class SwaggerAuthGuard implements CanActivate {
   private readonly swaggerPassword: string;
   private readonly validApiKeys: Set<string>;
 
-  constructor(configService: ConfigService) {
-    this.isProduction = configService.nodeEnv === 'production';
+  constructor(private readonly configService: ConfigService) {
+    this.isProduction = configService.isProduction;
 
-    // Get Swagger auth credentials from config
-    // These would be added to the config schema
-    this.swaggerUsername = process.env['SWAGGER_USERNAME'] || 'admin';
-    this.swaggerPassword = process.env['SWAGGER_PASSWORD'] || '';
+    // Get Swagger auth credentials from typed config
+    this.swaggerUsername = configService.get<string>('swagger.username');
+    this.swaggerPassword = configService.get<string>('swagger.password');
 
-    // You could also check against valid API keys from database
-    // For now, we'll use a simple environment variable
-    const swaggerApiKeys = process.env['SWAGGER_API_KEYS']?.split(',') || [];
+    // Get API keys from config
+    const swaggerApiKeys = configService.get<string[]>('swagger.apiKeys') || [];
     this.validApiKeys = new Set(swaggerApiKeys);
   }
 
@@ -80,11 +78,11 @@ export class SwaggerAuthGuard implements CanActivate {
  * Used to protect the Swagger UI route at application level
  */
 export function createSwaggerAuthMiddleware(configService: ConfigService) {
-  const isProduction = configService.nodeEnv === 'production';
-  const swaggerUsername = process.env['SWAGGER_USERNAME'] || 'admin';
-  const swaggerPassword = process.env['SWAGGER_PASSWORD'] || '';
+  const isProduction = configService.isProduction;
+  const swaggerUsername = configService.get<string>('swagger.username');
+  const swaggerPassword = configService.get<string>('swagger.password');
   const swaggerApiKeys = new Set(
-    process.env['SWAGGER_API_KEYS']?.split(',') || [],
+    configService.get<string[]>('swagger.apiKeys') || [],
   );
 
   return (req: Request, res: Response, next: NextFunction) => {

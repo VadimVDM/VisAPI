@@ -114,6 +114,9 @@ export const EnvSchema = z.object({
   WABA_APP_SECRET: z.string().optional(), // Deprecated - use WABA_WEBHOOK_SECRET
   WABA_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
   
+  // Zapier integration
+  ZAPIER_WEBHOOK_URL: z.string().url().optional(),
+  
   // Workflow configuration
   WORKFLOW_PROCESSING_DELAY_MS: z.string().default('1000').transform((val) => parseInt(val, 10)).pipe(z.number().min(0)),
   WORKFLOW_BATCH_PROCESSING_SIZE: z.string().default('50').transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(1000)),
@@ -198,6 +201,11 @@ export function validateProductionEnv(config: EnvSchema): void {
     
     if (!config.SLACK_WEBHOOK_URL && !config.SLACK_BOT_TOKEN) {
       console.warn('⚠️  Slack integration not configured');
+    }
+    
+    // Swagger documentation security
+    if (!config.SWAGGER_PASSWORD || config.SWAGGER_PASSWORD.length < 8) {
+      errors.push('SWAGGER_PASSWORD is required in production and must be at least 8 characters');
     }
   }
   
@@ -306,6 +314,9 @@ export function getValidatedConfig() {
       webhookSecret: env.WABA_WEBHOOK_SECRET,
       appSecret: env.WABA_APP_SECRET,
       webhookVerifyToken: env.WABA_WEBHOOK_VERIFY_TOKEN,
+    },
+    zapier: {
+      webhookUrl: env.ZAPIER_WEBHOOK_URL,
     },
     workflow: {
       processingDelayMs: env.WORKFLOW_PROCESSING_DELAY_MS,

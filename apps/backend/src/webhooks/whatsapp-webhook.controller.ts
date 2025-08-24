@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@visapi/core-config';
 import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '@visapi/core-supabase';
 import {
@@ -44,8 +44,17 @@ export class WhatsAppWebhookController {
     private readonly templateManager: TemplateManagerService,
     private readonly slackRateLimiter: SlackRateLimiterService,
   ) {
-    this.zapierWebhookUrl = this.configService.get('ZAPIER_WEBHOOK_URL', '');
-    this.slackWebhookUrl = this.configService.get('SLACK_WEBHOOK_URL', '');
+    // Use try-catch since these are optional configs
+    try {
+      this.zapierWebhookUrl = this.configService.get<string>('zapier.webhookUrl');
+    } catch {
+      this.zapierWebhookUrl = '';
+    }
+    try {
+      this.slackWebhookUrl = this.configService.get<string>('slack.webhookUrl');
+    } catch {
+      this.slackWebhookUrl = '';
+    }
   }
 
   @Get()
@@ -54,7 +63,7 @@ export class WhatsAppWebhookController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async verifyWebhook(@Query() query: WebhookVerifyDto): Promise<string> {
     // Only log in development to reduce production logs
-    if (process.env.NODE_ENV !== 'production') {
+    if (!this.configService.isProduction) {
       this.logger.log('WhatsApp webhook verification request received');
     }
 
@@ -103,7 +112,7 @@ export class WhatsAppWebhookController {
     const eventId = uuidv4();
 
     // Only log event IDs in development to reduce production logs
-    if (process.env.NODE_ENV !== 'production') {
+    if (!this.configService.isProduction) {
       this.logger.log(`Received WhatsApp webhook event ${eventId}`);
     }
 
@@ -112,7 +121,7 @@ export class WhatsAppWebhookController {
       const timestamp = headers['x-hub-timestamp'] || Date.now().toString();
 
       // Log headers only in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (!this.configService.isProduction) {
         this.logger.debug(
           `Webhook headers: x-hub-signature-256=${signature ? 'present' : 'missing'}, x-hub-timestamp=${timestamp}`,
         );
@@ -131,12 +140,12 @@ export class WhatsAppWebhookController {
         );
 
       // Check if we should enforce signature verification
-      const enforceSignature =
-        this.configService.get('WABA_ENFORCE_SIGNATURE', 'true') === 'true';
+      // WABA_ENFORCE_SIGNATURE is not in config schema, default to true
+      const enforceSignature = true;
 
       if (
         !isValidSignature &&
-        this.configService.get('NODE_ENV') === 'production' &&
+        this.configService.isProduction &&
         enforceSignature
       ) {
         this.logger.error('Invalid webhook signature - rejecting request');
@@ -253,7 +262,7 @@ export class WhatsAppWebhookController {
 
     for (const status of statuses) {
       // Only log individual message processing in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (!this.configService.isProduction) {
         this.logger.log(
           `Processing message status: ${status.id} - ${status.status}`,
         );
@@ -287,7 +296,7 @@ export class WhatsAppWebhookController {
     const messages = value.messages || [];
     for (const message of messages) {
       // Only log individual incoming messages in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (!this.configService.isProduction) {
         this.logger.log(
           `Received incoming message ${message.id} from ${message.from}`,
         );
@@ -535,7 +544,7 @@ export class WhatsAppWebhookController {
         .eq('id', eventId);
 
       // Only log Zapier forwarding in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (!this.configService.isProduction) {
         this.logger.log(
           `Webhook forwarded to Zapier for event ${eventId} - Status: ${response.status}`,
         );

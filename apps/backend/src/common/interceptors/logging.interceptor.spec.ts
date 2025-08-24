@@ -2,6 +2,7 @@ import { LoggingInterceptor } from './logging.interceptor';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import { EnhancedRequest, EnhancedResponse } from '@visapi/backend-http-types';
+import { ConfigService } from '@visapi/core-config';
 
 type MockRequest = Partial<EnhancedRequest> & {
   method: string;
@@ -58,9 +59,13 @@ describe('LoggingInterceptor', () => {
   let mockCallHandler: MockCallHandler;
   let mockRequest: MockRequest;
   let mockResponse: MockResponse;
+  let mockConfigService: Partial<ConfigService>;
 
   beforeEach(() => {
-    interceptor = new LoggingInterceptor();
+    mockConfigService = {
+      isProduction: false,
+    };
+    interceptor = new LoggingInterceptor(mockConfigService as ConfigService);
 
     mockRequest = {
       method: 'GET',

@@ -1,7 +1,3 @@
-// IMPORTANT: Make sure to import `instrument.ts` at the top of your file.
-import './instrument';
-
-// All other imports below
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,14 +5,16 @@ import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
 import helmet from 'helmet';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
-import { ErrorFilter } from './common/utils/error-filter';
-
+// Read version from package.json at build time
+const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  const pkg = require('../../../package.json') as { version: string };
+  packageInfo.version = pkg.version;
+} catch {
+  // Use default version if package.json is not available
+}
 async function bootstrap() {
-  // Install error filter in production to suppress known non-critical errors
-  if (process.env.NODE_ENV === 'production') {
-    ErrorFilter.install();
-  }
-
   const app = await NestFactory.create(AppModule, {
     // Raw body is needed for webhook signature verification
     rawBody: true,
@@ -63,7 +61,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('VisAPI')
     .setDescription('Workflow automation API for Visanet')
-    .setVersion('0.5.0')
+    .setVersion(packageInfo.version)
     .addApiKey(
       {
         type: 'apiKey',

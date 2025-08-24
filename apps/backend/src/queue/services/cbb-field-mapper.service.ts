@@ -33,7 +33,8 @@ interface OrderData {
   whatsapp_alerts_enabled: boolean | null;
   applicants_data?: ApplicantData[];
   processing_days?: number | null; // Calculated by business rules engine
-  product_data?: any; // JSON field containing product details including urgency
+  is_urgent?: boolean | null; // Direct boolean field from orders table
+  product_data?: any; // JSON field containing product details
 }
 
 interface CBBContactRecord {
@@ -50,12 +51,11 @@ interface CBBContactRecord {
   client_name?: string;
   product_country?: string;
   product_doc_type?: string;
-  urgency?: string;
+  is_urgent?: boolean;
   processing_days?: number;
   language_code: string;
   country_name_translated?: string;
   visa_type_translated?: string;
-  urgency_translated?: string;
   processing_days_translated?: string;
   branch?: string;
   order_days?: number;
@@ -108,7 +108,6 @@ export class CBBFieldMapperService {
     translations: {
       countryNameTranslated?: string;
       visaTypeTranslated?: string;
-      urgencyTranslated?: string;
       processingDaysTranslated?: string;
     } = {},
   ): Promise<CBBContactRecord | null> {
@@ -117,7 +116,7 @@ export class CBBFieldMapperService {
       order.processing_days ||
       this.calculateDefaultProcessingDays(
         order.product_country,
-        order.product_data?.urgency || 'standard',
+        order.is_urgent === true,
       );
 
     const contactData = {
@@ -127,13 +126,12 @@ export class CBBFieldMapperService {
       client_name: order.client_name,
       product_country: order.product_country,
       product_doc_type: order.product_doc_type,
-      urgency: order.product_data?.urgency || 'standard',
+      is_urgent: order.is_urgent === true, // Store boolean directly
       processing_days: processingDays,
       language_code:
         language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
       country_name_translated: translations.countryNameTranslated,
       visa_type_translated: translations.visaTypeTranslated,
-      urgency_translated: translations.urgencyTranslated,
       processing_days_translated: translations.processingDaysTranslated,
       branch: order.branch,
       order_days: processingDays,
@@ -221,7 +219,8 @@ export class CBBFieldMapperService {
    * Map order data to CBB contact format
    */
   mapOrderToContact(order: OrderData): CBBContactData {
-    const isUrgent = this.isOrderUrgent(order);
+    // Use the direct is_urgent boolean field from orders table
+    const isUrgent = order.is_urgent === true;
     const orderDateUnix = this.convertDateToUnix(
       order.entry_date ?? '',
       order.order_id,
@@ -240,7 +239,7 @@ export class CBBFieldMapperService {
       order.processing_days ||
       this.calculateDefaultProcessingDays(
         order.product_country,
-        order.product_data?.urgency || 'standard',
+        isUrgent,
       );
 
     // Use actual product data from the order
@@ -314,21 +313,6 @@ export class CBBFieldMapperService {
     };
   }
 
-  /**
-   * Determine if order is urgent from product_data
-   */
-  private isOrderUrgent(order: OrderData): boolean {
-    const urgency = order.product_data?.urgency || 'standard';
-    const urgentValues = [
-      'urgent',
-      'express',
-      'few_hours',
-      'next_day',
-      'rush',
-      'priority',
-    ];
-    return urgentValues.includes(urgency.toLowerCase());
-  }
 
   /**
    * Convert date string to Unix timestamp in seconds
@@ -451,10 +435,8 @@ export class CBBFieldMapperService {
    */
   private calculateDefaultProcessingDays(
     country: string,
-    urgency: string,
+    isUrgent: boolean,
   ): number {
-    const isUrgent = urgency === 'urgent' || urgency === 'express';
-
     // If urgent, always 1 business day
     if (isUrgent) {
       return 1;

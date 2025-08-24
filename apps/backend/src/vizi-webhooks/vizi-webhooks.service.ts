@@ -276,6 +276,7 @@ export class ViziWebhooksService {
             webhook_data: webhookData, // Store the webhook data for audit
           },
           correlation_id: correlationId,
+          skipPiiRedaction: true, // Preserve original data for retrigger
         });
 
         // EXACTLY replicate what the controller does:
@@ -359,6 +360,7 @@ export class ViziWebhooksService {
               retrigger: true,
             },
             correlation_id: correlationId,
+            skipPiiRedaction: true, // Preserve original data for retrigger
           });
 
           // Re-throw to be caught by outer error handler
@@ -389,6 +391,7 @@ export class ViziWebhooksService {
             retrigger: true,
           },
           correlation_id: correlationId,
+          skipPiiRedaction: true, // Preserve original data for retrigger
         });
 
         result.successful++;

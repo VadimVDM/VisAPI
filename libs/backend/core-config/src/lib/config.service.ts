@@ -1,12 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService as NestConfigService } from '@nestjs/config';
+import { getValidatedConfig, ValidatedConfig } from './config-schema';
 
 @Injectable()
 export class ConfigService {
-  constructor(private configService: NestConfigService) {}
+  private cachedConfig?: ValidatedConfig;
+  
+  constructor(private configService?: NestConfigService) {}
+  
+  /**
+   * Get the full validated configuration object
+   * Can be used when ConfigService is instantiated without injection
+   */
+  getConfig(): ValidatedConfig {
+    if (!this.cachedConfig) {
+      this.cachedConfig = getValidatedConfig();
+    }
+    return this.cachedConfig;
+  }
 
   // Generic get method for accessing any config value
   get<T = any>(propertyPath: string): T {
+    if (!this.configService) {
+      // Fallback to getting from validated config when ConfigService is used standalone
+      const config = this.getConfig();
+      const pathParts = propertyPath.split('.');
+      let value: any = config;
+      
+      for (const part of pathParts) {
+        value = value?.[part];
+        if (value === undefined) {
+          throw new Error(`Configuration value for '${propertyPath}' is not defined`);
+        }
+      }
+      return value as T;
+    }
+    
     const value = this.configService.get<T>(propertyPath);
     if (value === undefined) {
       throw new Error(`Configuration value for '${propertyPath}' is not defined`);
@@ -15,7 +44,7 @@ export class ConfigService {
   }
 
   get nodeEnv(): string {
-    return this.configService.get<string>('node.env') ?? 'development';
+    return this.get<string>('node.env') ?? 'development';
   }
 
   get isDevelopment(): boolean {

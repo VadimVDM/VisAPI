@@ -8,6 +8,7 @@ import { MetricsService } from '../metrics/metrics.service';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
 import { IdempotencyService } from '@visapi/util-redis';
+import { OrdersRepository } from '@visapi/backend-repositories';
 
 describe('ViziWebhooksController', () => {
   let controller: ViziWebhooksController;
@@ -48,6 +49,13 @@ describe('ViziWebhooksController', () => {
       execute: jest.fn(),
     };
 
+    const mockOrdersRepository = {
+      findById: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ViziWebhooksController],
       providers: [
@@ -82,6 +90,10 @@ describe('ViziWebhooksController', () => {
         {
           provide: QueryBus,
           useValue: mockQueryBus,
+        },
+        {
+          provide: OrdersRepository,
+          useValue: mockOrdersRepository,
         },
         Reflector,
       ],

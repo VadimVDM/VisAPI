@@ -224,6 +224,7 @@ export class ViziWebhooksController {
         source: 'webhook',
       },
       correlation_id: correlationId,
+      skipPiiRedaction: true, // Preserve original data for retrigger
     });
 
     // Check idempotency if key provided
@@ -287,6 +288,7 @@ export class ViziWebhooksController {
             source: 'webhook',
           },
           correlation_id: correlationId,
+          skipPiiRedaction: true, // Preserve original data for retrigger
         });
 
         // Throw the error to prevent marking webhook as successful
@@ -325,6 +327,7 @@ export class ViziWebhooksController {
           source: 'webhook',
         },
         correlation_id: correlationId,
+        skipPiiRedaction: true, // Preserve original data for retrigger
       });
 
       return result;

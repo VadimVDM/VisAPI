@@ -5,6 +5,7 @@ import { QueueService } from '../queue/queue.service';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
+import { OrdersService } from '../orders/orders.service';
 
 describe('ViziWebhooksService', () => {
   let service: ViziWebhooksService;
@@ -32,6 +33,11 @@ describe('ViziWebhooksService', () => {
       createLog: jest.fn(),
     };
 
+    const mockOrdersService = {
+      createOrder: jest.fn(),
+      updateOrderProcessing: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ViziWebhooksService,
@@ -54,6 +60,10 @@ describe('ViziWebhooksService', () => {
         {
           provide: LogService,
           useValue: mockLogService,
+        },
+        {
+          provide: OrdersService,
+          useValue: mockOrdersService,
         },
       ],
     }).compile();

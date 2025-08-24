@@ -13,7 +13,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { LogService } from './services/log.service';
+import { LogService } from '@visapi/backend-logging';
 import { LogFiltersDto, PaginatedLogsDto, LogStatsDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -48,16 +48,14 @@ export class LogsController {
     const result = await this.logService.getLogs(filters);
 
     return {
-      logs: result.data.map((log) => ({
+      logs: result.logs.map((log: any) => ({
         ...log,
         metadata: log.metadata as Record<string, unknown>,
       })),
-      total: result.pagination.total,
-      offset: result.pagination.page,
-      limit: result.pagination.limit,
-      has_more:
-        result.pagination.page * result.pagination.limit <
-        result.pagination.total,
+      total: result.total,
+      offset: result.offset,
+      limit: result.limit,
+      has_more: result.offset + result.limit < result.total,
     };
   }
 

@@ -28,7 +28,7 @@ export class LogsRepository extends BaseRepository<LogEntry> {
   async findByCorrelationId(correlationId: string): Promise<LogEntry[]> {
     return this.findMany({
       where: { correlation_id: correlationId },
-      orderBy: 'timestamp',
+      orderBy: 'created_at',
       orderDirection: 'asc',
     });
   }
@@ -39,7 +39,7 @@ export class LogsRepository extends BaseRepository<LogEntry> {
   async findByUserId(userId: string, limit = 100): Promise<LogEntry[]> {
     return this.findMany({
       where: { user_id: userId },
-      orderBy: 'timestamp',
+      orderBy: 'created_at',
       orderDirection: 'desc',
       limit,
     });
@@ -51,7 +51,7 @@ export class LogsRepository extends BaseRepository<LogEntry> {
   async findErrors(limit = 100): Promise<LogEntry[]> {
     return this.findMany({
       where: { level: 'error' },
-      orderBy: 'timestamp',
+      orderBy: 'created_at',
       orderDirection: 'desc',
       limit,
     });
@@ -83,14 +83,14 @@ export class LogsRepository extends BaseRepository<LogEntry> {
       query = query.eq('correlation_id', filters.correlationId);
     }
     if (filters.dateFrom) {
-      query = query.gte('timestamp', filters.dateFrom);
+      query = query.gte('created_at', filters.dateFrom);
     }
     if (filters.dateTo) {
-      query = query.lte('timestamp', filters.dateTo);
+      query = query.lte('created_at', filters.dateTo);
     }
 
     query = query
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit)
       .range(offset, offset + limit - 1);
 
@@ -114,7 +114,7 @@ export class LogsRepository extends BaseRepository<LogEntry> {
     const { data, error } = await this.supabase
       .from(this.tableName)
       .delete()
-      .lt('timestamp', cutoffDate.toISOString())
+      .lt('created_at', cutoffDate.toISOString())
       .select();
 
     if (error) {
@@ -140,7 +140,7 @@ export class LogsRepository extends BaseRepository<LogEntry> {
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('level, source')
-      .gte('timestamp', since.toISOString());
+      .gte('created_at', since.toISOString());
 
     if (error) {
       this.logger.error('Error getting log statistics', error);

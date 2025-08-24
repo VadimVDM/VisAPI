@@ -29,7 +29,7 @@ export class IdempotencyService {
    */
   private async checkIdempotency(key: string): Promise<any> {
     try {
-      const cachedResult = await this.redis.get(`idempotent:${key}`);
+      const cachedResult = await this.redis.get(`idempotent:${key}:result`);
       return cachedResult ? JSON.parse(cachedResult) : null;
     } catch (error) {
       this.logger.warn(`Failed to check idempotency for key ${key}:`, error);
@@ -47,7 +47,7 @@ export class IdempotencyService {
   ): Promise<void> {
     try {
       await this.redis.setex(
-        `idempotent:${key}`,
+        `idempotent:${key}:result`,
         ttl,
         JSON.stringify({
           result,
@@ -187,7 +187,6 @@ export class IdempotencyService {
    */
   async clearIdempotencyKey(key: string): Promise<void> {
     try {
-      await this.redis.del(`idempotent:${key}`);
       await this.redis.del(`idempotent:${key}:lock`);
       await this.redis.del(`idempotent:${key}:result`);
       this.logger.debug(`Cleared idempotency key: ${key}`);
