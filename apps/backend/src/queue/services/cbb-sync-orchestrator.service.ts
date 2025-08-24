@@ -19,7 +19,6 @@ interface OrderData {
   product_validity?: string | null;
   product_days_to_use?: number | null;
   visa_quantity: number | null;
-  urgency: string | null;
   amount: number;
   currency: string;
   entry_date: string | null;
@@ -33,6 +32,7 @@ interface OrderData {
   whatsapp_confirmation_sent?: boolean | null;
   whatsapp_confirmation_sent_at?: string | null;
   whatsapp_message_id?: string | null;
+  product_data?: any; // JSON field containing product details including urgency
 }
 
 /**

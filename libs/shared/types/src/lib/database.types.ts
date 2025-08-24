@@ -219,7 +219,7 @@ export type Database = {
           emergency_contact_data: Json | null
           entry_date: string | null
           entry_port: string | null
-          entry_type: string | null
+          visa_entries: string | null
           extra_data: Json | null
           extra_nationality_data: Json | null
           face_url: string | null
@@ -247,14 +247,13 @@ export type Database = {
           product_country: string
           product_country_flag: string | null
           product_days_to_use: number | null
+          product_data: Json | null
           product_doc_name: string | null
           product_doc_type: string | null
           product_entries: string | null
           product_intent: string | null
-          product_name: string
           product_validity: string | null
           updated_at: string | null
-          urgency: string | null
           visa_quantity: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
@@ -277,7 +276,7 @@ export type Database = {
           emergency_contact_data?: Json | null
           entry_date?: string | null
           entry_port?: string | null
-          entry_type?: string | null
+          visa_entries?: string | null
           extra_data?: Json | null
           extra_nationality_data?: Json | null
           face_url?: string | null
@@ -306,13 +305,12 @@ export type Database = {
           product_country_flag?: string | null
           product_days_to_use?: number | null
           product_doc_name?: string | null
+          product_data?: Json | null
           product_doc_type?: string | null
           product_entries?: string | null
           product_intent?: string | null
-          product_name: string
           product_validity?: string | null
           updated_at?: string | null
-          urgency?: string | null
           visa_quantity?: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
@@ -335,7 +333,7 @@ export type Database = {
           emergency_contact_data?: Json | null
           entry_date?: string | null
           entry_port?: string | null
-          entry_type?: string | null
+          visa_entries?: string | null
           extra_data?: Json | null
           extra_nationality_data?: Json | null
           face_url?: string | null
@@ -365,12 +363,11 @@ export type Database = {
           product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
+          product_data?: Json | null
           product_entries?: string | null
           product_intent?: string | null
-          product_name?: string
           product_validity?: string | null
           updated_at?: string | null
-          urgency?: string | null
           visa_quantity?: number | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
@@ -936,7 +933,7 @@ export type Database = {
           emergency_contact_data: Json | null
           entry_date: string | null
           entry_port: string | null
-          entry_type: string | null
+          visa_entries: string | null
           extra_data: Json | null
           extra_nationality_data: Json | null
           face_url: string | null
@@ -970,13 +967,12 @@ export type Database = {
           product_country_flag: string | null
           product_days_to_use: number | null
           product_doc_name: string | null
+          product_data: Json | null
           product_doc_type: string | null
           product_entries: string | null
           product_intent: string | null
-          product_name: string | null
           product_validity: string | null
           updated_at: string | null
-          urgency: string | null
           urgency_translated: string | null
           visa_quantity: number | null
           visa_type_translated: string | null

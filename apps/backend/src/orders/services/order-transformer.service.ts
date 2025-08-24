@@ -55,8 +55,7 @@ export class OrderTransformerService {
       client_phone: this.transformPhoneNumber(form.client?.phone),
       whatsapp_alerts_enabled: form.client?.whatsappAlertsEnabled || false,
 
-      // Product details
-      product_name: form.product?.name || `${form.country} Visa`,
+      // Product details (keeping for backward compatibility - will be removed)
       product_country: form.product?.country || form.country || 'unknown',
       product_doc_type: form.product?.docType,
       product_doc_name: form.product?.docName,
@@ -81,7 +80,6 @@ export class OrderTransformerService {
           }
         )?.date,
       ),
-      urgency: this.normalizeUrgency(form.urgency),
       is_urgent: this.isUrgentOrder(form.urgency),
       file_transfer_method: (form as unknown as Record<string, unknown>)
         .fileTransferMethod as string | undefined,
@@ -90,11 +88,7 @@ export class OrderTransformerService {
       entry_port: (
         (form as unknown as Record<string, unknown>).entry as { port?: string }
       )?.port,
-      entry_type: (
-        (form as unknown as Record<string, unknown>).entry as {
-          crossing?: { type?: string };
-        }
-      )?.crossing?.type,
+      visa_entries: form.product?.entries || 'single',
 
       // Document URLs
       face_url: faceUrl as string | undefined,
@@ -129,6 +123,26 @@ export class OrderTransformerService {
       form_meta_data: form.meta || null,
       applicants_data: (form.applicants || []) as unknown as Json,
       extra_data: this.extractExtraFields(form as unknown as Json),
+      
+      // New consolidated product data
+      product_data: {
+        name: form.product?.name || `${form.country} Visa`,
+        country: form.product?.country || form.country || 'unknown',
+        doc_type: form.product?.docType,
+        doc_name: form.product?.docName,
+        intent: form.product?.intent || 'tourism',
+        entries: form.product?.entries || 'single',
+        validity: form.product?.validity || 'month',
+        days_to_use: form.product?.days_to_use || 30,
+        urgency: this.normalizeUrgency(form.urgency),
+        urgencies: form.product?.urgencies,
+        price: form.product?.price,
+        wait: form.product?.wait,
+        instructions: form.product?.instructions,
+        stay_limit: form.product?.stay_limit,
+        photo_types: form.product?.photo_types,
+        variations: form.product?.variations,
+      } as Json,
 
       // Tracking
       webhook_received_at: new Date().toISOString(),

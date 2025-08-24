@@ -23,7 +23,6 @@ export interface OrderRecord {
   whatsapp_alerts_enabled: boolean;
   
   // Product fields
-  product_name: string;
   product_country: string;
   product_doc_type?: string;
   product_doc_name?: string;
@@ -31,16 +30,16 @@ export interface OrderRecord {
   product_entries?: string;
   product_validity?: string;
   product_days_to_use?: number;
+  product_data?: Json;
   
   // Visa details
   visa_quantity: number;
-  urgency?: string;
   file_transfer_method?: string;
   
   // Entry details
   entry_date?: string;
   entry_port?: string;
-  entry_type?: string;
+  visa_entries?: string;
   
   // Document URLs
   face_url?: string;
@@ -88,8 +87,8 @@ export interface CreateOrderData {
   client_email: string;
   client_phone: string;
   whatsapp_alerts_enabled: boolean;
-  product_name: string;
   product_country: string;
+  product_data?: Json;
   visa_quantity: number;
   webhook_received_at: string;
   [key: string]: any; // Allow additional fields

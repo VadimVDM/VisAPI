@@ -185,7 +185,7 @@ function reconstructOrderFromLogs(orderGroup: OrderGroup): any {
     whatsapp_alerts_enabled: combinedMetadata.whatsapp_alerts_enabled || false,
 
     // Product info
-    product_name: combinedMetadata.product_name || `${finalCountry} Visa`,
+    // product_name is now in product_data JSON
     product_country: finalCountry,
     product_doc_type:
       combinedMetadata.product_doc_type ||
@@ -196,13 +196,12 @@ function reconstructOrderFromLogs(orderGroup: OrderGroup): any {
     // Visa details
     visa_quantity:
       combinedMetadata.visa_quantity || combinedMetadata.quantity || 1,
-    urgency: urgency,
     file_transfer_method: combinedMetadata.file_transfer_method || 'email',
 
     // Entry details
     entry_date: combinedMetadata.entry_date || null,
     entry_port: combinedMetadata.entry_port || null,
-    entry_type: combinedMetadata.entry_type || null,
+    visa_entries: combinedMetadata.visa_entries || combinedMetadata.product_entries || 'single',
 
     // Document URLs - not available in logs
     face_url: null,

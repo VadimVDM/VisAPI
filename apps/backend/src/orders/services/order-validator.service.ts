@@ -33,7 +33,7 @@ export class OrderValidatorService {
     if (!orderData.client_name) missingFields.push('client_name');
     if (!orderData.client_email) missingFields.push('client_email');
     if (!orderData.client_phone) missingFields.push('client_phone');
-    if (!orderData.product_name) missingFields.push('product_name');
+    // product_name is now stored in product_data JSON column
     if (!orderData.product_country) missingFields.push('product_country');
     if (!orderData.webhook_received_at) {
       missingFields.push('webhook_received_at');
@@ -148,9 +148,7 @@ export class OrderValidatorService {
     if (sanitized.client_email) {
       sanitized.client_email = this.sanitizeString(sanitized.client_email).toLowerCase();
     }
-    if (sanitized.product_name) {
-      sanitized.product_name = this.sanitizeString(sanitized.product_name);
-    }
+    // product_name is now in product_data JSON, no need to sanitize here
 
     // Ensure numeric fields are numbers
     sanitized.amount = Number(sanitized.amount) || 0;

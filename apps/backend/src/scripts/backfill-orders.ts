@@ -123,20 +123,19 @@ function reconstructOrderFromLogs(orderGroup: OrderGroup): any {
     whatsapp_alerts_enabled: metadata.whatsapp_alerts_enabled || false,
 
     // Product info
-    product_name: metadata.product_name || `${country} Visa`,
+    // product_name is now in product_data JSON
     product_country: country,
     product_doc_type: metadata.product_doc_type || 'unknown',
     product_doc_name: metadata.product_doc_name || 'Historical Import',
 
     // Visa details
     visa_quantity: metadata.visa_quantity || 1,
-    urgency: metadata.urgency || 'standard',
     file_transfer_method: metadata.file_transfer_method || 'unknown',
 
     // Entry details
     entry_date: metadata.entry_date || null,
     entry_port: metadata.entry_port || null,
-    entry_type: metadata.entry_type || null,
+    visa_entries: metadata.visa_entries || metadata.product_entries || 'single',
 
     // Document URLs - not available in logs
     face_url: null,

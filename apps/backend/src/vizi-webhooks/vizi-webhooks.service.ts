@@ -76,12 +76,10 @@ export class ViziWebhooksService {
       metadata: {
         source: 'vizi_webhook',
         country: form.country,
-        product_name: form.product?.name,
         client_email: form.client?.email,
         client_name: form.client?.name,
         client_phone: `${form.client?.phone?.code}${form.client?.phone?.number}`,
         applicant_count: form.applicants?.length || 0,
-        urgency: form.urgency,
         branch: form.meta?.branch,
         domain: form.meta?.domain,
         timestamp: new Date().toISOString(),
