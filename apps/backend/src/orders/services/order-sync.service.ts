@@ -99,6 +99,7 @@ export class OrderSyncService {
 
   /**
    * Queue WhatsApp message for orders with alerts enabled
+   * @deprecated WhatsApp messages are now queued directly by CBBSyncOrchestrator after successful sync
    */
   async queueWhatsAppMessage(
     orderId: string,

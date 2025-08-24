@@ -22,9 +22,7 @@ interface OrderData {
   amount?: number;
   urgency?: string | null;
   product_days_to_use?: number | null;
-  whatsapp_confirmation_sent?: boolean | null;
-  whatsapp_status_update_sent?: boolean | null;
-  whatsapp_document_ready_sent?: boolean | null;
+  whatsapp_alerts_enabled?: boolean | null;
 }
 
 interface ProcessResult {
@@ -41,16 +39,7 @@ interface SendMessageResult {
   status?: string;
 }
 
-interface OrderUpdateData {
-  updated_at: string;
-  whatsapp_confirmation_sent?: boolean;
-  whatsapp_confirmation_sent_at?: string;
-  whatsapp_message_id?: string;
-  whatsapp_status_update_sent?: boolean;
-  whatsapp_status_update_sent_at?: string;
-  whatsapp_document_ready_sent?: boolean;
-  whatsapp_document_ready_sent_at?: string;
-}
+// Removed unused interface - now using whatsapp_messages table
 
 @Injectable()
 @Processor('WHATSAPP_MESSAGES')
@@ -272,15 +261,37 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     order: OrderData,
     messageType: string,
   ): Promise<boolean> {
+    const { data, error } = await this.supabaseService.serviceClient
+      .from('whatsapp_messages')
+      .select('id, confirmation_sent, status')
+      .eq('order_id', order.order_id)
+      .eq('template_name', this.getTemplateNameForMessageType(messageType))
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(
+        `Failed to check WhatsApp message status for order ${order.order_id}: ${error.message}`,
+      );
+      return false; // Allow retry if we can't check
+    }
+
+    // Message exists and was successfully sent
+    return data?.confirmation_sent === true || data?.status === 'delivered';
+  }
+
+  /**
+   * Get template name for message type
+   */
+  private getTemplateNameForMessageType(messageType: string): string {
     switch (messageType) {
       case 'order_confirmation':
-        return order.whatsapp_confirmation_sent === true;
+        return 'order_confirmation_global';
       case 'status_update':
-        return order.whatsapp_status_update_sent === true;
+        return 'status_update'; // When implemented
       case 'document_ready':
-        return order.whatsapp_document_ready_sent === true;
+        return 'document_ready'; // When implemented
       default:
-        return false;
+        return messageType;
     }
   }
 
@@ -303,49 +314,54 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   }
 
   /**
-   * Update order with WhatsApp message status
+   * Update WhatsApp message tracking in database
    */
   private async updateOrderWhatsAppStatus(
     orderId: string,
     messageType: string,
     messageId: string,
   ): Promise<void> {
-    const updateData: OrderUpdateData = {
-      updated_at: new Date().toISOString(),
-    };
-
-    // Set specific fields based on message type
-    switch (messageType) {
-      case 'order_confirmation':
-        updateData.whatsapp_confirmation_sent = true;
-        updateData.whatsapp_confirmation_sent_at = new Date().toISOString();
-        updateData.whatsapp_message_id = messageId;
-        break;
-      case 'status_update':
-        updateData.whatsapp_status_update_sent = true;
-        updateData.whatsapp_status_update_sent_at = new Date().toISOString();
-        break;
-      case 'document_ready':
-        updateData.whatsapp_document_ready_sent = true;
-        updateData.whatsapp_document_ready_sent_at = new Date().toISOString();
-        break;
+    // Get order details for phone number
+    const order = await this.getOrderByOrderId(orderId);
+    if (!order) {
+      throw new Error(`Order ${orderId} not found for WhatsApp tracking update`);
     }
 
+    const now = new Date().toISOString();
+    const templateName = this.getTemplateNameForMessageType(messageType);
+
+    // Insert or update WhatsApp message record
+    const messageData = {
+      order_id: orderId,
+      phone_number: order.client_phone || '',
+      template_name: templateName,
+      message_id: messageId,
+      status: 'sent',
+      confirmation_sent: true,
+      confirmation_sent_at: now,
+      sent_at: now,
+      alerts_enabled: order.whatsapp_alerts_enabled || false,
+      created_at: now,
+      updated_at: now,
+    };
+
     const { error } = await this.supabaseService.serviceClient
-      .from('orders')
-      .update(updateData)
-      .eq('order_id', orderId);
+      .from('whatsapp_messages')
+      .upsert(messageData, { 
+        onConflict: 'order_id,template_name',
+        ignoreDuplicates: false 
+      });
 
     if (error) {
       this.logger.error(
-        `Failed to update WhatsApp status for order ${orderId}:`,
+        `Failed to update WhatsApp message tracking for order ${orderId}:`,
         error,
       );
       throw error;
     } else if (!this.configService.isProduction) {
       // Only log status updates in development
       this.logger.log(
-        `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`,
+        `Created WhatsApp message record for order ${orderId}: ${messageType}, message_id=${messageId}`,
       );
     }
   }

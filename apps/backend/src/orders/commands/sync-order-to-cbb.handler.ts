@@ -23,23 +23,15 @@ export class SyncOrderToCBBHandler
     );
 
     // Queue CBB synchronization
+    // WhatsApp notifications will be queued automatically after successful CBB sync
     await this.syncService.queueCBBSync({
       orderId,
       branch,
       whatsappAlertsEnabled,
     });
 
-    // Queue WhatsApp notification if enabled
-    if (whatsappAlertsEnabled) {
-      await this.syncService.queueWhatsAppMessage(
-        orderId,
-        whatsappAlertsEnabled,
-        branch,
-      );
-    }
-
     this.logger.log(
-      `[${correlationId}] Order ${orderId} queued for CBB sync and notifications`,
+      `[${correlationId}] Order ${orderId} queued for CBB sync (WhatsApp notifications will follow after successful sync)`,
     );
   }
 }
