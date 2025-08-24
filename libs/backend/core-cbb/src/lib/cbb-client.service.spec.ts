@@ -51,7 +51,7 @@ describe('CbbClientService', () => {
 
     const mockConfigService = {
       get: jest.fn((key: string) => {
-        const config: Record<string, any> = {
+        const config: Record<string, unknown> = {
           'cbb.apiUrl': mockConfig.apiUrl,
           'cbb.apiKey': mockConfig.apiKey,
           'cbb.timeout': mockConfig.timeout,

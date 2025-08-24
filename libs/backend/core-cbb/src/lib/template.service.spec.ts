@@ -27,7 +27,7 @@ describe('TemplateService', () => {
 
     const mockConfigService = {
       get: jest.fn((key: string) => {
-        const config: Record<string, any> = {
+        const config: Record<string, unknown> = {
           'cbb.cacheTimeout': 3600, // 1 hour
           CBB_TEMPLATE_VISA_APPROVED: '200',
           CBB_TEMPLATE_DOCUMENT_REQUEST: '300',

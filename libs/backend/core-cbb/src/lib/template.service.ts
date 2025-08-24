@@ -63,8 +63,8 @@ export class TemplateService {
    */
   async processTemplateVariables(
     templateName: string,
-    variables: Record<string, any>,
-  ): Promise<any> {
+    variables: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     this.logger.debug(
       `Processing variables for template: ${templateName}`,
       variables,

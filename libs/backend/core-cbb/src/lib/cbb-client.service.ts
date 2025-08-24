@@ -382,7 +382,7 @@ export class CbbClientService {
    */
   async updateContactFields(
     id: string,
-    cufs: Record<string, any>,
+    cufs: Record<string, unknown>,
   ): Promise<CBBContact> {
     try {
       this.logger.debug(`Updating contact custom fields for ID: ${id}`);

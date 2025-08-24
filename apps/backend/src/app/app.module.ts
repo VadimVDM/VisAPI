@@ -24,7 +24,6 @@ import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
-import type { Event as SentryEvent, Exception as SentryException } from '@sentry/types';
 import { CacheModule } from '@visapi/backend-cache';
 import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
