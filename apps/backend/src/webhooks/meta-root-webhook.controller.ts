@@ -8,8 +8,11 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  RawBodyRequest,
+  Req,
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { Request } from 'express';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 
 /**
@@ -62,8 +65,9 @@ export class MetaRootWebhookController {
   async handleRootPost(
     @Body() body: any,
     @Headers() headers: any,
+    @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     this.logger.log('Root webhook POST received, forwarding to WhatsApp controller');
-    return this.whatsappController.receiveWebhook(body, headers);
+    return this.whatsappController.receiveWebhook(body, headers, req);
   }
 }

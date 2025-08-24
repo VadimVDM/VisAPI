@@ -11,12 +11,14 @@ export class WebhookVerifierService {
 
   constructor(private readonly configService: ConfigService) {
     this.verifyToken = this.configService.get('WABA_VERIFY_TOKEN', 'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U');
-    // Use WABA_WEBHOOK_SECRET first, fallback to WABA_APP_SECRET for backwards compatibility
-    this.webhookSecret = this.configService.get('WABA_WEBHOOK_SECRET', '') || 
-                         this.configService.get('WABA_APP_SECRET', '');
+    // Meta uses the App Secret from developers.facebook.com for webhook signatures
+    // This should be from Settings -> Basic -> App Secret in your Meta app
+    this.webhookSecret = this.configService.get('WABA_APP_SECRET', '') || 
+                         this.configService.get('WABA_WEBHOOK_SECRET', '');
     
     if (!this.webhookSecret) {
-      this.logger.warn('WABA_WEBHOOK_SECRET not configured - webhook signature verification disabled');
+      this.logger.warn('WABA_APP_SECRET not configured - webhook signature verification disabled');
+      this.logger.warn('Get your App Secret from https://developers.facebook.com -> Your App -> Settings -> Basic');
     }
   }
 
@@ -44,32 +46,50 @@ export class WebhookVerifierService {
   ): Promise<boolean> {
     // If no webhook secret is configured, skip verification
     if (!this.webhookSecret) {
+      this.logger.warn('No WABA_APP_SECRET configured - skipping signature verification');
       return true;
     }
 
     // If no signature provided but secret is configured, reject
     if (!signature) {
-      this.logger.error('Missing webhook signature in request headers');
+      this.logger.error('Missing webhook signature in request headers (x-hub-signature-256)');
       return false;
     }
 
     try {
-      // Meta's webhook signature is calculated as: sha256=HMAC-SHA256(payload, app_secret)
+      // Meta sends: X-Hub-Signature-256: sha256={signature}
+      // We need to validate: HMAC-SHA256(raw_body, app_secret)
       const expectedSignature = crypto
         .createHmac('sha256', this.webhookSecret)
-        .update(payload)
+        .update(payload, 'utf8')
         .digest('hex');
 
-      // Remove 'sha256=' prefix if present
-      const providedSignature = signature.replace('sha256=', '');
+      // Meta includes 'sha256=' prefix in the header
+      const expectedWithPrefix = `sha256=${expectedSignature}`;
 
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(providedSignature, 'hex'),
-        Buffer.from(expectedSignature, 'hex'),
-      );
+      // Compare the full signature including prefix
+      const isValid = signature === expectedWithPrefix;
 
       if (!isValid) {
+        // Try comparing without prefix for backwards compatibility
+        const providedSignature = signature.replace('sha256=', '');
+        const isValidWithoutPrefix = crypto.timingSafeEqual(
+          Buffer.from(providedSignature, 'hex'),
+          Buffer.from(expectedSignature, 'hex'),
+        );
+
+        if (isValidWithoutPrefix) {
+          this.logger.debug('Signature valid after removing prefix');
+          return true;
+        }
+
         this.logger.error('Webhook signature verification failed');
+        this.logger.debug(`Expected: ${expectedWithPrefix}`);
+        this.logger.debug(`Received: ${signature}`);
+        this.logger.debug(`Payload length: ${payload.length} bytes`);
+        this.logger.debug(`Secret length: ${this.webhookSecret.length} chars`);
+        // Log first 100 chars of payload for debugging
+        this.logger.debug(`Payload start: ${payload.substring(0, 100)}...`);
       }
 
       return isValid;

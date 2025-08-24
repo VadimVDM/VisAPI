@@ -9,8 +9,11 @@ import {
   HttpStatus,
   Logger,
   UnauthorizedException,
+  RawBodyRequest,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '@visapi/core-supabase';
@@ -91,6 +94,7 @@ export class WhatsAppWebhookController {
   async receiveWebhook(
     @Body() body: WebhookEvent,
     @Headers() headers: any,
+    @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     const eventId = uuidv4();
     this.logger.log(`Received WhatsApp webhook event ${eventId}`);
@@ -99,15 +103,26 @@ export class WhatsAppWebhookController {
       const signature = headers['x-hub-signature-256'];
       const timestamp = headers['x-hub-timestamp'] || Date.now().toString();
 
+      // Log headers for debugging
+      this.logger.debug(`Webhook headers: x-hub-signature-256=${signature ? 'present' : 'missing'}, x-hub-timestamp=${timestamp}`);
+
+      // Use raw body for signature verification if available, otherwise fallback to stringified body
+      const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(body);
+      
       const isValidSignature = await this.webhookVerifier.verifyWebhookSignature(
-        JSON.stringify(body),
+        rawBody,
         signature,
         timestamp,
       );
 
-      if (!isValidSignature && this.configService.get('NODE_ENV') === 'production') {
-        this.logger.error('Invalid webhook signature');
+      // Check if we should enforce signature verification
+      const enforceSignature = this.configService.get('WABA_ENFORCE_SIGNATURE', 'true') === 'true';
+      
+      if (!isValidSignature && this.configService.get('NODE_ENV') === 'production' && enforceSignature) {
+        this.logger.error('Invalid webhook signature - rejecting request');
         throw new UnauthorizedException('Invalid webhook signature');
+      } else if (!isValidSignature) {
+        this.logger.warn('Invalid webhook signature - allowing request (signature not enforced or non-production)');
       }
 
       const eventType = this.webhookVerifier.extractEventType(body);

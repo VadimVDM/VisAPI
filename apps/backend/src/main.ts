@@ -17,7 +17,10 @@ async function bootstrap() {
     ErrorFilter.install();
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Raw body is needed for webhook signature verification
+    rawBody: true,
+  });
   const configService = app.get(ConfigService);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
