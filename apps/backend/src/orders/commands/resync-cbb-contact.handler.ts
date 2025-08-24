@@ -28,13 +28,17 @@ export class ResyncCBBContactHandler
     const { orderId, correlationId } = command;
 
     this.logger.log(
-      `[${correlationId}] Processing ResyncCBBContactCommand for order: ${orderId}`,
+      `[${correlationId}] Processing ResyncCBBContactCommand for Vizi order: ${orderId}`,
     );
 
-    // Verify order exists
-    const order = await this.ordersRepository.findById(orderId);
+    // Verify order exists - look up by Vizi order ID
+    const orders = await this.ordersRepository.findMany({
+      where: { order_id: orderId },
+    });
+    const order = orders?.[0];
+    
     if (!order) {
-      throw new NotFoundException(`Order not found: ${orderId}`);
+      throw new NotFoundException(`Order not found with Vizi ID: ${orderId}`);
     }
 
     // Log the resync request
@@ -42,8 +46,8 @@ export class ResyncCBBContactHandler
       level: 'info',
       message: `Manual CBB resync requested for order ${orderId}`,
       metadata: {
-        order_id: orderId,
-        vizi_order_id: order.order_id,
+        database_id: order.id,
+        vizi_order_id: orderId,
         phone_number: order.client_phone,
         branch: order.branch,
         source: 'admin_resync',
@@ -67,7 +71,8 @@ export class ResyncCBBContactHandler
         level: 'info',
         message: `CBB resync successful for order ${orderId}`,
         metadata: {
-          order_id: orderId,
+          database_id: order.id,
+          vizi_order_id: orderId,
           result,
           source: 'admin_resync',
           correlation_id: correlationId,
@@ -90,7 +95,8 @@ export class ResyncCBBContactHandler
         level: 'error',
         message: `CBB resync failed for order ${orderId}`,
         metadata: {
-          order_id: orderId,
+          database_id: order.id,
+          vizi_order_id: orderId,
           error: errorMessage,
           source: 'admin_resync',
           correlation_id: correlationId,

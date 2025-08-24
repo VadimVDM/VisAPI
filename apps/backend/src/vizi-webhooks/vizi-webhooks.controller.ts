@@ -551,9 +551,9 @@ export class ViziWebhooksController {
         };
       }
 
-      // Execute resync command
+      // Execute resync command - pass Vizi order ID, not database ID
       const result: CBBContactSyncResult = await this.commandBus.execute(
-        new ResyncCBBContactCommand(order.id, correlationId),
+        new ResyncCBBContactCommand(order.order_id, correlationId),
       );
 
       this.logger.log(
