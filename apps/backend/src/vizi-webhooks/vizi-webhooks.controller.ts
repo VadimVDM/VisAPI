@@ -756,8 +756,8 @@ export class ViziWebhooksController {
         };
       }
 
-      // Check if order has CBB contact synced
-      if (!order.cbb_contact_id) {
+      // Check if order has CBB contact synced (using cbb_contact_uuid field)
+      if (!order.cbb_contact_uuid) {
         return {
           success: false,
           orderId: order.id,
@@ -770,7 +770,7 @@ export class ViziWebhooksController {
       const { data: cbbContact, error: cbbError } = await this.supabaseService.serviceClient
         .from('cbb_contacts')
         .select('*')
-        .eq('cbb_contact_id', order.cbb_contact_id)
+        .eq('id', order.cbb_contact_uuid)
         .single();
 
       if (cbbError || !cbbContact) {
@@ -802,7 +802,7 @@ export class ViziWebhooksController {
             success: false,
             orderId: order.id,
             phoneNumber: order.client_phone || 'unknown',
-            cbbContactUuid: order.cbb_contact_id,
+            cbbContactUuid: order.cbb_contact_uuid,
             message: 'WhatsApp notification already sent. Use force=true to resend.',
             alreadySent: true,
           };
@@ -814,7 +814,7 @@ export class ViziWebhooksController {
             success: false,
             orderId: order.id,
             phoneNumber: order.client_phone || 'unknown',
-            cbbContactUuid: order.cbb_contact_id,
+            cbbContactUuid: order.cbb_contact_uuid,
             message: 'WhatsApp notification already sent (CBB flag). Use force=true to resend.',
             alreadySent: true,
           };

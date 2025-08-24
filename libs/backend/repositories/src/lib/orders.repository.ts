@@ -70,6 +70,7 @@ export interface OrderRecord {
   updated_at: string;
   whatsapp_confirmation_sent?: boolean;
   cbb_contact_id?: string;
+  cbb_contact_uuid?: string;
   cbb_synced_at?: string;
 }
 
