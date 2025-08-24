@@ -294,12 +294,25 @@ export class CbbClientService {
         this.logger.debug(`Setting language to: ${data.language}`);
       }
 
-      const response = await this.makeRequest<CBBContact>('POST', '/contacts', {
+      const response = await this.makeRequest<any>('POST', '/contacts', {
         data: payload,
       });
 
-      this.logger.debug(`Contact created with ID: ${response.data?.id}`);
-      return response.data;
+      // CBB returns success: true and data.id with the phone number as ID
+      const contactId = response.data?.data?.id || response.data?.id || data.phone;
+      this.logger.debug(`Contact created with ID: ${contactId}`);
+      
+      // Return a properly formatted CBBContact object
+      return {
+        id: contactId,
+        phone: data.phone,
+        name: data.name ?? '',
+        email: data.email ?? '',
+        hasWhatsApp: true,
+        customFields: data.cufs,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     } catch (error) {
       this.logger.error(`Failed to create contact for ${data.phone}:`, error);
       throw error;
@@ -382,9 +395,12 @@ export class CbbClientService {
         await this.updateContactFields(data.id, data.cufs);
       }
       
+      // Ensure we use the phone number as the contact ID (which is how CBB works)
+      const contactId = data.id || data.phone;
+      
       // Return the contact data we have (CBB doesn't return updated contact from field updates)
       return {
-        id: data.id,
+        id: contactId,
         phone: data.phone,
         name: data.name ?? '',
         email: data.email ?? '',
