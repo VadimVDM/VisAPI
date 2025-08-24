@@ -516,7 +516,7 @@ export class ViziWebhooksController {
         // Direct lookup by database ID
         order = await this.ordersRepository.findById(dto.orderId);
       } else if (dto.viziOrderId) {
-        // Lookup by Vizi order ID
+        // Lookup by Vizi order ID (stored in order_id field)
         const orders = await this.ordersRepository.findMany({
           where: { order_id: dto.viziOrderId },
         });
