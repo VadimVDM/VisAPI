@@ -41,6 +41,6 @@
     "**/*.spec.ts",
     "**/*.test.ts",
     "src/test-setup.ts",
-    "src/scripts/**/*.ts"
+    "src/scripts/**"
   ]
 }

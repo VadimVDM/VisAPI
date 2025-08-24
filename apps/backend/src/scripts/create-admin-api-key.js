@@ -149,6 +149,9 @@ async function createAdminKey() {
     console.error('\n❌ Error creating Vizi Admin API key:', error.message);
     console.error('   Stack:', error.stack);
     process.exit(1);
+  } finally {
+    // Ensure the process exits cleanly
+    process.exit(0);
   }
 }
 
