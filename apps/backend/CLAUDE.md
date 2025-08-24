@@ -18,38 +18,29 @@ Modern layered architecture with enterprise design patterns:
 └─────────────────────────────────────────┘
 ```
 
-## Backend Optimization Complete (August 22, 2025)
+## Architecture Patterns
 
-**Achievement**: 53.7% code reduction (2,518 → 1,166 lines) with 40% performance improvement
-
-### Key Implementations
-
-#### CQRS Pattern
+### CQRS Pattern
 - **Commands**: CreateOrder, SyncOrderToCBB, UpdateOrderProcessing
 - **Queries**: GetOrderById, GetOrders, GetOrderStats
 - CommandBus/QueryBus for clean separation
 
-#### Repository Pattern
+### Repository Pattern
 - `@visapi/backend-repositories`: Generic BaseRepository with CRUD operations
 - Specialized repositories: Orders, ApiKeys, Workflows, Users, Logs
 - BatchOperationsService for bulk operations
 
-#### Advanced Caching
+### Caching Strategy
 - `@visapi/backend-cache`: Redis-based with decorators
 - @Cacheable, @CacheEvict, @CachePut decorators
 - Pattern-based cache invalidation
 - Strategic TTLs (15min auth, 30sec queues)
 
-#### Domain Events
-- `@visapi/backend-events`: Event-driven architecture
+### Event-Driven Architecture
+- `@visapi/backend-events`: Domain events
 - Automatic audit logging
 - Event replay capabilities
 - Loose coupling between modules
-
-#### Specification Pattern
-- Complex query building
-- Composable business rules (AND/OR/NOT)
-- Type-safe query construction
 
 ## Key Modules
 

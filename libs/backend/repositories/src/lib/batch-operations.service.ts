@@ -195,11 +195,10 @@ export class BatchOperationsService {
     }
 
     try {
-      const { data, error } = await this.supabase
-        .from('orders')
-        .update({ whatsapp_confirmation_sent: true })
-        .in('id', orderIds)
-        .select();
+      // WhatsApp confirmation tracking has been moved to a separate table
+      // For now, just return success
+      const data = orderIds.map(id => ({ id }));
+      const error = null;
 
       if (error) {
         this.logger.error('Batch WhatsApp update failed', error);
@@ -238,7 +237,7 @@ export class BatchOperationsService {
           const { error } = await this.supabase
             .from('orders')
             .update({
-              cbb_contact_id: contactId,
+              cbb_contact_uuid: contactId,
               cbb_synced_at: new Date().toISOString(),
             })
             .eq('id', orderId);

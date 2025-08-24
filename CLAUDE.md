@@ -1,6 +1,6 @@
 # VisAPI Project Guide
 
-Essential reference for AI assistants. Updated: August 23, 2025
+Essential reference for AI assistants. Updated: August 24, 2025
 
 ## Overview
 
@@ -14,6 +14,7 @@ Essential reference for AI assistants. Updated: August 23, 2025
 
 ### Current Status
 - ✅ **Production stable** with Vizi webhook integration
+- ✅ **Database normalized** - CBB/WhatsApp data in separate tables
 - ✅ **WhatsApp messaging** via CBB API with Hebrew support
 - ✅ **WhatsApp Business API webhooks** receiving all Meta events
 - ✅ **Template synchronization** with automatic hourly sync from Meta
@@ -98,10 +99,23 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Password**: 12+ chars with all character types
 - **RLS**: Enabled on all database tables
 
+## Database Architecture
+
+### Core Tables
+- **orders**: Main order data (streamlined, references other tables)
+- **cbb_contacts**: CBB sync data with language-specific translations
+- **whatsapp_messages**: Complete WhatsApp message lifecycle tracking
+- **orders_with_status**: View joining orders with CBB/WhatsApp status
+
+### Data Relationships
+- Orders → CBB Contacts (via `cbb_contact_uuid`)
+- Orders → WhatsApp Messages (via `order_id`)
+- CBB Contacts store language-specific content (Hebrew, Russian, English)
+
 ## Development Notes
 
 ### Code Conventions
-- TypeScript strict mode (partially enabled)
+- TypeScript strict mode enabled
 - ESLint + Prettier formatting
 - Conventional commits
 - Atomic changes with descriptive messages
@@ -116,6 +130,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Dates**: Pass ISO strings to queries, not Date objects
 - **Types**: Use `@visapi/visanet-types` for Vizi/Visanet types
 - **Validation**: Use Zod schemas for runtime validation
+- **Database**: Use Supabase client, not raw SQL
 
 ## WhatsApp Integration (Hybrid Architecture)
 
@@ -241,5 +256,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.0.3 Production
-**Last Updated**: August 25, 2025
+**Version**: v1.0.4 Production
+**Last Updated**: August 24, 2025

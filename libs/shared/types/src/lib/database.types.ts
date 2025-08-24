@@ -208,13 +208,7 @@ export type Database = {
           applicants_data: Json | null
           branch: string
           business_data: Json | null
-          cbb_contact_id: string | null
           cbb_contact_uuid: string | null
-          cbb_sync_attempts: number | null
-          cbb_sync_error_count: number | null
-          cbb_sync_last_attempt_at: string | null
-          cbb_sync_last_error: string | null
-          cbb_synced: boolean | null
           client_email: string
           client_name: string
           client_phone: string
@@ -249,11 +243,9 @@ export type Database = {
           processed_at: string | null
           processing_days: number | null
           processing_days_calculated_at: string | null
-          processing_days_hebrew: string | null
           processing_rule_id: string | null
           product_country: string
           product_country_flag: string | null
-          product_country_hebrew: string | null
           product_days_to_use: number | null
           product_doc_name: string | null
           product_doc_type: string | null
@@ -263,18 +255,9 @@ export type Database = {
           product_validity: string | null
           updated_at: string | null
           urgency: string | null
-          urgency_hebrew: string | null
           visa_quantity: number | null
-          visa_type_hebrew: string | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
-          whatsapp_confirmation_sent: boolean | null
-          whatsapp_confirmation_sent_at: string | null
-          whatsapp_delivered_at: string | null
-          whatsapp_failed_at: string | null
-          whatsapp_failure_reason: string | null
-          whatsapp_message_id: string | null
-          whatsapp_read_at: string | null
           workflow_id: string | null
         }
         Insert: {
@@ -283,13 +266,7 @@ export type Database = {
           applicants_data?: Json | null
           branch: string
           business_data?: Json | null
-          cbb_contact_id?: string | null
           cbb_contact_uuid?: string | null
-          cbb_sync_attempts?: number | null
-          cbb_sync_error_count?: number | null
-          cbb_sync_last_attempt_at?: string | null
-          cbb_sync_last_error?: string | null
-          cbb_synced?: boolean | null
           client_email: string
           client_name: string
           client_phone: string
@@ -324,11 +301,9 @@ export type Database = {
           processed_at?: string | null
           processing_days?: number | null
           processing_days_calculated_at?: string | null
-          processing_days_hebrew?: string | null
           processing_rule_id?: string | null
           product_country: string
           product_country_flag?: string | null
-          product_country_hebrew?: string | null
           product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
@@ -338,18 +313,9 @@ export type Database = {
           product_validity?: string | null
           updated_at?: string | null
           urgency?: string | null
-          urgency_hebrew?: string | null
           visa_quantity?: number | null
-          visa_type_hebrew?: string | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
-          whatsapp_confirmation_sent?: boolean | null
-          whatsapp_confirmation_sent_at?: string | null
-          whatsapp_delivered_at?: string | null
-          whatsapp_failed_at?: string | null
-          whatsapp_failure_reason?: string | null
-          whatsapp_message_id?: string | null
-          whatsapp_read_at?: string | null
           workflow_id?: string | null
         }
         Update: {
@@ -358,13 +324,7 @@ export type Database = {
           applicants_data?: Json | null
           branch?: string
           business_data?: Json | null
-          cbb_contact_id?: string | null
           cbb_contact_uuid?: string | null
-          cbb_sync_attempts?: number | null
-          cbb_sync_error_count?: number | null
-          cbb_sync_last_attempt_at?: string | null
-          cbb_sync_last_error?: string | null
-          cbb_synced?: boolean | null
           client_email?: string
           client_name?: string
           client_phone?: string
@@ -399,11 +359,9 @@ export type Database = {
           processed_at?: string | null
           processing_days?: number | null
           processing_days_calculated_at?: string | null
-          processing_days_hebrew?: string | null
           processing_rule_id?: string | null
           product_country?: string
           product_country_flag?: string | null
-          product_country_hebrew?: string | null
           product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
@@ -413,18 +371,9 @@ export type Database = {
           product_validity?: string | null
           updated_at?: string | null
           urgency?: string | null
-          urgency_hebrew?: string | null
           visa_quantity?: number | null
-          visa_type_hebrew?: string | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
-          whatsapp_confirmation_sent?: boolean | null
-          whatsapp_confirmation_sent_at?: string | null
-          whatsapp_delivered_at?: string | null
-          whatsapp_failed_at?: string | null
-          whatsapp_failure_reason?: string | null
-          whatsapp_message_id?: string | null
-          whatsapp_read_at?: string | null
           workflow_id?: string | null
         }
         Relationships: [
@@ -434,13 +383,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cbb_contacts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_cbb_contact_uuid_fkey"
-            columns: ["cbb_contact_uuid"]
-            isOneToOne: false
-            referencedRelation: "orders_with_status"
-            referencedColumns: ["cbb_contact_uuid"]
           },
           {
             foreignKeyName: "orders_processing_rule_id_fkey"
@@ -978,16 +920,14 @@ export type Database = {
           applicants_data: Json | null
           branch: string | null
           business_data: Json | null
-          cbb_contact_id: string | null
           cbb_contact_uuid: string | null
+          cbb_language: string | null
           cbb_sync_attempts: number | null
-          cbb_sync_error_count: number | null
-          cbb_sync_last_attempt_at: string | null
           cbb_sync_last_error: string | null
-          cbb_synced: boolean | null
           client_email: string | null
           client_name: string | null
           client_phone: string | null
+          country_name_translated: string | null
           coupon_data: Json | null
           created_at: string | null
           currency: string | null
@@ -1010,6 +950,7 @@ export type Database = {
           id: string | null
           is_urgent: boolean | null
           job_id: string | null
+          latest_whatsapp_message_id: string | null
           latest_whatsapp_status: string | null
           military_data: Json | null
           occupation_data: Json | null
@@ -1023,11 +964,10 @@ export type Database = {
           processed_at: string | null
           processing_days: number | null
           processing_days_calculated_at: string | null
-          processing_days_hebrew: string | null
+          processing_days_translated: string | null
           processing_rule_id: string | null
           product_country: string | null
           product_country_flag: string | null
-          product_country_hebrew: string | null
           product_days_to_use: number | null
           product_doc_name: string | null
           product_doc_type: string | null
@@ -1037,21 +977,21 @@ export type Database = {
           product_validity: string | null
           updated_at: string | null
           urgency: string | null
-          urgency_hebrew: string | null
+          urgency_translated: string | null
           visa_quantity: number | null
-          visa_type_hebrew: string | null
+          visa_type_translated: string | null
           webhook_received_at: string | null
           whatsapp_alerts_enabled: boolean | null
-          whatsapp_confirmation_sent: boolean | null
-          whatsapp_confirmation_sent_at: string | null
-          whatsapp_delivered_at: string | null
-          whatsapp_failed_at: string | null
-          whatsapp_failure_reason: string | null
-          whatsapp_message_id: string | null
-          whatsapp_read_at: string | null
           workflow_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_cbb_contact_uuid_fkey"
+            columns: ["cbb_contact_uuid"]
+            isOneToOne: false
+            referencedRelation: "cbb_contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_processing_rule_id_fkey"
             columns: ["processing_rule_id"]

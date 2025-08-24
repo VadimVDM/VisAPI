@@ -531,24 +531,31 @@ export class CbbClientService {
     this.logger.debug(`Sending WhatsApp template '${templateName}' to contact ${contactId}`);
     this.logger.debug(`Language: ${languageCode}, Parameters: ${parameters.length}`);
     
-    // Build the WhatsApp template message format for CBB API
+    // Build the WhatsApp template message format for CBB Dynamic Content API
     const templatePayload = {
-      type: "template",
-      template: {
-        name: templateName,
-        language: {
-          code: languageCode
-        },
-        components: [
-          {
-            type: "body",
-            parameters: parameters.map(param => ({
-              type: "text",
-              text: param
-            }))
+      messages: [
+        {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: contactId,
+          type: "template",
+          template: {
+            name: templateName,
+            language: {
+              code: languageCode
+            },
+            components: [
+              {
+                type: "body",
+                parameters: parameters.map(param => ({
+                  type: "text",
+                  text: param
+                }))
+              }
+            ]
           }
-        ]
-      }
+        }
+      ]
     };
     
     try {
