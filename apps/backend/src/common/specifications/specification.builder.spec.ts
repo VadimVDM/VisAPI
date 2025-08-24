@@ -171,8 +171,9 @@ describe('OrderSpecificationFactory', () => {
       expect(query.created_at.$lte).toBeInstanceOf(Date);
       
       // Verify it's today
-      const startDate = query.created_at.$gte;
-      const endDate = query.created_at.$lte;
+      const createdAt = query.created_at as { $gte: Date; $lte: Date };
+      const startDate = createdAt.$gte;
+      const endDate = createdAt.$lte;
       expect(startDate.getDate()).toBe(new Date().getDate());
       expect(endDate.getDate()).toBe(new Date().getDate());
     });

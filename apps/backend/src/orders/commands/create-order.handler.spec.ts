@@ -103,11 +103,17 @@ describe('CreateOrderHandler', () => {
 
       // Assert
       expect(result).toBe('uuid-123');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(transformerService.transformWebhookToOrder).toHaveBeenCalledWith(webhookData);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(validatorService.validateOrderData).toHaveBeenCalledWith(transformedData);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(validatorService.sanitizeOrderData).toHaveBeenCalledWith(transformedData);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(ordersRepository.create).toHaveBeenCalledWith(sanitizedData);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(eventBusService.publish).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'OrderCreatedForSync',
@@ -138,6 +144,7 @@ describe('CreateOrderHandler', () => {
 
       // Assert
       expect(result).toBe('existing-uuid');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(ordersRepository.findOne).toHaveBeenCalledWith({
         where: { order_id: 'ORD-DUP' },
       });

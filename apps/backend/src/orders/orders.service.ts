@@ -136,7 +136,7 @@ export class OrdersService {
    * Get order by order_id
    * Uses GetOrderByIdQuery
    */
-  async getOrderByOrderId(orderId: string): Promise<any> {
+  async getOrderByOrderId(orderId: string): Promise<OrderRecord | null> {
     return this.getOrderById(orderId);
   }
 
@@ -151,8 +151,12 @@ export class OrdersService {
     status?: string;
     from_date?: string;
     to_date?: string;
-  } = {}): Promise<any[]> {
-    const queryFilters: any = {};
+  } = {}): Promise<OrderRecord[]> {
+    const queryFilters: {
+      orderStatus?: string;
+      startDate?: string;
+      endDate?: string;
+    } = {};
     
     if (filters.status) {
       queryFilters.orderStatus = filters.status;
@@ -176,7 +180,7 @@ export class OrdersService {
    * Get orders by client email
    * Uses GetOrdersQuery with email filter
    */
-  async getOrdersByClientEmail(email: string): Promise<any[]> {
+  async getOrdersByClientEmail(email: string): Promise<OrderRecord[]> {
     const result = await this.getOrders({ clientEmail: email });
     return result.data;
   }
@@ -185,7 +189,7 @@ export class OrdersService {
    * Get orders by branch
    * Uses GetOrdersQuery with branch filter
    */
-  async getOrdersByBranch(branch: string, limit = 100, offset = 0): Promise<any[]> {
+  async getOrdersByBranch(branch: string, limit = 100, offset = 0): Promise<OrderRecord[]> {
     const pagination = {
       page: Math.floor(offset / limit) + 1,
       limit,

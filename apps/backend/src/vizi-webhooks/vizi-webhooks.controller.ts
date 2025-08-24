@@ -225,22 +225,21 @@ export class ViziWebhooksController {
           stack: err.stack,
         };
 
-        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+        const failedOrderId = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
         this.logger.error(
-          `Failed to save order ${orderIdStr} to database: ${JSON.stringify(errorDetails)}`,
+          `Failed to save order ${failedOrderId} to database: ${JSON.stringify(errorDetails)}`,
           typeof err.stack === 'string' ? err.stack : undefined,
         );
 
         // Log the failed order creation with full details
-        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
-        const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
+        const failedFormId = form && hasProperty(form, 'id') ? String(form.id) : undefined;
         await this.logService.createLog({
           level: 'error',
-          message: `Order creation failed for ${orderIdStr}`,
+          message: `Order creation failed for ${failedOrderId}`,
           metadata: {
             webhook_type: 'vizi_order',
-            order_id: orderIdStr === 'unknown' ? undefined : orderIdStr,
-            form_id: formIdStr,
+            order_id: failedOrderId === 'unknown' ? undefined : failedOrderId,
+            form_id: failedFormId,
             error: errorDetails,
             webhook_data: bodyAsRecord,
             correlationId,
