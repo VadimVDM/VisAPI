@@ -23,6 +23,7 @@ import {
 } from '@visapi/backend-whatsapp-business';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
+import { SlackRateLimiterService } from './slack-rate-limiter.service';
 
 @ApiTags('WhatsApp Webhooks')
 @Controller('v1/webhooks/whatsapp')
@@ -38,6 +39,7 @@ export class WhatsAppWebhookController {
     private readonly webhookVerifier: WebhookVerifierService,
     private readonly deliveryTracker: DeliveryTrackerService,
     private readonly templateManager: TemplateManagerService,
+    private readonly slackRateLimiter: SlackRateLimiterService,
   ) {
     this.zapierWebhookUrl = this.configService.get('ZAPIER_WEBHOOK_URL', '');
     this.slackWebhookUrl = this.configService.get('SLACK_WEBHOOK_URL', '');
@@ -139,12 +141,38 @@ export class WhatsAppWebhookController {
 
       await this.updateWebhookEventStatus(eventId, 'failed', error.message);
 
+      // Check rate limit before sending Slack notification
       if (this.slackWebhookUrl) {
-        await this.sendSlackAlert('Webhook Processing Failed', {
-          eventId,
-          error: error.message,
-          eventType: this.webhookVerifier.extractEventType(body),
-        });
+        const shouldSend = await this.slackRateLimiter.shouldSendNotification(
+          'webhook_failure',
+          error.message, // Use error message as key for granular rate limiting
+        );
+
+        if (shouldSend) {
+          const rateLimitStatus = await this.slackRateLimiter.getRateLimitStatus(
+            'webhook_failure',
+            error.message,
+          );
+
+          await this.sendSlackAlert('Webhook Processing Failed', {
+            eventId,
+            error: error.message,
+            eventType: this.webhookVerifier.extractEventType(body),
+            rateLimitInfo: {
+              message: 'This notification is rate limited to 1 per hour',
+              lastSentAt: rateLimitStatus.lastSentAt,
+            },
+          });
+
+          await this.slackRateLimiter.recordNotificationSent(
+            'webhook_failure',
+            error.message,
+          );
+        } else {
+          this.logger.debug(
+            `Slack notification suppressed due to rate limiting for webhook failure: ${error.message}`,
+          );
+        }
       }
 
       throw error;
