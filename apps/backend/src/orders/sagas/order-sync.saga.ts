@@ -25,7 +25,7 @@ export class OrderSyncSaga {
    * Listen for OrderCreatedForSync events and trigger CBB sync
    */
   @Saga()
-  orderCreatedForSync = (events$: Observable<any>): Observable<ICommand> => {
+  orderCreatedForSync = (events$: Observable<OrderCreatedForSyncEvent>): Observable<ICommand> => {
     return events$.pipe(
       filter((event): event is OrderCreatedForSyncEvent => 
         event?.type === 'OrderCreatedForSync'

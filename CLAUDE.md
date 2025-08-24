@@ -75,18 +75,22 @@ pnpm build                 # Build all apps
 # Docker
 pnpm docker:up             # Start PostgreSQL & Redis
 pnpm docker:down           # Stop services
+
+# Admin Operations
+pnpm create-admin-key      # Generate admin API key for retrigger ops
 ```
 
 ## Key APIs
 
 ```
-POST /api/v1/webhooks/vizi/orders   # Vizi webhook
-GET  /api/v1/webhooks/whatsapp      # WhatsApp webhook verification
-POST /api/v1/webhooks/whatsapp      # WhatsApp events from Meta
-POST /api/v1/whatsapp/templates/sync # Manual template sync
-GET  /api/v1/whatsapp/templates      # List approved templates
-GET  /api/v1/healthz                 # Health check
-POST /api/v1/triggers/{key}          # Workflow trigger
+POST /api/v1/webhooks/vizi/orders     # Vizi webhook
+POST /api/v1/webhooks/vizi/retrigger  # Admin: Retrigger order creation
+GET  /api/v1/webhooks/whatsapp        # WhatsApp webhook verification
+POST /api/v1/webhooks/whatsapp        # WhatsApp events from Meta
+POST /api/v1/whatsapp/templates/sync  # Manual template sync
+GET  /api/v1/whatsapp/templates       # List approved templates
+GET  /api/v1/healthz                  # Health check
+POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
 ```
 

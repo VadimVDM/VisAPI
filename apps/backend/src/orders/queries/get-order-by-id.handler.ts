@@ -1,7 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { GetOrderByIdQuery } from './get-order-by-id.query';
-import { OrdersRepository } from '@visapi/backend-repositories';
+import { OrdersRepository, OrderRecord } from '@visapi/backend-repositories';
 import { CacheService } from '@visapi/backend-cache';
 
 /**
@@ -17,12 +17,12 @@ export class GetOrderByIdHandler implements IQueryHandler<GetOrderByIdQuery> {
     private readonly cacheService: CacheService,
   ) {}
 
-  async execute(query: GetOrderByIdQuery): Promise<any> {
+  async execute(query: GetOrderByIdQuery): Promise<OrderRecord | null> {
     const { orderId, includeRelations } = query;
     
     // Try to get from cache first
     const cacheKey = `order:${orderId}:${includeRelations ? 'full' : 'basic'}`;
-    const cached = await this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get<OrderRecord>(cacheKey);
     
     if (cached) {
       this.logger.debug(`Cache hit for order ${orderId}`);

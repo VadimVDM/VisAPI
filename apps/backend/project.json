@@ -46,6 +46,13 @@
       "options": {
         "lintFilePatterns": ["apps/backend/**/*.ts"]
       }
+    },
+    "create-admin-key": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/backend/src/scripts/create-admin-api-key.js",
+        "cwd": "{workspaceRoot}"
+      }
     }
   },
   "tags": ["scope:backend", "type:app"]

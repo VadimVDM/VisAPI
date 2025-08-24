@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { CreateOrderCommand } from './create-order.command';
-import { OrdersRepository, CreateOrderData } from '@visapi/backend-repositories';
+import { OrdersRepository } from '@visapi/backend-repositories';
 import { EventBusService, OrderCreatedEvent } from '@visapi/backend-events';
 import { OrderTransformerService } from '../services/order-transformer.service';
 import { OrderValidatorService } from '../services/order-validator.service';

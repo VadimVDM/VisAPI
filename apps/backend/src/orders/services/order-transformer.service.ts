@@ -65,11 +65,7 @@ export class OrderTransformerService {
       product_days_to_use: form.product?.days_to_use || 30,
 
       // Translation fields (stored for optimization)
-      product_country_hebrew: translations.countryHebrew,
       product_country_flag: translations.countryFlag,
-      visa_type_hebrew: translations.visaTypeHebrew,
-      processing_days_hebrew: translations.processingDays,
-      urgency_hebrew: translations.urgencyHebrew,
 
       // Visa details
       visa_quantity: form.quantity || 1,
@@ -203,12 +199,14 @@ export class OrderTransformerService {
       // Handle various date formats
       const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
-        this.logger.warn(`Invalid entry date format: ${typeof date === 'object' ? JSON.stringify(date) : String(date)}`);
+        const dateStr = typeof date === 'object' ? JSON.stringify(date) : String(date);
+        this.logger.warn(`Invalid entry date format: ${dateStr}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
-      this.logger.warn(`Failed to parse entry date: ${typeof date === 'object' ? JSON.stringify(date) : String(date)}`);
+      const dateStr = typeof date === 'object' ? JSON.stringify(date) : String(date);
+      this.logger.warn(`Failed to parse entry date: ${dateStr}`);
       return undefined;
     }
   }

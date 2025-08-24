@@ -1,8 +1,39 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { GetOrderStatsQuery } from './get-order-stats.query';
-import { OrdersRepository } from '@visapi/backend-repositories';
+import { OrdersRepository, OrderRecord } from '@visapi/backend-repositories';
 import { CacheService } from '@visapi/backend-cache';
+
+interface OrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+  ordersByBranch: Record<string, number>;
+  ordersByStatus: Record<string, number>;
+  ordersByVisaType: Record<string, number>;
+  timeSeries: TimeSeriesPoint[];
+  whatsappEnabled: number;
+  processingTimeStats: ProcessingTimeStats;
+}
+
+interface TimeSeriesPoint {
+  date: string;
+  count: number;
+}
+
+interface ProcessingTimeStats {
+  average: number;
+  min: number;
+  max: number;
+}
+
+interface WhereClause {
+  branch?: string;
+  created_at?: {
+    $gte?: string;
+    $lte?: string;
+  };
+}
 
 /**
  * Handler for GetOrderStatsQuery
@@ -17,7 +48,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
     private readonly cacheService: CacheService,
   ) {}
 
-  async execute(query: GetOrderStatsQuery): Promise<any> {
+  async execute(query: GetOrderStatsQuery): Promise<OrderStats> {
     const { period, branch, startDate, endDate } = query;
     
     // Build cache key
@@ -27,11 +58,11 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
     const cached = await this.cacheService.get(cacheKey);
     if (cached) {
       this.logger.debug('Cache hit for order statistics');
-      return cached;
+      return cached as OrderStats;
     }
 
     // Build where clause
-    const where: any = {};
+    const where: WhereClause = {};
     
     if (branch) {
       where.branch = branch;
@@ -71,30 +102,30 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
     return stats;
   }
 
-  private groupByBranch(orders: any[]): Record<string, number> {
+  private groupByBranch(orders: OrderRecord[]): Record<string, number> {
     return orders.reduce((acc, order) => {
       acc[order.branch] = (acc[order.branch] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
   }
 
-  private groupByStatus(orders: any[]): Record<string, number> {
+  private groupByStatus(orders: OrderRecord[]): Record<string, number> {
     return orders.reduce((acc, order) => {
       const status = order.order_status || 'pending';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
   }
 
-  private groupByVisaType(orders: any[]): Record<string, number> {
+  private groupByVisaType(orders: OrderRecord[]): Record<string, number> {
     return orders.reduce((acc, order) => {
       const visaType = order.product_doc_type || 'unknown';
       acc[visaType] = (acc[visaType] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
   }
 
-  private generateTimeSeries(orders: any[], period: string): any[] {
+  private generateTimeSeries(orders: OrderRecord[], period: string): TimeSeriesPoint[] {
     // Group orders by time period
     const grouped: Record<string, number> = {};
     
@@ -130,7 +161,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  private calculateProcessingTimeStats(orders: any[]): any {
+  private calculateProcessingTimeStats(orders: OrderRecord[]): ProcessingTimeStats {
     const processedOrders = orders.filter(o => o.processed_at);
     
     if (processedOrders.length === 0) {
@@ -139,7 +170,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
     const processingTimes = processedOrders.map(order => {
       const created = new Date(order.created_at).getTime();
-      const processed = new Date(order.processed_at).getTime();
+      const processed = new Date(order.processed_at!).getTime();
       return (processed - created) / 1000 / 60; // Convert to minutes
     });
 

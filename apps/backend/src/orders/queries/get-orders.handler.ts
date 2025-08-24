@@ -1,8 +1,25 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { GetOrdersQuery } from './get-orders.query';
-import { OrdersRepository } from '@visapi/backend-repositories';
+import { OrdersRepository, OrderRecord } from '@visapi/backend-repositories';
 import { CacheService } from '@visapi/backend-cache';
+
+interface OrdersResult {
+  data: OrderRecord[];
+  total: number;
+}
+
+
+interface WhereClause {
+  branch?: string;
+  order_status?: string;
+  client_email?: string;
+  whatsapp_alerts_enabled?: boolean;
+  created_at?: {
+    $gte?: string;
+    $lte?: string;
+  };
+}
 
 /**
  * Handler for GetOrdersQuery
@@ -17,21 +34,21 @@ export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
     private readonly cacheService: CacheService,
   ) {}
 
-  async execute(query: GetOrdersQuery): Promise<{ data: any[]; total: number }> {
+  async execute(query: GetOrdersQuery): Promise<OrdersResult> {
     const { filters = {}, pagination = {} } = query;
     
     // Generate cache key based on query parameters
     const cacheKey = this.cacheService.generateKey('GetOrders', [filters, pagination]);
     
     // Try to get from cache first
-    const cached = await this.cacheService.get<{ data: any[]; total: number }>(cacheKey);
+    const cached = await this.cacheService.get<OrdersResult>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for orders query: ${cacheKey}`);
       return cached;
     }
     
     // Build where clause from filters
-    const where: any = {};
+    const where: WhereClause = {};
     
     if (filters.branch) {
       where.branch = filters.branch;

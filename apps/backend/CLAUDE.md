@@ -74,6 +74,14 @@ Modern layered architecture with enterprise design patterns:
 - Redis availability monitoring
 - Kubernetes probes support
 
+## Scripts
+
+### Admin Key Creation
+- `pnpm create-admin-key` - Create admin API key for webhook retrigger operations
+- Script location: `apps/backend/src/scripts/create-admin-api-key.js`
+- Creates system user and API key with full permissions for `/api/v1/webhooks/vizi/retrigger`
+- Generates key in format: `vizi_admin_[uuid].[secret]`
+
 ## Testing
 
 - Unit tests for all services

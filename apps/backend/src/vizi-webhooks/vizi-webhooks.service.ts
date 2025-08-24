@@ -263,15 +263,106 @@ export class ViziWebhooksService {
             retrigger: true,
             correlationId,
             source: 'retrigger',
+            webhook_data: webhookData, // Store the webhook data for audit
           },
           correlation_id: correlationId,
         });
 
-        // Save order to database
-        await this.ordersService.createOrder(webhookData);
+        // EXACTLY replicate what the controller does:
+        // 1. First normalize the data (same as controller lines 103-146)
+        const order = webhookData.order;
+        const form = webhookData.form;
+        
+        // 2. Validate webhook payload based on country (same as controller lines 204-207)
+        if (!form || !order) {
+          throw new Error('Missing required form or order data in stored webhook');
+        }
+        
+        // 3. Normalize the data (same as controller lines 103-146)
+        if (order?.branch) {
+          order.branch = order.branch.toLowerCase() as typeof order.branch;
+        }
 
-        // Process the webhook
-        await this.processViziOrder(webhookData, correlationId);
+        // Ensure payment_processor is valid
+        const validProcessors = ['stripe', 'paypal', 'tbank', 'bill', 'bit', 'paybox'];
+        if (order?.payment_processor && !validProcessors.includes(order.payment_processor)) {
+          this.logger.warn(
+            `Invalid payment processor: ${order.payment_processor}, defaulting to stripe`,
+          );
+          order.payment_processor = 'stripe';
+        }
+
+        // Ensure status is valid
+        const validStatuses = ['active', 'completed', 'issue', 'canceled'];
+        if (order?.status && !validStatuses.includes(order.status)) {
+          this.logger.warn(
+            `Invalid order status: ${order.status}, defaulting to active`,
+          );
+          order.status = 'active';
+        }
+
+        // 4. Save order to database (same as controller line 214-256) WITH SAME ERROR HANDLING
+        let dbOrderId: string;
+        try {
+          dbOrderId = await this.ordersService.createOrder(webhookData);
+          this.logger.log(
+            `Order saved to database: ${orderId} (DB ID: ${dbOrderId})`,
+          );
+        } catch (dbError) {
+          const err = dbError as Record<string, unknown>;
+          const errorDetails = {
+            message: err.message,
+            code: err.code,
+            detail: err.detail,
+            stack: err.stack,
+          };
+
+          this.logger.error(
+            `Failed to save order ${orderId} to database during retrigger: ${JSON.stringify(errorDetails)}`,
+            typeof err.stack === 'string' ? err.stack : undefined,
+          );
+
+          // Log the failed order creation with full details (same as controller)
+          await this.logService.createLog({
+            level: 'error',
+            message: `Order creation failed during retrigger for ${orderId}`,
+            metadata: {
+              webhook_type: 'vizi_order',
+              order_id: orderId,
+              form_id: form?.id,
+              error: errorDetails,
+              webhook_data: webhookData,
+              correlationId,
+              source: 'retrigger',
+              retrigger: true,
+            },
+            correlation_id: correlationId,
+          });
+
+          // Re-throw to be caught by outer error handler
+          throw new Error(`Failed to save order to database: ${err instanceof Error ? err.message : String(err)}`);
+        }
+
+        // 5. Process the webhook (same as controller line 258-262)
+        const processResult = await this.processViziOrder(webhookData, correlationId);
+
+        // 6. Log success WITH FULL WEBHOOK DATA (same as controller lines 270-286)
+        await this.logService.createLog({
+          level: 'info',
+          message: `Order ${orderId} created successfully from retrigger`,
+          metadata: {
+            webhook_type: 'vizi_order',
+            order_id: orderId,
+            form_id: form?.id,
+            order_db_id: dbOrderId,
+            result_status: processResult.status,
+            webhook_data: webhookData, // Save full payload for data recovery
+            correlationId,
+            source: 'retrigger',
+            retrigger: true,
+          },
+          correlation_id: correlationId,
+        });
 
         result.successful++;
         result.details.push({
@@ -282,7 +373,38 @@ export class ViziWebhooksService {
 
         this.logger.log(`Successfully retriggered order ${orderId}`);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        // Enhanced error handling with detailed information
+        let errorDetails: Record<string, unknown> = {};
+        let errorMessage = 'Unknown error';
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          errorDetails = {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          };
+          
+          // Check for nested errors or specific error types
+          if ('code' in error) {
+            errorDetails.code = (error as Error & { code?: unknown }).code;
+          }
+          if ('details' in error) {
+            errorDetails.details = (error as Error & { details?: unknown }).details;
+          }
+          if ('response' in error) {
+            errorDetails.response = (error as Error & { response?: unknown }).response;
+          }
+        } else {
+          // Handle non-Error objects
+          errorDetails = {
+            type: typeof error,
+            value: error,
+            stringified: String(error),
+          };
+          errorMessage = String(error);
+        }
+
         result.failed++;
         result.details.push({
           orderId,
@@ -290,7 +412,7 @@ export class ViziWebhooksService {
           error: errorMessage,
         });
 
-        this.logger.error(`Failed to retrigger order ${orderId}: ${errorMessage}`);
+        this.logger.error(`Failed to retrigger order ${orderId}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
 
         await this.logService.createLog({
           level: 'error',
@@ -298,8 +420,10 @@ export class ViziWebhooksService {
           metadata: {
             orderId,
             error: errorMessage,
+            errorDetails,
             retrigger: true,
             source: 'retrigger',
+            correlationId: `retrigger-${orderId}-${Date.now()}`,
           },
         });
       }
@@ -324,28 +448,38 @@ export class ViziWebhooksService {
   private async getWebhookDataForOrder(orderId: string): Promise<ViziWebhookDto | null> {
     const supabase = this.supabaseService.client;
     
-    // Query logs for webhook data with this order ID
+    // Simple approach: get recent logs and filter in memory
+    // Supabase JS doesn't handle complex JSONB queries well
     const { data, error } = await supabase
       .from('logs')
       .select('metadata')
-      .or(`metadata->webhook_data->order->id.eq.${orderId},metadata->order_id.eq.${orderId}`)
-      .in('metadata->webhook_type', ['vizi_order'])
       .order('created_at', { ascending: false })
-      .limit(1);
+      .limit(500); // Get recent logs
 
     if (error || !data || data.length === 0) {
-      this.logger.warn(`No webhook data found for order ${orderId}`);
+      this.logger.warn(`No logs found when searching for order ${orderId}`);
       return null;
     }
 
-    const metadata = data[0].metadata as Record<string, any>;
-    const webhookData = metadata?.webhook_data;
-    if (!webhookData) {
-      this.logger.warn(`Webhook data is empty for order ${orderId}`);
-      return null;
+    // Filter for the specific order
+    for (const log of data) {
+      const metadata = log.metadata as Record<string, any>;
+      
+      // Check if this is a vizi_order log with webhook_data
+      if (metadata?.webhook_type === 'vizi_order' && metadata?.webhook_data) {
+        const webhookData = metadata.webhook_data;
+        const webhookOrderId = webhookData?.order?.id;
+        const metadataOrderId = metadata?.order_id;
+        
+        if (webhookOrderId === orderId || metadataOrderId === orderId) {
+          this.logger.log(`Found webhook data for order ${orderId}`);
+          return webhookData as ViziWebhookDto;
+        }
+      }
     }
 
-    return webhookData as ViziWebhookDto;
+    this.logger.warn(`No webhook data found for order ${orderId} after checking ${data.length} logs`);
+    return null;
   }
 
   private async getWebhookDataByDateRange(
@@ -354,13 +488,13 @@ export class ViziWebhooksService {
   ): Promise<Array<{ orderId: string; webhookData: ViziWebhookDto }>> {
     const supabase = this.supabaseService.client;
     
+    // Simpler approach: just get ALL logs and filter in memory
+    // Supabase JS client doesn't handle nested JSONB filtering well
     let query = supabase
       .from('logs')
-      .select('metadata')
-      .eq('metadata->webhook_type', 'vizi_order')
-      .not('metadata->webhook_data', 'is', null)
-      .order('created_at', { ascending: false });
+      .select('metadata, created_at');
 
+    // Add date filters if provided
     if (startDate) {
       query = query.gte('created_at', startDate);
     }
@@ -368,7 +502,12 @@ export class ViziWebhooksService {
       query = query.lte('created_at', endDate);
     }
 
+    // Order and limit
+    query = query.order('created_at', { ascending: false }).limit(1000);
+
     const { data, error } = await query;
+    
+    this.logger.log(`Date range query returned ${data?.length || 0} total logs`);
 
     if (error || !data) {
       this.logger.error(`Failed to fetch webhook data by date range: ${error?.message}`);
@@ -377,17 +516,23 @@ export class ViziWebhooksService {
 
     const results: Array<{ orderId: string; webhookData: ViziWebhookDto }> = [];
     
+    // Filter for vizi_order logs with webhook_data
     for (const log of data) {
       const metadata = log.metadata as Record<string, any>;
-      const webhookData = metadata?.webhook_data as ViziWebhookDto;
-      const orderId = webhookData?.order?.id || metadata?.order_id;
       
-      if (webhookData && orderId) {
-        results.push({ orderId, webhookData });
+      // Check if this is a vizi_order log with webhook_data
+      if (metadata?.webhook_type === 'vizi_order' && metadata?.webhook_data) {
+        const webhookData = metadata.webhook_data;
+        const orderId = webhookData?.order?.id || metadata?.order_id;
+        
+        if (orderId) {
+          results.push({ orderId, webhookData: webhookData as ViziWebhookDto });
+          this.logger.log(`Found webhook data for order ${orderId}`);
+        }
       }
     }
 
-    this.logger.log(`Found ${results.length} webhook payloads in date range`);
+    this.logger.log(`Found ${results.length} vizi_order webhook payloads in date range`);
     return results;
   }
 

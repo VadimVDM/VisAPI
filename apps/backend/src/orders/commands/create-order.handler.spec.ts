@@ -69,7 +69,7 @@ describe('CreateOrderHandler', () => {
     eventBus = module.get(EventBus);
     transformerService = module.get(OrderTransformerService);
     validatorService = module.get(OrderValidatorService);
-    syncService = module.get(OrderSyncService);
+    syncService = module.get<jest.Mocked<OrderSyncService>>(OrderSyncService);
   });
 
   describe('execute', () => {
