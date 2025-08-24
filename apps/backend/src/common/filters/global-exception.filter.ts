@@ -6,18 +6,27 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-// Import from fastify directly for types (already installed as dependency)
-type FastifyRequest = any;
-type FastifyReply = any;
+
+// Generic interfaces for Fastify compatibility
+interface HttpRequest {
+  url?: string;
+  method?: string;
+  headers?: Record<string, unknown>;
+}
+
+interface HttpResponse {
+  code: (statusCode: number) => HttpResponse;
+  type: (contentType: string) => HttpResponse;
+  header: (name: string, value: string) => HttpResponse;
+  send: (payload: unknown) => HttpResponse;
+}
 import { 
-  ALL_ERROR_CODES, 
-  ErrorCodeHelper, 
   SYSTEM_ERRORS,
   VALIDATION_ERRORS,
   AUTH_ERRORS,
   EXTERNAL_ERRORS 
 } from '../constants/error-codes';
-import { getCorrelationId, getRequestMethod, getRequestUrl } from '@visapi/backend-http-types';
+import { getCorrelationId, getRequestUrl } from '@visapi/backend-http-types';
 
 // Type for exception response
 interface ExceptionResponse {
@@ -50,8 +59,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<FastifyReply>();
-    const request = ctx.getRequest<FastifyRequest>();
+    const response = ctx.getResponse<HttpResponse>();
+    const request = ctx.getRequest<HttpRequest>();
 
     // Extract correlation ID using utility function
     const correlationId = getCorrelationId(request);
@@ -120,7 +129,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
 
       // Map specific HTTP status codes to our error catalog
-      switch (status) {
+      const httpStatus = status as HttpStatus;
+      switch (httpStatus) {
         case HttpStatus.BAD_REQUEST:
           const validationError = errors ? VALIDATION_ERRORS.SCHEMA_VALIDATION_FAILED : VALIDATION_ERRORS.INVALID_REQUEST_BODY;
           return {
@@ -175,7 +185,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         default:
           return {
             ...SYSTEM_ERRORS.INTERNAL_SERVER_ERROR,
-            status: status >= 500 ? status : HttpStatus.INTERNAL_SERVER_ERROR,
+            status: httpStatus >= 500 ? httpStatus : HttpStatus.INTERNAL_SERVER_ERROR as number,
             detail: message,
           };
       }

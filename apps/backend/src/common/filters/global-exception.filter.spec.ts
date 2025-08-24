@@ -2,10 +2,24 @@ import { Test } from '@nestjs/testing';
 import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { GlobalExceptionFilter } from './global-exception.filter';
 
+// Mock interfaces for Fastify types
+interface MockFastifyReply {
+  code: jest.Mock;
+  type: jest.Mock;
+  header: jest.Mock;
+  send: jest.Mock;
+}
+
+interface MockFastifyRequest {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+}
+
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
-  let mockResponse: any;
-  let mockRequest: any;
+  let mockResponse: MockFastifyReply;
+  let mockRequest: MockFastifyRequest;
   let mockHost: ArgumentsHost;
 
   beforeEach(async () => {
@@ -20,7 +34,7 @@ describe('GlobalExceptionFilter', () => {
       type: jest.fn().mockReturnThis(),
       header: jest.fn().mockReturnThis(),
       send: jest.fn().mockReturnThis(),
-    };
+    } as MockFastifyReply;
 
     mockRequest = {
       url: '/api/test',
@@ -28,7 +42,7 @@ describe('GlobalExceptionFilter', () => {
       headers: {
         'x-correlation-id': 'test-correlation-id',
       },
-    };
+    } as MockFastifyRequest;
 
     mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
