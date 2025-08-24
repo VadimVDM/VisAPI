@@ -24,6 +24,11 @@ import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
 import { IdempotencyService } from '@visapi/util-redis';
 import { RetriggerOrdersDto, RetriggerResultDto } from './dto/retrigger-orders.dto';
+import { ResyncCBBContactDto, ResyncCBBResultDto } from './dto/resync-cbb-contact.dto';
+import { CommandBus } from '@nestjs/cqrs';
+import { ResyncCBBContactCommand } from '../orders/commands/resync-cbb-contact.command';
+import { OrdersRepository } from '@visapi/backend-repositories';
+import { CBBContactSyncResult } from '@visapi/shared-types';
 
 @Controller('v1/webhooks/vizi')
 @ApiTags('Vizi Webhooks')
@@ -35,6 +40,8 @@ export class ViziWebhooksController {
     private readonly ordersService: OrdersService,
     private readonly idempotencyService: IdempotencyService,
     private readonly logService: LogService,
+    private readonly commandBus: CommandBus,
+    private readonly ordersRepository: OrdersRepository,
   ) {
     this.logger = new Logger(ViziWebhooksController.name);
   }
@@ -394,6 +401,167 @@ export class ViziWebhooksController {
       });
 
       throw error;
+    }
+  }
+
+  @Post('resync-cbb')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('webhook:vizi', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resync CBB contact for an order',
+    description:
+      'Manually triggers CBB contact synchronization for a specific order. Useful for recovery when sync failed or needs refresh. Requires admin API key.',
+  })
+  @ApiBearerAuth('api-key')
+  @ApiBody({
+    type: ResyncCBBContactDto,
+    description: 'CBB resync parameters',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'CBB resync completed',
+    type: ResyncCBBResultDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid parameters or order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions (admin required)',
+  })
+  async resyncCBBContact(
+    @Body() dto: ResyncCBBContactDto,
+    @Headers() headers: Record<string, string>,
+  ): Promise<ResyncCBBResultDto> {
+    const correlationId =
+      headers['x-correlation-id'] || headers['x-request-id'] || `resync-cbb-${Date.now()}`;
+
+    this.logger.log(
+      `Starting CBB resync: phoneNumber=${dto.phoneNumber}, orderId=${dto.orderId}, viziOrderId=${dto.viziOrderId}, correlationId=${correlationId}`,
+    );
+
+    // Validate that at least one parameter is provided
+    if (!dto.phoneNumber && !dto.orderId && !dto.viziOrderId) {
+      throw new BadRequestException(
+        'At least one of phoneNumber, orderId, or viziOrderId must be provided',
+      );
+    }
+
+    // Log the resync request
+    await this.logService.createLog({
+      level: 'info',
+      message: 'CBB resync operation initiated',
+      metadata: {
+        phoneNumber: dto.phoneNumber,
+        orderId: dto.orderId,
+        viziOrderId: dto.viziOrderId,
+        source: 'admin_resync',
+      },
+      correlation_id: correlationId,
+    });
+
+    try {
+      // Find the order based on provided parameters
+      let order;
+      
+      if (dto.orderId) {
+        // Direct lookup by database ID
+        order = await this.ordersRepository.findById(dto.orderId);
+      } else if (dto.viziOrderId) {
+        // Lookup by Vizi order ID
+        const orders = await this.ordersRepository.findMany({
+          where: { order_id: dto.viziOrderId },
+        });
+        order = orders?.[0];
+      } else if (dto.phoneNumber) {
+        // Lookup by phone number - find most recent order
+        const orders = await this.ordersRepository.findMany({
+          where: { client_phone: dto.phoneNumber },
+          orderBy: 'created_at',
+          orderDirection: 'desc',
+        });
+        order = orders?.[0];
+      }
+
+      if (!order) {
+        const searchCriteria = dto.orderId 
+          ? `orderId: ${dto.orderId}`
+          : dto.viziOrderId 
+          ? `viziOrderId: ${dto.viziOrderId}`
+          : `phoneNumber: ${dto.phoneNumber}`;
+          
+        throw new BadRequestException(`Order not found with ${searchCriteria}`);
+      }
+
+      // Only sync IL branch orders
+      if (order.branch?.toLowerCase() !== 'il') {
+        return {
+          success: false,
+          phoneNumber: order.client_phone,
+          orderId: order.id,
+          message: `CBB sync skipped - order is for ${order.branch} branch (only IL branch orders are synced)`,
+        };
+      }
+
+      // Execute resync command
+      const result: CBBContactSyncResult = await this.commandBus.execute(
+        new ResyncCBBContactCommand(order.id, correlationId),
+      );
+
+      this.logger.log(
+        `CBB resync completed for order ${order.id}: status=${result.status}`,
+      );
+
+      // Return formatted result
+      return {
+        success: result.status === 'success',
+        phoneNumber: order.client_phone,
+        orderId: order.id,
+        cbbContactUuid: result.contactId,
+        message: result.status === 'success' 
+          ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
+          : result.status === 'no_whatsapp'
+          ? 'CBB contact synced but WhatsApp not available'
+          : 'CBB resync failed',
+        whatsappAvailable: result.hasWhatsApp,
+        created: result.action === 'created',
+        error: result.error,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      await this.logService.createLog({
+        level: 'error',
+        message: 'CBB resync operation failed',
+        metadata: {
+          error: errorMessage,
+          phoneNumber: dto.phoneNumber,
+          orderId: dto.orderId,
+          viziOrderId: dto.viziOrderId,
+          source: 'admin_resync',
+        },
+        correlation_id: correlationId,
+      });
+
+      // If it's already a BadRequestException, re-throw it
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // Otherwise, return a structured error response
+      return {
+        success: false,
+        phoneNumber: dto.phoneNumber || 'unknown',
+        orderId: dto.orderId || 'unknown',
+        message: 'CBB resync failed',
+        error: errorMessage,
+      };
     }
   }
 }

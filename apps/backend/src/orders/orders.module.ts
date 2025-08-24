@@ -10,6 +10,7 @@ import { QueueModule } from '../queue/queue.module';
 import { ConfigModule } from '@visapi/core-config';
 import { RepositoriesModule } from '@visapi/backend-repositories';
 import { EventsModule } from '@visapi/backend-events';
+import { LoggingModule } from '@visapi/backend-logging';
 import { CommandHandlers } from './commands';
 import { QueryHandlers } from './queries';
 import { OrderSyncSaga } from './sagas/order-sync.saga';
@@ -22,6 +23,7 @@ import { OrderSyncSaga } from './sagas/order-sync.saga';
     ConfigModule,
     RepositoriesModule,
     EventsModule,
+    LoggingModule,
   ],
   providers: [
     OrdersService,

@@ -8,6 +8,7 @@ import { SupabaseModule } from '@visapi/core-supabase';
 import { LoggingModule } from '@visapi/backend-logging';
 import { RedisModule } from '@visapi/util-redis';
 import { OrdersModule } from '../orders/orders.module';
+import { RepositoriesModule } from '@visapi/backend-repositories';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrdersModule } from '../orders/orders.module';
     LoggingModule,
     RedisModule,
     OrdersModule,
+    RepositoriesModule,
   ],
   controllers: [ViziWebhooksController],
   providers: [ViziWebhooksService],

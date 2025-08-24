@@ -207,6 +207,6 @@ import {
       buckets: [0.5, 1, 2, 5, 10, 20, 30],
     }),
   ],
-  exports: [QueueService, BullModule],
+  exports: [QueueService, BullModule, CBBSyncOrchestratorService],
 })
 export class QueueModule {}
