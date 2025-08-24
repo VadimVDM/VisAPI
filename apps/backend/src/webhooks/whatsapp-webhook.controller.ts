@@ -424,21 +424,40 @@ export class WhatsAppWebhookController {
 
   private async forwardToZapier(body: any, eventId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.httpService.post(this.zapierWebhookUrl, {
-          ...body,
-          visapi_event_id: eventId,
-          visapi_timestamp: new Date().toISOString(),
+      // Forward the exact raw webhook body to Zapier (same as WebhookVerifier)
+      // DO NOT add extra fields - Zapier expects the raw Meta webhook format
+      const response = await firstValueFrom(
+        this.httpService.post(this.zapierWebhookUrl, body, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }),
       );
 
       await this.supabaseService.serviceClient.from('whatsapp_webhook_events')
-        .update({ forwarded_to_zapier: true })
+        .update({ 
+          forwarded_to_zapier: true,
+          details: {
+            zapier_status: response.status,
+            forwarded_at: new Date().toISOString(),
+          },
+        })
         .eq('id', eventId);
 
-      this.logger.log(`Webhook forwarded to Zapier for event ${eventId}`);
+      this.logger.log(`Webhook forwarded to Zapier for event ${eventId} - Status: ${response.status}`);
     } catch (error: any) {
       this.logger.error(`Failed to forward to Zapier: ${error.message}`);
+      
+      // Still mark the attempt in the database
+      await this.supabaseService.serviceClient.from('whatsapp_webhook_events')
+        .update({ 
+          forwarded_to_zapier: false,
+          details: {
+            zapier_error: error.message,
+            attempted_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', eventId);
     }
   }
 
