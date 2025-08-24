@@ -35,26 +35,26 @@ export class SlackRateLimiterService {
 
     try {
       // Get current count from cache
-      const currentCount = await this.cacheService.get<number>(cacheKey) || 0;
+      const currentCount = (await this.cacheService.get<number>(cacheKey)) || 0;
 
       if (currentCount >= config.maxNotifications) {
         this.logger.debug(
           `Rate limit exceeded for ${notificationType}${key ? `:${key}` : ''} ` +
-          `(${currentCount}/${config.maxNotifications} in ${config.windowMs}ms window)`,
+            `(${currentCount}/${config.maxNotifications} in ${config.windowMs}ms window)`,
         );
         return false;
       }
 
       // Increment counter and set TTL to window duration
       await this.cacheService.set(
-        cacheKey, 
-        currentCount + 1, 
+        cacheKey,
+        currentCount + 1,
         Math.floor(config.windowMs / 1000), // Convert to seconds for Redis TTL
       );
 
       this.logger.debug(
         `Slack notification allowed for ${notificationType}${key ? `:${key}` : ''} ` +
-        `(${currentCount + 1}/${config.maxNotifications})`,
+          `(${currentCount + 1}/${config.maxNotifications})`,
       );
 
       return true;
@@ -78,7 +78,7 @@ export class SlackRateLimiterService {
     key?: string,
   ): Promise<Date | null> {
     const timestampKey = `${this.getCacheKey(notificationType, key)}:timestamp`;
-    
+
     try {
       const timestamp = await this.cacheService.get<string>(timestampKey);
       return timestamp ? new Date(timestamp) : null;
@@ -99,7 +99,7 @@ export class SlackRateLimiterService {
   ): Promise<void> {
     const timestampKey = `${this.getCacheKey(notificationType, key)}:timestamp`;
     const config = this.getConfigForType(notificationType);
-    
+
     try {
       await this.cacheService.set(
         timestampKey,
@@ -116,17 +116,16 @@ export class SlackRateLimiterService {
    * @param notificationType Type of notification
    * @param key Optional specific key
    */
-  async resetRateLimit(
-    notificationType: string,
-    key?: string,
-  ): Promise<void> {
+  async resetRateLimit(notificationType: string, key?: string): Promise<void> {
     const cacheKey = this.getCacheKey(notificationType, key);
     const timestampKey = `${cacheKey}:timestamp`;
-    
+
     try {
       await this.cacheService.delete(cacheKey);
       await this.cacheService.delete(timestampKey);
-      this.logger.debug(`Reset rate limit for ${notificationType}${key ? `:${key}` : ''}`);
+      this.logger.debug(
+        `Reset rate limit for ${notificationType}${key ? `:${key}` : ''}`,
+      );
     } catch (error) {
       this.logger.error(`Error resetting rate limit: ${error}`);
     }
@@ -149,11 +148,14 @@ export class SlackRateLimiterService {
   }> {
     const cacheKey = this.getCacheKey(notificationType, key);
     const config = this.getConfigForType(notificationType);
-    
+
     try {
-      const currentCount = await this.cacheService.get<number>(cacheKey) || 0;
-      const lastSentAt = await this.getLastNotificationTime(notificationType, key);
-      
+      const currentCount = (await this.cacheService.get<number>(cacheKey)) || 0;
+      const lastSentAt = await this.getLastNotificationTime(
+        notificationType,
+        key,
+      );
+
       return {
         currentCount,
         maxNotifications: config.maxNotifications,
@@ -192,25 +194,25 @@ export class SlackRateLimiterService {
           maxNotifications: 1,
           windowMs: 60 * 60 * 1000, // 1 per hour
         };
-      
+
       case 'template_rejected':
         return {
           maxNotifications: 1,
           windowMs: 24 * 60 * 60 * 1000, // 1 per day
         };
-      
+
       case 'account_banned':
         return {
           maxNotifications: 10,
           windowMs: 60 * 1000, // 10 per minute (critical alert)
         };
-      
+
       case 'message_failed':
         return {
           maxNotifications: 5,
           windowMs: 60 * 60 * 1000, // 5 per hour
         };
-      
+
       default:
         return this.defaultConfig;
     }

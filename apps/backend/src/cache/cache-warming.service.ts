@@ -21,7 +21,7 @@ export class CacheWarmingService implements OnModuleInit {
   onModuleInit() {
     // Warm cache on startup (delayed to avoid startup bottleneck)
     setTimeout(() => {
-      this.warmCache().catch(error => {
+      this.warmCache().catch((error) => {
         this.logger.error('Failed to warm cache on startup', error);
       });
     }, 5000);
@@ -69,22 +69,37 @@ export class CacheWarmingService implements OnModuleInit {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       await this.queryBus.execute(
-        new GetOrderStatsQuery('day', undefined, today.toISOString(), tomorrow.toISOString()),
+        new GetOrderStatsQuery(
+          'day',
+          undefined,
+          today.toISOString(),
+          tomorrow.toISOString(),
+        ),
       );
 
       // Warm this week's stats
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay());
-      
+
       await this.queryBus.execute(
-        new GetOrderStatsQuery('week', undefined, weekStart.toISOString(), tomorrow.toISOString()),
+        new GetOrderStatsQuery(
+          'week',
+          undefined,
+          weekStart.toISOString(),
+          tomorrow.toISOString(),
+        ),
       );
 
       // Warm this month's stats
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      
+
       await this.queryBus.execute(
-        new GetOrderStatsQuery('month', undefined, monthStart.toISOString(), tomorrow.toISOString()),
+        new GetOrderStatsQuery(
+          'month',
+          undefined,
+          monthStart.toISOString(),
+          tomorrow.toISOString(),
+        ),
       );
 
       this.logger.debug('Order statistics cache warmed');
@@ -100,7 +115,10 @@ export class CacheWarmingService implements OnModuleInit {
     try {
       // Warm first page of recent orders
       await this.queryBus.execute(
-        new GetOrdersQuery({}, { page: 1, limit: 20, sortBy: 'created_at', sortOrder: 'desc' }),
+        new GetOrdersQuery(
+          {},
+          { page: 1, limit: 20, sortBy: 'created_at', sortOrder: 'desc' },
+        ),
       );
 
       // Warm pending orders
@@ -127,7 +145,7 @@ export class CacheWarmingService implements OnModuleInit {
       const branches = ['il', 'us', 'uk']; // Main branches (lowercase as stored in db)
 
       await Promise.all(
-        branches.map(branch =>
+        branches.map((branch) =>
           this.queryBus.execute(
             new GetOrdersQuery({ branch }, { page: 1, limit: 10 }),
           ),
@@ -148,10 +166,10 @@ export class CacheWarmingService implements OnModuleInit {
     try {
       // Clear old statistics cache
       await this.cacheService.deleteByPattern('stats:orders:*');
-      
+
       // Clear old query cache
       await this.cacheService.deleteByPattern('GetOrders:*');
-      
+
       this.logger.debug('Stale cache entries cleared');
     } catch (error) {
       this.logger.error('Failed to clear stale cache', error);
@@ -170,7 +188,7 @@ export class CacheWarmingService implements OnModuleInit {
       await this.cacheService.deleteByPattern('*');
       this.logger.log('All cache cleared');
     }
-    
+
     // Re-warm cache after clearing
     await this.warmCache();
   }

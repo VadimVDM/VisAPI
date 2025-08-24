@@ -11,7 +11,9 @@ import { LogService } from '@visapi/backend-logging';
  * Manually triggers CBB contact synchronization for recovery/admin purposes
  */
 @CommandHandler(ResyncCBBContactCommand)
-export class ResyncCBBContactHandler implements ICommandHandler<ResyncCBBContactCommand> {
+export class ResyncCBBContactHandler
+  implements ICommandHandler<ResyncCBBContactCommand>
+{
   private readonly logger = new Logger(ResyncCBBContactHandler.name);
 
   constructor(
@@ -20,7 +22,9 @@ export class ResyncCBBContactHandler implements ICommandHandler<ResyncCBBContact
     private readonly logService: LogService,
   ) {}
 
-  async execute(command: ResyncCBBContactCommand): Promise<CBBContactSyncResult> {
+  async execute(
+    command: ResyncCBBContactCommand,
+  ): Promise<CBBContactSyncResult> {
     const { orderId, correlationId } = command;
 
     this.logger.log(
@@ -73,8 +77,9 @@ export class ResyncCBBContactHandler implements ICommandHandler<ResyncCBBContact
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       this.logger.error(
         `[${correlationId}] CBB resync failed for order ${orderId}: ${errorMessage}`,
         error,

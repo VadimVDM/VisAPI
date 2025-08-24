@@ -23,8 +23,14 @@ import { ViziWebhookDto } from '@visapi/visanet-types';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
 import { IdempotencyService } from '@visapi/util-redis';
-import { RetriggerOrdersDto, RetriggerResultDto } from './dto/retrigger-orders.dto';
-import { ResyncCBBContactDto, ResyncCBBResultDto } from './dto/resync-cbb-contact.dto';
+import {
+  RetriggerOrdersDto,
+  RetriggerResultDto,
+} from './dto/retrigger-orders.dto';
+import {
+  ResyncCBBContactDto,
+  ResyncCBBResultDto,
+} from './dto/resync-cbb-contact.dto';
 import { CommandBus } from '@nestjs/cqrs';
 import { ResyncCBBContactCommand } from '../orders/commands/resync-cbb-contact.command';
 import { OrdersRepository } from '@visapi/backend-repositories';
@@ -86,7 +92,9 @@ export class ViziWebhooksController {
 
     // Type guard functions for safer type checking
     const isRecord = (value: unknown): value is Record<string, unknown> => {
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
+      return (
+        typeof value === 'object' && value !== null && !Array.isArray(value)
+      );
     };
 
     const hasProperty = <K extends string>(
@@ -102,14 +110,18 @@ export class ViziWebhooksController {
     }
 
     const bodyAsRecord = body;
-    
+
     // Safely access nested properties
     const order = isRecord(bodyAsRecord.order) ? bodyAsRecord.order : undefined;
     const form = isRecord(bodyAsRecord.form) ? bodyAsRecord.form : undefined;
-    
+
     try {
       // Normalize branch to lowercase if present
-      if (order && hasProperty(order, 'branch') && typeof order.branch === 'string') {
+      if (
+        order &&
+        hasProperty(order, 'branch') &&
+        typeof order.branch === 'string'
+      ) {
         order.branch = order.branch.toLowerCase();
       }
 
@@ -157,28 +169,44 @@ export class ViziWebhooksController {
     const client = form && isRecord(form.client) ? form.client : undefined;
     const product = form && isRecord(form.product) ? form.product : undefined;
     const phone = client && isRecord(client.phone) ? client.phone : undefined;
-    const applicants = form && Array.isArray(form.applicants) ? form.applicants : undefined;
+    const applicants =
+      form && Array.isArray(form.applicants) ? form.applicants : undefined;
 
     const webhookValidation = {
       hasOrder: !!order,
       hasForm: !!form,
       orderId: order && hasProperty(order, 'id') ? String(order.id) : undefined,
       formId: form && hasProperty(form, 'id') ? String(form.id) : undefined,
-      country: form && hasProperty(form, 'country') ? String(form.country) : undefined,
+      country:
+        form && hasProperty(form, 'country') ? String(form.country) : undefined,
       clientData: client
         ? {
             name: hasProperty(client, 'name') ? String(client.name) : undefined,
-            email: hasProperty(client, 'email') ? String(client.email) : undefined,
+            email: hasProperty(client, 'email')
+              ? String(client.email)
+              : undefined,
             hasPhone: !!phone,
-            phoneCode: phone && hasProperty(phone, 'code') ? String(phone.code) : undefined,
-            phoneNumber: phone && hasProperty(phone, 'number') ? String(phone.number) : undefined,
-            whatsappEnabled: hasProperty(client, 'whatsappAlertsEnabled') ? Boolean(client.whatsappAlertsEnabled) : false,
+            phoneCode:
+              phone && hasProperty(phone, 'code')
+                ? String(phone.code)
+                : undefined,
+            phoneNumber:
+              phone && hasProperty(phone, 'number')
+                ? String(phone.number)
+                : undefined,
+            whatsappEnabled: hasProperty(client, 'whatsappAlertsEnabled')
+              ? Boolean(client.whatsappAlertsEnabled)
+              : false,
           }
         : null,
       productData: product
         ? {
-            name: hasProperty(product, 'name') ? String(product.name) : undefined,
-            country: hasProperty(product, 'country') ? String(product.country) : undefined,
+            name: hasProperty(product, 'name')
+              ? String(product.name)
+              : undefined,
+            country: hasProperty(product, 'country')
+              ? String(product.country)
+              : undefined,
           }
         : null,
       applicantCount: applicants?.length || 0,
@@ -202,7 +230,9 @@ export class ViziWebhooksController {
     if (idempotencyKey) {
       const cached = await this.idempotencyService.get(idempotencyKey);
       if (cached) {
-        this.logger.log(`Returning cached response for idempotency key: ${idempotencyKey}`);
+        this.logger.log(
+          `Returning cached response for idempotency key: ${idempotencyKey}`,
+        );
         return cached;
       }
     }
@@ -220,7 +250,8 @@ export class ViziWebhooksController {
       let orderId: string;
       try {
         orderId = await this.ordersService.createOrder(webhookData);
-        const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+        const orderIdStr =
+          order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
         this.logger.log(
           `Order saved to database: ${orderIdStr} (DB ID: ${orderId})`,
         );
@@ -233,14 +264,16 @@ export class ViziWebhooksController {
           stack: err.stack,
         };
 
-        const failedOrderId = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+        const failedOrderId =
+          order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
         this.logger.error(
           `Failed to save order ${failedOrderId} to database: ${JSON.stringify(errorDetails)}`,
           typeof err.stack === 'string' ? err.stack : undefined,
         );
 
         // Log the failed order creation with full details
-        const failedFormId = form && hasProperty(form, 'id') ? String(form.id) : undefined;
+        const failedFormId =
+          form && hasProperty(form, 'id') ? String(form.id) : undefined;
         await this.logService.createLog({
           level: 'error',
           message: `Order creation failed for ${failedOrderId}`,
@@ -274,8 +307,10 @@ export class ViziWebhooksController {
       }
 
       // Log success WITH FULL WEBHOOK DATA
-      const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
-      const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
+      const orderIdStr =
+        order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+      const formIdStr =
+        form && hasProperty(form, 'id') ? String(form.id) : undefined;
       await this.logService.createLog({
         level: 'info',
         message: `Order ${orderIdStr} created successfully from Vizi webhook`,
@@ -299,8 +334,10 @@ export class ViziWebhooksController {
         error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
 
-      const orderIdStr = order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
-      const formIdStr = form && hasProperty(form, 'id') ? String(form.id) : undefined;
+      const orderIdStr =
+        order && hasProperty(order, 'id') ? String(order.id) : 'unknown';
+      const formIdStr =
+        form && hasProperty(form, 'id') ? String(form.id) : undefined;
       await this.logService.createLog({
         level: 'error',
         message: `Failed to process Vizi webhook for order ${orderIdStr}`,
@@ -356,7 +393,9 @@ export class ViziWebhooksController {
     @Headers() headers: Record<string, string>,
   ): Promise<RetriggerResultDto> {
     const correlationId =
-      headers['x-correlation-id'] || headers['x-request-id'] || `retrigger-${Date.now()}`;
+      headers['x-correlation-id'] ||
+      headers['x-request-id'] ||
+      `retrigger-${Date.now()}`;
 
     this.logger.log(
       `Starting retrigger operation: mode=${dto.mode}, correlationId=${correlationId}`,
@@ -387,8 +426,9 @@ export class ViziWebhooksController {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       await this.logService.createLog({
         level: 'error',
         message: 'Retrigger operation failed',
@@ -440,7 +480,9 @@ export class ViziWebhooksController {
     @Headers() headers: Record<string, string>,
   ): Promise<ResyncCBBResultDto> {
     const correlationId =
-      headers['x-correlation-id'] || headers['x-request-id'] || `resync-cbb-${Date.now()}`;
+      headers['x-correlation-id'] ||
+      headers['x-request-id'] ||
+      `resync-cbb-${Date.now()}`;
 
     this.logger.log(
       `Starting CBB resync: phoneNumber=${dto.phoneNumber}, orderId=${dto.orderId}, viziOrderId=${dto.viziOrderId}, correlationId=${correlationId}`,
@@ -469,7 +511,7 @@ export class ViziWebhooksController {
     try {
       // Find the order based on provided parameters
       let order;
-      
+
       if (dto.orderId) {
         // Direct lookup by database ID
         order = await this.ordersRepository.findById(dto.orderId);
@@ -490,12 +532,12 @@ export class ViziWebhooksController {
       }
 
       if (!order) {
-        const searchCriteria = dto.orderId 
+        const searchCriteria = dto.orderId
           ? `orderId: ${dto.orderId}`
-          : dto.viziOrderId 
-          ? `viziOrderId: ${dto.viziOrderId}`
-          : `phoneNumber: ${dto.phoneNumber}`;
-          
+          : dto.viziOrderId
+            ? `viziOrderId: ${dto.viziOrderId}`
+            : `phoneNumber: ${dto.phoneNumber}`;
+
         throw new BadRequestException(`Order not found with ${searchCriteria}`);
       }
 
@@ -524,18 +566,20 @@ export class ViziWebhooksController {
         phoneNumber: order.client_phone,
         orderId: order.id,
         cbbContactUuid: result.contactId,
-        message: result.status === 'success' 
-          ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
-          : result.status === 'no_whatsapp'
-          ? 'CBB contact synced but WhatsApp not available'
-          : 'CBB resync failed',
+        message:
+          result.status === 'success'
+            ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
+            : result.status === 'no_whatsapp'
+              ? 'CBB contact synced but WhatsApp not available'
+              : 'CBB resync failed',
         whatsappAvailable: result.hasWhatsApp,
         created: result.action === 'created',
         error: result.error,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       await this.logService.createLog({
         level: 'error',
         message: 'CBB resync operation failed',

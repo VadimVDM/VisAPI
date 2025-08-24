@@ -119,7 +119,7 @@ export class OrderTransformerService {
       form_meta_data: form.meta || null,
       applicants_data: (form.applicants || []) as unknown as Json,
       extra_data: this.extractExtraFields(form as unknown as Json),
-      
+
       // New consolidated product data
       product_data: {
         name: form.product?.name || `${form.country} Visa`,
@@ -199,13 +199,15 @@ export class OrderTransformerService {
       // Handle various date formats
       const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
-        const dateStr = typeof date === 'object' ? JSON.stringify(date) : String(date);
+        const dateStr =
+          typeof date === 'object' ? JSON.stringify(date) : String(date);
         this.logger.warn(`Invalid entry date format: ${dateStr}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
-      const dateStr = typeof date === 'object' ? JSON.stringify(date) : String(date);
+      const dateStr =
+        typeof date === 'object' ? JSON.stringify(date) : String(date);
       this.logger.warn(`Failed to parse entry date: ${dateStr}`);
       return undefined;
     }
@@ -270,7 +272,7 @@ export class OrderTransformerService {
     }
 
     const normalized = urgency.toLowerCase().trim();
-    
+
     // Map common variations to standard values
     switch (normalized) {
       case 'none':
@@ -278,7 +280,7 @@ export class OrderTransformerService {
       case 'regular':
       case 'standard':
         return 'standard';
-      
+
       case 'urgent':
       case 'express':
       case 'rush':
@@ -286,7 +288,7 @@ export class OrderTransformerService {
       case 'next_day':
       case 'few_hours':
         return 'urgent';
-      
+
       default:
         this.logger.warn(
           `Unknown urgency value '${urgency}', defaulting to 'standard'`,
@@ -302,8 +304,15 @@ export class OrderTransformerService {
     if (!urgency) {
       return false;
     }
-    
-    const urgentValues = ['urgent', 'express', 'few_hours', 'next_day', 'rush', 'priority'];
+
+    const urgentValues = [
+      'urgent',
+      'express',
+      'few_hours',
+      'next_day',
+      'rush',
+      'priority',
+    ];
     return urgentValues.includes(urgency.toLowerCase().trim());
   }
 

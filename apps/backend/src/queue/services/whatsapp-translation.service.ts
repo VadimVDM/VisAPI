@@ -3,89 +3,89 @@ import { SupabaseService } from '@visapi/core-supabase';
 
 // Hebrew translation maps
 const COUNTRY_NAMES_HEBREW: Record<string, string> = {
-  'india': 'הודו',
-  'usa': 'ארה"ב',
-  'us': 'ארה"ב',
+  india: 'הודו',
+  usa: 'ארה"ב',
+  us: 'ארה"ב',
   'united states': 'ארה"ב',
   'u.s.': 'ארה"ב',
-  'uk': 'בריטניה',
+  uk: 'בריטניה',
   'united kingdom': 'בריטניה',
-  'britain': 'בריטניה',
-  'canada': 'קנדה',
-  'israel': 'ישראל',
-  'thailand': 'תאילנד',
+  britain: 'בריטניה',
+  canada: 'קנדה',
+  israel: 'ישראל',
+  thailand: 'תאילנד',
   'south korea': 'דרום קוריאה',
-  'korea': 'קוריאה',
-  'vietnam': 'וייטנאם',
+  korea: 'קוריאה',
+  vietnam: 'וייטנאם',
   'saudi arabia': 'ערב הסעודית',
-  'saudi': 'סעודיה',
-  'indonesia': 'אינדונזיה',
-  'bahrain': 'בחריין',
+  saudi: 'סעודיה',
+  indonesia: 'אינדונזיה',
+  bahrain: 'בחריין',
   'new zealand': 'ניו זילנד',
-  'cambodia': 'קמבודיה',
-  'schengen': 'אזור שנגן',
+  cambodia: 'קמבודיה',
+  schengen: 'אזור שנגן',
   'schengen area': 'אזור שנגן',
-  'morocco': 'מרוקו',
+  morocco: 'מרוקו',
   'sri lanka': 'סרי לנקה',
-  'togo': 'טוגו',
-  'china': 'סין',
-  'japan': 'יפן',
-  'singapore': 'סינגפור',
-  'australia': 'אוסטרליה',
-  'brazil': 'ברזיל',
-  'mexico': 'מקסיקו',
-  'argentina': 'ארגנטינה',
-  'chile': 'צ\'ילה',
-  'peru': 'פרו',
-  'colombia': 'קולומביה',
-  'egypt': 'מצרים',
-  'jordan': 'ירדן',
-  'uae': 'איחוד האמירויות',
+  togo: 'טוגו',
+  china: 'סין',
+  japan: 'יפן',
+  singapore: 'סינגפור',
+  australia: 'אוסטרליה',
+  brazil: 'ברזיל',
+  mexico: 'מקסיקו',
+  argentina: 'ארגנטינה',
+  chile: "צ'ילה",
+  peru: 'פרו',
+  colombia: 'קולומביה',
+  egypt: 'מצרים',
+  jordan: 'ירדן',
+  uae: 'איחוד האמירויות',
   'united arab emirates': 'איחוד האמירויות',
-  'turkey': 'טורקיה',
-  'greece': 'יוון',
-  'cyprus': 'קפריסין',
-  'russia': 'רוסיה',
-  'ukraine': 'אוקראינה',
-  'poland': 'פולין',
-  'germany': 'גרמניה',
-  'france': 'צרפת',
-  'spain': 'ספרד',
-  'italy': 'איטליה',
-  'netherlands': 'הולנד',
-  'belgium': 'בלגיה',
-  'switzerland': 'שוויץ',
-  'austria': 'אוסטריה',
-  'portugal': 'פורטוגל',
-  'sweden': 'שוודיה',
-  'norway': 'נורבגיה',
-  'denmark': 'דנמרק',
-  'finland': 'פינלנד',
+  turkey: 'טורקיה',
+  greece: 'יוון',
+  cyprus: 'קפריסין',
+  russia: 'רוסיה',
+  ukraine: 'אוקראינה',
+  poland: 'פולין',
+  germany: 'גרמניה',
+  france: 'צרפת',
+  spain: 'ספרד',
+  italy: 'איטליה',
+  netherlands: 'הולנד',
+  belgium: 'בלגיה',
+  switzerland: 'שוויץ',
+  austria: 'אוסטריה',
+  portugal: 'פורטוגל',
+  sweden: 'שוודיה',
+  norway: 'נורבגיה',
+  denmark: 'דנמרק',
+  finland: 'פינלנד',
 };
 
 const VISA_TYPES_HEBREW: Record<string, string> = {
-  'tourist': 'תיירות',
-  'tourism': 'תיירות',
-  'business': 'עסקים',
-  'student': 'סטודנט',
-  'evisa': 'ויזה אלקטרונית',
+  tourist: 'תיירות',
+  tourism: 'תיירות',
+  business: 'עסקים',
+  student: 'סטודנט',
+  evisa: 'ויזה אלקטרונית',
   'e-visa': 'ויזה אלקטרונית',
-  'transit': 'מעבר',
-  'medical': 'רפואית',
-  'work': 'עבודה',
-  'conference': 'כנס',
-  'family': 'משפחה',
-  'pilgrimage': 'עלייה לרגל',
-  'diplomatic': 'דיפלומטית',
-  'official': 'רשמית',
-  'multiple': 'רב כניסות',
-  'single': 'כניסה יחידה',
+  transit: 'מעבר',
+  medical: 'רפואית',
+  work: 'עבודה',
+  conference: 'כנס',
+  family: 'משפחה',
+  pilgrimage: 'עלייה לרגל',
+  diplomatic: 'דיפלומטית',
+  official: 'רשמית',
+  multiple: 'רב כניסות',
+  single: 'כניסה יחידה',
 };
 
 const VALIDITY_HEBREW: Record<string, string> = {
-  'month': 'חודש',
+  month: 'חודש',
   '1month': 'חודש',
-  'year': 'שנה',
+  year: 'שנה',
   '1year': 'שנה',
   '3months': '3 חודשים',
   '6months': '6 חודשים',
@@ -96,64 +96,64 @@ const VALIDITY_HEBREW: Record<string, string> = {
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
-  'india': '🇮🇳',
-  'usa': '🇺🇸',
-  'us': '🇺🇸',
+  india: '🇮🇳',
+  usa: '🇺🇸',
+  us: '🇺🇸',
   'united states': '🇺🇸',
   'u.s.': '🇺🇸',
-  'uk': '🇬🇧',
+  uk: '🇬🇧',
   'united kingdom': '🇬🇧',
-  'britain': '🇬🇧',
-  'canada': '🇨🇦',
-  'israel': '🇮🇱',
-  'thailand': '🇹🇭',
+  britain: '🇬🇧',
+  canada: '🇨🇦',
+  israel: '🇮🇱',
+  thailand: '🇹🇭',
   'south korea': '🇰🇷',
-  'korea': '🇰🇷',
-  'vietnam': '🇻🇳',
+  korea: '🇰🇷',
+  vietnam: '🇻🇳',
   'saudi arabia': '🇸🇦',
-  'saudi': '🇸🇦',
-  'indonesia': '🇮🇩',
-  'bahrain': '🇧🇭',
+  saudi: '🇸🇦',
+  indonesia: '🇮🇩',
+  bahrain: '🇧🇭',
   'new zealand': '🇳🇿',
-  'cambodia': '🇰🇭',
-  'schengen': '🇪🇺',
+  cambodia: '🇰🇭',
+  schengen: '🇪🇺',
   'schengen area': '🇪🇺',
-  'morocco': '🇲🇦',
+  morocco: '🇲🇦',
   'sri lanka': '🇱🇰',
-  'togo': '🇹🇬',
-  'china': '🇨🇳',
-  'japan': '🇯🇵',
-  'singapore': '🇸🇬',
-  'australia': '🇦🇺',
-  'brazil': '🇧🇷',
-  'mexico': '🇲🇽',
-  'argentina': '🇦🇷',
-  'chile': '🇨🇱',
-  'peru': '🇵🇪',
-  'colombia': '🇨🇴',
-  'egypt': '🇪🇬',
-  'jordan': '🇯🇴',
-  'uae': '🇦🇪',
+  togo: '🇹🇬',
+  china: '🇨🇳',
+  japan: '🇯🇵',
+  singapore: '🇸🇬',
+  australia: '🇦🇺',
+  brazil: '🇧🇷',
+  mexico: '🇲🇽',
+  argentina: '🇦🇷',
+  chile: '🇨🇱',
+  peru: '🇵🇪',
+  colombia: '🇨🇴',
+  egypt: '🇪🇬',
+  jordan: '🇯🇴',
+  uae: '🇦🇪',
   'united arab emirates': '🇦🇪',
-  'turkey': '🇹🇷',
-  'greece': '🇬🇷',
-  'cyprus': '🇨🇾',
-  'russia': '🇷🇺',
-  'ukraine': '🇺🇦',
-  'poland': '🇵🇱',
-  'germany': '🇩🇪',
-  'france': '🇫🇷',
-  'spain': '🇪🇸',
-  'italy': '🇮🇹',
-  'netherlands': '🇳🇱',
-  'belgium': '🇧🇪',
-  'switzerland': '🇨🇭',
-  'austria': '🇦🇹',
-  'portugal': '🇵🇹',
-  'sweden': '🇸🇪',
-  'norway': '🇳🇴',
-  'denmark': '🇩🇰',
-  'finland': '🇫🇮',
+  turkey: '🇹🇷',
+  greece: '🇬🇷',
+  cyprus: '🇨🇾',
+  russia: '🇷🇺',
+  ukraine: '🇺🇦',
+  poland: '🇵🇱',
+  germany: '🇩🇪',
+  france: '🇫🇷',
+  spain: '🇪🇸',
+  italy: '🇮🇹',
+  netherlands: '🇳🇱',
+  belgium: '🇧🇪',
+  switzerland: '🇨🇭',
+  austria: '🇦🇹',
+  portugal: '🇵🇹',
+  sweden: '🇸🇪',
+  norway: '🇳🇴',
+  denmark: '🇩🇰',
+  finland: '🇫🇮',
 };
 
 // Removed: DEFAULT_PROCESSING_TIMES - now using database-driven rules
@@ -161,10 +161,8 @@ const COUNTRY_FLAGS: Record<string, string> = {
 @Injectable()
 export class WhatsAppTranslationService {
   private readonly logger = new Logger(WhatsAppTranslationService.name);
-  
-  constructor(
-    private readonly supabaseService: SupabaseService,
-  ) {}
+
+  constructor(private readonly supabaseService: SupabaseService) {}
   /**
    * Get Hebrew translation for a country name
    */
@@ -191,14 +189,17 @@ export class WhatsAppTranslationService {
     // First check if we have a specific intent translation
     if (normalizedIntent && VISA_TYPES_HEBREW[normalizedIntent]) {
       const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent];
-      
+
       // Check validity if it's part of the doc type
-      if (normalizedDocType?.includes('month') || normalizedDocType?.includes('year')) {
+      if (
+        normalizedDocType?.includes('month') ||
+        normalizedDocType?.includes('year')
+      ) {
         const validity = this.extractValidity(normalizedDocType);
         const validityHebrew = VALIDITY_HEBREW[validity] || validity;
         return `${intentHebrew} ${validityHebrew}`;
       }
-      
+
       return intentHebrew;
     }
 
@@ -228,24 +229,42 @@ export class WhatsAppTranslationService {
    */
   private extractValidity(text: string): string {
     const normalizedText = text?.toLowerCase().trim();
-    
+
     // Check for common validity patterns
-    if (normalizedText?.includes('3month') || normalizedText?.includes('3 month')) {
+    if (
+      normalizedText?.includes('3month') ||
+      normalizedText?.includes('3 month')
+    ) {
       return '3months';
     }
-    if (normalizedText?.includes('6month') || normalizedText?.includes('6 month')) {
+    if (
+      normalizedText?.includes('6month') ||
+      normalizedText?.includes('6 month')
+    ) {
       return '6months';
     }
-    if (normalizedText?.includes('2year') || normalizedText?.includes('2 year')) {
+    if (
+      normalizedText?.includes('2year') ||
+      normalizedText?.includes('2 year')
+    ) {
       return '2years';
     }
-    if (normalizedText?.includes('3year') || normalizedText?.includes('3 year')) {
+    if (
+      normalizedText?.includes('3year') ||
+      normalizedText?.includes('3 year')
+    ) {
       return '3years';
     }
-    if (normalizedText?.includes('5year') || normalizedText?.includes('5 year')) {
+    if (
+      normalizedText?.includes('5year') ||
+      normalizedText?.includes('5 year')
+    ) {
       return '5years';
     }
-    if (normalizedText?.includes('10year') || normalizedText?.includes('10 year')) {
+    if (
+      normalizedText?.includes('10year') ||
+      normalizedText?.includes('10 year')
+    ) {
       return '10years';
     }
     if (normalizedText?.includes('year')) {
@@ -254,7 +273,7 @@ export class WhatsAppTranslationService {
     if (normalizedText?.includes('month')) {
       return 'month';
     }
-    
+
     return '';
   }
 
@@ -266,7 +285,7 @@ export class WhatsAppTranslationService {
   async calculateProcessingDays(
     country: string,
     urgency?: string,
-    productDaysToUse?: number
+    productDaysToUse?: number,
   ): Promise<string> {
     // If productDaysToUse is provided and valid, use it directly
     if (productDaysToUse && productDaysToUse > 0 && productDaysToUse <= 30) {
@@ -275,11 +294,13 @@ export class WhatsAppTranslationService {
 
     try {
       // Call the database function for calculation
-      const { data, error } = await this.supabaseService.serviceClient
-        .rpc('calculate_processing_days' as any, {
+      const { data, error } = (await this.supabaseService.serviceClient.rpc(
+        'calculate_processing_days' as any,
+        {
           p_country: country?.toLowerCase().trim() || null,
           p_urgency: urgency?.toLowerCase().trim() || null,
-        }) as { data: number | null; error: any };
+        },
+      )) as { data: number | null; error: any };
 
       if (error) {
         this.logger.error('Error calculating processing days:', error);
@@ -300,10 +321,10 @@ export class WhatsAppTranslationService {
    */
   private calculateProcessingDaysFallback(
     country: string,
-    urgency?: string
+    urgency?: string,
   ): string {
     const isUrgent = urgency === 'urgent' || urgency === 'express';
-    
+
     // If urgent, always 1 business day
     if (isUrgent) {
       return '1';

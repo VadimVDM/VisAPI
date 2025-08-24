@@ -90,7 +90,9 @@ describe('ApiKeyGuard', () => {
       expect(authService.validateApiKey).toHaveBeenCalledWith(
         'vapi_validkey123',
       );
-      const request = context.switchToHttp().getRequest<{ apiKey: ApiKeyRecord }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<{ apiKey: ApiKeyRecord }>();
       expect(request.apiKey).toEqual(mockApiKey);
     });
 
@@ -220,7 +222,9 @@ describe('ApiKeyGuard', () => {
 
       await guard.canActivate(context);
 
-      const request = context.switchToHttp().getRequest<{ apiKey: ApiKeyRecord }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<{ apiKey: ApiKeyRecord }>();
       expect(request.apiKey).toEqual(mockApiKey);
     });
 

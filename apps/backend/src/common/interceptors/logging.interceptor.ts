@@ -15,9 +15,7 @@ import {
   RequestMetadata,
   LogEntry,
 } from '@visapi/backend-http-types';
-import {
-  isEnhancedError,
-} from '@visapi/backend-http-types';
+import { isEnhancedError } from '@visapi/backend-http-types';
 import {
   sanitizeData,
   getCorrelationId,
@@ -29,7 +27,7 @@ import {
 
 /**
  * LoggingInterceptor - Enterprise-grade request/response logging
- * 
+ *
  * Features:
  * - Automatic correlation ID generation and propagation
  * - Request/response timing measurement
@@ -52,14 +50,14 @@ export class LoggingInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest<EnhancedRequest>();
     const response = context.switchToHttp().getResponse<EnhancedResponse>();
     const startTime = Date.now();
-    
+
     // Generate or extract correlation ID
     const correlationId = getCorrelationId(request) || uuidv4();
-    
+
     // Attach correlation ID to request and response
     request.correlationId = correlationId;
     response.setHeader('x-correlation-id', correlationId);
-    
+
     // Extract request metadata
     const requestMetadata: RequestMetadata = {
       correlationId,
@@ -73,7 +71,7 @@ export class LoggingInterceptor implements NestInterceptor {
     // Only log incoming requests in development or for non-webhook endpoints
     const isWebhook = requestMetadata.url.includes('/webhooks/');
     const isDevelopment = process.env.NODE_ENV !== 'production';
-    
+
     if (!isWebhook || isDevelopment) {
       const logEntry: LogEntry = {
         message: 'Incoming request',
@@ -87,7 +85,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         const responseTime = Date.now() - startTime;
-        
+
         // Only log successful responses for non-webhooks in production
         if (!isWebhook || isDevelopment) {
           const successLog: LogEntry = {
@@ -116,7 +114,7 @@ export class LoggingInterceptor implements NestInterceptor {
       catchError((error: unknown) => {
         const responseTime = Date.now() - startTime;
         const enhancedError = error as EnhancedError;
-        
+
         // Log error with full context
         const errorLog: LogEntry = {
           message: 'Request failed',
@@ -124,16 +122,22 @@ export class LoggingInterceptor implements NestInterceptor {
           method: getRequestMethod(request),
           url: getRequestUrl(request),
           responseTime: `${responseTime}ms`,
-          error: isEnhancedError(error) ? {
-            name: enhancedError.name || 'Error',
-            message: enhancedError.message || 'Unknown error',
-            stack: enhancedError.stack,
-            statusCode: enhancedError.status || enhancedError.statusCode || 500,
-          } : {
-            name: 'Error',
-            message: error instanceof Error ? error.message : 'Unknown error occurred',
-            statusCode: 500,
-          },
+          error: isEnhancedError(error)
+            ? {
+                name: enhancedError.name || 'Error',
+                message: enhancedError.message || 'Unknown error',
+                stack: enhancedError.stack,
+                statusCode:
+                  enhancedError.status || enhancedError.statusCode || 500,
+              }
+            : {
+                name: 'Error',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : 'Unknown error occurred',
+                statusCode: 500,
+              },
         };
         this.logger.error(errorLog);
 
@@ -142,5 +146,4 @@ export class LoggingInterceptor implements NestInterceptor {
       }),
     );
   }
-
 }

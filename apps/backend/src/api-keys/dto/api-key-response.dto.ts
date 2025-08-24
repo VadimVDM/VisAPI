@@ -90,7 +90,7 @@ export class ApiKeyWithSecretResponseDto extends ApiKeyResponseDto {
   static fromRecordWithKey(
     record: ApiKeyRecord,
     key: string,
-    message: string = 'Save this key securely. It will not be shown again.'
+    message: string = 'Save this key securely. It will not be shown again.',
   ): ApiKeyWithSecretResponseDto {
     const baseResponse = ApiKeyResponseDto.fromRecord(record);
     return {

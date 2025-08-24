@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsArray, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsArray,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 
 export enum RetriggerMode {
   SINGLE = 'single',

@@ -33,7 +33,9 @@ import {
 
         if (!redisUrl || redisUrl === 'h') {
           // Return a config that will fail gracefully
-          logger.warn('Redis URL not configured - queue functionality disabled');
+          logger.warn(
+            'Redis URL not configured - queue functionality disabled',
+          );
           return {
             connection: {
               host: 'localhost',
@@ -57,18 +59,19 @@ import {
           publicRedisUrl = undefined;
         }
         const effectiveRedisUrl = publicRedisUrl || redisUrl;
-        
+
         // Log which URL we're using (without exposing sensitive data)
         const isInternalUrl = redisUrl.includes('.railway.internal');
-        const isUsingPublic = !!publicRedisUrl && effectiveRedisUrl === publicRedisUrl;
+        const isUsingPublic =
+          !!publicRedisUrl && effectiveRedisUrl === publicRedisUrl;
         logger.log(
           `Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL`,
         );
-        
+
         // Additional logging for debugging
         if (isInternalUrl && !publicRedisUrl) {
           logger.warn(
-            'Using internal Railway URL without public URL fallback - this may fail!'
+            'Using internal Railway URL without public URL fallback - this may fail!',
           );
         }
 
@@ -85,9 +88,7 @@ import {
             lazyConnect: true, // Don't connect immediately
             retryStrategy: (times: number) => {
               if (times > 10) {
-                logger.error(
-                  'Redis connection failed after 10 retries',
-                );
+                logger.error('Redis connection failed after 10 retries');
                 return null;
               }
               const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s

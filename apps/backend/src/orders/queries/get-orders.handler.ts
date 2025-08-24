@@ -9,7 +9,6 @@ interface OrdersResult {
   total: number;
 }
 
-
 interface WhereClause {
   branch?: string;
   order_status?: string;
@@ -36,36 +35,39 @@ export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
 
   async execute(query: GetOrdersQuery): Promise<OrdersResult> {
     const { filters = {}, pagination = {} } = query;
-    
+
     // Generate cache key based on query parameters
-    const cacheKey = this.cacheService.generateKey('GetOrders', [filters, pagination]);
-    
+    const cacheKey = this.cacheService.generateKey('GetOrders', [
+      filters,
+      pagination,
+    ]);
+
     // Try to get from cache first
     const cached = await this.cacheService.get<OrdersResult>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for orders query: ${cacheKey}`);
       return cached;
     }
-    
+
     // Build where clause from filters
     const where: WhereClause = {};
-    
+
     if (filters.branch) {
       where.branch = filters.branch;
     }
-    
+
     if (filters.orderStatus) {
       where.order_status = filters.orderStatus;
     }
-    
+
     if (filters.clientEmail) {
       where.client_email = filters.clientEmail;
     }
-    
+
     if (filters.whatsappEnabled !== undefined) {
       where.whatsapp_alerts_enabled = filters.whatsappEnabled;
     }
-    
+
     if (filters.startDate || filters.endDate) {
       where.created_at = {};
       if (filters.startDate) {
@@ -96,11 +98,13 @@ export class GetOrdersHandler implements IQueryHandler<GetOrdersQuery> {
     ]);
 
     const result = { data, total };
-    
+
     // Cache the result for 60 seconds (short TTL for frequently changing data)
     await this.cacheService.set(cacheKey, result, 60);
-    
-    this.logger.debug(`Retrieved ${data.length} orders out of ${total} total (cached)`);
+
+    this.logger.debug(
+      `Retrieved ${data.length} orders out of ${total} total (cached)`,
+    );
 
     return result;
   }

@@ -16,19 +16,19 @@ export class WorkflowSchemaLoaderService {
    */
   loadWorkflowSchema(): Record<string, unknown> {
     const cacheKey = 'workflow-main';
-    
+
     // Return cached schema if available
     if (this.schemaCache.has(cacheKey)) {
-      return this.schemaCache.get(cacheKey);
+      return this.schemaCache.get(cacheKey)!;
     }
 
     // Try to load from file system
     const schema = this.loadFromFile() || this.getInlineSchema();
-    
+
     // Cache the loaded schema
     this.schemaCache.set(cacheKey, schema);
     this.logger.log('Workflow schema loaded and cached');
-    
+
     return schema;
   }
 
@@ -39,7 +39,10 @@ export class WorkflowSchemaLoaderService {
     const possiblePaths = [
       join(__dirname, '../schemas/workflow.schema.json'),
       join(__dirname, '../../workflows/schemas/workflow.schema.json'),
-      join(process.cwd(), 'apps/backend/src/workflows/schemas/workflow.schema.json'),
+      join(
+        process.cwd(),
+        'apps/backend/src/workflows/schemas/workflow.schema.json',
+      ),
     ];
 
     for (const schemaPath of possiblePaths) {

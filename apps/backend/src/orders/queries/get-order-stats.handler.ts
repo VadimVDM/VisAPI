@@ -50,10 +50,10 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
   async execute(query: GetOrderStatsQuery): Promise<OrderStats> {
     const { period, branch, startDate, endDate } = query;
-    
+
     // Build cache key
     const cacheKey = `stats:orders:${period}:${branch || 'all'}:${startDate || 'start'}:${endDate || 'end'}`;
-    
+
     // Check cache
     const cached = await this.cacheService.get(cacheKey);
     if (cached) {
@@ -63,11 +63,11 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
 
     // Build where clause
     const where: WhereClause = {};
-    
+
     if (branch) {
       where.branch = branch;
     }
-    
+
     if (startDate || endDate) {
       where.created_at = {};
       if (startDate) {
@@ -85,14 +85,16 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
     const stats = {
       totalOrders: orders.length,
       totalRevenue: orders.reduce((sum, order) => sum + (order.amount || 0), 0),
-      averageOrderValue: orders.length > 0 
-        ? orders.reduce((sum, order) => sum + (order.amount || 0), 0) / orders.length 
-        : 0,
+      averageOrderValue:
+        orders.length > 0
+          ? orders.reduce((sum, order) => sum + (order.amount || 0), 0) /
+            orders.length
+          : 0,
       ordersByBranch: this.groupByBranch(orders),
       ordersByStatus: this.groupByStatus(orders),
       ordersByVisaType: this.groupByVisaType(orders),
       timeSeries: this.generateTimeSeries(orders, period),
-      whatsappEnabled: orders.filter(o => o.whatsapp_alerts_enabled).length,
+      whatsappEnabled: orders.filter((o) => o.whatsapp_alerts_enabled).length,
       processingTimeStats: this.calculateProcessingTimeStats(orders),
     };
 
@@ -103,36 +105,48 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
   }
 
   private groupByBranch(orders: OrderRecord[]): Record<string, number> {
-    return orders.reduce((acc, order) => {
-      acc[order.branch] = (acc[order.branch] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return orders.reduce(
+      (acc, order) => {
+        acc[order.branch] = (acc[order.branch] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   private groupByStatus(orders: OrderRecord[]): Record<string, number> {
-    return orders.reduce((acc, order) => {
-      const status = order.order_status || 'pending';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return orders.reduce(
+      (acc, order) => {
+        const status = order.order_status || 'pending';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   private groupByVisaType(orders: OrderRecord[]): Record<string, number> {
-    return orders.reduce((acc, order) => {
-      const visaType = order.product_doc_type || 'unknown';
-      acc[visaType] = (acc[visaType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return orders.reduce(
+      (acc, order) => {
+        const visaType = order.product_doc_type || 'unknown';
+        acc[visaType] = (acc[visaType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
-  private generateTimeSeries(orders: OrderRecord[], period: string): TimeSeriesPoint[] {
+  private generateTimeSeries(
+    orders: OrderRecord[],
+    period: string,
+  ): TimeSeriesPoint[] {
     // Group orders by time period
     const grouped: Record<string, number> = {};
-    
-    orders.forEach(order => {
+
+    orders.forEach((order) => {
       const date = new Date(order.created_at);
       let key: string;
-      
+
       switch (period) {
         case 'day':
           key = date.toISOString().split('T')[0];
@@ -152,7 +166,7 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
           key = date.toISOString().split('T')[0]; // Default to day format
           break;
       }
-      
+
       grouped[key] = (grouped[key] || 0) + 1;
     });
 
@@ -161,21 +175,26 @@ export class GetOrderStatsHandler implements IQueryHandler<GetOrderStatsQuery> {
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  private calculateProcessingTimeStats(orders: OrderRecord[]): ProcessingTimeStats {
-    const processedOrders = orders.filter(o => o.processed_at);
-    
+  private calculateProcessingTimeStats(
+    orders: OrderRecord[],
+  ): ProcessingTimeStats {
+    const processedOrders = orders.filter((o) => o.processed_at);
+
     if (processedOrders.length === 0) {
       return { average: 0, min: 0, max: 0 };
     }
 
-    const processingTimes = processedOrders.map(order => {
-      const created = new Date(order.created_at).getTime();
-      const processed = new Date(order.processed_at).getTime();
-      return (processed - created) / 1000 / 60; // Convert to minutes
-    });
+    const processingTimes = processedOrders
+      .filter((order) => order.processed_at)
+      .map((order) => {
+        const created = new Date(order.created_at).getTime();
+        const processed = new Date(order.processed_at!).getTime();
+        return (processed - created) / 1000 / 60; // Convert to minutes
+      });
 
     return {
-      average: processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length,
+      average:
+        processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length,
       min: Math.min(...processingTimes),
       max: Math.max(...processingTimes),
     };

@@ -87,19 +87,23 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     try {
       // Validate required fields
       if (!orderId || !contactId) {
-        throw new Error('Missing required fields: orderId and contactId are required');
+        throw new Error(
+          'Missing required fields: orderId and contactId are required',
+        );
       }
 
       // Check if message type has a template
       if (!this.templateService.hasTemplate(messageType)) {
-        this.logger.warn(`Message type '${messageType}' needs template implementation. Skipping for now.`);
-        
+        this.logger.warn(
+          `Message type '${messageType}' needs template implementation. Skipping for now.`,
+        );
+
         return {
           status: 'skipped',
           orderId,
           contactId,
           messageType,
-          reason: 'Template not yet implemented'
+          reason: 'Template not yet implemented',
         };
       }
 
@@ -111,13 +115,15 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Check for duplicate messages
       if (await this.isMessageAlreadySent(order, messageType)) {
-        this.logger.log(`${messageType} already sent for order ${orderId}, skipping`);
+        this.logger.log(
+          `${messageType} already sent for order ${orderId}, skipping`,
+        );
         return {
           status: 'skipped',
           orderId,
           contactId,
           messageType,
-          reason: 'Already sent'
+          reason: 'Already sent',
         };
       }
 
@@ -125,14 +131,21 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       const result = await this.sendMessage(order, contactId, messageType);
 
       // Update order with WhatsApp tracking info
-      await this.updateOrderWhatsAppStatus(orderId, messageType, result.message_id || 'sent');
+      await this.updateOrderWhatsAppStatus(
+        orderId,
+        messageType,
+        result.message_id || 'sent',
+      );
 
       // Only log success in development
       if (process.env.NODE_ENV !== 'production') {
-        this.logger.log(`WhatsApp ${messageType} sent successfully for order ${orderId}`, {
-          contact_id: contactId,
-          message_id: result.message_id,
-        });
+        this.logger.log(
+          `WhatsApp ${messageType} sent successfully for order ${orderId}`,
+          {
+            contact_id: contactId,
+            message_id: result.message_id,
+          },
+        );
       }
 
       await this.logService.createLog({
@@ -149,7 +162,10 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Record metrics
       const duration = (Date.now() - startTime) / 1000;
-      this.messageDurationHistogram.observe({ message_type: messageType }, duration);
+      this.messageDurationHistogram.observe(
+        { message_type: messageType },
+        duration,
+      );
       this.messagesSentCounter.inc({ message_type: messageType });
 
       return {
@@ -161,12 +177,16 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       };
     } catch (error) {
       // Handle errors
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
 
-      this.logger.error(`Failed to send WhatsApp ${messageType} for order ${orderId}`, {
-        error: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-      });
+      this.logger.error(
+        `Failed to send WhatsApp ${messageType} for order ${orderId}`,
+        {
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      );
 
       await this.logService.createLog({
         level: 'error',
@@ -183,7 +203,10 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Record failure metrics
       const duration = (Date.now() - startTime) / 1000;
-      this.messageDurationHistogram.observe({ message_type: messageType }, duration);
+      this.messageDurationHistogram.observe(
+        { message_type: messageType },
+        duration,
+      );
       this.messagesFailedCounter.inc({ message_type: messageType });
 
       throw error;
@@ -196,29 +219,43 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   private async sendMessage(
     order: OrderData,
     contactId: string,
-    messageType: string
+    messageType: string,
   ): Promise<SendMessageResult> {
     switch (messageType) {
       case 'order_confirmation':
-        const orderData = await this.templateService.prepareOrderConfirmationData(order);
-        
+        const orderData =
+          await this.templateService.prepareOrderConfirmationData(order);
+
         // Only log individual sends in development
         if (process.env.NODE_ENV !== 'production') {
-          this.logger.log(`Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`);
+          this.logger.log(
+            `Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`,
+          );
         }
-        
-        return await this.cbbService.sendOrderConfirmation(contactId, orderData);
+
+        return await this.cbbService.sendOrderConfirmation(
+          contactId,
+          orderData,
+        );
 
       case 'status_update':
         // For future implementation with template
-        const statusMessage = this.templateService.buildStatusUpdateMessage(order);
-        this.logger.warn('Status update template not yet implemented, message prepared but not sent:', statusMessage);
+        const statusMessage =
+          this.templateService.buildStatusUpdateMessage(order);
+        this.logger.warn(
+          'Status update template not yet implemented, message prepared but not sent:',
+          statusMessage,
+        );
         throw new Error('Status update template not yet implemented');
 
       case 'document_ready':
         // For future implementation with template
-        const documentMessage = this.templateService.buildDocumentReadyMessage(order);
-        this.logger.warn('Document ready template not yet implemented, message prepared but not sent:', documentMessage);
+        const documentMessage =
+          this.templateService.buildDocumentReadyMessage(order);
+        this.logger.warn(
+          'Document ready template not yet implemented, message prepared but not sent:',
+          documentMessage,
+        );
         throw new Error('Document ready template not yet implemented');
 
       default:
@@ -229,7 +266,10 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   /**
    * Check if a message has already been sent for this order
    */
-  private async isMessageAlreadySent(order: OrderData, messageType: string): Promise<boolean> {
+  private async isMessageAlreadySent(
+    order: OrderData,
+    messageType: string,
+  ): Promise<boolean> {
     switch (messageType) {
       case 'order_confirmation':
         return order.whatsapp_confirmation_sent === true;
@@ -266,7 +306,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   private async updateOrderWhatsAppStatus(
     orderId: string,
     messageType: string,
-    messageId: string
+    messageId: string,
   ): Promise<void> {
     const updateData: OrderUpdateData = {
       updated_at: new Date().toISOString(),
@@ -303,7 +343,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     } else if (process.env.NODE_ENV !== 'production') {
       // Only log status updates in development
       this.logger.log(
-        `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`
+        `Updated WhatsApp status for order ${orderId}: ${messageType}=true, message_id=${messageId}`,
       );
     }
   }

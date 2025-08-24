@@ -77,7 +77,7 @@ export class CBBSyncMetricsService {
   startSync(): () => number {
     this.activeSync.inc();
     const startTime = Date.now();
-    
+
     return () => {
       this.activeSync.dec();
       return (Date.now() - startTime) / 1000;
@@ -115,8 +115,8 @@ export class CBBSyncMetricsService {
    * Record WhatsApp availability check
    */
   recordWhatsAppAvailability(available: boolean, branch: string): void {
-    this.whatsappAvailability.inc({ 
-      available: available ? 'yes' : 'no', 
+    this.whatsappAvailability.inc({
+      available: available ? 'yes' : 'no',
       branch,
     });
   }
@@ -142,7 +142,7 @@ export class CBBSyncMetricsService {
     whatsappAvailabilityRate: number;
   }> {
     const metrics = await register.getMetricsAsJSON();
-    
+
     // Parse metrics to calculate summary
     let totalSyncs = 0;
     let successfulSyncs = 0;
@@ -162,7 +162,7 @@ export class CBBSyncMetricsService {
           }
         }
       }
-      
+
       if (metric.name === 'cbb_sync_duration_seconds') {
         // For histograms, we need to look for specific aggregations
         const histogram = metric as any;
@@ -172,14 +172,14 @@ export class CBBSyncMetricsService {
           durationCount += histogram.value || 0;
         }
       }
-      
+
       if (metric.name === 'cbb_sync_errors_total') {
         const values = metric.values || [];
         for (const value of values) {
           totalErrors += value.value || 0;
         }
       }
-      
+
       if (metric.name === 'cbb_whatsapp_availability_total') {
         const values = metric.values || [];
         for (const value of values) {
@@ -196,7 +196,8 @@ export class CBBSyncMetricsService {
       successRate: totalSyncs > 0 ? (successfulSyncs / totalSyncs) * 100 : 0,
       averageDuration: durationCount > 0 ? totalDuration / durationCount : 0,
       errorRate: totalSyncs > 0 ? (totalErrors / totalSyncs) * 100 : 0,
-      whatsappAvailabilityRate: whatsappTotal > 0 ? (whatsappAvailable / whatsappTotal) * 100 : 0,
+      whatsappAvailabilityRate:
+        whatsappTotal > 0 ? (whatsappAvailable / whatsappTotal) * 100 : 0,
     };
   }
 }

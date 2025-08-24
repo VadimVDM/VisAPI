@@ -7,7 +7,12 @@ import {
   Logger,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { TemplateManagerService } from '@visapi/backend-whatsapp-business';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 
@@ -18,27 +23,29 @@ import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 export class WhatsAppManagementController {
   private readonly logger = new Logger(WhatsAppManagementController.name);
 
-  constructor(
-    private readonly templateManager: TemplateManagerService,
-  ) {}
+  constructor(private readonly templateManager: TemplateManagerService) {}
 
   @Post('templates/sync')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Manually sync WhatsApp templates from Meta' })
   @ApiResponse({ status: 200, description: 'Templates synced successfully' })
   @ApiResponse({ status: 500, description: 'Sync failed' })
-  async syncTemplates(): Promise<{ success: boolean; count: number; templates: any[] }> {
+  async syncTemplates(): Promise<{
+    success: boolean;
+    count: number;
+    templates: any[];
+  }> {
     try {
       this.logger.log('Manual template sync triggered');
-      
+
       const templates = await this.templateManager.syncTemplatesFromMeta();
-      
+
       this.logger.log(`Successfully synced ${templates.length} templates`);
-      
+
       return {
         success: true,
         count: templates.length,
-        templates: templates.map(t => ({
+        templates: templates.map((t) => ({
           name: t.name,
           language: t.language,
           status: t.status,
@@ -58,8 +65,8 @@ export class WhatsAppManagementController {
   async getTemplates(): Promise<any[]> {
     try {
       const templates = await this.templateManager.getApprovedTemplates();
-      
-      return templates.map(t => ({
+
+      return templates.map((t) => ({
         name: t.name,
         language: t.language,
         status: t.status,
@@ -78,7 +85,8 @@ export class WhatsAppManagementController {
   @ApiResponse({ status: 200, description: 'Compliance report generated' })
   async checkCompliance(): Promise<any> {
     try {
-      const report = await this.templateManager.checkTemplateCategoryCompliance();
+      const report =
+        await this.templateManager.checkTemplateCategoryCompliance();
       return report;
     } catch (error: any) {
       this.logger.error(`Failed to check compliance: ${error.message}`, error);

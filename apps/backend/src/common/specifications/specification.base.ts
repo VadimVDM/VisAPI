@@ -80,19 +80,19 @@ export class AndSpecification<T> extends Specification<T> {
     // Merge queries with AND logic
     if (leftQuery.$and || rightQuery.$and) {
       const conditions: QueryObject[] = [];
-      
+
       if (leftQuery.$and) {
         conditions.push(...leftQuery.$and);
       } else {
         conditions.push(leftQuery);
       }
-      
+
       if (rightQuery.$and) {
         conditions.push(...rightQuery.$and);
       } else {
         conditions.push(rightQuery);
       }
-      
+
       return { $and: conditions };
     }
 
@@ -147,10 +147,10 @@ export class NotSpecification<T> extends Specification<T> {
 
   toQuery(): QueryObject {
     const query = this.specification.toQuery();
-    
+
     // Convert to NOT query
     const notQuery: QueryObject = {};
-    
+
     for (const key in query) {
       if (key === '$or' || key === '$and') {
         notQuery.$not = query;
@@ -158,7 +158,7 @@ export class NotSpecification<T> extends Specification<T> {
         notQuery[key] = { $not: query[key] };
       }
     }
-    
+
     return notQuery;
   }
 

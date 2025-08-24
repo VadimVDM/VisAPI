@@ -14,8 +14,8 @@ describe('WorkflowValidationService', () => {
         properties: {
           name: { type: 'string' },
           enabled: { type: 'boolean' },
-          triggers: { 
-            type: 'array', 
+          triggers: {
+            type: 'array',
             minItems: 1,
             items: {
               type: 'object',
@@ -23,14 +23,14 @@ describe('WorkflowValidationService', () => {
               properties: {
                 type: {
                   type: 'string',
-                  enum: ['webhook', 'cron', 'manual']
+                  enum: ['webhook', 'cron', 'manual'],
                 },
-                config: { type: 'object' }
-              }
-            }
+                config: { type: 'object' },
+              },
+            },
           },
-          steps: { 
-            type: 'array', 
+          steps: {
+            type: 'array',
             minItems: 1,
             items: {
               type: 'object',
@@ -39,26 +39,31 @@ describe('WorkflowValidationService', () => {
                 id: { type: 'string' },
                 type: {
                   type: 'string',
-                  enum: ['slack.send', 'whatsapp.send', 'pdf.generate', 'email.send']
+                  enum: [
+                    'slack.send',
+                    'whatsapp.send',
+                    'pdf.generate',
+                    'email.send',
+                  ],
                 },
                 config: {
                   type: 'object',
                   properties: {
                     contact: {
                       type: 'string',
-                      pattern: '^\\+[1-9]\\d{1,14}$'
+                      pattern: '^\\+[1-9]\\d{1,14}$',
                     },
                     channel: { type: 'string' },
-                    recipient: { 
+                    recipient: {
                       type: 'string',
-                      format: 'email'
+                      format: 'email',
                     },
                     template: { type: 'string' },
-                    message: { type: 'string' }
-                  }
-                }
-              }
-            }
+                    message: { type: 'string' },
+                  },
+                },
+              },
+            },
           },
         },
         required: ['name', 'enabled', 'triggers', 'steps'],
@@ -68,14 +73,19 @@ describe('WorkflowValidationService', () => {
     const mockValidationEngine = {
       validateStepConfig: jest.fn((stepType, config) => {
         // Validate unknown step types
-        const validStepTypes = ['slack.send', 'whatsapp.send', 'pdf.generate', 'email.send'];
+        const validStepTypes = [
+          'slack.send',
+          'whatsapp.send',
+          'pdf.generate',
+          'email.send',
+        ];
         if (!validStepTypes.includes(stepType)) {
           return {
             valid: false,
             errors: [`Unknown step type: ${stepType}`],
           };
         }
-        
+
         // Validate required fields
         const requiredFields: Record<string, string[]> = {
           'slack.send': ['channel'],
@@ -83,7 +93,7 @@ describe('WorkflowValidationService', () => {
           'pdf.generate': ['template'],
           'email.send': ['recipient'],
         };
-        
+
         const required = requiredFields[stepType] || [];
         const missing = required.filter((field) => !config[field]);
         if (missing.length > 0) {
@@ -92,18 +102,20 @@ describe('WorkflowValidationService', () => {
             errors: missing.map((field) => `Missing required field: ${field}`),
           };
         }
-        
+
         // Validate phone format for whatsapp
         if (stepType === 'whatsapp.send' && config.contact) {
           const phoneRegex = /^\+[1-9]\d{1,14}$/;
           if (!phoneRegex.test(config.contact as string)) {
             return {
               valid: false,
-              errors: ['Invalid phone number format. Use E.164 format (e.g., +1234567890)'],
+              errors: [
+                'Invalid phone number format. Use E.164 format (e.g., +1234567890)',
+              ],
             };
           }
         }
-        
+
         // Validate email format for email.send
         if (stepType === 'email.send' && config.recipient) {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -114,7 +126,7 @@ describe('WorkflowValidationService', () => {
             };
           }
         }
-        
+
         return { valid: true };
       }),
       validateCronExpression: jest.fn((expression) => {
@@ -125,7 +137,7 @@ describe('WorkflowValidationService', () => {
             errors: ['Cron expression must be a non-empty string'],
           };
         }
-        
+
         const fields = expression.trim().split(/\s+/);
         if (fields.length !== 5) {
           return {
@@ -133,10 +145,15 @@ describe('WorkflowValidationService', () => {
             errors: ['Cron expression must have exactly 5 fields'],
           };
         }
-        
+
         // Validate minute field (0-59)
         const minute = parseInt(fields[0]);
-        if (fields[0] !== '*' && !fields[0].includes('/') && !fields[0].includes(',') && !fields[0].includes('-')) {
+        if (
+          fields[0] !== '*' &&
+          !fields[0].includes('/') &&
+          !fields[0].includes(',') &&
+          !fields[0].includes('-')
+        ) {
           if (isNaN(minute) || minute < 0 || minute > 59) {
             return {
               valid: false,
@@ -144,21 +161,23 @@ describe('WorkflowValidationService', () => {
             };
           }
         }
-        
+
         return { valid: true };
       }),
       validateUniqueStepIds: jest.fn((steps) => {
         const ids = steps.map((step: { id: string }) => step.id);
         const uniqueIds = new Set(ids);
-        
+
         if (ids.length !== uniqueIds.size) {
-          const duplicates = ids.filter((id: string, index: number) => ids.indexOf(id) !== index);
+          const duplicates = ids.filter(
+            (id: string, index: number) => ids.indexOf(id) !== index,
+          );
           return {
             valid: false,
             errors: [`Duplicate step IDs found: ${duplicates.join(', ')}`],
           };
         }
-        
+
         return { valid: true };
       }),
       validateBusinessRules: jest.fn((workflow) => {
@@ -176,16 +195,21 @@ describe('WorkflowValidationService', () => {
         }
         return { valid: true };
       }),
-      validateWorkflowSteps: jest.fn(function(workflow) {
+      validateWorkflowSteps: jest.fn(function (workflow) {
         // Use the arrow function to access the mocked validateUniqueStepIds
-        const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(workflow.steps);
+        const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(
+          workflow.steps,
+        );
         if (!uniqueIdResult.valid) {
           return uniqueIdResult;
         }
-        
+
         // Validate each step configuration
         for (const step of workflow.steps) {
-          const stepResult = mockValidationEngine.validateStepConfig(step.type, step.config);
+          const stepResult = mockValidationEngine.validateStepConfig(
+            step.type,
+            step.config,
+          );
           if (!stepResult.valid) {
             return {
               valid: false,
@@ -195,7 +219,7 @@ describe('WorkflowValidationService', () => {
             };
           }
         }
-        
+
         return { valid: true };
       }),
       validateWorkflowTriggers: jest.fn((workflow) => {

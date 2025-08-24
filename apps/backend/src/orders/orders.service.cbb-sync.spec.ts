@@ -104,7 +104,10 @@ describe('OrdersService - CQRS Integration', () => {
 
     it('should execute CreateOrderCommand with correlation ID when provided', async () => {
       // Act
-      const result = await service.createOrder(mockWebhookData, 'test-correlation-123');
+      const result = await service.createOrder(
+        mockWebhookData,
+        'test-correlation-123',
+      );
 
       // Assert
       expect(commandBus.execute).toHaveBeenCalledWith(
@@ -118,10 +121,14 @@ describe('OrdersService - CQRS Integration', () => {
 
     it('should handle command bus errors gracefully', async () => {
       // Arrange
-      commandBus.execute.mockRejectedValue(new Error('Command execution failed'));
+      commandBus.execute.mockRejectedValue(
+        new Error('Command execution failed'),
+      );
 
       // Act & Assert
-      await expect(service.createOrder(mockWebhookData)).rejects.toThrow('Command execution failed');
+      await expect(service.createOrder(mockWebhookData)).rejects.toThrow(
+        'Command execution failed',
+      );
       expect(commandBus.execute).toHaveBeenCalled();
     });
   });
@@ -150,7 +157,9 @@ describe('OrdersService - CQRS Integration', () => {
       commandBus.execute.mockRejectedValue(new Error('Sync failed'));
 
       // Act & Assert
-      await expect(service.syncOrderToCBB('order-123', 'IL', true)).rejects.toThrow('Sync failed');
+      await expect(
+        service.syncOrderToCBB('order-123', 'IL', true),
+      ).rejects.toThrow('Sync failed');
     });
   });
 
@@ -160,7 +169,12 @@ describe('OrdersService - CQRS Integration', () => {
       commandBus.execute.mockResolvedValue(undefined);
 
       // Act
-      await service.updateOrderProcessing('order-123', 'workflow-123', 'job-456', 'correlation-789');
+      await service.updateOrderProcessing(
+        'order-123',
+        'workflow-123',
+        'job-456',
+        'correlation-789',
+      );
 
       // Assert
       expect(commandBus.execute).toHaveBeenCalledWith(
@@ -181,7 +195,10 @@ describe('OrdersService - CQRS Integration', () => {
       queryBus.execute.mockResolvedValue(mockOrders);
 
       // Act
-      const result = await service.getOrders({ branch: 'IL' }, { page: 1, limit: 10 });
+      const result = await service.getOrders(
+        { branch: 'IL' },
+        { page: 1, limit: 10 },
+      );
 
       // Assert
       expect(queryBus.execute).toHaveBeenCalledWith(

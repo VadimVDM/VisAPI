@@ -19,11 +19,11 @@ export class GetOrderByIdHandler implements IQueryHandler<GetOrderByIdQuery> {
 
   async execute(query: GetOrderByIdQuery): Promise<OrderRecord | null> {
     const { orderId, includeRelations } = query;
-    
+
     // Try to get from cache first
     const cacheKey = `order:${orderId}:${includeRelations ? 'full' : 'basic'}`;
     const cached = await this.cacheService.get<OrderRecord>(cacheKey);
-    
+
     if (cached) {
       this.logger.debug(`Cache hit for order ${orderId}`);
       return cached;
@@ -41,7 +41,7 @@ export class GetOrderByIdHandler implements IQueryHandler<GetOrderByIdQuery> {
 
     // Cache the result
     await this.cacheService.set(cacheKey, order, 300); // 5 minutes TTL
-    
+
     return order;
   }
 }

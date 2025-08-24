@@ -25,18 +25,22 @@ export class OrderSyncSaga {
    * Listen for OrderCreatedForSync events and trigger CBB sync
    */
   @Saga()
-  orderCreatedForSync = (events$: Observable<OrderCreatedForSyncEvent>): Observable<ICommand> => {
+  orderCreatedForSync = (
+    events$: Observable<OrderCreatedForSyncEvent>,
+  ): Observable<ICommand> => {
     return events$.pipe(
-      filter((event): event is OrderCreatedForSyncEvent => 
-        event?.type === 'OrderCreatedForSync'
+      filter(
+        (event): event is OrderCreatedForSyncEvent =>
+          event?.type === 'OrderCreatedForSync',
       ),
-      map((event) =>
-        new SyncOrderToCBBCommand(
-          event.orderId,
-          event.branch,
-          event.whatsappEnabled,
-          event.correlationId,
-        ),
+      map(
+        (event) =>
+          new SyncOrderToCBBCommand(
+            event.orderId,
+            event.branch,
+            event.whatsappEnabled,
+            event.correlationId,
+          ),
       ),
     );
   };

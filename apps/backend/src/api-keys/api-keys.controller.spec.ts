@@ -100,10 +100,7 @@ describe('ApiKeysController', () => {
       );
 
       await expect(
-        controller.createApiKey(
-          createApiKeyDto,
-          mockRequest,
-        ),
+        controller.createApiKey(createApiKeyDto, mockRequest),
       ).rejects.toThrow('Failed to create API key');
     });
   });

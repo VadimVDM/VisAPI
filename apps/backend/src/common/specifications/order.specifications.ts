@@ -202,7 +202,7 @@ export class HighPriorityOrderSpecification extends Specification<Order> {
     const isPriorityBranch = this.priorityBranches.includes(order.branch);
     const isHighAmount = (order.amount || 0) >= this.highAmountThreshold;
     const hasWhatsApp = order.whatsapp_alerts_enabled === true;
-    
+
     return isPriorityBranch && (isHighAmount || hasWhatsApp);
   }
 

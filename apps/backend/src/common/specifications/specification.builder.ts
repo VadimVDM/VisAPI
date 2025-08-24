@@ -32,17 +32,20 @@ export class OrderSpecificationBuilder {
    */
   withBranches(branches: string[]): this {
     if (branches.length === 0) return this;
-    
-    const branchSpecs = branches.map(branch => new OrderByBranchSpecification(branch));
-    const orSpec: ISpecification<unknown> | null = branchSpecs.reduce((acc: ISpecification<unknown> | null, spec) => 
-      acc ? acc.or(spec) : spec,
-      null as ISpecification<unknown> | null
+
+    const branchSpecs = branches.map(
+      (branch) => new OrderByBranchSpecification(branch),
     );
-    
+    const orSpec: ISpecification<unknown> | null = branchSpecs.reduce(
+      (acc: ISpecification<unknown> | null, spec) =>
+        acc ? acc.or(spec) : spec,
+      null as ISpecification<unknown> | null,
+    );
+
     if (orSpec) {
       this.specifications.push(orSpec);
     }
-    
+
     return this;
   }
 
@@ -58,7 +61,9 @@ export class OrderSpecificationBuilder {
    * Filter by date range
    */
   withinDateRange(startDate: Date, endDate: Date): this {
-    this.specifications.push(new OrderByDateRangeSpecification(startDate, endDate));
+    this.specifications.push(
+      new OrderByDateRangeSpecification(startDate, endDate),
+    );
     return this;
   }
 
@@ -149,10 +154,8 @@ export class OrderSpecificationBuilder {
     // Combine all specifications
     return this.specifications.reduce((combined, spec) => {
       if (!combined) return spec;
-      
-      return this.combineWithAnd 
-        ? combined.and(spec)
-        : combined.or(spec);
+
+      return this.combineWithAnd ? combined.and(spec) : combined.or(spec);
     });
   }
 
@@ -199,10 +202,10 @@ export class OrderSpecificationFactory {
   static todaysOrders(): ISpecification<unknown> {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     return new OrderByDateRangeSpecification(startOfDay, endOfDay);
   }
 
@@ -214,11 +217,11 @@ export class OrderSpecificationFactory {
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-    
+
     return new OrderByDateRangeSpecification(startOfWeek, endOfWeek);
   }
 
@@ -226,8 +229,9 @@ export class OrderSpecificationFactory {
    * Get pending processing specification
    */
   static pendingProcessing(): ISpecification<unknown> {
-    return new UnprocessedOrderSpecification()
-      .and(new OrderWithWhatsAppEnabledSpecification());
+    return new UnprocessedOrderSpecification().and(
+      new OrderWithWhatsAppEnabledSpecification(),
+    );
   }
 
   /**
@@ -243,8 +247,9 @@ export class OrderSpecificationFactory {
   static needingAttention(): ISpecification<unknown> {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    
-    return new UnprocessedOrderSpecification()
-      .and(new OrderByDateRangeSpecification(new Date(0), threeDaysAgo));
+
+    return new UnprocessedOrderSpecification().and(
+      new OrderByDateRangeSpecification(new Date(0), threeDaysAgo),
+    );
   }
 }

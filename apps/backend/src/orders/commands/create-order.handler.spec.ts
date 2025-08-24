@@ -81,11 +81,11 @@ describe('CreateOrderHandler', () => {
       };
 
       const command = new CreateOrderCommand(webhookData, 'correlation-123');
-      
+
       const transformedData = { order_id: 'ORD-123', branch: 'IL' };
       const sanitizedData = { ...transformedData, amount: 1000 };
-      const createdOrder = { 
-        id: 'uuid-123', 
+      const createdOrder = {
+        id: 'uuid-123',
         order_id: 'ORD-123',
         branch: 'IL',
         amount: 1000,
@@ -93,8 +93,13 @@ describe('CreateOrderHandler', () => {
         whatsapp_alerts_enabled: true,
       };
 
-      transformerService.transformWebhookToOrder.mockReturnValue(transformedData);
-      validatorService.validateOrderData.mockReturnValue({ isValid: true, missingFields: [] });
+      transformerService.transformWebhookToOrder.mockReturnValue(
+        transformedData,
+      );
+      validatorService.validateOrderData.mockReturnValue({
+        isValid: true,
+        missingFields: [],
+      });
       validatorService.sanitizeOrderData.mockReturnValue(sanitizedData);
       ordersRepository.create.mockResolvedValue(createdOrder);
 
@@ -104,11 +109,17 @@ describe('CreateOrderHandler', () => {
       // Assert
       expect(result).toBe('uuid-123');
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(transformerService.transformWebhookToOrder).toHaveBeenCalledWith(webhookData);
+      expect(transformerService.transformWebhookToOrder).toHaveBeenCalledWith(
+        webhookData,
+      );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(validatorService.validateOrderData).toHaveBeenCalledWith(transformedData);
+      expect(validatorService.validateOrderData).toHaveBeenCalledWith(
+        transformedData,
+      );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(validatorService.sanitizeOrderData).toHaveBeenCalledWith(transformedData);
+      expect(validatorService.sanitizeOrderData).toHaveBeenCalledWith(
+        transformedData,
+      );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(ordersRepository.create).toHaveBeenCalledWith(sanitizedData);
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -126,16 +137,23 @@ describe('CreateOrderHandler', () => {
       // Arrange
       const webhookData: Partial<ViziWebhookDto> = { order: { id: 'ORD-DUP' } };
       const command = new CreateOrderCommand(webhookData);
-      
+
       const transformedData = { order_id: 'ORD-DUP' };
       const existingOrder = { id: 'existing-uuid', order_id: 'ORD-DUP' };
-      
-      transformerService.transformWebhookToOrder.mockReturnValue(transformedData);
-      validatorService.validateOrderData.mockReturnValue({ isValid: true, missingFields: [] });
+
+      transformerService.transformWebhookToOrder.mockReturnValue(
+        transformedData,
+      );
+      validatorService.validateOrderData.mockReturnValue({
+        isValid: true,
+        missingFields: [],
+      });
       validatorService.sanitizeOrderData.mockReturnValue(transformedData);
-      
+
       // Simulate duplicate key error
-      const duplicateError = Object.assign(new Error('duplicate key'), { code: '23505' });
+      const duplicateError = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+      });
       ordersRepository.create.mockRejectedValue(duplicateError);
       ordersRepository.findOne.mockResolvedValue(existingOrder);
 
@@ -152,12 +170,14 @@ describe('CreateOrderHandler', () => {
 
     it('should throw error when validation fails', async () => {
       // Arrange
-      const webhookData: Partial<ViziWebhookDto> = { order: { id: 'ORD-INVALID' } };
+      const webhookData: Partial<ViziWebhookDto> = {
+        order: { id: 'ORD-INVALID' },
+      };
       const command = new CreateOrderCommand(webhookData);
-      
+
       transformerService.transformWebhookToOrder.mockReturnValue({});
-      validatorService.validateOrderData.mockReturnValue({ 
-        isValid: false, 
+      validatorService.validateOrderData.mockReturnValue({
+        isValid: false,
         missingFields: ['order_id', 'branch'],
       });
 

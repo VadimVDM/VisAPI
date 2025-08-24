@@ -49,7 +49,8 @@ export class PdfGeneratorService {
 
       // Use Chrome/Chromium executable path based on environment
       const executablePath =
-        process.env['PUPPETEER_EXECUTABLE_PATH'] || process.platform === 'darwin'
+        process.env['PUPPETEER_EXECUTABLE_PATH'] ||
+        process.platform === 'darwin'
           ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
           : process.platform === 'win32'
             ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'

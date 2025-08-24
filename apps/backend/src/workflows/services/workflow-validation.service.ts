@@ -3,7 +3,10 @@ import Ajv, { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { WorkflowSchema } from '@visapi/shared-types';
 import { WorkflowSchemaLoaderService } from './workflow-schema-loader.service';
-import { WorkflowValidationEngineService, ValidationResult } from './workflow-validation-engine.service';
+import {
+  WorkflowValidationEngineService,
+  ValidationResult,
+} from './workflow-validation-engine.service';
 
 /**
  * Main workflow validation service that orchestrates schema and business rule validation
@@ -157,19 +160,22 @@ export class WorkflowValidationService implements OnModuleInit {
     const validWorkflow = workflow as WorkflowSchema;
 
     // Validate business rules
-    const businessRuleResult = this.validationEngine.validateBusinessRules(validWorkflow);
+    const businessRuleResult =
+      this.validationEngine.validateBusinessRules(validWorkflow);
     if (!businessRuleResult.valid) {
       return businessRuleResult;
     }
 
     // Validate all workflow steps
-    const stepsResult = this.validationEngine.validateWorkflowSteps(validWorkflow);
+    const stepsResult =
+      this.validationEngine.validateWorkflowSteps(validWorkflow);
     if (!stepsResult.valid) {
       return stepsResult;
     }
 
     // Validate all workflow triggers
-    const triggersResult = this.validationEngine.validateWorkflowTriggers(validWorkflow);
+    const triggersResult =
+      this.validationEngine.validateWorkflowTriggers(validWorkflow);
     if (!triggersResult.valid) {
       return triggersResult;
     }

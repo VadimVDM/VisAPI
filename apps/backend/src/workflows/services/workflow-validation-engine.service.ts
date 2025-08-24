@@ -234,15 +234,11 @@ export class WorkflowValidationEngineService {
   validateWorkflowTriggers(workflow: WorkflowSchema): ValidationResult {
     for (const trigger of workflow.triggers) {
       if (trigger.type === 'cron' && trigger.config.schedule) {
-        const cronResult = this.validateCronExpression(
-          trigger.config.schedule,
-        );
+        const cronResult = this.validateCronExpression(trigger.config.schedule);
         if (!cronResult.valid) {
           return {
             valid: false,
-            errors: cronResult.errors?.map(
-              (error) => `Cron trigger: ${error}`,
-            ),
+            errors: cronResult.errors?.map((error) => `Cron trigger: ${error}`),
           };
         }
       }

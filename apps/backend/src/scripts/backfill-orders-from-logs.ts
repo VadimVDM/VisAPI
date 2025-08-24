@@ -13,7 +13,8 @@ import { createClient } from '@supabase/supabase-js';
 // Hardcoded credentials for the script (since we don't have .env)
 const SUPABASE_URL = 'https://pangdzwamawwgmvxnwkk.supabase.co';
 // Note: This should be the service role key - you'll need to provide it
-const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Please set SUPABASE_SERVICE_ROLE_KEY environment variable');
@@ -201,7 +202,10 @@ function reconstructOrderFromLogs(orderGroup: OrderGroup): any {
     // Entry details
     entry_date: combinedMetadata.entry_date || null,
     entry_port: combinedMetadata.entry_port || null,
-    visa_entries: combinedMetadata.visa_entries || combinedMetadata.product_entries || 'single',
+    visa_entries:
+      combinedMetadata.visa_entries ||
+      combinedMetadata.product_entries ||
+      'single',
 
     // Document URLs - not available in logs
     face_url: null,

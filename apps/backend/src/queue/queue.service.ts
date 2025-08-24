@@ -15,7 +15,8 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
     @InjectQueue(QUEUE_NAMES.BULK) private bulkQueue: Queue,
     @InjectQueue(QUEUE_NAMES.CBB_SYNC) private cbbSyncQueue: Queue,
-    @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES) private whatsappMessagesQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES)
+    private whatsappMessagesQueue: Queue,
     private readonly config: ConfigService,
   ) {}
 
@@ -86,7 +87,10 @@ export class QueueService {
           { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
           { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
           { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
-          { name: QUEUE_NAMES.WHATSAPP_MESSAGES, queue: this.whatsappMessagesQueue },
+          {
+            name: QUEUE_NAMES.WHATSAPP_MESSAGES,
+            queue: this.whatsappMessagesQueue,
+          },
         ];
 
     const metrics: QueueMetrics[] = [];

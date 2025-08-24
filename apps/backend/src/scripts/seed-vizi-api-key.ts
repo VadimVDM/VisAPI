@@ -13,7 +13,7 @@ async function bootstrap() {
   try {
     // Check if a system user exists, or create one
     const systemEmail = 'vizi-system@visanet.app';
-    
+
     const { data: user, error: userError } = await supabaseService.serviceClient
       .from('users')
       .insert({
@@ -49,11 +49,7 @@ async function bootstrap() {
     // Create a Vizi API key with webhook scopes
     const { key, apiKey } = await authService.createApiKey(
       'Vizi Webhook API Key',
-      [
-        'webhook:vizi',
-        'orders:write',
-        'triggers:create',
-      ],
+      ['webhook:vizi', 'orders:write', 'triggers:create'],
       userId,
       'vizi_', // Custom prefix for Vizi keys
     );

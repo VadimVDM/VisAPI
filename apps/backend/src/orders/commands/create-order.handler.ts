@@ -32,7 +32,8 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
     );
 
     // Transform webhook data
-    const orderData = this.transformerService.transformWebhookToOrder(webhookData);
+    const orderData =
+      this.transformerService.transformWebhookToOrder(webhookData);
 
     // Validate order data
     const validationResult = this.validatorService.validateOrderData(orderData);
@@ -48,8 +49,10 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
     try {
       // Create order in repository
       const order = await this.ordersRepository.create(sanitizedData);
-      
-      this.logger.log(`[${correlationId}] Order created successfully: ${order.id}`);
+
+      this.logger.log(
+        `[${correlationId}] Order created successfully: ${order.id}`,
+      );
 
       // Publish domain event
       await this.eventBusService.publish(
@@ -74,22 +77,25 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
       return order.id;
     } catch (error) {
       // Handle duplicate orders gracefully
-      const isDuplicateError = error instanceof Error && 
-        (('code' in error && error.code === '23505') || 
-         error.message?.includes('duplicate key'));
-      
+      const isDuplicateError =
+        error instanceof Error &&
+        (('code' in error && error.code === '23505') ||
+          error.message?.includes('duplicate key'));
+
       if (isDuplicateError) {
-        this.logger.warn(`[${correlationId}] Order ${sanitizedData.order_id} already exists`);
-        
+        this.logger.warn(
+          `[${correlationId}] Order ${sanitizedData.order_id} already exists`,
+        );
+
         const existingOrder = await this.ordersRepository.findOne({
           where: { order_id: sanitizedData.order_id },
         });
-        
+
         if (existingOrder) {
           return existingOrder.id;
         }
       }
-      
+
       throw error;
     }
   }

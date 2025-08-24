@@ -48,7 +48,7 @@ interface ErrorData {
 
 /**
  * TransformInterceptor - Standardizes API responses
- * 
+ *
  * Features:
  * - Consistent response structure across all endpoints
  * - Automatic success/error wrapping
@@ -57,7 +57,9 @@ interface ErrorData {
  * - Null value handling
  */
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
+export class TransformInterceptor<T>
+  implements NestInterceptor<T, ApiResponse<T>>
+{
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -66,18 +68,25 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
       correlationId?: string;
       headers: { 'x-correlation-id'?: string };
     }>();
-    const correlationId = request.correlationId || request.headers['x-correlation-id'];
+    const correlationId =
+      request.correlationId || request.headers['x-correlation-id'];
 
     return next.handle().pipe(
       map((data): ApiResponse<T> => {
         // Handle paginated responses
         if (this.isPaginatedResponse(data)) {
-          return this.createPaginatedResponse(data, correlationId) as ApiResponse<T>;
+          return this.createPaginatedResponse(
+            data,
+            correlationId,
+          ) as ApiResponse<T>;
         }
 
         // Handle error responses
         if (this.isErrorResponse(data)) {
-          return this.createErrorResponse(data, correlationId) as ApiResponse<T>;
+          return this.createErrorResponse(
+            data,
+            correlationId,
+          ) as ApiResponse<T>;
         }
 
         // Handle null/undefined responses
@@ -95,28 +104,35 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
    * Check if response is paginated
    */
   private isPaginatedResponse(data: unknown): data is PaginatedData {
-    return data !== null &&
-           data !== undefined &&
-           typeof data === 'object' && 
-           'data' in data && 
-           'total' in data &&
-           Array.isArray((data as PaginatedData).data);
+    return (
+      data !== null &&
+      data !== undefined &&
+      typeof data === 'object' &&
+      'data' in data &&
+      'total' in data &&
+      Array.isArray((data as PaginatedData).data)
+    );
   }
 
   /**
    * Check if response is an error
    */
   private isErrorResponse(data: unknown): data is ErrorData {
-    return data !== null &&
-           data !== undefined &&
-           typeof data === 'object' && 
-           'error' in data;
+    return (
+      data !== null &&
+      data !== undefined &&
+      typeof data === 'object' &&
+      'error' in data
+    );
   }
 
   /**
    * Create standardized success response
    */
-  private createSuccessResponse<T>(data: T, correlationId?: string): ApiResponse<T> {
+  private createSuccessResponse<T>(
+    data: T,
+    correlationId?: string,
+  ): ApiResponse<T> {
     return {
       success: true,
       data,
@@ -128,7 +144,10 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
   /**
    * Create standardized error response
    */
-  private createErrorResponse(error: ErrorData, correlationId?: string): ApiResponse<null> {
+  private createErrorResponse(
+    error: ErrorData,
+    correlationId?: string,
+  ): ApiResponse<null> {
     return {
       success: false,
       error: error.error || error.message || 'An error occurred',

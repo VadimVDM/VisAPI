@@ -74,7 +74,9 @@ describe('QueueService', () => {
     defaultQueue = module.get(getQueueToken(QUEUE_NAMES.DEFAULT));
     bulkQueue = module.get(getQueueToken(QUEUE_NAMES.BULK));
     cbbSyncQueue = module.get(getQueueToken(QUEUE_NAMES.CBB_SYNC));
-    whatsappMessagesQueue = module.get(getQueueToken(QUEUE_NAMES.WHATSAPP_MESSAGES));
+    whatsappMessagesQueue = module.get(
+      getQueueToken(QUEUE_NAMES.WHATSAPP_MESSAGES),
+    );
   });
 
   it('should be defined', () => {

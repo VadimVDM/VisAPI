@@ -49,8 +49,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     // Extract correlation ID
-    const correlationId = (request as RequestWithCorrelationId).correlationId || 
-                         request.headers['x-correlation-id'] as string;
+    const correlationId =
+      (request as RequestWithCorrelationId).correlationId ||
+      (request.headers['x-correlation-id'] as string);
 
     // Determine status and message
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -61,19 +62,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         const responseObj = exceptionResponse as ExceptionResponse;
         message = responseObj.message || message;
         errors = responseObj.errors;
       }
-      
+
       type = `https://httpstatuses.com/${status}`;
     } else if (exception instanceof Error) {
       message = exception.message;
-      
+
       // Handle specific error types
       if (exception.name === 'ValidationError') {
         status = HttpStatus.BAD_REQUEST;
@@ -145,7 +149,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       503: 'Service Unavailable',
       504: 'Gateway Timeout',
     };
-    
+
     return titles[status] || 'Error';
   }
 

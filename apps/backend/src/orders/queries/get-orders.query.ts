@@ -8,9 +8,9 @@ export class GetOrdersQuery implements IQuery {
   constructor(
     public readonly filters?: {
       branch?: string;
-      orderStatus?: string;  // Changed from status to match database column
-      startDate?: string;    // Changed to string for ISO dates
-      endDate?: string;      // Changed to string for ISO dates
+      orderStatus?: string; // Changed from status to match database column
+      startDate?: string; // Changed to string for ISO dates
+      endDate?: string; // Changed to string for ISO dates
       clientEmail?: string;
       whatsappEnabled?: boolean;
     },

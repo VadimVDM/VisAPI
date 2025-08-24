@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 import { QueueService } from '../../queue/queue.service';
 import { QUEUE_NAMES } from '@visapi/shared-types';
-import { EventBusService, OrderSyncRequestedEvent } from '@visapi/backend-events';
+import {
+  EventBusService,
+  OrderSyncRequestedEvent,
+} from '@visapi/backend-events';
 
 export interface OrderSyncOptions {
   orderId: string;
@@ -41,7 +44,7 @@ export class OrderSyncService {
 
     try {
       const syncDelay = this.configService.cbbSyncDelayMs || 2000;
-      
+
       // Add job to CBB sync queue
       await this.queueService.addJob(
         QUEUE_NAMES.CBB_SYNC,
@@ -79,7 +82,7 @@ export class OrderSyncService {
         `Failed to queue CBB sync for order ${orderId}:`,
         error,
       );
-      
+
       // Still emit event for tracking, but with error status
       await this.eventBus.publish(
         new OrderSyncRequestedEvent({
@@ -164,7 +167,8 @@ export class OrderSyncService {
     }
 
     try {
-      const workflowDelay = this.configService.workflowProcessingDelayMs || 1000;
+      const workflowDelay =
+        this.configService.workflowProcessingDelayMs || 1000;
 
       for (const triggerId of workflowTriggers) {
         await this.queueService.addJob(
@@ -265,7 +269,8 @@ export class OrderSyncService {
   } {
     return {
       orderId,
-      message: 'Sync operations have been queued. Check queue dashboard for details.',
+      message:
+        'Sync operations have been queued. Check queue dashboard for details.',
     };
   }
 
@@ -277,7 +282,7 @@ export class OrderSyncService {
     this.logger.log(
       `Retry requested for order ${orderId}. Queue processors will handle retry logic.`,
     );
-    
+
     // Emit event for tracking
     await this.eventBus.publish(
       new OrderSyncRequestedEvent({

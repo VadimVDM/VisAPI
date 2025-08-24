@@ -3,7 +3,12 @@ import { ApiKeyService } from './services/api-key.service';
 import { UserAuthService } from './services/user-auth.service';
 import { TokenService } from './services/token.service';
 import { PermissionService } from './services/permission.service';
-import { ApiKeyRecord, User, RoleRecord, UserRoleRecord } from '@visapi/shared-types';
+import {
+  ApiKeyRecord,
+  User,
+  RoleRecord,
+  UserRoleRecord,
+} from '@visapi/shared-types';
 import { AuthUser, Session } from '@supabase/supabase-js';
 
 /**
@@ -27,7 +32,12 @@ export class AuthService {
     createdBy: string,
     customPrefix?: string,
   ): Promise<{ key: string; apiKey: ApiKeyRecord }> {
-    return this.apiKeyService.createApiKey(name, scopes, createdBy, customPrefix);
+    return this.apiKeyService.createApiKey(
+      name,
+      scopes,
+      createdBy,
+      customPrefix,
+    );
   }
 
   async validateApiKey(apiKey: string): Promise<ApiKeyRecord | null> {
@@ -110,7 +120,10 @@ export class AuthService {
     return this.tokenService.setSession(accessToken, refreshToken);
   }
 
-  async getCurrentUser(): Promise<{ user: AuthUser | null; error: Error | null }> {
+  async getCurrentUser(): Promise<{
+    user: AuthUser | null;
+    error: Error | null;
+  }> {
     return this.tokenService.getCurrentUser();
   }
 

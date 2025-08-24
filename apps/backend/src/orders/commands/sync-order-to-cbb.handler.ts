@@ -8,7 +8,9 @@ import { OrderSyncService } from '../services/order-sync.service';
  * Manages the CBB synchronization process
  */
 @CommandHandler(SyncOrderToCBBCommand)
-export class SyncOrderToCBBHandler implements ICommandHandler<SyncOrderToCBBCommand> {
+export class SyncOrderToCBBHandler
+  implements ICommandHandler<SyncOrderToCBBCommand>
+{
   private readonly logger = new Logger(SyncOrderToCBBHandler.name);
 
   constructor(private readonly syncService: OrderSyncService) {}

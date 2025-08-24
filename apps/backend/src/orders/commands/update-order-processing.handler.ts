@@ -9,7 +9,9 @@ import { EventBusService, OrderProcessedEvent } from '@visapi/backend-events';
  * Updates order status and emits relevant events
  */
 @CommandHandler(UpdateOrderProcessingCommand)
-export class UpdateOrderProcessingHandler implements ICommandHandler<UpdateOrderProcessingCommand> {
+export class UpdateOrderProcessingHandler
+  implements ICommandHandler<UpdateOrderProcessingCommand>
+{
   private readonly logger = new Logger(UpdateOrderProcessingHandler.name);
 
   constructor(
@@ -25,13 +27,17 @@ export class UpdateOrderProcessingHandler implements ICommandHandler<UpdateOrder
     });
 
     if (!order) {
-      this.logger.warn(`[${correlationId}] Order ${orderId} not found for processing update`);
+      this.logger.warn(
+        `[${correlationId}] Order ${orderId} not found for processing update`,
+      );
       return;
     }
 
     await this.ordersRepository.markAsProcessed(order.id, workflowId, jobId);
-    
-    this.logger.log(`[${correlationId}] Order ${orderId} processing status updated`);
+
+    this.logger.log(
+      `[${correlationId}] Order ${orderId} processing status updated`,
+    );
 
     // Emit domain event if workflow and job are provided
     if (workflowId && jobId) {

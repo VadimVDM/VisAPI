@@ -37,7 +37,10 @@ export class OrdersService {
    * Create a new order from Vizi webhook data
    * Delegates to CreateOrderCommand via CQRS
    */
-  async createOrder(webhookData: ViziWebhookDto, correlationId?: string): Promise<string> {
+  async createOrder(
+    webhookData: ViziWebhookDto,
+    correlationId?: string,
+  ): Promise<string> {
     const command = new CreateOrderCommand(webhookData, correlationId);
     return await this.commandBus.execute(command);
   }
@@ -65,7 +68,10 @@ export class OrdersService {
    * Get an order by ID
    * Delegates to GetOrderByIdQuery via CQRS
    */
-  async getOrderById(orderId: string, includeRelations = false): Promise<OrderRecord | null> {
+  async getOrderById(
+    orderId: string,
+    includeRelations = false,
+  ): Promise<OrderRecord | null> {
     const query = new GetOrderByIdQuery(orderId, includeRelations);
     return await this.queryBus.execute(query);
   }
@@ -144,31 +150,35 @@ export class OrdersService {
    * Query orders with legacy filter format
    * Transforms to use GetOrdersQuery
    */
-  async queryOrders(filters: {
-    limit?: number;
-    offset?: number;
-    country?: string;
-    status?: string;
-    from_date?: string;
-    to_date?: string;
-  } = {}): Promise<OrderRecord[]> {
+  async queryOrders(
+    filters: {
+      limit?: number;
+      offset?: number;
+      country?: string;
+      status?: string;
+      from_date?: string;
+      to_date?: string;
+    } = {},
+  ): Promise<OrderRecord[]> {
     const queryFilters: {
       orderStatus?: string;
       startDate?: string;
       endDate?: string;
     } = {};
-    
+
     if (filters.status) {
       queryFilters.orderStatus = filters.status;
     }
-    
+
     if (filters.from_date || filters.to_date) {
       queryFilters.startDate = filters.from_date || undefined;
       queryFilters.endDate = filters.to_date || undefined;
     }
 
     const pagination = {
-      page: filters.offset ? Math.floor(filters.offset / (filters.limit || 100)) + 1 : 1,
+      page: filters.offset
+        ? Math.floor(filters.offset / (filters.limit || 100)) + 1
+        : 1,
       limit: filters.limit || 100,
     };
 
@@ -189,7 +199,11 @@ export class OrdersService {
    * Get orders by branch
    * Uses GetOrdersQuery with branch filter
    */
-  async getOrdersByBranch(branch: string, limit = 100, offset = 0): Promise<OrderRecord[]> {
+  async getOrdersByBranch(
+    branch: string,
+    limit = 100,
+    offset = 0,
+  ): Promise<OrderRecord[]> {
     const pagination = {
       page: Math.floor(offset / limit) + 1,
       limit,

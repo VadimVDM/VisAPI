@@ -96,15 +96,17 @@ export class PermissionService {
       return false;
     }
 
-    return userWithRoles.roles.some(
-      (role) => {
-        const perms = role.permissions;
-        if (typeof perms === 'object' && perms !== null && !Array.isArray(perms)) {
-          return perms[permission] === true;
-        }
-        return false;
-      },
-    );
+    return userWithRoles.roles.some((role) => {
+      const perms = role.permissions;
+      if (
+        typeof perms === 'object' &&
+        perms !== null &&
+        !Array.isArray(perms)
+      ) {
+        return perms[permission] === true;
+      }
+      return false;
+    });
   }
 
   /**
@@ -120,7 +122,11 @@ export class PermissionService {
     const permissions: Record<string, boolean> = {};
     userWithRoles.roles.forEach((role) => {
       const perms = role.permissions;
-      if (typeof perms === 'object' && perms !== null && !Array.isArray(perms)) {
+      if (
+        typeof perms === 'object' &&
+        perms !== null &&
+        !Array.isArray(perms)
+      ) {
         Object.entries(perms).forEach(([key, value]) => {
           // If any role grants the permission, it's granted
           if (value === true) {
@@ -203,8 +209,12 @@ export class PermissionService {
     // Type the response properly
     type UserRoleWithUserData = { users: User | null };
     const typedData = data as UserRoleWithUserData[] | null;
-    
-    return typedData?.map((ur) => ur.users).filter((user): user is User => user !== null) || [];
+
+    return (
+      typedData
+        ?.map((ur) => ur.users)
+        .filter((user): user is User => user !== null) || []
+    );
   }
 
   /**

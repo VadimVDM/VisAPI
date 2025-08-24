@@ -89,7 +89,9 @@ describe('AuthService', () => {
 
       expect(result).toEqual(mockApiKey);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(apiKeyService.validateApiKey).toHaveBeenCalledWith('vapi_test.secret123');
+      expect(apiKeyService.validateApiKey).toHaveBeenCalledWith(
+        'vapi_test.secret123',
+      );
     });
 
     it('should return null when ApiKeyService returns null', async () => {
@@ -124,7 +126,9 @@ describe('AuthService', () => {
 
       expect(result).toBe(true);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(apiKeyService.checkScopes).toHaveBeenCalledWith(mockApiKey, ['webhooks:trigger']);
+      expect(apiKeyService.checkScopes).toHaveBeenCalledWith(mockApiKey, [
+        'webhooks:trigger',
+      ]);
     });
   });
 
@@ -148,11 +152,20 @@ describe('AuthService', () => {
 
       apiKeyService.createApiKey.mockResolvedValue(mockResult);
 
-      const result = await service.createApiKey('test-key', ['webhooks:trigger'], 'user-123');
+      const result = await service.createApiKey(
+        'test-key',
+        ['webhooks:trigger'],
+        'user-123',
+      );
 
       expect(result).toEqual(mockResult);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(apiKeyService.createApiKey).toHaveBeenCalledWith('test-key', ['webhooks:trigger'], 'user-123', undefined);
+      expect(apiKeyService.createApiKey).toHaveBeenCalledWith(
+        'test-key',
+        ['webhooks:trigger'],
+        'user-123',
+        undefined,
+      );
     });
   });
 });

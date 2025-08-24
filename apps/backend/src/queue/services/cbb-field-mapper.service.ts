@@ -73,47 +73,52 @@ export class CBBFieldMapperService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   private readonly countryFlags: Record<string, string> = {
-    'india': '🇮🇳',
-    'usa': '🇺🇸',
-    'us': '🇺🇸',
+    india: '🇮🇳',
+    usa: '🇺🇸',
+    us: '🇺🇸',
     'united states': '🇺🇸',
     'u.s.': '🇺🇸',
-    'uk': '🇬🇧',
+    uk: '🇬🇧',
     'united kingdom': '🇬🇧',
-    'britain': '🇬🇧',
-    'canada': '🇨🇦',
-    'israel': '🇮🇱',
-    'thailand': '🇹🇭',
+    britain: '🇬🇧',
+    canada: '🇨🇦',
+    israel: '🇮🇱',
+    thailand: '🇹🇭',
     'south korea': '🇰🇷',
-    'korea': '🇰🇷',
-    'vietnam': '🇻🇳',
+    korea: '🇰🇷',
+    vietnam: '🇻🇳',
     'saudi arabia': '🇸🇦',
-    'saudi': '🇸🇦',
-    'indonesia': '🇮🇩',
-    'bahrain': '🇧🇭',
+    saudi: '🇸🇦',
+    indonesia: '🇮🇩',
+    bahrain: '🇧🇭',
     'new zealand': '🇳🇿',
-    'cambodia': '🇰🇭',
-    'schengen': '🇪🇺',
+    cambodia: '🇰🇭',
+    schengen: '🇪🇺',
     'schengen area': '🇪🇺',
-    'morocco': '🇲🇦',
+    morocco: '🇲🇦',
     'sri lanka': '🇱🇰',
-    'togo': '🇹🇬',
+    togo: '🇹🇬',
   };
 
   /**
    * Save or update CBB contact in database
    */
-  async saveCBBContact(order: OrderData, translations: {
-    countryNameTranslated?: string;
-    visaTypeTranslated?: string;
-    urgencyTranslated?: string;
-    processingDaysTranslated?: string;
-  } = {}): Promise<CBBContactRecord | null> {
+  async saveCBBContact(
+    order: OrderData,
+    translations: {
+      countryNameTranslated?: string;
+      visaTypeTranslated?: string;
+      urgencyTranslated?: string;
+      processingDaysTranslated?: string;
+    } = {},
+  ): Promise<CBBContactRecord | null> {
     const language = this.mapBranchToLanguage(order.branch);
-    const processingDays = order.processing_days || this.calculateDefaultProcessingDays(
-      order.product_country,
-      order.product_data?.urgency || 'standard'
-    );
+    const processingDays =
+      order.processing_days ||
+      this.calculateDefaultProcessingDays(
+        order.product_country,
+        order.product_data?.urgency || 'standard',
+      );
 
     const contactData = {
       order_id: order.order_id,
@@ -124,7 +129,8 @@ export class CBBFieldMapperService {
       product_doc_type: order.product_doc_type,
       urgency: order.product_data?.urgency || 'standard',
       processing_days: processingDays,
-      language_code: language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
+      language_code:
+        language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
       country_name_translated: translations.countryNameTranslated,
       visa_type_translated: translations.visaTypeTranslated,
       urgency_translated: translations.urgencyTranslated,
@@ -133,7 +139,7 @@ export class CBBFieldMapperService {
       order_days: processingDays,
       cbb_synced: false,
       cbb_sync_attempts: 0,
-      cbb_sync_error_count: 0
+      cbb_sync_error_count: 0,
     };
 
     const { data, error } = await this.supabaseService.serviceClient
@@ -143,7 +149,10 @@ export class CBBFieldMapperService {
       .single();
 
     if (error) {
-      this.logger.error(`Failed to save CBB contact for order ${order.order_id}:`, error);
+      this.logger.error(
+        `Failed to save CBB contact for order ${order.order_id}:`,
+        error,
+      );
       return null;
     }
 
@@ -160,8 +169,12 @@ export class CBBFieldMapperService {
       .eq('order_id', orderId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      this.logger.error(`Failed to get CBB contact for order ${orderId}:`, error);
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows found
+      this.logger.error(
+        `Failed to get CBB contact for order ${orderId}:`,
+        error,
+      );
     }
 
     return data as CBBContactRecord | null;
@@ -170,20 +183,24 @@ export class CBBFieldMapperService {
   /**
    * Update CBB sync status
    */
-  async updateCBBSyncStatus(orderId: string, updates: {
-    cbb_contact_id?: string;
-    cbb_synced?: boolean;
-    cbb_sync_attempts?: number;
-    cbb_sync_error_count?: number;
-    cbb_sync_last_attempt_at?: Date;
-    cbb_sync_last_error?: string | null;
-  }): Promise<void> {
+  async updateCBBSyncStatus(
+    orderId: string,
+    updates: {
+      cbb_contact_id?: string;
+      cbb_synced?: boolean;
+      cbb_sync_attempts?: number;
+      cbb_sync_error_count?: number;
+      cbb_sync_last_attempt_at?: Date;
+      cbb_sync_last_error?: string | null;
+    },
+  ): Promise<void> {
     // Convert Date to ISO string for Supabase
     const updateData: any = { ...updates };
     if (updates.cbb_sync_last_attempt_at) {
-      updateData.cbb_sync_last_attempt_at = updates.cbb_sync_last_attempt_at.toISOString();
+      updateData.cbb_sync_last_attempt_at =
+        updates.cbb_sync_last_attempt_at.toISOString();
     }
-    
+
     // Always update the updated_at timestamp
     updateData.updated_at = new Date().toISOString();
 
@@ -193,7 +210,10 @@ export class CBBFieldMapperService {
       .eq('order_id', orderId);
 
     if (error) {
-      this.logger.error(`Failed to update CBB sync status for order ${orderId}:`, error);
+      this.logger.error(
+        `Failed to update CBB sync status for order ${orderId}:`,
+        error,
+      );
     }
   }
 
@@ -202,7 +222,10 @@ export class CBBFieldMapperService {
    */
   mapOrderToContact(order: OrderData): CBBContactData {
     const isUrgent = this.isOrderUrgent(order);
-    const orderDateUnix = this.convertDateToUnix(order.entry_date ?? '', order.order_id);
+    const orderDateUnix = this.convertDateToUnix(
+      order.entry_date ?? '',
+      order.order_id,
+    );
     const gender = this.extractGender(order.applicants_data, order.order_id);
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
@@ -210,13 +233,15 @@ export class CBBFieldMapperService {
       order.product_validity ?? undefined,
       order.product_days_to_use ?? undefined,
     );
-    
+
     // Use processing_days from database (calculated by business rules engine)
     // If not available, calculate based on urgency
-    const processingDays = order.processing_days || this.calculateDefaultProcessingDays(
-      order.product_country,
-      order.product_data?.urgency || 'standard'
-    );
+    const processingDays =
+      order.processing_days ||
+      this.calculateDefaultProcessingDays(
+        order.product_country,
+        order.product_data?.urgency || 'standard',
+      );
 
     // Use actual product data from the order
     const visaIntent = order.product_intent || 'tourism';
@@ -294,14 +319,24 @@ export class CBBFieldMapperService {
    */
   private isOrderUrgent(order: OrderData): boolean {
     const urgency = order.product_data?.urgency || 'standard';
-    const urgentValues = ['urgent', 'express', 'few_hours', 'next_day', 'rush', 'priority'];
+    const urgentValues = [
+      'urgent',
+      'express',
+      'few_hours',
+      'next_day',
+      'rush',
+      'priority',
+    ];
     return urgentValues.includes(urgency.toLowerCase());
   }
 
   /**
    * Convert date string to Unix timestamp in seconds
    */
-  private convertDateToUnix(dateString: string, orderId: string): number | undefined {
+  private convertDateToUnix(
+    dateString: string,
+    orderId: string,
+  ): number | undefined {
     if (!dateString) {
       return undefined;
     }
@@ -327,8 +362,15 @@ export class CBBFieldMapperService {
   /**
    * Extract gender from applicant passport data
    */
-  private extractGender(applicantsData: ApplicantData[] | undefined, orderId: string): string | undefined {
-    if (!applicantsData || !Array.isArray(applicantsData) || !applicantsData[0]) {
+  private extractGender(
+    applicantsData: ApplicantData[] | undefined,
+    orderId: string,
+  ): string | undefined {
+    if (
+      !applicantsData ||
+      !Array.isArray(applicantsData) ||
+      !applicantsData[0]
+    ) {
       return undefined;
     }
 
@@ -341,11 +383,11 @@ export class CBBFieldMapperService {
           : firstApplicant.passport.sex === 'f'
             ? 'female'
             : undefined;
-      
+
       this.logger.debug(
         `Extracted gender for ${orderId}: ${gender} from passport sex: ${firstApplicant.passport.sex}`,
       );
-      
+
       return gender;
     }
 
@@ -409,10 +451,10 @@ export class CBBFieldMapperService {
    */
   private calculateDefaultProcessingDays(
     country: string,
-    urgency: string
+    urgency: string,
   ): number {
     const isUrgent = urgency === 'urgent' || urgency === 'express';
-    
+
     // If urgent, always 1 business day
     if (isUrgent) {
       return 1;

@@ -35,15 +35,21 @@ export class WhatsAppTemplateService {
   /**
    * Prepare data for order confirmation template
    */
-  async prepareOrderConfirmationData(order: OrderData): Promise<OrderConfirmationData> {
+  async prepareOrderConfirmationData(
+    order: OrderData,
+  ): Promise<OrderConfirmationData> {
     // Get Hebrew translations
-    const countryHebrew = this.translationService.getCountryNameHebrew(order.product_country);
-    const countryFlag = this.translationService.getCountryFlag(order.product_country);
+    const countryHebrew = this.translationService.getCountryNameHebrew(
+      order.product_country,
+    );
+    const countryFlag = this.translationService.getCountryFlag(
+      order.product_country,
+    );
     const visaTypeHebrew = this.translationService.getVisaTypeHebrew(
       order.product_doc_type ?? 'tourist',
-      order.product_intent ?? undefined
+      order.product_intent ?? undefined,
     );
-    
+
     // Use processing_days from order if available (calculated at order creation)
     // Otherwise calculate it dynamically
     let processingDays: string;
@@ -53,7 +59,7 @@ export class WhatsAppTemplateService {
       processingDays = await this.translationService.calculateProcessingDays(
         order.product_country,
         order.urgency ?? undefined,
-        order.product_days_to_use ?? undefined
+        order.product_days_to_use ?? undefined,
       );
     }
 
@@ -66,7 +72,7 @@ export class WhatsAppTemplateService {
       visaType: visaTypeHebrew,
       applicantCount: String(order.visa_quantity || 1),
       paymentAmount: String(order.amount || 0),
-      processingDays: processingDays // Processing days in business days
+      processingDays: processingDays, // Processing days in business days
     };
   }
 
@@ -75,8 +81,10 @@ export class WhatsAppTemplateService {
    * NOTE: This needs to be converted to a WhatsApp Business template
    */
   buildStatusUpdateMessage(order: OrderData): string {
-    const countryHebrew = this.translationService.getCountryNameHebrew(order.product_country);
-    
+    const countryHebrew = this.translationService.getCountryNameHebrew(
+      order.product_country,
+    );
+
     return `שלום ${order.client_name},
 
 עדכון לגבי הזמנה ${order.order_id} - ויזה ל${countryHebrew}:
@@ -93,8 +101,10 @@ export class WhatsAppTemplateService {
    * NOTE: This needs to be converted to a WhatsApp Business template
    */
   buildDocumentReadyMessage(order: OrderData): string {
-    const countryHebrew = this.translationService.getCountryNameHebrew(order.product_country);
-    
+    const countryHebrew = this.translationService.getCountryNameHebrew(
+      order.product_country,
+    );
+
     return `שלום ${order.client_name},
 
 חדשות טובות! 🎉
@@ -112,9 +122,9 @@ export class WhatsAppTemplateService {
    */
   getTemplateName(messageType: string): string | null {
     const templateMap: Record<string, string> = {
-      'order_confirmation': 'order_confirmation_global',
-      'status_update': 'status_update', // To be created
-      'document_ready': 'document_ready', // To be created
+      order_confirmation: 'order_confirmation_global',
+      status_update: 'status_update', // To be created
+      document_ready: 'document_ready', // To be created
     };
 
     return templateMap[messageType] || null;

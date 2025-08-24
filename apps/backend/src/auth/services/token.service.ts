@@ -78,7 +78,10 @@ export class TokenService {
   /**
    * Gets the current user from the session
    */
-  async getCurrentUser(): Promise<{ user: AuthUser | null; error: Error | null }> {
+  async getCurrentUser(): Promise<{
+    user: AuthUser | null;
+    error: Error | null;
+  }> {
     const { data, error } = await this.supabase.client.auth.getUser();
 
     if (error) {

@@ -5,11 +5,7 @@ import { CacheWarmingService } from './cache-warming.service';
 import { CacheModule as BackendCacheModule } from '@visapi/backend-cache';
 
 @Module({
-  imports: [
-    BackendCacheModule,
-    CqrsModule,
-    ScheduleModule.forRoot(),
-  ],
+  imports: [BackendCacheModule, CqrsModule, ScheduleModule.forRoot()],
   providers: [CacheWarmingService],
   exports: [CacheWarmingService],
 })

@@ -1,4 +1,7 @@
-import { OrderSpecificationBuilder, OrderSpecificationFactory } from './specification.builder';
+import {
+  OrderSpecificationBuilder,
+  OrderSpecificationFactory,
+} from './specification.builder';
 import type { QueryObject } from './specification.base';
 
 describe('OrderSpecificationBuilder', () => {
@@ -39,7 +42,9 @@ describe('OrderSpecificationBuilder', () => {
       const endDate = new Date('2025-01-31');
 
       // Act
-      const query: QueryObject = builder.withinDateRange(startDate, endDate).toQuery();
+      const query: QueryObject = builder
+        .withinDateRange(startDate, endDate)
+        .toQuery();
 
       // Assert
       expect(query).toEqual({
@@ -102,7 +107,7 @@ describe('OrderSpecificationBuilder', () => {
         .withBranch('IL')
         .withBranch('US')
         .build();
-      
+
       const description = specification?.getDescription() || '';
 
       // Assert
@@ -111,16 +116,15 @@ describe('OrderSpecificationBuilder', () => {
 
     it('should handle multiple branches with OR logic', () => {
       // Act
-      const query: QueryObject = builder.withBranches(['IL', 'US', 'UK']).toQuery();
+      const query: QueryObject = builder
+        .withBranches(['IL', 'US', 'UK'])
+        .toQuery();
 
       // Assert
       expect(query).toEqual({
         $or: [
           {
-            $or: [
-              { branch: 'IL' },
-              { branch: 'US' },
-            ],
+            $or: [{ branch: 'IL' }, { branch: 'US' }],
           },
           { branch: 'UK' },
         ],
@@ -160,7 +164,7 @@ describe('OrderSpecificationBuilder', () => {
 
 describe('OrderSpecificationFactory', () => {
   describe('Predefined Specifications', () => {
-    it('should create specification for today\'s orders', () => {
+    it("should create specification for today's orders", () => {
       // Act
       const spec = OrderSpecificationFactory.todaysOrders();
       const query: QueryObject = spec.toQuery();
@@ -169,7 +173,7 @@ describe('OrderSpecificationFactory', () => {
       expect(query.created_at).toBeDefined();
       expect(query.created_at.$gte).toBeInstanceOf(Date);
       expect(query.created_at.$lte).toBeInstanceOf(Date);
-      
+
       // Verify it's today
       const createdAt = query.created_at as { $gte: Date; $lte: Date };
       const startDate = createdAt.$gte;

@@ -30,7 +30,9 @@ async function bootstrap() {
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
-    const expressInstance = app.getHttpAdapter().getInstance() as { set: (key: string, value: number) => void };
+    const expressInstance = app.getHttpAdapter().getInstance() as {
+      set: (key: string, value: number) => void;
+    };
     expressInstance.set('trust proxy', 1);
     Logger.log('Trust proxy enabled for production environment');
   }
@@ -80,7 +82,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  
+
   // Apply authentication middleware to Swagger routes in production
   if (configService.nodeEnv === 'production') {
     const swaggerAuth = createSwaggerAuthMiddleware(configService);
@@ -88,7 +90,7 @@ async function bootstrap() {
     app.use('/api/docs-json', swaggerAuth);
     Logger.log('Swagger documentation protected with authentication');
   }
-  
+
   SwaggerModule.setup('api/docs', app, document);
 
   const port = configService.port;

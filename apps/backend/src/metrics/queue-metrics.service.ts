@@ -48,7 +48,10 @@ export class QueueMetricsService implements OnModuleInit {
         this.metricsService.setQueueDepth(name, 'delayed', delayed);
       } catch (error) {
         // Log error but don't crash the metrics collection
-        this.logger.error(`Failed to collect metrics for queue ${name}:`, error);
+        this.logger.error(
+          `Failed to collect metrics for queue ${name}:`,
+          error,
+        );
       }
     }
   }

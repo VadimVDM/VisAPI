@@ -30,11 +30,17 @@ export class MetaRootWebhookController {
   @Get()
   async handleRootGet(@Query() query: any): Promise<string> {
     // Check if this is a webhook verification request
-    if (query['hub.mode'] && query['hub.verify_token'] && query['hub.challenge']) {
-      this.logger.log('Root webhook verification request received, forwarding to WhatsApp controller');
+    if (
+      query['hub.mode'] &&
+      query['hub.verify_token'] &&
+      query['hub.challenge']
+    ) {
+      this.logger.log(
+        'Root webhook verification request received, forwarding to WhatsApp controller',
+      );
       return this.whatsappController.verifyWebhook(query);
     }
-    
+
     // Not a webhook request, return a simple status page
     return `
 <!DOCTYPE html>
@@ -67,7 +73,9 @@ export class MetaRootWebhookController {
     @Headers() headers: any,
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
-    this.logger.log('Root webhook POST received, forwarding to WhatsApp controller');
+    this.logger.log(
+      'Root webhook POST received, forwarding to WhatsApp controller',
+    );
     return this.whatsappController.receiveWebhook(body, headers, req);
   }
 }

@@ -146,7 +146,9 @@ export class OrderValidatorService {
       sanitized.client_name = this.sanitizeString(sanitized.client_name);
     }
     if (sanitized.client_email) {
-      sanitized.client_email = this.sanitizeString(sanitized.client_email).toLowerCase();
+      sanitized.client_email = this.sanitizeString(
+        sanitized.client_email,
+      ).toLowerCase();
     }
     // product_name is now in product_data JSON, no need to sanitize here
 

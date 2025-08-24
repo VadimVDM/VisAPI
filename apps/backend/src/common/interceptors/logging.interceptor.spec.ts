@@ -61,7 +61,7 @@ describe('LoggingInterceptor', () => {
 
   beforeEach(() => {
     interceptor = new LoggingInterceptor();
-    
+
     mockRequest = {
       method: 'GET',
       url: '/api/v1/orders',
@@ -98,17 +98,22 @@ describe('LoggingInterceptor', () => {
       mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        next: () => {
-          // Assert
-          expect(mockRequest.correlationId).toBe('test-correlation-123');
-          expect(mockResponse.setHeader).toHaveBeenCalledWith(
-            'x-correlation-id',
-            'test-correlation-123',
-          );
-          done();
-        },
-      });
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          next: () => {
+            // Assert
+            expect(mockRequest.correlationId).toBe('test-correlation-123');
+            expect(mockResponse.setHeader).toHaveBeenCalledWith(
+              'x-correlation-id',
+              'test-correlation-123',
+            );
+            done();
+          },
+        });
     });
 
     it('should generate new correlation ID when not provided', (done) => {
@@ -117,18 +122,23 @@ describe('LoggingInterceptor', () => {
       mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        next: () => {
-          // Assert
-          expect(mockRequest.correlationId).toBeDefined();
-          expect(mockRequest.correlationId).toMatch(/^[a-f0-9-]+$/);
-          expect(mockResponse.setHeader).toHaveBeenCalledWith(
-            'x-correlation-id',
-            mockRequest.correlationId,
-          );
-          done();
-        },
-      });
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          next: () => {
+            // Assert
+            expect(mockRequest.correlationId).toBeDefined();
+            expect(mockRequest.correlationId).toMatch(/^[a-f0-9-]+$/);
+            expect(mockResponse.setHeader).toHaveBeenCalledWith(
+              'x-correlation-id',
+              mockRequest.correlationId,
+            );
+            done();
+          },
+        });
     });
   });
 
@@ -141,25 +151,33 @@ describe('LoggingInterceptor', () => {
         token: 'jwt-token-here',
         data: 'normal-data',
       };
-      
+
       mockRequest.headers['x-api-key'] = 'secret-api-key';
-      
+
       // Spy on logger with proper typing
-      const logSpy = jest.spyOn((interceptor as unknown as InterceptorWithLogger).logger, 'log');
+      const logSpy = jest.spyOn(
+        (interceptor as unknown as InterceptorWithLogger).logger,
+        'log',
+      );
       mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        next: () => {
-          // Assert
-          const logCall = logSpy.mock.calls[0][0] as LogCall;
-          expect(logCall.body.password).toBe('[REDACTED]');
-          expect(logCall.body.token).toBe('[REDACTED]');
-          expect(logCall.body.username).toBe('testuser');
-          expect(logCall.body.data).toBe('normal-data');
-          done();
-        },
-      });
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          next: () => {
+            // Assert
+            const logCall = logSpy.mock.calls[0][0] as LogCall;
+            expect(logCall.body.password).toBe('[REDACTED]');
+            expect(logCall.body.token).toBe('[REDACTED]');
+            expect(logCall.body.username).toBe('testuser');
+            expect(logCall.body.data).toBe('normal-data');
+            done();
+          },
+        });
     });
 
     it('should sanitize nested objects', (done) => {
@@ -173,36 +191,47 @@ describe('LoggingInterceptor', () => {
           },
         },
       };
-      
-      const logSpy = jest.spyOn((interceptor as unknown as InterceptorWithLogger).logger, 'log');
+
+      const logSpy = jest.spyOn(
+        (interceptor as unknown as InterceptorWithLogger).logger,
+        'log',
+      );
       mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        next: () => {
-          // Assert
-          const logCall = logSpy.mock.calls[0][0] as LogCall;
-          const userData = logCall.body.user as {
-            name: string;
-            credentials: {
-              password: string;
-              apiSecret: string;
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          next: () => {
+            // Assert
+            const logCall = logSpy.mock.calls[0][0] as LogCall;
+            const userData = logCall.body.user as {
+              name: string;
+              credentials: {
+                password: string;
+                apiSecret: string;
+              };
             };
-          };
-          expect(userData.name).toBe('Test User');
-          expect(userData.credentials.password).toBe('[REDACTED]');
-          expect(userData.credentials.apiSecret).toBe('[REDACTED]');
-          done();
-        },
-      });
+            expect(userData.name).toBe('Test User');
+            expect(userData.credentials.password).toBe('[REDACTED]');
+            expect(userData.credentials.apiSecret).toBe('[REDACTED]');
+            done();
+          },
+        });
     });
   });
 
   describe('Performance Monitoring', () => {
     it('should log warning for slow requests', (done) => {
       // Arrange
-      const warnSpy = jest.spyOn((interceptor as unknown as InterceptorWithLogger).logger, 'warn');
-      
+      const warnSpy = jest.spyOn(
+        (interceptor as unknown as InterceptorWithLogger).logger,
+        'warn',
+      );
+
       // Mock Date.now to simulate time passing
       const originalDateNow = Date.now;
       const startTime = originalDateNow();
@@ -219,24 +248,29 @@ describe('LoggingInterceptor', () => {
       mockCallHandler.handle = jest.fn().mockReturnValue(of({ success: true }));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        next: () => {
-          // Assert
-          expect(warnSpy).toHaveBeenCalledWith(
-            expect.objectContaining({
-              message: 'Slow request detected',
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              correlationId: expect.any(String),
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              responseTime: expect.stringContaining('ms'),
-            }),
-          );
-          
-          // Cleanup
-          Date.now = originalDateNow;
-          done();
-        },
-      });
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          next: () => {
+            // Assert
+            expect(warnSpy).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: 'Slow request detected',
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                correlationId: expect.any(String),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                responseTime: expect.stringContaining('ms'),
+              }),
+            );
+
+            // Cleanup
+            Date.now = originalDateNow;
+            done();
+          },
+        });
     });
   });
 
@@ -246,32 +280,42 @@ describe('LoggingInterceptor', () => {
       const error: TestError = new Error('Test error') as TestError;
       error.stack = 'Error stack trace';
       error.status = 500;
-      
-      const errorSpy = jest.spyOn((interceptor as unknown as InterceptorWithLogger).logger, 'error');
-      mockCallHandler.handle = jest.fn().mockReturnValue(throwError(() => error));
+
+      const errorSpy = jest.spyOn(
+        (interceptor as unknown as InterceptorWithLogger).logger,
+        'error',
+      );
+      mockCallHandler.handle = jest
+        .fn()
+        .mockReturnValue(throwError(() => error));
 
       // Act
-      interceptor.intercept(mockExecutionContext as ExecutionContext, mockCallHandler as CallHandler).subscribe({
-        error: (err) => {
-          // Assert
-          expect(errorSpy).toHaveBeenCalledWith(
-            expect.objectContaining({
-              message: 'Request failed',
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              correlationId: expect.any(String),
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              error: expect.objectContaining({
-                name: 'Error',
-                message: 'Test error',
-                stack: 'Error stack trace',
-                statusCode: 500,
+      interceptor
+        .intercept(
+          mockExecutionContext as ExecutionContext,
+          mockCallHandler as CallHandler,
+        )
+        .subscribe({
+          error: (err) => {
+            // Assert
+            expect(errorSpy).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: 'Request failed',
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                correlationId: expect.any(String),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                error: expect.objectContaining({
+                  name: 'Error',
+                  message: 'Test error',
+                  stack: 'Error stack trace',
+                  statusCode: 500,
+                }),
               }),
-            }),
-          );
-          expect(err).toBe(error);
-          done();
-        },
-      });
+            );
+            expect(err).toBe(error);
+            done();
+          },
+        });
     });
   });
 });

@@ -4,7 +4,11 @@ import { HttpException, HttpStatus } from '@nestjs/common';
  * Base class for business exceptions
  */
 export abstract class BusinessException extends HttpException {
-  constructor(message: string, status: HttpStatus, public readonly code?: string) {
+  constructor(
+    message: string,
+    status: HttpStatus,
+    public readonly code?: string,
+  ) {
     super({ message, code }, status);
   }
 }
@@ -14,7 +18,11 @@ export abstract class BusinessException extends HttpException {
  */
 export class OrderNotFoundException extends BusinessException {
   constructor(orderId: string) {
-    super(`Order with ID ${orderId} not found`, HttpStatus.NOT_FOUND, 'ORDER_NOT_FOUND');
+    super(
+      `Order with ID ${orderId} not found`,
+      HttpStatus.NOT_FOUND,
+      'ORDER_NOT_FOUND',
+    );
   }
 }
 
@@ -35,7 +43,10 @@ export class OrderAlreadyExistsException extends BusinessException {
  * Invalid order data exception
  */
 export class InvalidOrderDataException extends BusinessException {
-  constructor(message: string, public readonly errors?: Record<string, string[]>) {
+  constructor(
+    message: string,
+    public readonly errors?: Record<string, string[]>,
+  ) {
     super(message, HttpStatus.BAD_REQUEST, 'INVALID_ORDER_DATA');
   }
 
@@ -79,7 +90,11 @@ export class WorkflowExecutionException extends BusinessException {
  */
 export class InvalidApiKeyException extends BusinessException {
   constructor() {
-    super('Invalid or expired API key', HttpStatus.UNAUTHORIZED, 'INVALID_API_KEY');
+    super(
+      'Invalid or expired API key',
+      HttpStatus.UNAUTHORIZED,
+      'INVALID_API_KEY',
+    );
   }
 }
 
