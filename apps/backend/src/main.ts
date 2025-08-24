@@ -114,7 +114,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // Enable graceful shutdown hooks
-  app.enableShutdownHooks();
+  // Note: Disabled due to Fastify closeIdleConnections compatibility issue with Node.js 22
+  // app.enableShutdownHooks();
 
   // Register shutdown handlers
   const shutdown = async (signal: string) => {
