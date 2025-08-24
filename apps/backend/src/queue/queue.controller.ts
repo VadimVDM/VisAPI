@@ -1,10 +1,9 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { CBBSyncMetricsService } from './services/cbb-sync-metrics.service';
-import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { Scopes } from '../auth/decorators/scopes.decorator';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Queue')
 @Controller('v1/queue')
@@ -15,8 +14,9 @@ export class QueueController {
   ) {}
 
   @Get('metrics')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions('queues:read')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('queues:read')
+  @ApiBearerAuth('api-key')
   @ApiOperation({ summary: 'Get queue metrics' })
   @ApiResponse({ status: 200, description: 'Returns queue metrics' })
   async getMetrics() {
@@ -24,8 +24,9 @@ export class QueueController {
   }
 
   @Get('metrics/cbb-sync')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions('queues:read')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('queues:read')
+  @ApiBearerAuth('api-key')
   @ApiOperation({ summary: 'Get CBB sync metrics' })
   @ApiResponse({ status: 200, description: 'Returns CBB sync metrics summary' })
   async getCBBSyncMetrics() {

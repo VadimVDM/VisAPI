@@ -102,6 +102,7 @@ async function createAdminKey() {
           'orders:write',
           'triggers:create',
           'logs:write',
+          'queues:read',
         ],
         created_by: userId,
         expires_at: new Date(

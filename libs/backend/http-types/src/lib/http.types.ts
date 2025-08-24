@@ -59,6 +59,41 @@ export interface EnhancedError extends Error {
 }
 
 /**
+ * RFC 7807 Problem Details response format
+ */
+export interface ProblemDetails {
+  /** A URI reference that identifies the problem type */
+  type: string;
+  /** A short, human-readable summary of the problem type */
+  title: string;
+  /** The HTTP status code */
+  status: number;
+  /** A human-readable explanation specific to this occurrence */
+  detail?: string;
+  /** A URI reference that identifies the specific occurrence */
+  instance?: string;
+  /** Request correlation ID for tracing */
+  correlationId?: string;
+  /** ISO timestamp of when the error occurred */
+  timestamp: string;
+  /** Application-specific error code */
+  code?: string;
+  /** Validation errors (for 400/422 responses) */
+  errors?: Record<string, string[]>;
+}
+
+/**
+ * Base error code definition structure
+ */
+export interface ErrorCodeDefinition {
+  code: string;
+  type: string;
+  title: string;
+  status: number;
+  description: string;
+}
+
+/**
  * Type for data that can be sanitized
  */
 export type SanitizableData =

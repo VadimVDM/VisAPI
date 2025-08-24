@@ -128,6 +128,11 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         result.message_id || 'sent',
       );
 
+      // Update CBB contact flag for order confirmation messages
+      if (messageType === 'order_confirmation') {
+        await this.updateCBBNotificationFlag(orderId);
+      }
+
       // Only log success in development
       if (!this.configService.isProduction) {
         this.logger.log(
@@ -364,6 +369,39 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       // Only log status updates in development
       this.logger.log(
         `Created WhatsApp message record for order ${orderId}: ${messageType}, message_id=${messageId}`,
+      );
+    }
+  }
+
+  /**
+   * Update CBB contact notification flag after successful message sending
+   */
+  private async updateCBBNotificationFlag(orderId: string): Promise<void> {
+    try {
+      const { error } = await this.supabaseService.serviceClient
+        .from('cbb_contacts')
+        .update({
+          new_order_notification_sent: true,
+          new_order_notification_sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_id', orderId);
+
+      if (error) {
+        // Don't throw error - this is not critical enough to fail the message processing
+        this.logger.warn(
+          `Failed to update CBB notification flag for order ${orderId}: ${error.message}`,
+        );
+      } else if (!this.configService.isProduction) {
+        this.logger.debug(
+          `Updated CBB notification flag for order ${orderId}`,
+        );
+      }
+    } catch (error) {
+      // Log but don't fail the message processing
+      this.logger.error(
+        `Error updating CBB notification flag for order ${orderId}:`,
+        error,
       );
     }
   }

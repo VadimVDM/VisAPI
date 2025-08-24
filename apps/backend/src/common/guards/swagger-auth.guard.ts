@@ -4,7 +4,6 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@visapi/core-config';
 
 /**
@@ -54,7 +53,7 @@ export class SwaggerAuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest();
 
     // Check for API key authentication
     const apiKey = request.headers['x-api-key'] as string;
@@ -87,8 +86,9 @@ export class SwaggerAuthGuard implements CanActivate {
 }
 
 /**
- * Express middleware for Swagger authentication
+ * Middleware for Swagger authentication
  * Used to protect the Swagger UI route at application level
+ * Works with both Express and Fastify
  */
 export function createSwaggerAuthMiddleware(configService: ConfigService) {
   const isProduction = configService.isProduction;
@@ -117,7 +117,7 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
     // Use empty set
   }
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: any, res: any, next: any) => {
     // Allow unrestricted access in development/test
     if (!isProduction) {
       return next();
@@ -144,10 +144,20 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
     }
 
     // If no valid authentication, request Basic auth
-    res.setHeader('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
-    res.status(401).json({
-      statusCode: 401,
-      message: 'Authentication required to access API documentation',
-    });
+    // Works for both Express and Fastify
+    if (res.setHeader) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
+      res.status(401).json({
+        statusCode: 401,
+        message: 'Authentication required to access API documentation',
+      });
+    } else {
+      // Fastify response
+      res.header('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
+      res.code(401).send({
+        statusCode: 401,
+        message: 'Authentication required to access API documentation',
+      });
+    }
   };
 }

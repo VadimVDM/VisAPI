@@ -1,9 +1,13 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
-import helmet from 'helmet';
+import fastifyHelmet from '@fastify/helmet';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
 // Read version from package.json at build time
 const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
@@ -15,23 +19,41 @@ try {
   // Use default version if package.json is not available
 }
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    // Raw body is needed for webhook signature verification
-    rawBody: true,
-  });
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      logger: false,
+      bodyLimit: 10485760, // 10MB
+    }),
+    {
+      // Raw body is needed for webhook signature verification
+      rawBody: true,
+    },
+  );
   const configService = app.get(ConfigService);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
-  // Security
-  app.use(helmet());
+  // Security - Fastify helmet
+  await app.register(fastifyHelmet, {
+    contentSecurityPolicy: configService.nodeEnv === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    } : false,
+  });
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
-    const expressInstance = app.getHttpAdapter().getInstance() as {
-      set: (key: string, value: number) => void;
+    const fastifyInstance = app.getHttpAdapter().getInstance();
+    // Fastify uses server.trustProxy property
+    (fastifyInstance as any).server = { 
+      ...(fastifyInstance as any).server,
+      trustProxy: true 
     };
-    expressInstance.set('trust proxy', 1);
     Logger.log('Trust proxy enabled for production environment');
   }
 
@@ -124,8 +146,11 @@ async function bootstrap() {
   Logger.log(`Attempting to start server on port ${port}...`);
 
   try {
-    // Bind to 0.0.0.0 to accept external connections
-    await app.listen(port, '0.0.0.0');
+    // Bind to 0.0.0.0 to accept external connections (Fastify format)
+    await app.listen({
+      port,
+      host: '0.0.0.0',
+    });
     Logger.log(
       `🚀 Application is running on: http://0.0.0.0:${port}/${globalPrefix}`,
     );

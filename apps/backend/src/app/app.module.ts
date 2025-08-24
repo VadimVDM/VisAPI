@@ -22,12 +22,14 @@ import { TransformInterceptor } from '../common/interceptors/transform.intercept
 import { SlackModule } from '../notifications/slack.module';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { CacheModule } from '@visapi/backend-cache';
 import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
+import Redis from 'ioredis';
 
 // Initialize Sentry if DSN is configured
 const configService = new ConfigService();
@@ -88,6 +90,7 @@ if (sentryConfig.dsn) {
 @Module({
   imports: [
     SentryModule.forRoot(),
+    // TracingModule, // TODO: Fix OpenTelemetry Resource import
     ConfigModule,
     CacheModule.forRoot({ isGlobal: true }),
     CacheManagementModule,
@@ -108,12 +111,31 @@ if (sentryConfig.dsn) {
         },
       }),
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 200, // 200 requests per minute
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.redisUrl;
+        
+        // If Redis is available, use Redis storage; otherwise fallback to in-memory
+        const storage = redisUrl
+          ? new ThrottlerStorageRedisService(new Redis(redisUrl, {
+              maxRetriesPerRequest: 3,
+              retryStrategy: (times) => Math.min(times * 50, 2000),
+            }))
+          : undefined;
+        
+        return {
+          throttlers: [
+            {
+              ttl: 60000, // 1 minute
+              limit: 200, // 200 requests per minute (default)
+            },
+          ],
+          storage,
+        };
       },
-    ]),
+    }),
     SupabaseModule,
     AuthModule,
     LogsModule,
