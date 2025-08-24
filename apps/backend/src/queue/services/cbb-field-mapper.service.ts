@@ -272,10 +272,8 @@ export class CBBFieldMapperService {
       order_days: computed.processingDays, // Processing days for WhatsApp template
 
       // Boolean field (type 4) - CBB expects 1 for true, 0 for false
+      // Note: order_priority field removed - we only need the boolean order_urgent
       order_urgent: computed.isUrgent ? 1 : 0,
-
-      // Additional order information
-      order_priority: order.product_data?.urgency || 'standard',
 
       // Date field (type 2) expects Unix timestamp in seconds
       order_date: computed.orderDateUnix,
