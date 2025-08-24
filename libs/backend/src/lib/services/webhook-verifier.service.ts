@@ -11,7 +11,16 @@ export class WebhookVerifierService {
 
   constructor(private readonly configService: ConfigService) {
     this.verifyToken = this.configService.get('WABA_VERIFY_TOKEN', 'Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U');
-    this.webhookSecret = this.configService.get('WABA_WEBHOOK_SECRET', '');
+    // Use WABA_WEBHOOK_SECRET first, fallback to WABA_APP_SECRET for backwards compatibility
+    this.webhookSecret = this.configService.get('WABA_WEBHOOK_SECRET', '') || 
+                         this.configService.get('WABA_APP_SECRET', '');
+    
+    if (!this.webhookSecret) {
+      this.logger.warn('⚠️ WABA_WEBHOOK_SECRET not configured - webhook signature verification will fail');
+      this.logger.warn('Please set WABA_WEBHOOK_SECRET to your Meta App Secret from: https://developers.facebook.com/apps/YOUR_APP_ID/settings/basic/');
+    } else {
+      this.logger.log(`✅ Webhook secret configured (length: ${this.webhookSecret.length})`);
+    }
   }
 
   verifyWebhookChallenge(query: WebhookVerifyDto): string {

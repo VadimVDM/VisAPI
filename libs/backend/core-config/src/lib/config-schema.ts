@@ -110,8 +110,8 @@ export const EnvSchema = z.object({
   WABA_PHONE_NUMBER_ID: z.string().optional(),
   WABA_BUSINESS_ID: z.string().optional(),
   WABA_ACCESS_TOKEN: z.string().optional(),
-  WABA_WEBHOOK_SECRET: z.string().optional(),
-  WABA_APP_SECRET: z.string().optional(),
+  WABA_WEBHOOK_SECRET: z.string().optional(), // Meta App Secret for webhook signature verification
+  WABA_APP_SECRET: z.string().optional(), // Deprecated - use WABA_WEBHOOK_SECRET
   WABA_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
   
   // Workflow configuration
