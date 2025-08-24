@@ -115,7 +115,15 @@ if (sentryConfig.dsn) {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const redisUrl = configService.redisUrl;
+        // Use public URL if available (for Railway), otherwise use standard URL
+        let publicRedisUrl: string | undefined;
+        try {
+          publicRedisUrl = configService.get<string>('redis.publicUrl');
+        } catch {
+          // Public URL is optional
+          publicRedisUrl = undefined;
+        }
+        const redisUrl = publicRedisUrl || configService.redisUrl;
         
         // If Redis is available, use Redis storage; otherwise fallback to in-memory
         const storage = redisUrl
