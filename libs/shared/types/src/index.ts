@@ -4,3 +4,4 @@ export * from './lib/cbb.types';
 export * from './lib/workflow.types';
 export * from './lib/queue.types';
 export * from './lib/models';
+export * from './lib/business-rules.types';

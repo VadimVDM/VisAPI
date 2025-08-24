@@ -49,8 +49,17 @@ export class WebhookVerifierService {
     signature: string | undefined,
     timestamp?: string,
   ): Promise<boolean> {
-    if (!signature || !this.webhookSecret) {
-      this.logger.warn('Missing signature or webhook secret');
+    // If no webhook secret is configured, skip verification (development only)
+    if (!this.webhookSecret) {
+      this.logger.warn('⚠️ WABA_WEBHOOK_SECRET not configured - skipping signature verification');
+      this.logger.warn('This is INSECURE and should only be used for development/debugging');
+      return true; // Allow webhook through for debugging
+    }
+
+    // If no signature provided but secret is configured, reject
+    if (!signature) {
+      this.logger.error('Missing webhook signature in request headers');
+      this.logger.debug('Expected header: X-Hub-Signature-256');
       return false;
     }
 
@@ -74,8 +83,9 @@ export class WebhookVerifierService {
         this.logger.error(`Webhook signature verification failed`);
         this.logger.debug(`Expected: sha256=${expectedSignature}`);
         this.logger.debug(`Received: ${signature}`);
+        this.logger.debug(`Secret length: ${this.webhookSecret.length} chars`);
       } else {
-        this.logger.log('Webhook signature verified successfully');
+        this.logger.log('✅ Webhook signature verified successfully');
       }
 
       return isValid;

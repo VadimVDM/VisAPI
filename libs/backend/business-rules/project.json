@@ -1,0 +1,20 @@
+{
+  "name": "backend-business-rules",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/business-rules/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/backend/business-rules",
+        "tsConfig": "libs/backend/business-rules/tsconfig.lib.json",
+        "packageJson": "libs/backend/business-rules/package.json",
+        "main": "libs/backend/business-rules/src/index.ts",
+        "assets": ["libs/backend/business-rules/*.md"]
+      }
+    }
+  }
+}

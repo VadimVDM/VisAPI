@@ -94,10 +94,20 @@ export class WhatsAppWebhookController {
   ): Promise<{ status: string }> {
     const eventId = uuidv4();
     this.logger.log(`Received WhatsApp webhook event ${eventId}`);
+    
+    // Log all headers for debugging (remove in production)
+    this.logger.debug('Webhook headers:', Object.keys(headers).filter(h => h.startsWith('x-')));
 
     try {
       const signature = headers['x-hub-signature-256'];
       const timestamp = headers['x-hub-timestamp'] || Date.now().toString();
+      
+      // Log signature presence for debugging
+      if (signature) {
+        this.logger.debug(`Signature header present: ${signature.substring(0, 20)}...`);
+      } else {
+        this.logger.warn('No X-Hub-Signature-256 header found in request');
+      }
 
       const isValidSignature = await this.webhookVerifier.verifyWebhookSignature(
         JSON.stringify(body),
@@ -106,8 +116,10 @@ export class WhatsAppWebhookController {
       );
 
       if (!isValidSignature && this.configService.get('NODE_ENV') === 'production') {
-        this.logger.error('Invalid webhook signature');
+        this.logger.error('Invalid webhook signature - webhook rejected');
         throw new UnauthorizedException('Invalid webhook signature');
+      } else if (!isValidSignature) {
+        this.logger.warn('⚠️ Invalid signature but allowing in non-production mode');
       }
 
       const eventType = this.webhookVerifier.extractEventType(body);
