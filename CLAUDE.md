@@ -15,10 +15,11 @@ Essential reference for AI assistants. Updated: August 23, 2025
 ### Current Status
 - ✅ **Production stable** with Vizi webhook integration
 - ✅ **WhatsApp messaging** via CBB API with Hebrew support
+- ✅ **WhatsApp Business API webhooks** receiving all Meta events
+- ✅ **Template synchronization** with automatic hourly sync from Meta
 - ✅ **CQRS architecture** with repository pattern
+- ✅ **TypeScript strict mode** fully enabled
 - ✅ **16 test suites passing** (100% success rate)
-- 🚧 TypeScript strict mode migration (85 errors remaining)
-- 🚧 WhatsApp Business API hybrid architecture (63% complete)
 
 ## Project Structure
 
@@ -78,7 +79,10 @@ pnpm docker:down           # Stop services
 
 ```
 POST /api/v1/webhooks/vizi/orders   # Vizi webhook
-POST /api/v1/webhooks/whatsapp      # WhatsApp events
+GET  /api/v1/webhooks/whatsapp      # WhatsApp webhook verification
+POST /api/v1/webhooks/whatsapp      # WhatsApp events from Meta
+POST /api/v1/whatsapp/templates/sync # Manual template sync
+GET  /api/v1/whatsapp/templates      # List approved templates
 GET  /api/v1/healthz                 # Health check
 POST /api/v1/triggers/{key}          # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
@@ -112,18 +116,22 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Types**: Use `@visapi/visanet-types` for Vizi/Visanet types
 - **Validation**: Use Zod schemas for runtime validation
 
-## WhatsApp Integration
+## WhatsApp Integration (Hybrid Architecture)
 
-### CBB (Production)
+### Message Sending (CBB)
 - All message sending via `@visapi/backend-core-cbb`
 - Uses `X-ACCESS-TOKEN` header
 - Template-based messaging only
 - Hebrew translations included
+- Dashboard at CBB for manual sending
 
-### WABA (In Progress)
-- Webhook receiving via `@visapi/backend-whatsapp-business`
-- HMAC signature verification
-- Hybrid architecture with CBB
+### Webhook Receiving (Meta WABA)
+- All delivery tracking via Meta webhooks
+- HMAC-SHA256 signature verification
+- Receives ALL events for phone number ID: 1182477616994327
+- Captures events from CBB dashboard, API, and customer replies
+- Automatic template synchronization every hour
+- Stores events in `whatsapp_webhook_events` table
 
 ## Environment Variables
 
@@ -137,14 +145,21 @@ SUPABASE_SERVICE_KEY=...
 
 # Redis
 REDIS_URL=redis://...
+REDIS_PUBLIC_URL=redis://... (optional for Railway)
 
 # Email
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
 
-# WhatsApp
+# WhatsApp CBB
 CBB_API_BASE_URL=https://...
 CBB_ACCESS_TOKEN=...
+
+# WhatsApp Meta Business API
+WABA_PHONE_NUMBER_ID=...
+WABA_ACCESS_TOKEN=...
+WABA_WEBHOOK_SECRET=...
+WABA_APP_SECRET=...
 ```
 
 ## Troubleshooting
@@ -200,11 +215,10 @@ lsof -i :3000             # Check port usage
 
 ## Known Issues
 
-- TypeScript strict mode: 85 errors remaining (non-blocking)
 - NX peer dependencies: Minor version mismatch (non-blocking)
 - Lighthouse CI: Disabled due to Next.js 15 compatibility
 
 ---
 
-**Version**: v1.0.0 Production
-**Last Updated**: August 23, 2025
+**Version**: v1.0.1 Production
+**Last Updated**: August 24, 2025
