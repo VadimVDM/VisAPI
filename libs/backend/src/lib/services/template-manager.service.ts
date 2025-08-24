@@ -28,7 +28,8 @@ export class TemplateManagerService {
     const apiVersion = this.configService.get('WABA_API_VERSION', 'v23.0');
     this.baseUrl = `https://graph.facebook.com/${apiVersion}`;
     this.accessToken = this.configService.get('WABA_ACCESS_TOKEN', '');
-    this.businessId = this.configService.get('WABA_BUSINESS_ID', '');
+    // Use phone number ID for template fetching
+    this.businessId = this.configService.get('WABA_PHONE_NUMBER_ID', '');
 
     const syncInterval = parseInt(
       this.configService.get('WABA_AUTOMATED_TEMPLATE_SYNC_INTERVAL', '3600'),

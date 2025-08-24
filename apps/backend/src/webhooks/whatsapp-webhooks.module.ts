@@ -5,6 +5,7 @@ import { SupabaseModule } from '@visapi/core-supabase';
 import { WhatsAppBusinessModule } from '@visapi/backend-whatsapp-business';
 import { CacheModule } from '@visapi/backend-cache';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
+import { WhatsAppManagementController } from '../whatsapp/whatsapp-management.controller';
 import { SlackRateLimiterService } from './slack-rate-limiter.service';
 
 @Module({
@@ -15,7 +16,7 @@ import { SlackRateLimiterService } from './slack-rate-limiter.service';
     WhatsAppBusinessModule,
     CacheModule,
   ],
-  controllers: [WhatsAppWebhookController],
+  controllers: [WhatsAppWebhookController, WhatsAppManagementController],
   providers: [SlackRateLimiterService],
   exports: [SlackRateLimiterService],
 })
