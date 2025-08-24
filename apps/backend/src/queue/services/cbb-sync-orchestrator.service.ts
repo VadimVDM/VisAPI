@@ -10,6 +10,7 @@ import { LogService } from '@visapi/backend-logging';
 import { QueueService } from '../queue.service';
 import { CBBFieldMapperService } from './cbb-field-mapper.service';
 import { CBBSyncMetricsService } from './cbb-sync-metrics.service';
+import { WhatsAppTranslationService } from './whatsapp-translation.service';
 
 interface OrderData {
   order_id: string;
@@ -55,6 +56,7 @@ export class CBBSyncOrchestratorService {
     private readonly queueService: QueueService,
     private readonly fieldMapper: CBBFieldMapperService,
     private readonly metricsService: CBBSyncMetricsService,
+    private readonly translationService: WhatsAppTranslationService,
   ) {}
 
   /**
@@ -88,7 +90,26 @@ export class CBBSyncOrchestratorService {
     // If no CBB contact record exists, create it first
     if (!cbbContact) {
       this.logger.log(`Creating CBB contact record for order: ${orderId}`);
-      cbbContact = await this.fieldMapper.saveCBBContact(order);
+      
+      // Generate translations for Hebrew localization
+      const language = this.mapBranchToLanguage(order.branch);
+      const translations: {
+        countryNameTranslated?: string;
+        visaTypeTranslated?: string;
+        processingDaysTranslated?: string;
+      } = {};
+      
+      if (language === 'he') {
+        translations.countryNameTranslated = this.translationService.getCountryNameHebrew(order.product_country);
+        translations.visaTypeTranslated = this.translationService.getVisaTypeHebrew(order.product_doc_type || 'evisa', order.product_intent || undefined);
+        
+        // Generate Hebrew processing days message
+        const processingDays = this.calculateDefaultProcessingDays(order.product_country, order.is_urgent === true);
+        const countryFlag = this.translationService.getCountryFlag(order.product_country);
+        translations.processingDaysTranslated = `${countryFlag} תוך ${processingDays} ימי עסקים`;
+      }
+      
+      cbbContact = await this.fieldMapper.saveCBBContact(order, translations);
       if (!cbbContact) {
         const duration = endTimer();
         this.metricsService.recordSyncComplete(
@@ -333,22 +354,27 @@ export class CBBSyncOrchestratorService {
 
   /**
    * Queue WhatsApp order confirmation if conditions are met
+   * Now checks CBB contact's new_order_notification_sent field to prevent duplicate notifications
    */
   private async queueWhatsAppConfirmation(
     order: OrderData,
     contactId: string,
     hasWhatsApp: boolean,
   ): Promise<void> {
+    // Get CBB contact to check if new order notification has already been sent
+    const cbbContact = await this.fieldMapper.getCBBContact(order.order_id);
+    
     // Log the conditions for debugging
     this.logger.log(
       `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
       {
         hasWhatsApp,
         whatsapp_alerts_enabled: order.whatsapp_alerts_enabled,
+        cbb_alerts_enabled: cbbContact?.alerts_enabled,
+        new_order_notification_sent: cbbContact?.new_order_notification_sent,
         branch: order.branch,
         branch_lowercase: order.branch?.toLowerCase(),
         is_il_branch: order.branch?.toLowerCase() === 'il',
-        whatsapp_confirmation_sent: order.whatsapp_confirmation_sent,
       },
     );
 
@@ -357,7 +383,8 @@ export class CBBSyncOrchestratorService {
       !hasWhatsApp ||
       !order.whatsapp_alerts_enabled ||
       order.branch?.toLowerCase() !== 'il' ||
-      order.whatsapp_confirmation_sent
+      cbbContact?.alerts_enabled === false || // Check if alerts are enabled for this contact
+      cbbContact?.new_order_notification_sent === true // Check if new order notification already sent
     ) {
       if (!hasWhatsApp) {
         this.logger.log(
@@ -371,9 +398,13 @@ export class CBBSyncOrchestratorService {
         this.logger.log(
           `Non-IL branch (${order.branch}) for order ${order.order_id}, skipping`,
         );
-      } else if (order.whatsapp_confirmation_sent) {
+      } else if (cbbContact?.alerts_enabled === false) {
         this.logger.log(
-          `WhatsApp confirmation already sent for order ${order.order_id}, skipping`,
+          `WhatsApp alerts disabled for contact ${order.order_id}, skipping`,
+        );
+      } else if (cbbContact?.new_order_notification_sent === true) {
+        this.logger.log(
+          `New order notification already sent for contact ${order.order_id}, skipping`,
         );
       }
       return;
@@ -400,6 +431,12 @@ export class CBBSyncOrchestratorService {
       this.logger.log(
         `Queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId}`,
       );
+      
+      // Mark new order notification as sent to prevent duplicates
+      await this.fieldMapper.updateCBBSyncStatus(order.order_id, {
+        new_order_notification_sent: true,
+        new_order_notification_sent_at: new Date(),
+      });
     } catch (error) {
       // Don't fail the sync if we can't queue the message
       this.logger.error(
@@ -419,17 +456,22 @@ export class CBBSyncOrchestratorService {
     hasWhatsApp: boolean,
   ): Promise<void> {
     const action = isNewContact ? 'created' : 'updated';
+    
+    // Check if WhatsApp was queued based on CBB contact status
+    const cbbContact = await this.fieldMapper.getCBBContact(order.order_id);
     const whatsappQueued =
       hasWhatsApp &&
       order.whatsapp_alerts_enabled &&
       order.branch?.toLowerCase() === 'il' &&
-      !order.whatsapp_confirmation_sent;
+      cbbContact?.alerts_enabled !== false &&
+      cbbContact?.new_order_notification_sent !== true; // Will be true after notification is queued
 
     this.logger.log(`CBB contact sync successful for order ${order.order_id}`, {
       contact_id: contactId,
       action,
       has_whatsapp: hasWhatsApp,
       whatsapp_queued: whatsappQueued,
+      new_order_notification_sent: cbbContact?.new_order_notification_sent,
     });
 
     await this.logService.createLog({
@@ -606,6 +648,48 @@ export class CBBSyncOrchestratorService {
       this.logger.log(
         `Linked order ${orderId} to CBB contact ${cbbContactUuid}`,
       );
+    }
+  }
+
+  /**
+   * Map branch code to language code for translations
+   */
+  private mapBranchToLanguage(branch?: string): string {
+    switch (branch?.toLowerCase()) {
+      case 'il':
+        return 'he';
+      case 'ru':
+        return 'ru';
+      case 'se':
+        return 'sv';
+      case 'co':
+      default:
+        return 'en';
+    }
+  }
+
+  /**
+   * Calculate default processing days based on business rules
+   * This is a fallback when processing_days is not set in the order
+   */
+  private calculateDefaultProcessingDays(
+    country: string,
+    isUrgent: boolean,
+  ): number {
+    // If urgent, always 1 business day
+    if (isUrgent) {
+      return 1;
+    }
+
+    // Country-specific processing times (based on requirements)
+    const countryNormalized = country?.toLowerCase().trim();
+    switch (countryNormalized) {
+      case 'morocco':
+        return 5;
+      case 'vietnam':
+        return 7;
+      default:
+        return 3; // Default for all other countries
     }
   }
 }

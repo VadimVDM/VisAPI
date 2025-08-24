@@ -70,6 +70,7 @@ const VISA_TYPES_HEBREW: Record<string, string> = {
   student: 'סטודנט',
   evisa: 'ויזה אלקטרונית',
   'e-visa': 'ויזה אלקטרונית',
+  eta: 'אישור נסיעה',
   transit: 'מעבר',
   medical: 'רפואית',
   work: 'עבודה',

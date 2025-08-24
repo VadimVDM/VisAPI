@@ -63,6 +63,7 @@ export type Database = {
       }
       cbb_contacts: {
         Row: {
+          alerts_enabled: boolean | null
           branch: string | null
           cbb_contact_id: string | null
           cbb_created: boolean | null
@@ -89,6 +90,7 @@ export type Database = {
           visa_type_translated: string | null
         }
         Insert: {
+          alerts_enabled?: boolean | null
           branch?: string | null
           cbb_contact_id?: string | null
           cbb_created?: boolean | null
@@ -115,6 +117,7 @@ export type Database = {
           visa_type_translated?: string | null
         }
         Update: {
+          alerts_enabled?: boolean | null
           branch?: string | null
           cbb_contact_id?: string | null
           cbb_created?: boolean | null

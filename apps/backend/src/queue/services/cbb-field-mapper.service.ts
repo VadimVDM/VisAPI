@@ -59,6 +59,9 @@ interface CBBContactRecord {
   processing_days_translated?: string;
   branch?: string;
   order_days?: number;
+  alerts_enabled?: boolean;
+  new_order_notification_sent?: boolean;
+  new_order_notification_sent_at?: Date;
 }
 
 /**
@@ -135,6 +138,7 @@ export class CBBFieldMapperService {
       processing_days_translated: translations.processingDaysTranslated,
       branch: order.branch,
       order_days: processingDays,
+      alerts_enabled: order.whatsapp_alerts_enabled ?? true, // Internal tracking for WhatsApp notifications
       cbb_synced: false,
       cbb_sync_attempts: 0,
       cbb_sync_error_count: 0,
@@ -190,6 +194,9 @@ export class CBBFieldMapperService {
       cbb_sync_error_count?: number;
       cbb_sync_last_attempt_at?: Date;
       cbb_sync_last_error?: string | null;
+      alerts_enabled?: boolean;
+      new_order_notification_sent?: boolean;
+      new_order_notification_sent_at?: Date;
     },
   ): Promise<void> {
     // Convert Date to ISO string for Supabase
@@ -197,6 +204,10 @@ export class CBBFieldMapperService {
     if (updates.cbb_sync_last_attempt_at) {
       updateData.cbb_sync_last_attempt_at =
         updates.cbb_sync_last_attempt_at.toISOString();
+    }
+    if (updates.new_order_notification_sent_at) {
+      updateData.new_order_notification_sent_at =
+        updates.new_order_notification_sent_at.toISOString();
     }
 
     // Always update the updated_at timestamp
