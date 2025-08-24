@@ -74,10 +74,19 @@ export class WebhookVerifierService {
       // Remove 'sha256=' prefix if present
       const providedSignature = signature.replace('sha256=', '');
 
-      const isValid = crypto.timingSafeEqual(
-        Buffer.from(providedSignature, 'hex'),
-        Buffer.from(expectedSignature, 'hex'),
-      );
+      // Both signatures must be valid hex strings of same length
+      let isValid = false;
+      try {
+        isValid = crypto.timingSafeEqual(
+          Buffer.from(providedSignature, 'hex'),
+          Buffer.from(expectedSignature, 'hex'),
+        );
+      } catch (bufferError) {
+        this.logger.error(`Signature buffer comparison error: ${bufferError.message}`);
+        this.logger.debug(`Provided signature length: ${providedSignature.length}`);
+        this.logger.debug(`Expected signature length: ${expectedSignature.length}`);
+        return false;
+      }
 
       if (!isValid) {
         this.logger.error(`Webhook signature verification failed`);
