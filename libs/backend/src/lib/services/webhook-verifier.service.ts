@@ -35,15 +35,27 @@ export class WebhookVerifierService {
     const token = query['hub.verify_token'];
     const challenge = query['hub.challenge'];
 
-    if (mode !== 'subscribe') {
+    // Log the received parameters for debugging
+    this.logger.debug(`Webhook verification received: mode="${mode}", token="${token ? '***' : 'undefined'}", challenge="${challenge ? 'present' : 'undefined'}"`);
+
+    // Handle various forms of hub.mode that Meta might send
+    const validModes = ['subscribe', 'unsubscribe', 'Subscribe', 'Unsubscribe'];
+    if (!mode || !validModes.includes(mode)) {
+      this.logger.error(`Invalid hub.mode received: "${mode}". Expected one of: ${validModes.join(', ')}`);
       throw new UnauthorizedException('Invalid hub.mode');
     }
 
-    if (token !== this.verifyToken) {
+    if (!token || token !== this.verifyToken) {
+      this.logger.error(`Invalid verify token. Expected: "${this.verifyToken}", received: "${token}"`);
       throw new UnauthorizedException('Invalid verify token');
     }
 
-    this.logger.log('Webhook verification successful');
+    if (!challenge) {
+      this.logger.error('Missing hub.challenge parameter');
+      throw new UnauthorizedException('Missing challenge');
+    }
+
+    this.logger.log(`Webhook verification successful for mode: ${mode}`);
     return challenge;
   }
 

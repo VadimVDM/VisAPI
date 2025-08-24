@@ -62,21 +62,29 @@ export class WhatsAppWebhookController {
   @ApiOperation({ summary: 'Verify WhatsApp webhook' })
   @ApiResponse({ status: 200, description: 'Webhook verified' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async verifyWebhook(@Query() query: WebhookVerifyDto): Promise<string> {
+  async verifyWebhook(@Query() query: any): Promise<string> {
     // Only log in development to reduce production logs
     if (!this.configService.isProduction) {
       this.logger.log('WhatsApp webhook verification request received');
+      this.logger.debug(`Query parameters: ${JSON.stringify(query)}`);
     }
 
+    // Handle both direct query params and nested object structures
+    const normalizedQuery: WebhookVerifyDto = {
+      'hub.mode': query['hub.mode'] || query.hub?.mode || query['hub[mode]'],
+      'hub.verify_token': query['hub.verify_token'] || query.hub?.verify_token || query['hub[verify_token]'],
+      'hub.challenge': query['hub.challenge'] || query.hub?.challenge || query['hub[challenge]'],
+    };
+
     try {
-      const challenge = this.webhookVerifier.verifyWebhookChallenge(query);
+      const challenge = this.webhookVerifier.verifyWebhookChallenge(normalizedQuery);
 
       await this.trackWebhookEvent({
         method: 'GET',
         status: 'verified',
         challenge,
         details: {
-          mode: query['hub.mode'],
+          mode: normalizedQuery['hub.mode'],
           verified: true,
         },
       });
@@ -91,8 +99,9 @@ export class WhatsAppWebhookController {
         method: 'GET',
         status: 'failed',
         details: {
-          mode: query['hub.mode'],
+          mode: normalizedQuery['hub.mode'],
           error: errorMessage,
+          rawQuery: query,
         },
       });
 
