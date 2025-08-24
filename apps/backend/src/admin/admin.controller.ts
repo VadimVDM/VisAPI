@@ -19,7 +19,7 @@ export class AdminController {
   }
 
   @ApiExcludeEndpoint()
-  @All('(.*)') // Use regex pattern to avoid NestJS warnings
+  @All('*') // Catch-all route for queue subpaths
   handleAllQueueSubPaths(
     @Req() req: Request,
     @Res() res: Response,

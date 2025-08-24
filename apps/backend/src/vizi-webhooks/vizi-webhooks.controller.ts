@@ -31,10 +31,16 @@ import {
   ResyncCBBContactDto,
   ResyncCBBResultDto,
 } from './dto/resync-cbb-contact.dto';
+import {
+  RetriggerWhatsAppDto,
+  RetriggerWhatsAppResultDto,
+} from './dto/retrigger-whatsapp.dto';
 import { CommandBus } from '@nestjs/cqrs';
 import { ResyncCBBContactCommand } from '../orders/commands/resync-cbb-contact.command';
 import { OrdersRepository } from '@visapi/backend-repositories';
-import { CBBContactSyncResult } from '@visapi/shared-types';
+import { CBBContactSyncResult, QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
+import { QueueService } from '../queue/queue.service';
+import { SupabaseService } from '@visapi/core-supabase';
 
 @Controller('v1/webhooks/vizi')
 @ApiTags('Vizi Webhooks')
@@ -48,6 +54,8 @@ export class ViziWebhooksController {
     private readonly logService: LogService,
     private readonly commandBus: CommandBus,
     private readonly ordersRepository: OrdersRepository,
+    private readonly queueService: QueueService,
+    private readonly supabaseService: SupabaseService,
   ) {
     this.logger = new Logger(ViziWebhooksController.name);
   }
@@ -617,6 +625,274 @@ export class ViziWebhooksController {
         error: errorMessage,
         whatsappAvailable: false,
         created: false,
+      };
+    }
+  }
+
+  @Post('retrigger-whatsapp')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('webhook:vizi', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retrigger WhatsApp notification for an order',
+    description:
+      'Manually triggers WhatsApp order confirmation message for a specific order. Useful for recovery when message failed or needs to be resent. Requires admin API key.',
+  })
+  @ApiBearerAuth('api-key')
+  @ApiBody({
+    type: RetriggerWhatsAppDto,
+    description: 'WhatsApp retrigger parameters',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'WhatsApp retrigger completed',
+    type: RetriggerWhatsAppResultDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid parameters or order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions (admin required)',
+  })
+  async retriggerWhatsApp(
+    @Body() dto: RetriggerWhatsAppDto,
+    @Headers() headers: Record<string, string>,
+  ): Promise<RetriggerWhatsAppResultDto> {
+    const correlationId =
+      headers['x-correlation-id'] ||
+      headers['x-request-id'] ||
+      `retrigger-whatsapp-${Date.now()}`;
+
+    this.logger.log(
+      `Starting WhatsApp retrigger: phoneNumber=${dto.phoneNumber}, orderId=${dto.orderId}, viziOrderId=${dto.viziOrderId}, force=${dto.force}, correlationId=${correlationId}`,
+    );
+
+    // Validate that at least one parameter is provided
+    if (!dto.phoneNumber && !dto.orderId && !dto.viziOrderId) {
+      throw new BadRequestException(
+        'At least one of phoneNumber, orderId, or viziOrderId must be provided',
+      );
+    }
+
+    // Log the retrigger request
+    await this.logService.createLog({
+      level: 'info',
+      message: 'WhatsApp retrigger operation initiated',
+      metadata: {
+        phoneNumber: dto.phoneNumber,
+        orderId: dto.orderId,
+        viziOrderId: dto.viziOrderId,
+        force: dto.force,
+        source: 'admin_retrigger_whatsapp',
+      },
+      correlation_id: correlationId,
+    });
+
+    try {
+      // Find the order based on provided parameters
+      let order;
+
+      if (dto.orderId) {
+        // Direct lookup by database ID
+        order = await this.ordersRepository.findById(dto.orderId);
+      } else if (dto.viziOrderId) {
+        // Lookup by Vizi order ID (stored in order_id field)
+        const orders = await this.ordersRepository.findMany({
+          where: { order_id: dto.viziOrderId },
+        });
+        order = orders?.[0];
+      } else if (dto.phoneNumber) {
+        // Lookup by phone number - find most recent order
+        const orders = await this.ordersRepository.findMany({
+          where: { client_phone: dto.phoneNumber },
+          orderBy: 'created_at',
+          orderDirection: 'desc',
+        });
+        order = orders?.[0];
+      }
+
+      if (!order) {
+        const searchCriteria = dto.orderId
+          ? `orderId: ${dto.orderId}`
+          : dto.viziOrderId
+            ? `viziOrderId: ${dto.viziOrderId}`
+            : `phoneNumber: ${dto.phoneNumber}`;
+
+        throw new BadRequestException(`Order not found with ${searchCriteria}`);
+      }
+
+      // Only process IL branch orders
+      if (order.branch?.toLowerCase() !== 'il') {
+        return {
+          success: false,
+          orderId: order.id,
+          phoneNumber: order.client_phone || 'unknown',
+          message: `WhatsApp notification skipped - order is for ${order.branch} branch (only IL branch orders can send WhatsApp)`,
+        };
+      }
+
+      // Check if order has WhatsApp alerts enabled (unless force is true)
+      if (!dto.force && !order.whatsapp_alerts_enabled) {
+        return {
+          success: false,
+          orderId: order.id,
+          phoneNumber: order.client_phone || 'unknown',
+          message: 'WhatsApp alerts are disabled for this order. Use force=true to override.',
+        };
+      }
+
+      // Check if order has CBB contact synced
+      if (!order.cbb_contact_id) {
+        return {
+          success: false,
+          orderId: order.id,
+          phoneNumber: order.client_phone || 'unknown',
+          message: 'Order has not been synced with CBB yet. Please run CBB resync first.',
+        };
+      }
+
+      // Get CBB contact to check WhatsApp availability
+      const { data: cbbContact, error: cbbError } = await this.supabaseService.serviceClient
+        .from('cbb_contacts')
+        .select('*')
+        .eq('cbb_contact_id', order.cbb_contact_id)
+        .single();
+
+      if (cbbError || !cbbContact) {
+        return {
+          success: false,
+          orderId: order.id,
+          phoneNumber: order.client_phone || 'unknown',
+          message: 'CBB contact not found in database',
+          error: cbbError?.message,
+        };
+      }
+
+      // Note: We're not checking WhatsApp availability here since the orchestrator 
+      // already validated it during initial sync. If WhatsApp wasn't available,
+      // the alerts_enabled flag would be false.
+
+      // Check if message was already sent (unless force is true)
+      if (!dto.force) {
+        // Check WhatsApp messages table
+        const { data: existingMessage } = await this.supabaseService.serviceClient
+          .from('whatsapp_messages')
+          .select('id, confirmation_sent, status')
+          .eq('order_id', order.order_id)
+          .eq('template_name', 'order_confirmation_global')
+          .maybeSingle();
+
+        if (existingMessage?.confirmation_sent || existingMessage?.status === 'delivered') {
+          return {
+            success: false,
+            orderId: order.id,
+            phoneNumber: order.client_phone || 'unknown',
+            cbbContactUuid: order.cbb_contact_id,
+            message: 'WhatsApp notification already sent. Use force=true to resend.',
+            alreadySent: true,
+          };
+        }
+
+        // Also check CBB contact flag
+        if (cbbContact.new_order_notification_sent) {
+          return {
+            success: false,
+            orderId: order.id,
+            phoneNumber: order.client_phone || 'unknown',
+            cbbContactUuid: order.cbb_contact_id,
+            message: 'WhatsApp notification already sent (CBB flag). Use force=true to resend.',
+            alreadySent: true,
+          };
+        }
+      }
+
+      // Queue the WhatsApp message - using the exact same parameters as CBBSyncOrchestratorService
+      const job = await this.queueService.addJob(
+        QUEUE_NAMES.WHATSAPP_MESSAGES,
+        JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
+        {
+          orderId: order.order_id, // Use Vizi order ID, not database ID
+          contactId: cbbContact.cbb_contact_id, // CBB contact ID (cbb_contact_id field)
+          messageType: 'order_confirmation',
+        },
+        {
+          delay: 1000, // 1 second delay, same as in orchestrator
+          attempts: 3,
+          removeOnComplete: true,
+          removeOnFail: false,
+          backoff: {
+            type: 'exponential',
+            delay: 10000,
+          },
+        },
+      );
+
+      this.logger.log(
+        `WhatsApp message queued for order ${order.order_id} (job ID: ${job.id})`,
+      );
+
+      await this.logService.createLog({
+        level: 'info',
+        message: 'WhatsApp notification successfully queued',
+        metadata: {
+          order_id: order.order_id,
+          database_id: order.id,
+          cbb_contact_id: cbbContact.cbb_contact_id,
+          job_id: job.id,
+          force: dto.force,
+          source: 'admin_retrigger_whatsapp',
+        },
+        correlation_id: correlationId,
+      });
+
+      return {
+        success: true,
+        orderId: order.id,
+        phoneNumber: order.client_phone || 'unknown',
+        cbbContactUuid: order.cbb_contact_id,
+        message: `WhatsApp notification queued successfully (Job ID: ${job.id})`,
+        jobId: job.id,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error(
+        `WhatsApp retrigger operation failed: ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      await this.logService.createLog({
+        level: 'error',
+        message: 'WhatsApp retrigger operation failed',
+        metadata: {
+          error: errorMessage,
+          phoneNumber: dto.phoneNumber,
+          orderId: dto.orderId,
+          viziOrderId: dto.viziOrderId,
+          source: 'admin_retrigger_whatsapp',
+        },
+        correlation_id: correlationId,
+      });
+
+      // If it's already a BadRequestException, re-throw it to maintain HTTP status
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // For other errors, return a structured error response
+      return {
+        success: false,
+        phoneNumber: dto.phoneNumber || 'unknown',
+        orderId: dto.orderId || 'unknown',
+        message: 'WhatsApp retrigger failed',
+        error: errorMessage,
       };
     }
   }

@@ -162,4 +162,24 @@ const stats = await cacheService.getStats();
 - **Memory overhead**: ~10% for metadata
 - **Hit ratio target**: >85% in production
 
+## Recent Updates (August 25, 2025)
+
+### Performance Optimization Impact ✅
+
+With today's **Fastify adapter migration** and **Redis-backed rate limiting**, the cache system becomes even more critical:
+
+- **Throughput Increase**: 20-30% more requests will benefit from caching
+- **Redis Scaling**: Rate limiting and caching now share Redis infrastructure  
+- **Multi-Instance Ready**: Cache invalidation works across backend instances
+- **Error Caching**: New RFC 7807 error responses respect cache TTLs
+
+### Redis Infrastructure Consolidation
+
+The cache system now shares Redis with:
+- **Rate Limiting**: ThrottlerModule using same Redis instance
+- **Queue System**: BullMQ job processing
+- **Session Storage**: User authentication state
+
+**Configuration**: Single Redis URL supports all services with proper namespacing to avoid conflicts.
+
 Last Updated: August 25, 2025

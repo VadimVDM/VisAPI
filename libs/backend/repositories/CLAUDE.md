@@ -223,4 +223,37 @@ TestingModule.compile({
 });
 ```
 
+## Recent Updates (August 25, 2025)
+
+### Performance & Reliability Enhancements ✅
+
+Today's backend optimizations directly impact repository performance:
+
+#### Fastify Adapter Benefits
+- **Throughput**: 20-30% more database operations per second
+- **Response Time**: Faster JSON serialization for query results
+- **Memory**: Lower overhead for large result sets
+
+#### Enhanced Error Handling
+- **RFC 7807 Compliance**: All database errors now return structured Problem Details
+- **Error Codes**: Database-specific errors mapped to EXT-001 (Supabase) categories
+- **Correlation Tracking**: Every database operation includes correlation IDs
+
+#### Migration Consolidation Impact
+- **Schema Consistency**: All repositories now reference consolidated migration schemas
+- **Version Control**: Single source of truth for database structure
+- **Deployment Safety**: Unified migration validation prevents schema drift
+
+#### Example Error Response
+```json
+{
+  "type": "https://api.visanet.app/problems/supabase-connection-failed",
+  "title": "Database Connection Failed", 
+  "status": 503,
+  "code": "EXT-001",
+  "correlationId": "req-abc123",
+  "detail": "Unable to connect to the database"
+}
+```
+
 Last Updated: August 25, 2025

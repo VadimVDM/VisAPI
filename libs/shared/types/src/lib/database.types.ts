@@ -80,6 +80,8 @@ export type Database = {
           id: string
           is_urgent: boolean | null
           language_code: string | null
+          new_order_notification_sent: boolean | null
+          new_order_notification_sent_at: string | null
           order_days: number | null
           order_id: string
           processing_days: number | null
@@ -107,6 +109,8 @@ export type Database = {
           id?: string
           is_urgent?: boolean | null
           language_code?: string | null
+          new_order_notification_sent?: boolean | null
+          new_order_notification_sent_at?: string | null
           order_days?: number | null
           order_id: string
           processing_days?: number | null
@@ -134,6 +138,8 @@ export type Database = {
           id?: string
           is_urgent?: boolean | null
           language_code?: string | null
+          new_order_notification_sent?: boolean | null
+          new_order_notification_sent_at?: string | null
           order_days?: number | null
           order_id?: string
           processing_days?: number | null
