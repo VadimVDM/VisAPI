@@ -150,6 +150,16 @@ export class CBBSyncOrchestratorService {
     contactId: string,
     hasWhatsApp: boolean,
   ): Promise<void> {
+    // Log the conditions for debugging
+    this.logger.log(`Checking WhatsApp confirmation conditions for order ${order.order_id}:`, {
+      hasWhatsApp,
+      whatsapp_alerts_enabled: order.whatsapp_alerts_enabled,
+      branch: order.branch,
+      branch_lowercase: order.branch?.toLowerCase(),
+      is_il_branch: order.branch?.toLowerCase() === 'il',
+      whatsapp_confirmation_sent: order.whatsapp_confirmation_sent,
+    });
+
     // Check all conditions for sending WhatsApp confirmation
     if (
       !hasWhatsApp ||
@@ -157,7 +167,19 @@ export class CBBSyncOrchestratorService {
       order.branch?.toLowerCase() !== 'il' ||
       order.whatsapp_confirmation_sent
     ) {
-      if (order.whatsapp_confirmation_sent) {
+      if (!hasWhatsApp) {
+        this.logger.log(
+          `Contact doesn't have WhatsApp for order ${order.order_id}, skipping`,
+        );
+      } else if (!order.whatsapp_alerts_enabled) {
+        this.logger.log(
+          `WhatsApp alerts disabled for order ${order.order_id}, skipping`,
+        );
+      } else if (order.branch?.toLowerCase() !== 'il') {
+        this.logger.log(
+          `Non-IL branch (${order.branch}) for order ${order.order_id}, skipping`,
+        );
+      } else if (order.whatsapp_confirmation_sent) {
         this.logger.log(
           `WhatsApp confirmation already sent for order ${order.order_id}, skipping`,
         );

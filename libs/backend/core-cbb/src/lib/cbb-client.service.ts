@@ -401,18 +401,19 @@ export class CbbClientService {
   /**
    * Validate if phone has WhatsApp
    * NOTE: CBB API doesn't have a WhatsApp validation endpoint
-   * We assume if contact exists, they have WhatsApp capability
+   * We assume all contacts have WhatsApp capability since CBB is a WhatsApp platform
    */
   async validateWhatsApp(phone: string): Promise<boolean> {
     try {
-      this.logger.debug(`Checking if contact ${phone} exists (assuming WhatsApp if exists)`);
+      this.logger.debug(`Validating WhatsApp for ${phone} - assuming available (CBB is WhatsApp-first)`);
       
-      // Try to get the contact - if it exists, assume WhatsApp is available
-      const contact = await this.getContactById(phone);
-      return contact !== null;
+      // CBB is a WhatsApp messaging platform, so we assume all contacts can receive WhatsApp
+      // The actual validation happens when we try to send the message
+      return true;
     } catch (error) {
-      this.logger.warn(`Failed to validate WhatsApp for ${phone}:`, error);
-      return false;
+      this.logger.warn(`Error in WhatsApp validation for ${phone}:`, error);
+      // Even on error, we return true to attempt sending since CBB will handle the actual validation
+      return true;
     }
   }
 

@@ -57,7 +57,7 @@ export class WhatsAppTemplateService {
       visaType: visaTypeHebrew,
       applicantCount: String(order.visa_quantity || 1),
       paymentAmount: String(order.amount || 0),
-      processingDays: String(processingDays)
+      processingDays: processingDays // Already a string from translation service
     };
   }
 

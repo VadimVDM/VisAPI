@@ -266,12 +266,13 @@ export class WhatsAppTranslationService {
 
   /**
    * Calculate processing days based on country and urgency
+   * Returns a string in format "X-Y" for ranges or "X" for single values
    */
   calculateProcessingDays(
     country: string,
     urgency?: string,
     productDaysToUse?: number
-  ): number {
+  ): string {
     // Calculate processing time based on urgency and product type
     const isUrgent = urgency === 'urgent' || urgency === 'express';
     
@@ -288,6 +289,14 @@ export class WhatsAppTranslationService {
       baseDays = productDaysToUse;
     }
 
-    return baseDays;
+    // Return as a range for standard processing, or exact for urgent
+    if (isUrgent) {
+      return String(baseDays); // Just the number for urgent
+    }
+    
+    // For standard processing, show a range
+    const minDays = baseDays;
+    const maxDays = baseDays + 2; // Add 2 days for buffer
+    return `${minDays}-${maxDays}`;
   }
 }
