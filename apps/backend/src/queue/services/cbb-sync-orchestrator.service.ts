@@ -384,22 +384,20 @@ export class CBBSyncOrchestratorService {
     // Check WhatsApp messages table for existing successful messages
     const isAlreadySent = await this.isOrderConfirmationAlreadySent(order.order_id);
     
-    // Log the conditions for debugging (only in non-production)
-    if (process.env.NODE_ENV !== 'production') {
-      this.logger.debug(
-        `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
-        {
-          hasWhatsApp,
-          whatsapp_alerts_enabled: order.whatsapp_alerts_enabled,
-          cbb_alerts_enabled: cbbContact?.alerts_enabled,
-          new_order_notification_sent: cbbContact?.new_order_notification_sent,
-          whatsapp_message_already_sent: isAlreadySent,
-          branch: order.branch,
-          branch_lowercase: order.branch?.toLowerCase(),
-          is_il_branch: order.branch?.toLowerCase() === 'il',
-        },
-      );
-    }
+    // Always log the conditions for debugging
+    this.logger.log(
+      `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
+      {
+        hasWhatsApp,
+        whatsapp_alerts_enabled: order.whatsapp_alerts_enabled,
+        cbb_alerts_enabled: cbbContact?.alerts_enabled,
+        new_order_notification_sent: cbbContact?.new_order_notification_sent,
+        whatsapp_message_already_sent: isAlreadySent,
+        branch: order.branch,
+        branch_lowercase: order.branch?.toLowerCase(),
+        is_il_branch: order.branch?.toLowerCase() === 'il',
+      },
+    );
 
     // Check all conditions for sending WhatsApp confirmation
     if (
@@ -410,27 +408,52 @@ export class CBBSyncOrchestratorService {
       cbbContact?.new_order_notification_sent === true || // Check CBB contact flag
       isAlreadySent // Check WhatsApp messages table
     ) {
-      // Only log skip reasons in development
-      if (process.env.NODE_ENV !== 'production') {
-        if (!hasWhatsApp) {
-          this.logger.debug(`Contact doesn't have WhatsApp for order ${order.order_id}, skipping`);
-        } else if (!order.whatsapp_alerts_enabled) {
-          this.logger.debug(`WhatsApp alerts disabled for order ${order.order_id}, skipping`);
-        } else if (order.branch?.toLowerCase() !== 'il') {
-          this.logger.debug(`Non-IL branch (${order.branch}) for order ${order.order_id}, skipping`);
-        } else if (cbbContact?.alerts_enabled === false) {
-          this.logger.debug(`WhatsApp alerts disabled for contact ${order.order_id}, skipping`);
-        } else if (cbbContact?.new_order_notification_sent === true) {
-          this.logger.debug(`New order notification already sent (CBB flag) for order ${order.order_id}, skipping`);
-        } else if (isAlreadySent) {
-          this.logger.debug(`New order notification already sent (WhatsApp messages) for order ${order.order_id}, skipping`);
-        }
+      // Always log skip reasons for debugging
+      let skipReason = 'Unknown';
+      if (!hasWhatsApp) {
+        skipReason = `Contact doesn't have WhatsApp`;
+      } else if (!order.whatsapp_alerts_enabled) {
+        skipReason = `WhatsApp alerts disabled on order`;
+      } else if (order.branch?.toLowerCase() !== 'il') {
+        skipReason = `Non-IL branch (${order.branch})`;
+      } else if (cbbContact?.alerts_enabled === false) {
+        skipReason = `WhatsApp alerts disabled for CBB contact`;
+      } else if (cbbContact?.new_order_notification_sent === true) {
+        skipReason = `New order notification already sent (CBB flag)`;
+      } else if (isAlreadySent) {
+        skipReason = `New order notification already sent (WhatsApp messages table)`;
       }
+      
+      this.logger.log(`WhatsApp notification skipped for order ${order.order_id}: ${skipReason}`);
       return;
     }
 
     try {
-      await this.queueService.addJob(
+      // Create a WhatsApp message record to track that we've queued this message
+      // This prevents duplicate queueing if CBB sync runs again before the message is processed
+      const { error: trackingError } = await this.supabaseService.serviceClient
+        .from('whatsapp_messages')
+        .insert({
+          id: crypto.randomUUID(),
+          order_id: order.order_id,
+          phone_number: order.client_phone,
+          template_name: 'order_confirmation_global',
+          status: 'queued',
+          confirmation_sent: false,
+          alerts_enabled: order.whatsapp_alerts_enabled,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (trackingError && !trackingError.message?.includes('duplicate')) {
+        this.logger.warn(
+          `Failed to create WhatsApp tracking record for order ${order.order_id}: ${trackingError.message}`,
+        );
+      }
+      
+      const job = await this.queueService.addJob(
         QUEUE_NAMES.WHATSAPP_MESSAGES,
         JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
         {
@@ -447,15 +470,12 @@ export class CBBSyncOrchestratorService {
           },
         },
       );
+      
       this.logger.log(
-        `Queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId}`,
+        `Successfully queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId} (job ID: ${job.id}, job name: ${JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION})`,
       );
       
-      // Mark new order notification as sent to prevent duplicates
-      await this.fieldMapper.updateCBBSyncStatus(order.order_id, {
-        new_order_notification_sent: true,
-        new_order_notification_sent_at: new Date(),
-      });
+      // NOTE: The actual sent status will be updated by the WhatsApp processor after successful sending
     } catch (error) {
       // Don't fail the sync if we can't queue the message
       this.logger.error(
