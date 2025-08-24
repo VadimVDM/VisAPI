@@ -700,8 +700,16 @@ export class ViziWebhooksController {
       let order;
 
       if (dto.orderId) {
-        // Direct lookup by database ID
-        order = await this.ordersRepository.findById(dto.orderId);
+        // First try to find by Vizi order ID (most common case)
+        const orders = await this.ordersRepository.findMany({
+          where: { order_id: dto.orderId },
+        });
+        order = orders?.[0];
+        
+        // If not found and orderId looks like a UUID, try database ID lookup
+        if (!order && dto.orderId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          order = await this.ordersRepository.findById(dto.orderId);
+        }
       } else if (dto.viziOrderId) {
         // Lookup by Vizi order ID (stored in order_id field)
         const orders = await this.ordersRepository.findMany({
