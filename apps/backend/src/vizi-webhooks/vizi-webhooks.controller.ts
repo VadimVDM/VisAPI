@@ -560,28 +560,35 @@ export class ViziWebhooksController {
       );
 
       this.logger.log(
-        `CBB resync completed for order ${order.id}: status=${result.status}`,
+        `CBB resync completed for order ${order.id}: status=${result.status}, action=${result.action}`,
       );
 
-      // Return formatted result
+      // Return formatted result based on sync result
+      const isSuccess = result.status === 'success';
+      const message = isSuccess
+        ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
+        : result.status === 'no_whatsapp'
+          ? 'CBB contact synced but WhatsApp not available'
+          : 'CBB resync failed';
+
       return {
-        success: result.status === 'success',
-        phoneNumber: order.client_phone,
+        success: isSuccess,
+        phoneNumber: order.client_phone || 'unknown',
         orderId: order.id,
         cbbContactUuid: result.contactId,
-        message:
-          result.status === 'success'
-            ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
-            : result.status === 'no_whatsapp'
-              ? 'CBB contact synced but WhatsApp not available'
-              : 'CBB resync failed',
-        whatsappAvailable: result.hasWhatsApp,
+        message,
+        whatsappAvailable: result.hasWhatsApp ?? false,
         created: result.action === 'created',
-        error: result.error,
+        error: isSuccess ? undefined : result.error,
       };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error(
+        `CBB resync operation failed: ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       await this.logService.createLog({
         level: 'error',
@@ -596,18 +603,20 @@ export class ViziWebhooksController {
         correlation_id: correlationId,
       });
 
-      // If it's already a BadRequestException, re-throw it
+      // If it's already a BadRequestException, re-throw it to maintain HTTP status
       if (error instanceof BadRequestException) {
         throw error;
       }
 
-      // Otherwise, return a structured error response
+      // For other errors, return a structured error response
       return {
         success: false,
         phoneNumber: dto.phoneNumber || 'unknown',
         orderId: dto.orderId || 'unknown',
         message: 'CBB resync failed',
         error: errorMessage,
+        whatsappAvailable: false,
+        created: false,
       };
     }
   }

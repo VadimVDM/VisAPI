@@ -46,6 +46,7 @@ describe('WorkflowsService', () => {
   beforeEach(async () => {
     const mockSupabaseService = {
       client: mockSupabaseClient,
+      serviceClient: mockSupabaseClient,
       getClient: jest.fn().mockReturnValue(mockSupabaseClient),
     };
 
