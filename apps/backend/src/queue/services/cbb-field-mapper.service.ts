@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CBBContactData } from '@visapi/shared-types';
+import { SupabaseService } from '@visapi/core-supabase';
 
 interface PassportData {
   sex?: 'm' | 'f';
@@ -32,21 +33,44 @@ interface OrderData {
   webhook_received_at: string;
   whatsapp_alerts_enabled: boolean | null;
   applicants_data?: ApplicantData[];
-  cbb_synced?: boolean | null;
-  cbb_contact_id?: string | null;
-  whatsapp_confirmation_sent?: boolean | null;
-  whatsapp_confirmation_sent_at?: string | null;
-  whatsapp_message_id?: string | null;
   processing_days?: number | null; // Calculated by business rules engine
+}
+
+interface CBBContactRecord {
+  id: string;
+  order_id: string;
+  cbb_contact_id?: string;
+  cbb_synced: boolean;
+  cbb_sync_attempts: number;
+  cbb_sync_error_count: number;
+  cbb_sync_last_attempt_at?: Date;
+  cbb_sync_last_error?: string;
+  client_phone: string;
+  client_email?: string;
+  client_name?: string;
+  product_country?: string;
+  product_doc_type?: string;
+  urgency?: string;
+  processing_days?: number;
+  language_code: string;
+  country_name_translated?: string;
+  visa_type_translated?: string;
+  urgency_translated?: string;
+  processing_days_translated?: string;
+  branch?: string;
+  order_days?: number;
 }
 
 /**
  * Service responsible for mapping order data to CBB contact fields
  * Handles field transformations, data extraction, and formatting
+ * Now uses cbb_contacts table for storing CBB-related data
  */
 @Injectable()
 export class CBBFieldMapperService {
   private readonly logger = new Logger(CBBFieldMapperService.name);
+
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   private readonly countryFlags: Record<string, string> = {
     'india': '🇮🇳',
@@ -75,6 +99,103 @@ export class CBBFieldMapperService {
     'sri lanka': '🇱🇰',
     'togo': '🇹🇬',
   };
+
+  /**
+   * Save or update CBB contact in database
+   */
+  async saveCBBContact(order: OrderData, translations: {
+    countryNameTranslated?: string;
+    visaTypeTranslated?: string;
+    urgencyTranslated?: string;
+    processingDaysTranslated?: string;
+  } = {}): Promise<CBBContactRecord | null> {
+    const language = this.mapBranchToLanguage(order.branch);
+    const processingDays = order.processing_days || this.calculateDefaultProcessingDays(
+      order.product_country,
+      order.urgency ?? 'normal'
+    );
+
+    const contactData = {
+      order_id: order.order_id,
+      client_phone: order.client_phone,
+      client_email: order.client_email,
+      client_name: order.client_name,
+      product_country: order.product_country,
+      product_doc_type: order.product_doc_type,
+      urgency: order.urgency,
+      processing_days: processingDays,
+      language_code: language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
+      country_name_translated: translations.countryNameTranslated,
+      visa_type_translated: translations.visaTypeTranslated,
+      urgency_translated: translations.urgencyTranslated,
+      processing_days_translated: translations.processingDaysTranslated,
+      branch: order.branch,
+      order_days: processingDays,
+      cbb_synced: false,
+      cbb_sync_attempts: 0,
+      cbb_sync_error_count: 0
+    };
+
+    const { data, error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .upsert(contactData, { onConflict: 'order_id' })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to save CBB contact for order ${order.order_id}:`, error);
+      return null;
+    }
+
+    return data as unknown as CBBContactRecord;
+  }
+
+  /**
+   * Get CBB contact from database
+   */
+  async getCBBContact(orderId: string): Promise<CBBContactRecord | null> {
+    const { data, error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      this.logger.error(`Failed to get CBB contact for order ${orderId}:`, error);
+    }
+
+    return data as CBBContactRecord | null;
+  }
+
+  /**
+   * Update CBB sync status
+   */
+  async updateCBBSyncStatus(orderId: string, updates: {
+    cbb_contact_id?: string;
+    cbb_synced?: boolean;
+    cbb_sync_attempts?: number;
+    cbb_sync_error_count?: number;
+    cbb_sync_last_attempt_at?: Date;
+    cbb_sync_last_error?: string | null;
+  }): Promise<void> {
+    // Convert Date to ISO string for Supabase
+    const updateData: any = { ...updates };
+    if (updates.cbb_sync_last_attempt_at) {
+      updateData.cbb_sync_last_attempt_at = updates.cbb_sync_last_attempt_at.toISOString();
+    }
+    
+    // Always update the updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
+
+    const { error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .update(updateData)
+      .eq('order_id', orderId);
+
+    if (error) {
+      this.logger.error(`Failed to update CBB sync status for order ${orderId}:`, error);
+    }
+  }
 
   /**
    * Map order data to CBB contact format

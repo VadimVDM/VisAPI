@@ -72,19 +72,25 @@ export class CBBSyncOrchestratorService {
 
     const branch = order.branch || 'unknown';
     
-    // 2. Update sync attempt tracking
-    await this.updateSyncAttempt(orderId);
+    // 2. Check CBB contact record
+    const cbbContact = await this.fieldMapper.getCBBContact(orderId);
+    
+    // 3. Update sync attempt tracking
+    await this.fieldMapper.updateCBBSyncStatus(orderId, {
+      cbb_sync_attempts: (cbbContact?.cbb_sync_attempts || 0) + 1,
+      cbb_sync_last_attempt_at: new Date()
+    });
     this.metricsService.recordSyncAttempt(branch);
 
-    // 3. Check if already synced
-    if (order.cbb_synced === true && order.cbb_contact_id) {
-      this.logger.log(`Order ${orderId} already synced with contact ${order.cbb_contact_id}`);
+    // 4. Check if already synced
+    if (cbbContact?.cbb_synced === true && cbbContact.cbb_contact_id) {
+      this.logger.log(`Order ${orderId} already synced with contact ${cbbContact.cbb_contact_id}`);
       const duration = endTimer();
       this.metricsService.recordSyncComplete('success', 'skipped', branch, duration);
       return {
         status: 'success',
         action: 'skipped',
-        contactId: order.cbb_contact_id,
+        contactId: cbbContact.cbb_contact_id,
       };
     }
 
@@ -127,8 +133,12 @@ export class CBBSyncOrchestratorService {
         // Continue without WhatsApp
       }
 
-      // 7. Update order with results
-      await this.updateOrderCBBStatus(orderId, contact?.id, true, error);
+      // 7. Update CBB contact record with results
+      await this.fieldMapper.updateCBBSyncStatus(orderId, {
+        cbb_contact_id: contact?.id,
+        cbb_synced: true,
+        cbb_sync_last_error: error || undefined
+      });
 
       // 8. Queue WhatsApp confirmation if applicable
       if (contact && !error) {
@@ -410,59 +420,27 @@ export class CBBSyncOrchestratorService {
   }
 
   /**
-   * Update sync attempt tracking
+   * Update sync attempt tracking - now handled by fieldMapper
+   * @deprecated Use fieldMapper.updateCBBSyncStatus instead
    */
   private async updateSyncAttempt(orderId: string): Promise<void> {
-    // First get current value
-    const { data: order } = await this.supabaseService.serviceClient
-      .from('orders')
-      .select('*')
-      .eq('order_id', orderId)
-      .single();
-    
-    const currentAttempts = (order as any)?.cbb_sync_attempts || 0;
-    
-    const { error } = await this.supabaseService.serviceClient
-      .from('orders')
-      .update({
-        cbb_sync_attempts: currentAttempts + 1,
-        cbb_sync_last_attempt_at: new Date().toISOString(),
-      } as any)
-      .eq('order_id', orderId);
-
-    if (error) {
-      this.logger.warn(`Failed to update sync attempt for order ${orderId}:`, error);
-    }
+    // This is now handled in the main sync method via fieldMapper
+    this.logger.debug(`Sync attempt update handled by fieldMapper for order ${orderId}`);
   }
 
   /**
    * Record sync error in database
    */
   private async recordSyncError(orderId: string, errorMessage: string): Promise<void> {
-    // First get current error count
-    const { data: order } = await this.supabaseService.serviceClient
-      .from('orders')
-      .select('*')
-      .eq('order_id', orderId)
-      .single();
+    // Get current error count from CBB contact record
+    const cbbContact = await this.fieldMapper.getCBBContact(orderId);
+    const currentErrorCount = cbbContact?.cbb_sync_error_count || 0;
     
-    const currentErrorCount = (order as any)?.cbb_sync_error_count || 0;
-    
-    const { error } = await this.supabaseService.serviceClient
-      .from('orders')
-      .update({
-        cbb_sync_last_error: errorMessage.substring(0, 500), // Limit error message length
-        cbb_sync_error_count: currentErrorCount + 1,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq('order_id', orderId);
-
-    if (error) {
-      this.logger.error(
-        `Failed to record sync error for order ${orderId}:`,
-        error,
-      );
-    }
+    // Update error info in cbb_contacts table
+    await this.fieldMapper.updateCBBSyncStatus(orderId, {
+      cbb_sync_error_count: currentErrorCount + 1,
+      cbb_sync_last_error: errorMessage.substring(0, 500) // Limit error message length
+    });
   }
 
   /**
