@@ -524,6 +524,15 @@ export class CBBSyncOrchestratorService {
         });
       }
 
+      this.logger.info(
+        `Attempting to queue WhatsApp job for order ${order.order_id}`,
+        {
+          queue_name: QUEUE_NAMES.WHATSAPP_MESSAGES,
+          job_name: JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
+          contact_id: contactId,
+        },
+      );
+      
       const job = await this.queueService.addJob(
         QUEUE_NAMES.WHATSAPP_MESSAGES,
         JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
@@ -541,6 +550,10 @@ export class CBBSyncOrchestratorService {
           },
         },
       );
+      
+      if (!job) {
+        throw new Error('Failed to create WhatsApp job - addJob returned null');
+      }
 
       this.logger.info(
         `Successfully queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId} (job ID: ${job.id}, job name: ${JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION})`,

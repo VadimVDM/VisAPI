@@ -1,5 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
 import { WhatsAppMessageJobData, QUEUE_NAMES } from '@visapi/shared-types';
@@ -44,9 +45,9 @@ interface SendMessageResult {
 @Injectable()
 @Processor(QUEUE_NAMES.WHATSAPP_MESSAGES)
 export class WhatsAppMessageProcessor extends WorkerHost {
-  private readonly logger = new Logger(WhatsAppMessageProcessor.name);
-
   constructor(
+    @InjectPinoLogger(WhatsAppMessageProcessor.name)
+    private readonly logger: PinoLogger,
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
@@ -68,7 +69,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
     // Only log individual job processing in development
     if (!this.configService.isProduction) {
-      this.logger.log(`Processing WhatsApp message job ${job.id}`, {
+      this.logger.info(`Processing WhatsApp message job ${job.id}`, {
         order_id: orderId,
         contact_id: contactId,
         message_type: messageType,
@@ -106,7 +107,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Check for duplicate messages
       if (await this.isMessageAlreadySent(order, messageType)) {
-        this.logger.log(
+        this.logger.info(
           `${messageType} already sent for order ${orderId}, skipping`,
         );
         return {
@@ -145,7 +146,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Only log success in development
       if (!this.configService.isProduction) {
-        this.logger.log(
+        this.logger.info(
           `WhatsApp ${messageType} sent successfully for order ${orderId}`,
           {
             contact_id: contactId,
@@ -234,7 +235,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
         // Only log individual sends in development
         if (!this.configService.isProduction) {
-          this.logger.log(
+          this.logger.info(
             `Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`,
           );
         }
@@ -434,7 +435,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       throw error;
     } else if (!this.configService.isProduction) {
       // Only log status updates in development
-      this.logger.log(
+      this.logger.info(
         `Created WhatsApp message record for order ${orderId}: ${messageType}, message_id=${messageId}`,
       );
     }

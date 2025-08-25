@@ -58,7 +58,16 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       };
     },
   ): Promise<Job<T>> {
+    this.logger.log(
+      `Adding job to queue: ${queueName}, job: ${jobName}`,
+      { data },
+    );
+    
     const queue = this.getQueue(queueName);
+    if (!queue) {
+      this.logger.error(`Queue ${queueName} not found!`);
+      throw new Error(`Queue ${queueName} not found`);
+    }
 
     const defaultOptions = {
       attempts: this.config.queueMaxRetries,
@@ -70,11 +79,25 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       removeOnFail: false,
     };
 
-    return queue.add(jobName, data, {
-      ...defaultOptions,
-      ...options,
-      priority: options?.priority || this.getDefaultPriority(queueName),
-    }) as Promise<Job<T>>;
+    try {
+      const job = await queue.add(jobName, data, {
+        ...defaultOptions,
+        ...options,
+        priority: options?.priority || this.getDefaultPriority(queueName),
+      }) as Job<T>;
+      
+      this.logger.log(
+        `Job added successfully: ${queueName}/${jobName}, job ID: ${job.id}`,
+      );
+      
+      return job;
+    } catch (error) {
+      this.logger.error(
+        `Failed to add job to queue ${queueName}:`,
+        error instanceof Error ? error.message : error,
+      );
+      throw error;
+    }
   }
 
   async getJob<T>(
