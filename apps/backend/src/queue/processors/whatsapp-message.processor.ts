@@ -372,9 +372,50 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     const now = new Date().toISOString();
     const tempMessageId = `temp_${orderId}_${messageType}_${Date.now()}`;
 
-    // Use INSERT ON CONFLICT for atomic operation
-    // This ensures only ONE job can create/claim the record
-    const { data, error } = await this.supabaseService.serviceClient
+    // First check if record exists for this order + template combination
+    const { data: existing } = await this.supabaseService.serviceClient
+      .from('whatsapp_messages')
+      .select('id, status, message_id')
+      .eq('order_id', orderId)
+      .eq('template_name', templateName)
+      .maybeSingle();
+
+    if (existing) {
+      // If record exists and is in 'pending' or 'sent' status, skip
+      if (existing.status === 'sent' || existing.status === 'pending') {
+        this.logger.log(
+          `Message for order ${orderId} already ${existing.status}, skipping`,
+        );
+        return null;
+      }
+      
+      // Update existing record to pending with new message_id
+      const { error } = await this.supabaseService.serviceClient
+        .from('whatsapp_messages')
+        .update({
+          message_id: tempMessageId,
+          status: 'pending',
+          confirmation_sent: false,
+          updated_at: now,
+        })
+        .eq('id', existing.id);
+
+      if (error) {
+        this.logger.error(
+          `Failed to update idempotency record for order ${orderId}:`,
+          error,
+        );
+        throw error;
+      }
+
+      this.logger.debug(
+        `Updated idempotency record for order ${orderId}, message_id: ${tempMessageId}`,
+      );
+      return tempMessageId;
+    }
+
+    // Create new record if it doesn't exist
+    const { error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
       .insert({
         order_id: orderId,
@@ -385,32 +426,28 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         confirmation_sent: false,
         created_at: now,
         updated_at: now,
-      })
-      .select('message_id')
-      .single();
+      });
 
-    // If insert succeeded, we won the race - proceed with sending
-    if (data) {
-      this.logger.debug(
-        `Created idempotency record for order ${orderId}, message_id: ${data.message_id}`,
+    if (error) {
+      // Check if it's a duplicate key error (race condition)
+      if (error.code === '23505' || error.message?.includes('duplicate')) {
+        this.logger.log(
+          `Another job is already processing message for order ${orderId}, skipping`,
+        );
+        return null;
+      }
+      
+      this.logger.error(
+        `Failed to create idempotency record for order ${orderId}:`,
+        error,
       );
-      return data.message_id;
+      throw error;
     }
 
-    // If we got a duplicate key error, another job is handling it
-    if (error?.code === '23505' || error?.message?.includes('duplicate')) {
-      this.logger.log(
-        `Another job is already processing message for order ${orderId}, skipping`,
-      );
-      return null; // Signal to skip processing
-    }
-
-    // Any other error is unexpected
-    this.logger.error(
-      `Failed to create idempotency record for order ${orderId}:`,
-      error,
+    this.logger.debug(
+      `Created idempotency record for order ${orderId}, message_id: ${tempMessageId}`,
     );
-    throw error;
+    return tempMessageId;
   }
 
   /**
