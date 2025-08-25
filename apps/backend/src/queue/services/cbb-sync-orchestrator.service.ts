@@ -255,12 +255,26 @@ export class CBBSyncOrchestratorService {
       }
 
       // 11. Queue WhatsApp confirmation if applicable
+      this.logger.log(
+        `Pre-WhatsApp queue check for order ${orderId}:`,
+        {
+          has_contact: !!contact,
+          contact_id: contact?.id,
+          has_error: !!error,
+          error_message: error,
+        },
+      );
+      
       if (contact && !error) {
         await this.queueWhatsAppConfirmation(
           order,
           contact.id,
           hasWhatsApp,
           cbbContact,
+        );
+      } else {
+        this.logger.warn(
+          `Skipping WhatsApp queue for order ${orderId}: contact=${!!contact}, error=${error}`,
         );
       }
 

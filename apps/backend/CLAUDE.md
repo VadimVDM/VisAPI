@@ -65,10 +65,10 @@ Modern layered architecture with enterprise design patterns:
 
 ### Queue Module
 
-- BullMQ job processing
-- WhatsApp message sending
-- CBB contact synchronization
-- Workflow execution
+- BullMQ job processing with Redis backing
+- `whatsapp-messages` queue for order confirmations
+- `cbb-sync` queue for contact synchronization
+- Uses `QUEUE_NAMES` constants (never hardcode queue names)
 
 ### Workflows Module
 

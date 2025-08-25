@@ -1,6 +1,6 @@
 # VisAPI Project Guide
 
-Essential reference for AI assistants. Updated: August 24, 2025
+Essential reference for AI assistants. Updated: August 25, 2025
 
 ## Overview
 
@@ -16,29 +16,10 @@ Essential reference for AI assistants. Updated: August 24, 2025
 ### Current Status
 
 - ✅ **Production stable** with Vizi webhook integration
-- ✅ **Database normalized** - CBB/WhatsApp data in separate tables
-- ✅ **WhatsApp messaging** via CBB API with Hebrew support
-- ✅ **WhatsApp Business API webhooks** receiving all Meta events
-- ✅ **Template synchronization** with automatic hourly sync from Meta
-- ✅ **Zapier forwarding** of all Meta webhooks in raw format
+- ✅ **WhatsApp messaging** via CBB API with idempotency protection
+- ✅ **Queue architecture** - Separate backend/worker apps with distinct responsibilities
 - ✅ **CQRS architecture** with repository pattern
-- ✅ **TypeScript strict mode** fully enabled
 - ✅ **16 test suites passing** (100% success rate)
-- ✅ **Backend optimizations complete** (August 25, 2025)
-  - Redis caching with decorators implemented
-  - Graceful shutdown hooks (disabled due to Fastify compatibility)
-  - Docker multi-stage build optimized
-  - Dependencies updated to latest versions
-  - All imports cleaned up
-- ✅ **Queue Auto-Resume** (August 25, 2025)
-  - Queues automatically resume on startup if paused
-  - Fixed WhatsApp processor queue name mismatch  
-  - Admin endpoints support both UUID and Vizi order IDs
-- ✅ **Enhanced CBB Field Mapping** (August 25, 2025)
-  - WhatsApp quantities display with 'x' prefix (x1, x2)
-  - Visa validity includes units ("30 days", "6 months", "1 year")
-  - Order creation timestamp tracked in `order_date_time` field
-  - Total payment amount tracked in `order_sum_ils` field
 
 ## Project Structure
 
@@ -125,19 +106,31 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Password**: 12+ chars with all character types
 - **RLS**: Enabled on all database tables
 
+## Queue Architecture
+
+### Backend App Queues
+- **whatsapp-messages**: Order confirmation messages via CBB API
+- **cbb-sync**: Synchronize orders with CBB contacts
+
+### Worker App Queues  
+- **critical**: High-priority generic jobs
+- **default**: Standard priority jobs
+- **bulk**: Low-priority batch operations
+
+**CRITICAL**: Each queue must use `QUEUE_NAMES` constants from `@visapi/shared-types`. Never hardcode queue names.
+
 ## Database Architecture
 
 ### Core Tables
 
-- **orders**: Main order data (streamlined, references other tables)
-- **cbb_contacts**: CBB sync data with language-specific translations
-- **whatsapp_messages**: Complete WhatsApp message lifecycle tracking
+- **orders**: Main order data with foreign key references
+- **cbb_contacts**: CBB sync data with Hebrew translations
+- **whatsapp_messages**: Message tracking with idempotency keys
 
 ### Data Relationships
 
 - Orders → CBB Contacts (via `cbb_contact_uuid`)
 - Orders → WhatsApp Messages (via `order_id`)
-- CBB Contacts store language-specific content (Hebrew, Russian, English)
 
 ## Development Notes
 
@@ -288,22 +281,11 @@ lsof -i :3000             # Check port usage
 
 ## Critical Fixes (August 25, 2025)
 
-### Queue Processing Issues Resolved
-- **Root Cause**: Graceful shutdown was pausing queues persistently in Redis
-- **Solution**: Added auto-resume logic in `QueueService.onModuleInit()`
-- **Fixed**: WhatsApp processor listening to wrong queue name constant
-- **Impact**: All WhatsApp messages now process correctly
-
-### Admin Endpoint Enhancements
-- **Retrigger endpoints** now accept both UUID and Vizi order IDs
-- **Flexible search**: Tries Vizi ID first, then UUID fallback
-- **Example**: `IL250824VN22` or `550e8400-e29b-41d4-a716-446655440000`
-
-### CBB Custom Fields Completed
-- **order_date_time** (ID: 100644): Order creation timestamp
-- **order_sum_ils** (ID: 358366): Total payment amount (numeric)
-- **visa_validity**: Now includes units ("30 days", "6 months", "1 year")
-- **order_days** (ID: 271948): Processing days for fulfillment
+### Queue Architecture Fixed
+- **Issue**: Hardcoded queue names causing worker mismatch
+- **Solution**: All processors use `QUEUE_NAMES` constants
+- **Idempotency**: Pre-send record creation prevents duplicates
+- **Auto-resume**: Queues resume automatically on startup
 
 ## Known Issues
 
@@ -313,5 +295,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.0.5 Production
+**Version**: v1.0.6 Production
 **Last Updated**: August 25, 2025

@@ -14,11 +14,10 @@ Handles WhatsApp Business messaging via CBB API:
 
 Features:
 
-- WhatsApp Business template messaging (required for delivery)
+- Pre-send idempotency record creation (prevents duplicates on retry)
 - Hebrew translations with RTL support and flag emojis
 - Processing time calculations based on urgency
-- Idempotency checking to prevent duplicates
-- Database tracking of sent messages
+- Database tracking in `whatsapp_messages` table
 
 ### CBB_SYNC
 
@@ -39,15 +38,14 @@ Processes incoming webhooks with retry logic.
 
 ## Processors
 
-### Core Processors
+### Backend App Processors
 
-- `WhatsAppMessageProcessor` (273 lines): Sends WhatsApp Business templates via CBB API
-- `CBBSyncProcessor` (138 lines): Orchestrates order-to-CBB contact synchronization
-- `WorkflowProcessor`: Executes workflow steps
-- `WebhookProcessor`: Handles webhook payloads
-- `CronProcessor`: Manages scheduled jobs
+- `WhatsAppMessageProcessor`: Order confirmations with idempotency protection
+- `CBBSyncProcessor`: Order-to-CBB contact synchronization
 
-### Supporting Services (Updated August 25, 2025)
+**CRITICAL**: All processors must use `@Processor(QUEUE_NAMES.QUEUE_NAME)` - never hardcode queue names!
+
+### Supporting Services
 
 - `WhatsAppTranslationService` (323 lines): Hebrew translations with database-driven processing times
 - `WhatsAppTemplateService` (141 lines): Template building with 'x' prefix for quantities
@@ -112,19 +110,19 @@ Complete mapping of order data to CBB contact fields:
 
 ## Critical Fixes Applied (August 25, 2025)
 
-### Queue Persistence Issue
-- **Problem**: Queues remained paused after graceful shutdown
-- **Root Cause**: Redis persisted pause state across restarts
-- **Solution**: Auto-resume all queues in `onModuleInit()`
+### Queue Name Constants
+- **Issue**: CBB processor used hardcoded `'cbb-sync'` string
+- **Fix**: Changed to `QUEUE_NAMES.CBB_SYNC` constant
+- **Impact**: Workers now connect to correct queue names
 
-### WhatsApp Processor Registration
-- **Problem**: Processor listening to literal string instead of constant
-- **Fixed**: Changed from `'WHATSAPP_MESSAGES'` to `QUEUE_NAMES.WHATSAPP_MESSAGES`
-- **Impact**: Restored WhatsApp message processing
+### Idempotency Protection
+- **Issue**: Messages sent multiple times on job retry
+- **Fix**: Create idempotency record BEFORE sending message
+- **Impact**: Prevents duplicate WhatsApp messages
 
-### Fastify Compatibility
-- **Problem**: `enableShutdownHooks()` incompatible with Node.js 22
-- **Solution**: Disabled and implemented manual shutdown handlers
-- **Result**: Clean shutdown without crashes
+### Queue Auto-Resume
+- **Issue**: Queues remained paused in Redis after restart
+- **Fix**: Force resume all queues in `onModuleInit()`
+- **Impact**: Queues always active on startup
 
 Last Updated: August 25, 2025
