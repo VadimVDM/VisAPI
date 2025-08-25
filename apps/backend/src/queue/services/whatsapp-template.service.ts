@@ -44,14 +44,14 @@ export class WhatsAppTemplateService {
   ): Promise<OrderConfirmationData> {
     // Try to get the translated visa type from cbb_contacts first
     let visaTypeHebrew: string;
-    
+
     try {
       const { data: cbbContact } = await this.supabaseService.serviceClient
         .from('cbb_contacts')
         .select('visa_type_translated')
         .eq('order_id', order.order_id)
         .single();
-      
+
       if (cbbContact?.visa_type_translated) {
         visaTypeHebrew = cbbContact.visa_type_translated;
       } else {

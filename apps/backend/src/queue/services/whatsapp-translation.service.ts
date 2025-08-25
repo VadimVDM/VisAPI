@@ -198,8 +198,10 @@ export class WhatsAppTranslationService {
 
     // Special rules for Vietnam
     if (normalizedCountry === 'vietnam') {
-      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
-      const entriesHebrew = normalizedEntries === 'multiple' ? 'רב פעמית' : 'חד פעמית';
+      const intentHebrew =
+        VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
+      const entriesHebrew =
+        normalizedEntries === 'multiple' ? 'רב פעמית' : 'חד פעמית';
       const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
       return `${intentHebrew}, ${entriesHebrew}, ${validityHebrew}`;
     }
@@ -216,7 +218,8 @@ export class WhatsAppTranslationService {
 
     // Special rules for India
     if (normalizedCountry === 'india') {
-      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
+      const intentHebrew =
+        VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
       const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
       return `${intentHebrew} ${validityHebrew}`;
     }

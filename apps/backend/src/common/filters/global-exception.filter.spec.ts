@@ -74,7 +74,8 @@ describe('GlobalExceptionFilter', () => {
         'test-correlation-id',
       );
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: expect.stringContaining('https://api.visanet.app/problems/'),
         title: expect.any(String),
@@ -99,7 +100,8 @@ describe('GlobalExceptionFilter', () => {
 
       expect(mockResponse.code).toHaveBeenCalledWith(401);
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/invalid-api-key',
         title: 'Invalid API Key',
@@ -125,7 +127,8 @@ describe('GlobalExceptionFilter', () => {
 
       expect(mockResponse.code).toHaveBeenCalledWith(422);
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/schema-validation-failed',
         title: 'Schema Validation Failed',
@@ -146,7 +149,8 @@ describe('GlobalExceptionFilter', () => {
 
       expect(mockResponse.code).toHaveBeenCalledWith(503);
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/supabase-connection-failed',
         title: 'Database Connection Failed',
@@ -163,7 +167,8 @@ describe('GlobalExceptionFilter', () => {
 
       expect(mockResponse.code).toHaveBeenCalledWith(500);
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/internal-server-error',
         title: 'Internal Server Error',
@@ -179,7 +184,8 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      const [sentData] = mockResponse.send.mock.calls[0];
+      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
+      const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData.correlationId).toBeUndefined();
       expect(mockResponse.header).not.toHaveBeenCalledWith(
         'X-Request-Id',

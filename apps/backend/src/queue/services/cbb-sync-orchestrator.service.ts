@@ -137,13 +137,14 @@ export class CBBSyncOrchestratorService {
           order.product_country,
           order.is_urgent === true,
         );
-        
+
         // Special formatting for urgent orders and Thailand/Schengen
         const countryNormalized = order.product_country?.toLowerCase().trim();
-        const isThailandOrSchengen = countryNormalized === 'thailand' || 
-                                     countryNormalized === 'schengen' || 
-                                     countryNormalized === 'schengen area';
-        
+        const isThailandOrSchengen =
+          countryNormalized === 'thailand' ||
+          countryNormalized === 'schengen' ||
+          countryNormalized === 'schengen area';
+
         if (order.is_urgent === true && !isThailandOrSchengen) {
           // Urgent (non-Thailand/Schengen): "תוך יום אחד ⚡️"
           translations.processingDaysTranslated = 'תוך יום אחד ⚡️';

@@ -18,8 +18,9 @@ export class WorkflowSchemaLoaderService {
     const cacheKey = 'workflow-main';
 
     // Return cached schema if available
-    if (this.schemaCache.has(cacheKey)) {
-      return this.schemaCache.get(cacheKey)!;
+    const cachedSchema = this.schemaCache.get(cacheKey);
+    if (cachedSchema) {
+      return cachedSchema;
     }
 
     // Try to load from file system

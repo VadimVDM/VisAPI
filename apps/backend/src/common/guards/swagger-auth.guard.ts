@@ -6,6 +6,24 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 
+// Type definitions for Express/Fastify compatibility
+interface SwaggerRequest {
+  headers: Record<string, string | string[] | undefined>;
+  url?: string;
+  method?: string;
+}
+
+interface SwaggerResponse {
+  setHeader?: (name: string, value: string) => void;
+  status?: (code: number) => SwaggerResponse;
+  json?: (body: unknown) => void;
+  header?: (name: string, value: string) => SwaggerResponse;
+  code?: (statusCode: number) => SwaggerResponse;
+  send?: (body: unknown) => void;
+}
+
+type NextFunction = () => void;
+
 /**
  * SwaggerAuthGuard - Protects Swagger documentation in production
  *
@@ -123,21 +141,21 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
     // Use empty set
   }
 
-  return (req: any, res: any, next: any) => {
+  return (req: SwaggerRequest, res: SwaggerResponse, next: NextFunction) => {
     // Allow unrestricted access in development/test
     if (!isProduction) {
       return next();
     }
 
     // Check for API key authentication
-    const apiKey = req.headers['x-api-key'] as string;
+    const apiKey = req.headers['x-api-key'] as string | undefined;
     if (apiKey && swaggerApiKeys.has(apiKey)) {
       return next();
     }
 
     // Check for Basic authentication
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Basic ')) {
+    const authHeader = req.headers.authorization as string | undefined;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Basic ')) {
       const base64Credentials = authHeader.slice(6);
       const credentials = Buffer.from(base64Credentials, 'base64').toString(
         'utf-8',
@@ -151,19 +169,27 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
 
     // If no valid authentication, request Basic auth
     // Works for both Express and Fastify
-    if (res.setHeader) {
+    if (res.setHeader && res.status && res.json) {
       res.setHeader('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
-      res.status(401).json({
-        statusCode: 401,
-        message: 'Authentication required to access API documentation',
-      });
-    } else {
+      const statusRes = res.status(401);
+      if (statusRes && statusRes.json) {
+        statusRes.json({
+          statusCode: 401,
+          message: 'Authentication required to access API documentation',
+        });
+      }
+    } else if (res.header && res.code && res.send) {
       // Fastify response
-      res.header('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
-      res.code(401).send({
-        statusCode: 401,
-        message: 'Authentication required to access API documentation',
-      });
+      const headerRes = res.header('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
+      if (headerRes && headerRes.code && headerRes.send) {
+        const codeRes = headerRes.code(401);
+        if (codeRes && codeRes.send) {
+          codeRes.send({
+            statusCode: 401,
+            message: 'Authentication required to access API documentation',
+          });
+        }
+      }
     }
   };
 }

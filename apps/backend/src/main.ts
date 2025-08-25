@@ -12,7 +12,7 @@ import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard'
 // Read version from package.json at build time
 const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pkg = require('../../../package.json') as { version: string };
   packageInfo.version = pkg.version;
 } catch {

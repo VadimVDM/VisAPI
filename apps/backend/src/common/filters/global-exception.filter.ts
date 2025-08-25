@@ -191,7 +191,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           return {
             ...SYSTEM_ERRORS.INTERNAL_SERVER_ERROR,
             status:
-              httpStatus >= 500
+              Number(httpStatus) >= 500
                 ? httpStatus
                 : (HttpStatus.INTERNAL_SERVER_ERROR as number),
             detail: message,
