@@ -88,6 +88,9 @@ export type Database = {
           processing_days_translated: string | null
           product_country: string | null
           product_doc_type: string | null
+          product_entries: string | null
+          product_intent: string | null
+          product_validity: string | null
           updated_at: string | null
           visa_type_translated: string | null
         }
@@ -117,6 +120,9 @@ export type Database = {
           processing_days_translated?: string | null
           product_country?: string | null
           product_doc_type?: string | null
+          product_entries?: string | null
+          product_intent?: string | null
+          product_validity?: string | null
           updated_at?: string | null
           visa_type_translated?: string | null
         }
@@ -146,6 +152,9 @@ export type Database = {
           processing_days_translated?: string | null
           product_country?: string | null
           product_doc_type?: string | null
+          product_entries?: string | null
+          product_intent?: string | null
+          product_validity?: string | null
           updated_at?: string | null
           visa_type_translated?: string | null
         }

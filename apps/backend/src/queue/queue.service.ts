@@ -233,14 +233,20 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       },
     ];
 
-    // Clean up old stuck jobs and auto-resume queues
+    // ALWAYS resume queues on startup and clean up old jobs
     for (const { name, queue } of queues) {
       try {
+        // Force resume regardless of current state
+        await queue.resume();
         const isPaused = await queue.isPaused();
-
+        
         if (isPaused) {
-          await queue.resume();
-          this.logger.log(`Auto-resumed queue: ${name} (was paused)`);
+          // If still paused, log error
+          this.logger.error(
+            `Queue ${name} is still paused after resume attempt!`,
+          );
+        } else {
+          this.logger.log(`Queue ${name} is active`);
         }
 
         // Clean up very old completed/failed jobs (older than 24 hours)
@@ -270,25 +276,35 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('Starting graceful queue shutdown...');
 
     const queues = [
-      this.criticalQueue,
-      this.defaultQueue,
-      this.bulkQueue,
-      this.cbbSyncQueue,
-      this.whatsappMessagesQueue,
+      { name: QUEUE_NAMES.CRITICAL, queue: this.criticalQueue },
+      { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
+      { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
+      { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
+      {
+        name: QUEUE_NAMES.WHATSAPP_MESSAGES,
+        queue: this.whatsappMessagesQueue,
+      },
     ];
 
     try {
-      // Pause all queues to stop accepting new jobs
-      await Promise.all(queues.map((queue) => queue.pause()));
-      this.logger.log('All queues paused');
-
-      // Wait for active jobs to complete (max 5 seconds)
+      // DO NOT pause queues - let them resume naturally on next startup
+      // Just wait for active jobs to complete
       const shutdownTimeout = setTimeout(() => {
         this.logger.warn('Queue shutdown timeout reached, forcing close');
       }, 5000);
 
-      // Close all queue connections
-      await Promise.all(queues.map((queue) => queue.close()));
+      // Wait for active jobs only
+      for (const { name, queue } of queues) {
+        const counts = await queue.getJobCounts();
+        if (counts.active > 0) {
+          this.logger.log(
+            `Waiting for ${counts.active} active jobs in ${name} queue`,
+          );
+        }
+      }
+
+      // Close all queue connections without pausing
+      await Promise.all(queues.map(({ queue }) => queue.close()));
       clearTimeout(shutdownTimeout);
 
       this.logger.log('All queues closed gracefully');
