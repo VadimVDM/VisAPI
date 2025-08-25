@@ -118,15 +118,24 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         };
       }
 
-      // Send the appropriate message
-      const result = await this.sendMessage(order, contactId, messageType);
+      // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
+      await this.createIdempotencyRecord(orderId, messageType);
 
-      // Update order with WhatsApp tracking info
-      await this.updateOrderWhatsAppStatus(
-        orderId,
-        messageType,
-        result.message_id || 'sent',
-      );
+      try {
+        // Send the appropriate message
+        const result = await this.sendMessage(order, contactId, messageType);
+
+        // Update order with WhatsApp tracking info
+        await this.updateOrderWhatsAppStatus(
+          orderId,
+          messageType,
+          result.message_id || 'sent',
+        );
+      } catch (error) {
+        // If sending fails, remove idempotency record to allow retry
+        await this.removeIdempotencyRecord(orderId, messageType);
+        throw error;
+      }
 
       // Update CBB contact flag for order confirmation messages
       if (messageType === 'order_confirmation') {
@@ -280,8 +289,63 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       return false; // Allow retry if we can't check
     }
 
-    // Message exists and was successfully sent
-    return data?.confirmation_sent === true || data?.status === 'delivered';
+    // Message exists - don't send again regardless of status
+    // This prevents duplicates even if the previous attempt had errors
+    return data !== null;
+  }
+
+  /**
+   * Create idempotency record BEFORE sending message
+   */
+  private async createIdempotencyRecord(
+    orderId: string,
+    messageType: string,
+  ): Promise<void> {
+    const templateName = this.getTemplateNameForMessageType(messageType);
+    const now = new Date().toISOString();
+
+    const { error } = await this.supabaseService.serviceClient
+      .from('whatsapp_messages')
+      .insert({
+        order_id: orderId,
+        template_name: templateName,
+        status: 'pending',
+        confirmation_sent: false,
+        created_at: now,
+        updated_at: now,
+      });
+
+    if (error && !error.message?.includes('duplicate')) {
+      this.logger.error(
+        `Failed to create idempotency record for order ${orderId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Remove idempotency record if sending fails
+   */
+  private async removeIdempotencyRecord(
+    orderId: string,
+    messageType: string,
+  ): Promise<void> {
+    const templateName = this.getTemplateNameForMessageType(messageType);
+
+    const { error } = await this.supabaseService.serviceClient
+      .from('whatsapp_messages')
+      .delete()
+      .eq('order_id', orderId)
+      .eq('template_name', templateName)
+      .eq('status', 'pending');
+
+    if (error) {
+      this.logger.warn(
+        `Failed to remove idempotency record for order ${orderId}:`,
+        error,
+      );
+    }
   }
 
   /**
