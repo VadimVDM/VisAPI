@@ -88,7 +88,7 @@
     "@nx/web": "21.4.0",
     "@nx/webpack": "21.4.0",
     "@nx/workspace": "^21.4.0",
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "^1.55.0",
     "@supabase/supabase-js": "^2.55.0",
     "@swc-node/register": "~1.11.1",
     "@swc/cli": "~0.7.8",
