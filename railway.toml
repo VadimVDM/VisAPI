@@ -15,8 +15,7 @@ watchPatterns = [
 ]
 
 [deploy]
-# Start command handled by Dockerfile CMD
-startCommand = null
+# Start command handled by Dockerfile CMD (omitted to use Dockerfile default)
 
 # Health check configuration
 healthcheckPath = "/api/v1/healthz"
