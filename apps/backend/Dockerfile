@@ -13,9 +13,8 @@ RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 COPY package.json pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
 
-# Install ALL dependencies with BuildKit cache mount
-RUN --mount=type=cache,id=pnpm-store-v1-deps,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+# Install ALL dependencies
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
@@ -52,8 +51,7 @@ COPY --from=builder /app/dist/apps/backend/package.json ./
 COPY --from=builder /app/dist/apps/backend/pnpm-lock.yaml ./
 
 # Install ONLY the production dependencies needed by the bundled app
-RUN --mount=type=cache,id=pnpm-store-v1-prod,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
 # Stage 4: Final minimal runtime
 FROM node:22-alpine AS runner
