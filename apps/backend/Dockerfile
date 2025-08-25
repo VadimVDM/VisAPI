@@ -13,18 +13,15 @@ WORKDIR /app
 # Build tooling for native deps (bcrypt, etc)
 RUN apk add --no-cache python3 make g++ libc6-compat
 
-# Enable corepack and cache its downloads
-RUN corepack enable
-RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
+# Enable corepack
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
 
-# Install with pnpm store cache for faster rebuilds
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+# Install dependencies (rely on Docker layer caching)
+RUN pnpm install --frozen-lockfile
 
 ########################
 # Stage 2: Builder
@@ -34,9 +31,7 @@ WORKDIR /app
 
 # Minimal deps for build
 RUN apk add --no-cache libc6-compat
-RUN corepack enable
-RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy dependencies from previous stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -60,9 +55,7 @@ WORKDIR /app
 
 # Need libc6-compat for bcrypt and other native deps, jq for JSON manipulation
 RUN apk add --no-cache libc6-compat jq
-RUN corepack enable
-RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
-    corepack prepare pnpm@${PNPM_VERSION} --activate
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy generated package.json from build
 COPY --from=builder /app/dist/apps/backend/package.json ./
@@ -77,9 +70,8 @@ RUN jq '.dependencies.tslib = "^2.8.1" | \
     < package.json > package.json.tmp && \
     mv package.json.tmp package.json
 
-# Install production deps with cache (no lockfile as it doesn't match generated package.json)
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --ignore-scripts
+# Install production deps (rely on Docker layer caching)
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 ########################
 # Stage 4: Runner
