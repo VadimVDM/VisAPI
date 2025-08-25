@@ -14,7 +14,7 @@ COPY package.json pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
 
 # Install ALL dependencies with BuildKit cache mount
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 # Stage 2: Builder
@@ -52,7 +52,7 @@ COPY --from=builder /app/dist/apps/backend/package.json ./
 COPY --from=builder /app/dist/apps/backend/pnpm-lock.yaml ./
 
 # Install ONLY the production dependencies needed by the bundled app
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store-prod,target=/root/.local/share/pnpm/store \
     pnpm install --prod --frozen-lockfile
 
 # Stage 4: Final minimal runtime
