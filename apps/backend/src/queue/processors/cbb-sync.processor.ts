@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { CBBContactSyncResult } from '@visapi/shared-types';
+import { CBBContactSyncResult, QUEUE_NAMES } from '@visapi/shared-types';
 import { LogService } from '@visapi/backend-logging';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
@@ -17,7 +17,7 @@ interface CBBSyncJobData {
  * Delegates sync logic to orchestrator service
  */
 @Injectable()
-@Processor('cbb-sync')
+@Processor(QUEUE_NAMES.CBB_SYNC)
 export class CBBSyncProcessor extends WorkerHost {
   private readonly logger = new Logger(CBBSyncProcessor.name);
 
