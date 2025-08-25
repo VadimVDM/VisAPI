@@ -64,6 +64,9 @@ export class CbbClientService {
     visa_entries: '863041',
     visa_validity: '816014',
     visa_flag: '824812',
+    wa_alerts: '662459', // WhatsApp alerts enabled boolean
+    order_sum_ils: '358366', // Total payment amount
+    order_date_time: '100644', // Order creation timestamp
   };
 
   constructor(
