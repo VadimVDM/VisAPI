@@ -2,7 +2,7 @@
 # Optimized NestJS backend for Railway deployment - December 2024
 
 ARG NODE_VERSION=22-alpine
-ARG PNPM_VERSION=10.15.0
+ARG PNPM_VERSION=latest
 
 ########################
 # Stage 1: Dependencies
@@ -70,8 +70,8 @@ RUN jq '.dependencies.tslib = "^2.8.1" | \
     < package.json > package.json.tmp && \
     mv package.json.tmp package.json
 
-# Install production deps (rely on Docker layer caching)
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+# Install production deps (no lockfile as it's generated package.json)
+RUN pnpm install --prod --ignore-scripts
 
 ########################
 # Stage 4: Runner
