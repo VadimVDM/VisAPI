@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { CbbClientService } from '@visapi/backend-core-cbb';
 import {
   CBBContactSyncResult,
@@ -47,9 +48,9 @@ interface OrderData {
  */
 @Injectable()
 export class CBBSyncOrchestratorService {
-  private readonly logger = new Logger(CBBSyncOrchestratorService.name);
-
   constructor(
+    @InjectPinoLogger(CBBSyncOrchestratorService.name)
+    private readonly logger: PinoLogger,
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
@@ -63,7 +64,7 @@ export class CBBSyncOrchestratorService {
    * Main sync orchestration method with enhanced error handling
    */
   async syncOrderToCBB(orderId: string): Promise<CBBContactSyncResult> {
-    this.logger.log(`Starting CBB contact sync for order: ${orderId}`);
+    this.logger.info(`Starting CBB contact sync for order: ${orderId}`);
 
     // Start metrics tracking
     const endTimer = this.metricsService.startSync();
@@ -86,7 +87,7 @@ export class CBBSyncOrchestratorService {
 
     // 2. Early branch validation - only process IL branch orders
     if (branch.toLowerCase() !== 'il') {
-      this.logger.log(
+      this.logger.info(
         `CBB sync skipped - non-IL branch order ${orderId} (branch: ${branch})`,
       );
       const duration = endTimer();
@@ -108,7 +109,7 @@ export class CBBSyncOrchestratorService {
 
     // If no CBB contact record exists, create it first
     if (!cbbContact) {
-      this.logger.log(`Creating CBB contact record for order: ${orderId}`);
+      this.logger.info(`Creating CBB contact record for order: ${orderId}`);
 
       // Generate translations for Hebrew localization
       const language = this.mapBranchToLanguage(order.branch);
@@ -183,7 +184,7 @@ export class CBBSyncOrchestratorService {
 
     // 5. Check if already synced
     if (cbbContact?.cbb_synced === true && cbbContact.cbb_contact_id) {
-      this.logger.log(
+      this.logger.info(
         `Order ${orderId} already synced with contact ${cbbContact.cbb_contact_id}`,
       );
       const duration = endTimer();
@@ -255,7 +256,7 @@ export class CBBSyncOrchestratorService {
       }
 
       // 11. Queue WhatsApp confirmation if applicable
-      this.logger.log(
+      this.logger.info(
         `Pre-WhatsApp queue check for order ${orderId}:`,
         {
           has_contact: !!contact,
@@ -402,7 +403,7 @@ export class CBBSyncOrchestratorService {
       try {
         contact = await this.cbbService.updateContactComplete(contactData);
         this.metricsService.recordContactOperation('update', 'success');
-        this.logger.log(
+        this.logger.info(
           `Updated CBB contact custom fields for order ${orderId}`,
         );
       } catch (updateError) {
@@ -416,7 +417,7 @@ export class CBBSyncOrchestratorService {
       try {
         contact = await this.cbbService.createContactWithFields(contactData);
         this.metricsService.recordContactOperation('create', 'success');
-        this.logger.log(`Created new CBB contact for order ${orderId}`);
+        this.logger.info(`Created new CBB contact for order ${orderId}`);
       } catch (createError) {
         this.metricsService.recordContactOperation('create', 'failed');
         throw createError;
@@ -442,7 +443,7 @@ export class CBBSyncOrchestratorService {
     );
 
     // Always log the conditions for debugging
-    this.logger.log(
+    this.logger.info(
       `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
       {
         hasWhatsApp,
@@ -481,7 +482,7 @@ export class CBBSyncOrchestratorService {
         skipReason = `New order notification already sent (WhatsApp messages table)`;
       }
 
-      this.logger.log(
+      this.logger.info(
         `WhatsApp notification skipped for order ${order.order_id}: ${skipReason}`,
       );
       return;
@@ -510,6 +511,17 @@ export class CBBSyncOrchestratorService {
         this.logger.warn(
           `Failed to create WhatsApp tracking record for order ${order.order_id}: ${trackingError.message}`,
         );
+        
+        // Also log to database
+        await this.logService.createLog({
+          level: 'warn',
+          message: `Failed to create WhatsApp tracking record for order ${order.order_id}`,
+          metadata: {
+            order_id: order.order_id,
+            error: trackingError.message,
+            source: 'cbb_sync',
+          },
+        });
       }
 
       const job = await this.queueService.addJob(
@@ -530,17 +542,44 @@ export class CBBSyncOrchestratorService {
         },
       );
 
-      this.logger.log(
+      this.logger.info(
         `Successfully queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId} (job ID: ${job.id}, job name: ${JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION})`,
       );
+      
+      // Also log to database for production visibility
+      await this.logService.createLog({
+        level: 'info',
+        message: `Successfully queued WhatsApp order confirmation`,
+        metadata: {
+          order_id: order.order_id,
+          contact_id: contactId,
+          job_id: job.id,
+          job_name: JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
+          source: 'cbb_sync',
+        },
+      });
 
       // NOTE: The actual sent status will be updated by the WhatsApp processor after successful sending
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Don't fail the sync if we can't queue the message
       this.logger.error(
         `Failed to queue WhatsApp message for order ${order.order_id}:`,
         error,
       );
+      
+      // CRITICAL: Log to database since logger might not work in production
+      await this.logService.createLog({
+        level: 'error',
+        message: `Failed to queue WhatsApp message for order ${order.order_id}`,
+        metadata: {
+          order_id: order.order_id,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          source: 'cbb_sync',
+        },
+      });
     }
   }
 
@@ -564,7 +603,7 @@ export class CBBSyncOrchestratorService {
 
     // Only log detailed sync info in development
     if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(
+      this.logger.info(
         `CBB contact sync successful for order ${order.order_id}`,
         {
           contact_id: contactId,
@@ -719,7 +758,7 @@ export class CBBSyncOrchestratorService {
       );
       throw error;
     } else {
-      this.logger.log(
+      this.logger.info(
         `Updated CBB status for order ${orderId}: synced=${synced}, contact_id=${contactId}`,
       );
     }
@@ -747,7 +786,7 @@ export class CBBSyncOrchestratorService {
       );
       // Don't throw error - this is not critical enough to fail the entire sync
     } else {
-      this.logger.log(
+      this.logger.info(
         `Linked order ${orderId} to CBB contact ${cbbContactUuid}`,
       );
     }
