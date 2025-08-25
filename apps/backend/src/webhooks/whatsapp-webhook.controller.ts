@@ -287,6 +287,9 @@ export class WhatsAppWebhookController {
         );
       }
 
+      let finalMessageId = status.id;
+      let messageIdUpdated = false;
+
       // Update message ID if this is the first status update with real Meta message ID
       if (status.id && status.id.startsWith('wamid.') && status.biz_opaque_callback_data) {
         try {
@@ -304,10 +307,40 @@ export class WhatsAppWebhookController {
               this.logger.log(
                 `Updated message ID from ${updateResult.previousMessageId} to ${updateResult.newMessageId}`,
               );
+              messageIdUpdated = true;
             } else {
               this.logger.warn(
                 `Failed to update message ID: ${updateResult.error}`,
               );
+              // If correlation failed, we might need to use temporary ID for delivery updates
+              if (updateResult.error?.includes('No matching message found') && correlationData.contactId) {
+                // Try to find the temporary message ID
+                const tempMessage = await this.supabaseService.serviceClient
+                  .from('whatsapp_messages')
+                  .select('message_id')
+                  .eq('phone_number', correlationData.contactId)
+                  .like('message_id', 'temp_%')
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .single();
+                
+                if (tempMessage.data?.message_id) {
+                  // Manually update the message ID since correlation failed
+                  await this.supabaseService.serviceClient
+                    .from('whatsapp_messages')
+                    .update({
+                      message_id: status.id,
+                      meta_message_id: status.id,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('message_id', tempMessage.data.message_id);
+                  
+                  this.logger.log(
+                    `Manually updated message ID from ${tempMessage.data.message_id} to ${status.id}`,
+                  );
+                  messageIdUpdated = true;
+                }
+              }
             }
           }
         } catch (error) {
@@ -319,7 +352,7 @@ export class WhatsAppWebhookController {
       }
 
       const messageStatus = {
-        id: status.id,
+        id: finalMessageId,
         status: status.status,
         timestamp: new Date(status.timestamp * 1000),
         recipient: status.recipient_id,
@@ -328,6 +361,7 @@ export class WhatsAppWebhookController {
         pricingModel: status.pricing?.pricing_model,
         isBillable: status.pricing?.billable,
         error: status.errors?.[0],
+        messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
       this.deliveryTracker.updateMessageStatus(messageStatus as any);
@@ -475,40 +509,47 @@ export class WhatsAppWebhookController {
         updates.is_billable = status.isBillable;
       }
 
-      await this.supabaseService.serviceClient
+      // Try to update with the real message ID first (after correlation)
+      const { data, error } = await this.supabaseService.serviceClient
         .from('whatsapp_messages')
         .update(updates)
-        .eq('message_id', status.id);
+        .eq('message_id', status.id)
+        .select('order_id, message_id');
 
+      // If no rows were updated and we have a real WAMID, it might be a correlation issue
+      if (!error && (!data || data.length === 0) && status.id.startsWith('wamid.')) {
+        this.logger.warn(
+          `No message found with ID ${status.id}, delivery status update failed. This may indicate a message ID correlation issue.`,
+        );
+        return;
+      }
+
+      // Update orders table if we successfully updated the message
       if (
-        status.status === 'delivered' ||
-        status.status === 'read' ||
-        status.status === 'failed'
+        (status.status === 'delivered' || status.status === 'read' || status.status === 'failed') &&
+        data && data.length > 0 && data[0].order_id
       ) {
-        const message = await this.supabaseService.serviceClient
-          .from('whatsapp_messages')
-          .select('order_id')
-          .eq('message_id', status.id)
-          .single();
-
-        if (message.data?.order_id) {
-          const orderUpdate: any = {};
-
-          if (status.status === 'delivered') {
-            orderUpdate.whatsapp_delivered_at = status.timestamp;
-          } else if (status.status === 'read') {
-            orderUpdate.whatsapp_read_at = status.timestamp;
-          } else if (status.status === 'failed') {
-            orderUpdate.whatsapp_failed_at = status.timestamp;
-            orderUpdate.whatsapp_failure_reason =
-              status.error?.message || 'Unknown error';
-          }
-
-          await this.supabaseService.serviceClient
-            .from('orders')
-            .update(orderUpdate)
-            .eq('order_id', message.data.order_id);
-        }
+        const orderId = data[0].order_id;
+        this.logger.debug(`Updating order ${orderId} with WhatsApp ${status.status} status`);
+        
+        // Note: Currently the orders table doesn't have whatsapp_* columns
+        // This is a placeholder for when those columns are added
+        // For now, the tracking is handled in the whatsapp_messages table
+        
+        // If/when orders table gets WhatsApp status columns, uncomment:
+        // const orderUpdate: any = {};
+        // if (status.status === 'delivered') {
+        //   orderUpdate.whatsapp_delivered_at = status.timestamp;
+        // } else if (status.status === 'read') {
+        //   orderUpdate.whatsapp_read_at = status.timestamp;
+        // } else if (status.status === 'failed') {
+        //   orderUpdate.whatsapp_failed_at = status.timestamp;
+        //   orderUpdate.whatsapp_failure_reason = status.error?.message || 'Unknown error';
+        // }
+        // await this.supabaseService.serviceClient
+        //   .from('orders')
+        //   .update(orderUpdate)
+        //   .eq('order_id', orderId);
       }
     } catch (error: any) {
       this.logger.error(

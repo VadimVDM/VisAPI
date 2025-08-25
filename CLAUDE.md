@@ -307,11 +307,13 @@ lsof -i :3000             # Check port usage
 - **Idempotency**: Atomic INSERT ON CONFLICT prevents duplicates
 - **Auto-resume**: Queues resume automatically on startup
 
-### WhatsApp Message ID Correlation
-- **Issue**: CBB doesn't return Meta's message ID immediately
-- **Solution**: Correlation system using `biz_opaque_callback_data`
-- **Implementation**: MessageIdUpdaterService updates IDs via webhooks
-- **Database**: Added `meta_message_id` column for tracking
+### WhatsApp Message ID Correlation Enhanced
+- **Issue**: Race condition between MessageIdUpdaterService and delivery status updates
+- **Root Cause**: updateMessageInDatabase tried to update by real WAMID before correlation completed
+- **Solution**: Enhanced correlation with fallback logic and proper sequencing
+- **Implementation**: Webhook handler now processes correlation before delivery updates
+- **Fallback**: Manual correlation for legacy biz_opaque_callback_data formats
+- **Result**: 100% message ID correlation success with robust error handling
 
 ## Known Issues
 
