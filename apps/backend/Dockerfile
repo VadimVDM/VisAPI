@@ -15,7 +15,7 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 
 # Enable corepack and cache its downloads
 RUN corepack enable
-RUN --mount=type=cache,target=/root/.local/share/corepack \
+RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
     corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy package files
@@ -35,7 +35,7 @@ WORKDIR /app
 # Minimal deps for build
 RUN apk add --no-cache libc6-compat
 RUN corepack enable
-RUN --mount=type=cache,target=/root/.local/share/corepack \
+RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
     corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy dependencies from previous stage
@@ -61,15 +61,20 @@ WORKDIR /app
 # Need libc6-compat for bcrypt and other native deps, jq for JSON manipulation
 RUN apk add --no-cache libc6-compat jq
 RUN corepack enable
-RUN --mount=type=cache,target=/root/.local/share/corepack \
+RUN --mount=type=cache,id=corepack-cache,target=/root/.local/share/corepack \
     corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy generated package.json from build
 COPY --from=builder /app/dist/apps/backend/package.json ./
 
-# Add tslib manually since webpack doesn't include it
-RUN echo '{}' > package.json.tmp && \
-    jq '.dependencies.tslib = "^2.8.1"' < package.json > package.json.tmp && \
+# Add missing dependencies that webpack doesn't detect
+RUN jq '.dependencies.tslib = "^2.8.1" | \
+        .dependencies."@supabase/supabase-js" = "^2.55.0" | \
+        .dependencies."@nestjs/websockets" = "^11.1.6" | \
+        .dependencies."@nestjs/microservices" = "^11.1.6" | \
+        .dependencies."@fastify/view" = "^10.0.2" | \
+        .dependencies."class-transformer" = "^0.5.1"' \
+    < package.json > package.json.tmp && \
     mv package.json.tmp package.json
 
 # Install production deps with cache (no lockfile as it doesn't match generated package.json)
