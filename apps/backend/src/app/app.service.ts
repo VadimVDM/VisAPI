@@ -13,18 +13,17 @@ export class AppService {
   async checkDatabaseHealth(): Promise<boolean> {
     try {
       // Simple query to check database connectivity
-      const { error } = await this.supabase
-        .serviceClient
+      const { error } = await this.supabase.serviceClient
         .from('api_keys')
         .select('id')
         .limit(1)
         .single();
-      
+
       // If we get a 'PGRST116' error (no rows), that's fine - database is working
       if (error && error.code !== 'PGRST116') {
         return false;
       }
-      
+
       return true;
     } catch {
       return false;

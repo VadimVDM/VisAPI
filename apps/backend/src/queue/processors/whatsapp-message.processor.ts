@@ -393,9 +393,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
           `Failed to update CBB notification flag for order ${orderId}: ${error.message}`,
         );
       } else if (!this.configService.isProduction) {
-        this.logger.debug(
-          `Updated CBB notification flag for order ${orderId}`,
-        );
+        this.logger.debug(`Updated CBB notification flag for order ${orderId}`);
       }
     } catch (error) {
       // Log but don't fail the message processing

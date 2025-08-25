@@ -3,7 +3,12 @@ import { QueueService } from './queue.service';
 import { CBBSyncMetricsService } from './services/cbb-sync-metrics.service';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { Scopes } from '../auth/decorators/scopes.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('Queue')
 @Controller('v1/queue')

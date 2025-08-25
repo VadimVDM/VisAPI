@@ -12,7 +12,7 @@ export default defineConfig({
   dts: false, // We don't need type definitions for the app
   minify: process.env.NODE_ENV === 'production',
   bundle: true,
-  
+
   // External dependencies that should not be bundled
   external: [
     // Native Node.js modules
@@ -37,7 +37,7 @@ export default defineConfig({
     'v8',
     'vm',
     'zlib',
-    
+
     // Peer dependencies / problematic packages
     '@nestjs/microservices',
     '@nestjs/websockets',
@@ -56,7 +56,7 @@ export default defineConfig({
     'grpc',
     '@grpc/grpc-js',
     '@grpc/proto-loader',
-    
+
     // Keep these external to avoid bundling issues
     'bcrypt',
     'sharp',
@@ -66,7 +66,7 @@ export default defineConfig({
     '@swc/core',
     '@swc/wasm',
   ],
-  
+
   // ESBuild options
   esbuildOptions(options) {
     options.banner = {
@@ -76,22 +76,23 @@ export default defineConfig({
         // Node version: ${process.version}
       `.trim(),
     };
-    
+
     // Keep class names and function names for better debugging
     options.keepNames = true;
-    
+
     // Enable tree shaking
     options.treeShaking = true;
-    
+
     // Use more aggressive optimizations in production
     if (process.env.NODE_ENV === 'production') {
       options.drop = ['console', 'debugger'];
       options.legalComments = 'none';
     }
   },
-  
+
   // Watch options for development
-  onSuccess: process.env.NODE_ENV === 'development' 
-    ? 'node ../../dist/apps/backend/main.js' 
-    : undefined,
+  onSuccess:
+    process.env.NODE_ENV === 'development'
+      ? 'node ../../dist/apps/backend/main.js'
+      : undefined,
 });

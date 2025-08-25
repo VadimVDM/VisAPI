@@ -50,9 +50,9 @@ Processes incoming webhooks with retry logic.
 ### Supporting Services (Updated August 25, 2025)
 
 - `WhatsAppTranslationService` (323 lines): Hebrew translations with database-driven processing times
-- `WhatsAppTemplateService` (130 lines): Template building and formatting
-- `CBBFieldMapperService` (301 lines): Maps order data to CBB contact fields including `order_days`
-- `CBBSyncOrchestratorService` (328 lines): Handles sync workflow logic
+- `WhatsAppTemplateService` (141 lines): Template building with 'x' prefix for quantities
+- `CBBFieldMapperService` (478 lines): Enhanced field mapping with units and timestamps
+- `CBBSyncOrchestratorService` (428 lines): Handles sync workflow with improved logging
 
 ## Configuration
 

@@ -1,4 +1,9 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Logger,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Job, RepeatableJob } from 'bullmq';
 import {
@@ -222,14 +227,17 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       { name: QUEUE_NAMES.DEFAULT, queue: this.defaultQueue },
       { name: QUEUE_NAMES.BULK, queue: this.bulkQueue },
       { name: QUEUE_NAMES.CBB_SYNC, queue: this.cbbSyncQueue },
-      { name: QUEUE_NAMES.WHATSAPP_MESSAGES, queue: this.whatsappMessagesQueue },
+      {
+        name: QUEUE_NAMES.WHATSAPP_MESSAGES,
+        queue: this.whatsappMessagesQueue,
+      },
     ];
 
     // Clean up old stuck jobs and auto-resume queues
     for (const { name, queue } of queues) {
       try {
         const isPaused = await queue.isPaused();
-        
+
         if (isPaused) {
           await queue.resume();
           this.logger.log(`Auto-resumed queue: ${name} (was paused)`);
@@ -239,7 +247,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         const grace = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
         await queue.clean(grace, 0, 'completed');
         await queue.clean(grace, 0, 'failed');
-        
+
         // Get current job counts for monitoring
         const counts = await queue.getJobCounts();
         if (counts.delayed > 0 || counts.waiting > 0 || counts.active > 0) {

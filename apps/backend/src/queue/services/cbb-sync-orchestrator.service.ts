@@ -109,7 +109,7 @@ export class CBBSyncOrchestratorService {
     // If no CBB contact record exists, create it first
     if (!cbbContact) {
       this.logger.log(`Creating CBB contact record for order: ${orderId}`);
-      
+
       // Generate translations for Hebrew localization
       const language = this.mapBranchToLanguage(order.branch);
       const translations: {
@@ -117,16 +117,25 @@ export class CBBSyncOrchestratorService {
         visaTypeTranslated?: string;
         processingDaysTranslated?: string;
       } = {};
-      
+
       if (language === 'he') {
-        translations.countryNameTranslated = this.translationService.getCountryNameHebrew(order.product_country);
-        translations.visaTypeTranslated = this.translationService.getVisaTypeHebrew(order.product_doc_type || 'evisa', order.product_intent || undefined);
-        
+        translations.countryNameTranslated =
+          this.translationService.getCountryNameHebrew(order.product_country);
+        translations.visaTypeTranslated =
+          this.translationService.getVisaTypeHebrew(
+            order.product_doc_type || 'evisa',
+            order.product_intent || undefined,
+          );
+
         // Generate Hebrew processing days message using database-driven calculation
-        const processingDays = await this.calculateProcessingDays(orderId, order.product_country, order.is_urgent === true);
+        const processingDays = await this.calculateProcessingDays(
+          orderId,
+          order.product_country,
+          order.is_urgent === true,
+        );
         translations.processingDaysTranslated = `תוך ${processingDays} ימי עסקים`;
       }
-      
+
       cbbContact = await this.fieldMapper.saveCBBContact(order, translations);
       if (!cbbContact) {
         const duration = endTimer();
@@ -225,11 +234,22 @@ export class CBBSyncOrchestratorService {
 
       // 11. Queue WhatsApp confirmation if applicable
       if (contact && !error) {
-        await this.queueWhatsAppConfirmation(order, contact.id, hasWhatsApp, cbbContact);
+        await this.queueWhatsAppConfirmation(
+          order,
+          contact.id,
+          hasWhatsApp,
+          cbbContact,
+        );
       }
 
       // 12. Log success
-      await this.logSyncSuccess(order, contact?.id, isNewContact, hasWhatsApp, cbbContact);
+      await this.logSyncSuccess(
+        order,
+        contact?.id,
+        isNewContact,
+        hasWhatsApp,
+        cbbContact,
+      );
 
       // Record metrics
       const duration = endTimer();
@@ -380,10 +400,11 @@ export class CBBSyncOrchestratorService {
     hasWhatsApp: boolean,
     cbbContact: any, // Passed from caller to avoid re-fetching
   ): Promise<void> {
-    
     // Check WhatsApp messages table for existing successful messages
-    const isAlreadySent = await this.isOrderConfirmationAlreadySent(order.order_id);
-    
+    const isAlreadySent = await this.isOrderConfirmationAlreadySent(
+      order.order_id,
+    );
+
     // Always log the conditions for debugging
     this.logger.log(
       `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
@@ -423,8 +444,10 @@ export class CBBSyncOrchestratorService {
       } else if (isAlreadySent) {
         skipReason = `New order notification already sent (WhatsApp messages table)`;
       }
-      
-      this.logger.log(`WhatsApp notification skipped for order ${order.order_id}: ${skipReason}`);
+
+      this.logger.log(
+        `WhatsApp notification skipped for order ${order.order_id}: ${skipReason}`,
+      );
       return;
     }
 
@@ -446,13 +469,13 @@ export class CBBSyncOrchestratorService {
         })
         .select()
         .single();
-      
+
       if (trackingError && !trackingError.message?.includes('duplicate')) {
         this.logger.warn(
           `Failed to create WhatsApp tracking record for order ${order.order_id}: ${trackingError.message}`,
         );
       }
-      
+
       const job = await this.queueService.addJob(
         QUEUE_NAMES.WHATSAPP_MESSAGES,
         JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
@@ -470,11 +493,11 @@ export class CBBSyncOrchestratorService {
           },
         },
       );
-      
+
       this.logger.log(
         `Successfully queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId} (job ID: ${job.id}, job name: ${JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION})`,
       );
-      
+
       // NOTE: The actual sent status will be updated by the WhatsApp processor after successful sending
     } catch (error) {
       // Don't fail the sync if we can't queue the message
@@ -505,13 +528,16 @@ export class CBBSyncOrchestratorService {
 
     // Only log detailed sync info in development
     if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`CBB contact sync successful for order ${order.order_id}`, {
-        contact_id: contactId,
-        action,
-        has_whatsapp: hasWhatsApp,
-        whatsapp_queued: whatsappQueued,
-        new_order_notification_sent: cbbContact?.new_order_notification_sent,
-      });
+      this.logger.log(
+        `CBB contact sync successful for order ${order.order_id}`,
+        {
+          contact_id: contactId,
+          action,
+          has_whatsapp: hasWhatsApp,
+          whatsapp_queued: whatsappQueued,
+          new_order_notification_sent: cbbContact?.new_order_notification_sent,
+        },
+      );
     }
 
     await this.logService.createLog({
@@ -723,33 +749,33 @@ export class CBBSyncOrchestratorService {
         {
           p_country: country,
           p_urgency: isUrgent ? 'urgent' : undefined,
-        }
+        },
       );
 
       if (error) {
         this.logger.warn(
-          `Database processing days calculation failed for order ${orderId}: ${error.message}. Using fallback.`
+          `Database processing days calculation failed for order ${orderId}: ${error.message}. Using fallback.`,
         );
         return this.calculateDefaultProcessingDays(country, isUrgent);
       }
 
       if (data && typeof data === 'number' && data > 0) {
         this.logger.debug(
-          `Database calculated ${data} processing days for order ${orderId} (country: ${country}, urgent: ${isUrgent})`
+          `Database calculated ${data} processing days for order ${orderId} (country: ${country}, urgent: ${isUrgent})`,
         );
         return data;
       }
 
       // Fallback if database returns invalid data
       this.logger.warn(
-        `Database returned invalid processing days (${data}) for order ${orderId}. Using fallback.`
+        `Database returned invalid processing days (${data}) for order ${orderId}. Using fallback.`,
       );
       return this.calculateDefaultProcessingDays(country, isUrgent);
     } catch (error) {
       // Fallback on any error
       this.logger.error(
         `Error calling database processing days function for order ${orderId}:`,
-        error
+        error,
       );
       return this.calculateDefaultProcessingDays(country, isUrgent);
     }
@@ -783,7 +809,9 @@ export class CBBSyncOrchestratorService {
    * Check if order confirmation has already been sent via WhatsApp
    * Uses same logic as WhatsApp processor for consistency
    */
-  private async isOrderConfirmationAlreadySent(orderId: string): Promise<boolean> {
+  private async isOrderConfirmationAlreadySent(
+    orderId: string,
+  ): Promise<boolean> {
     try {
       const { data, error } = await this.supabaseService.serviceClient
         .from('whatsapp_messages')

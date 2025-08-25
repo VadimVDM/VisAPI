@@ -20,11 +20,11 @@ interface HttpResponse {
   header: (name: string, value: string) => HttpResponse;
   send: (payload: unknown) => HttpResponse;
 }
-import { 
+import {
   SYSTEM_ERRORS,
   VALIDATION_ERRORS,
   AUTH_ERRORS,
-  EXTERNAL_ERRORS 
+  EXTERNAL_ERRORS,
 } from '../constants/error-codes';
 import { getCorrelationId, getRequestUrl } from '@visapi/backend-http-types';
 
@@ -116,13 +116,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       let message = 'An error occurred';
       let errors: Record<string, string[]> | undefined;
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         const responseObj = exceptionResponse as ExceptionResponse;
         message = responseObj.message || message;
         errors = responseObj.errors;
@@ -132,25 +135,27 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const httpStatus = status as HttpStatus;
       switch (httpStatus) {
         case HttpStatus.BAD_REQUEST:
-          const validationError = errors ? VALIDATION_ERRORS.SCHEMA_VALIDATION_FAILED : VALIDATION_ERRORS.INVALID_REQUEST_BODY;
+          const validationError = errors
+            ? VALIDATION_ERRORS.SCHEMA_VALIDATION_FAILED
+            : VALIDATION_ERRORS.INVALID_REQUEST_BODY;
           return {
             ...validationError,
             detail: message,
             errors,
           };
-        
+
         case HttpStatus.UNAUTHORIZED:
           return {
             ...AUTH_ERRORS.INVALID_API_KEY,
             detail: message,
           };
-        
+
         case HttpStatus.FORBIDDEN:
           return {
             ...AUTH_ERRORS.INSUFFICIENT_PERMISSIONS,
             detail: message,
           };
-        
+
         case HttpStatus.NOT_FOUND:
           return {
             type: 'https://api.visanet.app/problems/resource-not-found',
@@ -159,7 +164,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             detail: message,
             code: 'RES-404',
           };
-        
+
         case HttpStatus.CONFLICT:
           return {
             type: 'https://api.visanet.app/problems/resource-conflict',
@@ -168,13 +173,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             detail: message,
             code: 'BIZ-409',
           };
-        
+
         case HttpStatus.TOO_MANY_REQUESTS:
           return {
             ...AUTH_ERRORS.API_KEY_RATE_LIMITED,
             detail: message,
           };
-        
+
         case HttpStatus.UNPROCESSABLE_ENTITY:
           return {
             ...VALIDATION_ERRORS.SCHEMA_VALIDATION_FAILED,
@@ -185,7 +190,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         default:
           return {
             ...SYSTEM_ERRORS.INTERNAL_SERVER_ERROR,
-            status: httpStatus >= 500 ? httpStatus : HttpStatus.INTERNAL_SERVER_ERROR as number,
+            status:
+              httpStatus >= 500
+                ? httpStatus
+                : (HttpStatus.INTERNAL_SERVER_ERROR as number),
             detail: message,
           };
       }
@@ -194,7 +202,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Handle specific error types by name
     if (exception instanceof Error) {
       const message = exception.message;
-      
+
       switch (exception.name) {
         case 'ValidationError':
         case 'ZodError':
@@ -202,19 +210,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             ...VALIDATION_ERRORS.SCHEMA_VALIDATION_FAILED,
             detail: message,
           };
-        
+
         case 'UnauthorizedError':
           return {
             ...AUTH_ERRORS.INVALID_API_KEY,
             detail: message,
           };
-        
+
         case 'ForbiddenError':
           return {
             ...AUTH_ERRORS.INSUFFICIENT_PERMISSIONS,
             detail: message,
           };
-        
+
         case 'NotFoundError':
           return {
             type: 'https://api.visanet.app/problems/resource-not-found',
@@ -223,7 +231,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             detail: message,
             code: 'RES-404',
           };
-        
+
         case 'ConflictError':
           return {
             type: 'https://api.visanet.app/problems/resource-conflict',
@@ -232,26 +240,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             detail: message,
             code: 'BIZ-409',
           };
-        
+
         case 'TimeoutError':
           return {
             ...SYSTEM_ERRORS.REQUEST_TIMEOUT,
             detail: message,
           };
-        
+
         case 'SupabaseError':
         case 'DatabaseError':
           return {
             ...EXTERNAL_ERRORS.SUPABASE_CONNECTION_FAILED,
             detail: 'Database operation failed',
           };
-        
+
         case 'RedisError':
           return {
             ...EXTERNAL_ERRORS.REDIS_CONNECTION_FAILED,
             detail: 'Cache operation failed',
           };
-        
+
         default:
           return {
             ...SYSTEM_ERRORS.INTERNAL_SERVER_ERROR,
@@ -290,10 +298,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       );
     } else if (problemDetails.status >= 400) {
       // Client errors - log as warning without stack trace
-      this.logger.warn(`Client error: ${problemDetails.title} (${problemDetails.code})`, logContext);
+      this.logger.warn(
+        `Client error: ${problemDetails.title} (${problemDetails.code})`,
+        logContext,
+      );
     } else {
       // Other errors - log as debug
-      this.logger.debug(`Error: ${problemDetails.title} (${problemDetails.code})`, logContext);
+      this.logger.debug(
+        `Error: ${problemDetails.title} (${problemDetails.code})`,
+        logContext,
+      );
     }
   }
 }

@@ -36,23 +36,26 @@ async function bootstrap() {
 
   // Security - Fastify helmet
   await app.register(fastifyHelmet, {
-    contentSecurityPolicy: configService.nodeEnv === 'production' ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-      },
-    } : false,
+    contentSecurityPolicy:
+      configService.nodeEnv === 'production'
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'https:'],
+            },
+          }
+        : false,
   });
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
     const fastifyInstance = app.getHttpAdapter().getInstance();
     // Fastify uses server.trustProxy property
-    (fastifyInstance as any).server = { 
+    (fastifyInstance as any).server = {
       ...(fastifyInstance as any).server,
-      trustProxy: true 
+      trustProxy: true,
     };
     Logger.log('Trust proxy enabled for production environment');
   }

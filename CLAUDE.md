@@ -26,10 +26,19 @@ Essential reference for AI assistants. Updated: August 24, 2025
 - ✅ **16 test suites passing** (100% success rate)
 - ✅ **Backend optimizations complete** (August 25, 2025)
   - Redis caching with decorators implemented
-  - Graceful shutdown hooks added
+  - Graceful shutdown hooks (disabled due to Fastify compatibility)
   - Docker multi-stage build optimized
   - Dependencies updated to latest versions
   - All imports cleaned up
+- ✅ **Queue Auto-Resume** (August 25, 2025)
+  - Queues automatically resume on startup if paused
+  - Fixed WhatsApp processor queue name mismatch  
+  - Admin endpoints support both UUID and Vizi order IDs
+- ✅ **Enhanced CBB Field Mapping** (August 25, 2025)
+  - WhatsApp quantities display with 'x' prefix (x1, x2)
+  - Visa validity includes units ("30 days", "6 months", "1 year")
+  - Order creation timestamp tracked in `order_date_time` field
+  - Total payment amount tracked in `order_sum_ils` field
 
 ## Project Structure
 
@@ -277,12 +286,32 @@ lsof -i :3000             # Check port usage
 9. **Build scripts**: Exclude `src/scripts/**` from tsconfig.app.json
 10. **CBB sync**: Orders auto-trigger sync via OrderSyncSaga
 
+## Critical Fixes (August 25, 2025)
+
+### Queue Processing Issues Resolved
+- **Root Cause**: Graceful shutdown was pausing queues persistently in Redis
+- **Solution**: Added auto-resume logic in `QueueService.onModuleInit()`
+- **Fixed**: WhatsApp processor listening to wrong queue name constant
+- **Impact**: All WhatsApp messages now process correctly
+
+### Admin Endpoint Enhancements
+- **Retrigger endpoints** now accept both UUID and Vizi order IDs
+- **Flexible search**: Tries Vizi ID first, then UUID fallback
+- **Example**: `IL250824VN22` or `550e8400-e29b-41d4-a716-446655440000`
+
+### CBB Custom Fields Completed
+- **order_date_time** (ID: 100644): Order creation timestamp
+- **order_sum_ils** (ID: 358366): Total payment amount (numeric)
+- **visa_validity**: Now includes units ("30 days", "6 months", "1 year")
+- **order_days** (ID: 271948): Processing days for fulfillment
+
 ## Known Issues
 
 - NX peer dependencies: Minor version mismatch (non-blocking)
 - Lighthouse CI: Disabled due to Next.js 15 compatibility
+- Fastify `enableShutdownHooks()`: Disabled due to Node.js 22 compatibility
 
 ---
 
-**Version**: v1.0.4 Production
-**Last Updated**: August 24, 2025
+**Version**: v1.0.5 Production
+**Last Updated**: August 25, 2025

@@ -16,10 +16,10 @@ import { Request } from 'express';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
 
 /**
- * Alternative webhook controller for Meta/WhatsApp  
+ * Alternative webhook controller for Meta/WhatsApp
  * Provides additional endpoints for Meta webhook compatibility at /api/v1/webhooks/meta
  * The main webhook endpoint remains at /api/v1/webhooks/whatsapp
- * 
+ *
  * Note: This controller was originally designed to handle root-level webhooks but
  * was moved to avoid conflicts with AppController's GET /api route
  */

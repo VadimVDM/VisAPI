@@ -124,15 +124,17 @@ if (sentryConfig.dsn) {
           publicRedisUrl = undefined;
         }
         const redisUrl = publicRedisUrl || configService.redisUrl;
-        
+
         // If Redis is available, use Redis storage; otherwise fallback to in-memory
         const storage = redisUrl
-          ? new ThrottlerStorageRedisService(new Redis(redisUrl, {
-              maxRetriesPerRequest: 3,
-              retryStrategy: (times) => Math.min(times * 50, 2000),
-            }))
+          ? new ThrottlerStorageRedisService(
+              new Redis(redisUrl, {
+                maxRetriesPerRequest: 3,
+                retryStrategy: (times) => Math.min(times * 50, 2000),
+              }),
+            )
           : undefined;
-        
+
         return {
           throttlers: [
             {

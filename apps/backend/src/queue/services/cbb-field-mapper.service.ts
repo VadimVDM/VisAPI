@@ -236,10 +236,15 @@ export class CBBFieldMapperService {
       order.entry_date ?? '',
       order.order_id,
     );
+    // Use webhook_received_at for the actual order creation time
+    const orderCreationDateUnix = this.convertDateToUnix(
+      order.webhook_received_at,
+      order.order_id,
+    );
     const gender = this.extractGender(order.applicants_data, order.order_id);
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
-    const visaValidityDays = this.calculateVisaValidityDays(
+    const visaValidityWithUnits = this.getVisaValidityWithUnits(
       order.product_validity ?? undefined,
       order.product_days_to_use ?? undefined,
     );
@@ -255,7 +260,7 @@ export class CBBFieldMapperService {
     const visaEntries = order.product_entries || 'single';
 
     this.logger.debug(
-      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityDays} days, processing=${processingDays} days`,
+      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityWithUnits}, processing=${processingDays} days`,
     );
 
     return {
@@ -268,9 +273,10 @@ export class CBBFieldMapperService {
       cufs: this.buildCustomFields(order, {
         isUrgent,
         orderDateUnix,
+        orderCreationDateUnix,
         visaIntent,
         visaEntries,
-        visaValidityDays,
+        visaValidityWithUnits,
         countryFlag,
         processingDays,
       }),
@@ -285,9 +291,10 @@ export class CBBFieldMapperService {
     computed: {
       isUrgent: boolean;
       orderDateUnix?: number;
+      orderCreationDateUnix?: number;
       visaIntent: string;
       visaEntries: string;
-      visaValidityDays: string;
+      visaValidityWithUnits: string;
       countryFlag: string;
       processingDays: number;
     },
@@ -302,18 +309,20 @@ export class CBBFieldMapperService {
       // Number fields (type 1)
       visa_quantity: order.visa_quantity || 1,
       order_days: computed.processingDays, // Processing days for WhatsApp template
+      order_sum_ils: order.amount || 0, // Total amount paid (CUF ID: 358366)
 
       // Boolean field (type 4) - CBB expects 1 for true, 0 for false
       // Note: order_priority field removed - we only need the boolean order_urgent
       order_urgent: computed.isUrgent ? 1 : 0,
 
       // Date field (type 2) expects Unix timestamp in seconds
-      order_date: computed.orderDateUnix,
+      order_date: computed.orderDateUnix, // Travel/entry date
+      order_date_time: computed.orderCreationDateUnix, // Order creation timestamp (CUF ID: 100644)
 
       // Visa fields using actual product data
       visa_intent: computed.visaIntent,
       visa_entries: computed.visaEntries,
-      visa_validity: computed.visaValidityDays,
+      visa_validity: computed.visaValidityWithUnits, // Now includes units like "30 days", "6 months", "1 year"
       visa_flag: computed.countryFlag,
 
       // System fields
@@ -412,27 +421,49 @@ export class CBBFieldMapperService {
   }
 
   /**
-   * Calculate visa validity in days
+   * Get visa validity with units (e.g., "30 days", "6 months", "1 year")
    */
-  private calculateVisaValidityDays(
+  private getVisaValidityWithUnits(
     validity?: string,
     daysToUse?: number,
   ): string {
+    // If specific days are provided, format with "days" unit
     if (daysToUse) {
-      return String(daysToUse);
+      if (daysToUse === 30) {
+        return '1 month';
+      } else if (daysToUse === 60) {
+        return '2 months';
+      } else if (daysToUse === 90) {
+        return '3 months';
+      } else if (daysToUse === 180) {
+        return '6 months';
+      } else if (daysToUse === 365) {
+        return '1 year';
+      } else if (daysToUse === 730) {
+        return '2 years';
+      } else {
+        return `${daysToUse} days`;
+      }
     }
 
+    // Map validity period to formatted string with units
     switch (validity) {
       case 'month':
-        return '30';
+        return '1 month';
       case 'year':
-        return '365';
+        return '1 year';
       case '3months':
-        return '90';
+        return '3 months';
       case '6months':
-        return '180';
+        return '6 months';
+      case '2years':
+        return '2 years';
+      case '5years':
+        return '5 years';
+      case '10years':
+        return '10 years';
       default:
-        return '30'; // Default to 30 days
+        return '30 days'; // Default to 30 days
     }
   }
 

@@ -38,7 +38,11 @@ import {
 import { CommandBus } from '@nestjs/cqrs';
 import { ResyncCBBContactCommand } from '../orders/commands/resync-cbb-contact.command';
 import { OrdersRepository } from '@visapi/backend-repositories';
-import { CBBContactSyncResult, QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
+import {
+  CBBContactSyncResult,
+  QUEUE_NAMES,
+  JOB_NAMES,
+} from '@visapi/shared-types';
 import { QueueService } from '../queue/queue.service';
 import { SupabaseService } from '@visapi/core-supabase';
 
@@ -573,12 +577,14 @@ export class ViziWebhooksController {
 
       // Return formatted result based on sync result
       // Consider both 'success' and 'no_whatsapp' as successful operations
-      const isSuccess = result.status === 'success' || result.status === 'no_whatsapp';
-      const message = result.status === 'success'
-        ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
-        : result.status === 'no_whatsapp'
-          ? 'CBB contact synced but WhatsApp not available'
-          : 'CBB resync failed';
+      const isSuccess =
+        result.status === 'success' || result.status === 'no_whatsapp';
+      const message =
+        result.status === 'success'
+          ? `CBB contact ${result.action === 'created' ? 'created' : result.action === 'updated' ? 'updated' : 'processed'} successfully`
+          : result.status === 'no_whatsapp'
+            ? 'CBB contact synced but WhatsApp not available'
+            : 'CBB resync failed';
 
       return {
         success: isSuccess,
@@ -705,9 +711,14 @@ export class ViziWebhooksController {
           where: { order_id: dto.orderId },
         });
         order = orders?.[0];
-        
+
         // If not found and orderId looks like a UUID, try database ID lookup
-        if (!order && dto.orderId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        if (
+          !order &&
+          dto.orderId.match(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+          )
+        ) {
           order = await this.ordersRepository.findById(dto.orderId);
         }
       } else if (dto.viziOrderId) {
@@ -752,7 +763,8 @@ export class ViziWebhooksController {
           success: false,
           orderId: order.id,
           phoneNumber: order.client_phone || 'unknown',
-          message: 'WhatsApp alerts are disabled for this order. Use force=true to override.',
+          message:
+            'WhatsApp alerts are disabled for this order. Use force=true to override.',
         };
       }
 
@@ -762,16 +774,18 @@ export class ViziWebhooksController {
           success: false,
           orderId: order.id,
           phoneNumber: order.client_phone || 'unknown',
-          message: 'Order has not been synced with CBB yet. Please run CBB resync first.',
+          message:
+            'Order has not been synced with CBB yet. Please run CBB resync first.',
         };
       }
 
       // Get CBB contact to check WhatsApp availability
-      const { data: cbbContact, error: cbbError } = await this.supabaseService.serviceClient
-        .from('cbb_contacts')
-        .select('*')
-        .eq('id', order.cbb_contact_uuid)
-        .single();
+      const { data: cbbContact, error: cbbError } =
+        await this.supabaseService.serviceClient
+          .from('cbb_contacts')
+          .select('*')
+          .eq('id', order.cbb_contact_uuid)
+          .single();
 
       if (cbbError || !cbbContact) {
         return {
@@ -783,27 +797,32 @@ export class ViziWebhooksController {
         };
       }
 
-      // Note: We're not checking WhatsApp availability here since the orchestrator 
+      // Note: We're not checking WhatsApp availability here since the orchestrator
       // already validated it during initial sync. If WhatsApp wasn't available,
       // the alerts_enabled flag would be false.
 
       // Check if message was already sent (unless force is true)
       if (!dto.force) {
         // Check WhatsApp messages table
-        const { data: existingMessage } = await this.supabaseService.serviceClient
-          .from('whatsapp_messages')
-          .select('id, confirmation_sent, status')
-          .eq('order_id', order.order_id)
-          .eq('template_name', 'order_confirmation_global')
-          .maybeSingle();
+        const { data: existingMessage } =
+          await this.supabaseService.serviceClient
+            .from('whatsapp_messages')
+            .select('id, confirmation_sent, status')
+            .eq('order_id', order.order_id)
+            .eq('template_name', 'order_confirmation_global')
+            .maybeSingle();
 
-        if (existingMessage?.confirmation_sent || existingMessage?.status === 'delivered') {
+        if (
+          existingMessage?.confirmation_sent ||
+          existingMessage?.status === 'delivered'
+        ) {
           return {
             success: false,
             orderId: order.id,
             phoneNumber: order.client_phone || 'unknown',
             cbbContactUuid: order.cbb_contact_uuid,
-            message: 'WhatsApp notification already sent. Use force=true to resend.',
+            message:
+              'WhatsApp notification already sent. Use force=true to resend.',
             alreadySent: true,
           };
         }
@@ -815,7 +834,8 @@ export class ViziWebhooksController {
             orderId: order.id,
             phoneNumber: order.client_phone || 'unknown',
             cbbContactUuid: order.cbb_contact_uuid,
-            message: 'WhatsApp notification already sent (CBB flag). Use force=true to resend.',
+            message:
+              'WhatsApp notification already sent (CBB flag). Use force=true to resend.',
             alreadySent: true,
           };
         }

@@ -65,7 +65,11 @@ export class SwaggerAuthGuard implements CanActivate {
 
     // Check for Basic authentication
     const authHeader = request.headers.authorization as string;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Basic ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Basic ')
+    ) {
       const base64Credentials = authHeader.slice(6);
       const credentials = Buffer.from(base64Credentials, 'base64').toString(
         'utf-8',

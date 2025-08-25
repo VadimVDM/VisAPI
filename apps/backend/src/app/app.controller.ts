@@ -21,7 +21,7 @@ export class AppController {
     try {
       // Quick database connectivity check
       const dbHealthy = await this.appService.checkDatabaseHealth();
-      
+
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),

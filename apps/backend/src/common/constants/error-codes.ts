@@ -27,7 +27,8 @@ export const AUTH_ERRORS = {
     type: 'https://api.visanet.app/problems/insufficient-permissions',
     title: 'Insufficient Permissions',
     status: 403,
-    description: 'The API key does not have required permissions for this operation',
+    description:
+      'The API key does not have required permissions for this operation',
   },
   API_KEY_RATE_LIMITED: {
     code: 'AUTH-003',
@@ -150,7 +151,8 @@ export const BUSINESS_ERRORS = {
     type: 'https://api.visanet.app/problems/template-not-approved',
     title: 'WhatsApp Template Not Approved',
     status: 422,
-    description: 'The WhatsApp template is not approved by Meta and cannot be used',
+    description:
+      'The WhatsApp template is not approved by Meta and cannot be used',
   },
   DUPLICATE_ORDER: {
     code: 'BIZ-006',
@@ -256,21 +258,27 @@ export class ErrorCodeHelper {
    * Get error definition by code
    */
   static getByCode(code: string): ErrorCodeDefinition | undefined {
-    return Object.values(ALL_ERROR_CODES).find(error => error.code === code);
+    return Object.values(ALL_ERROR_CODES).find((error) => error.code === code);
   }
 
   /**
    * Get error definition by HTTP status
    */
   static getByStatus(status: number): ErrorCodeDefinition[] {
-    return Object.values(ALL_ERROR_CODES).filter(error => error.status === status);
+    return Object.values(ALL_ERROR_CODES).filter(
+      (error) => error.status === status,
+    );
   }
 
   /**
    * Get error definition by category
    */
-  static getByCategory(category: 'AUTH' | 'VAL' | 'RES' | 'BIZ' | 'EXT' | 'SYS'): ErrorCodeDefinition[] {
-    return Object.values(ALL_ERROR_CODES).filter(error => error.code.startsWith(category));
+  static getByCategory(
+    category: 'AUTH' | 'VAL' | 'RES' | 'BIZ' | 'EXT' | 'SYS',
+  ): ErrorCodeDefinition[] {
+    return Object.values(ALL_ERROR_CODES).filter((error) =>
+      error.code.startsWith(category),
+    );
   }
 
   /**
@@ -281,7 +289,7 @@ export class ErrorCodeHelper {
     detail?: string,
     instance?: string,
     correlationId?: string,
-    errors?: Record<string, string[]>
+    errors?: Record<string, string[]>,
   ) {
     return {
       type: errorCode.type,

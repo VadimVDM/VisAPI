@@ -54,14 +54,25 @@ describe('GlobalExceptionFilter', () => {
 
   describe('RFC 7807 Problem Details Format', () => {
     it('should format HTTP exceptions with proper RFC 7807 structure', () => {
-      const exception = new HttpException('Test validation error', HttpStatus.BAD_REQUEST);
-      
+      const exception = new HttpException(
+        'Test validation error',
+        HttpStatus.BAD_REQUEST,
+      );
+
       filter.catch(exception, mockHost);
 
       expect(mockResponse.code).toHaveBeenCalledWith(400);
-      expect(mockResponse.type).toHaveBeenCalledWith('application/problem+json');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-Request-Id', 'test-correlation-id');
-      expect(mockResponse.header).toHaveBeenCalledWith('X-Correlation-Id', 'test-correlation-id');
+      expect(mockResponse.type).toHaveBeenCalledWith(
+        'application/problem+json',
+      );
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'X-Request-Id',
+        'test-correlation-id',
+      );
+      expect(mockResponse.header).toHaveBeenCalledWith(
+        'X-Correlation-Id',
+        'test-correlation-id',
+      );
 
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData).toMatchObject({
@@ -71,18 +82,23 @@ describe('GlobalExceptionFilter', () => {
         detail: 'Test validation error',
         instance: '/api/test',
         correlationId: 'test-correlation-id',
-        timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/),
+        timestamp: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/,
+        ),
         code: expect.stringMatching(/^[A-Z]+-\d{3}$/),
       });
     });
 
     it('should handle unauthorized errors with proper error code', () => {
-      const exception = new HttpException('Invalid API key', HttpStatus.UNAUTHORIZED);
-      
+      const exception = new HttpException(
+        'Invalid API key',
+        HttpStatus.UNAUTHORIZED,
+      );
+
       filter.catch(exception, mockHost);
 
       expect(mockResponse.code).toHaveBeenCalledWith(401);
-      
+
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/invalid-api-key',
@@ -94,18 +110,21 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should handle validation errors with field errors', () => {
-      const validationException = new HttpException({
-        message: 'Validation failed',
-        errors: {
-          email: ['Email is required', 'Email must be valid'],
-          password: ['Password too short'],
+      const validationException = new HttpException(
+        {
+          message: 'Validation failed',
+          errors: {
+            email: ['Email is required', 'Email must be valid'],
+            password: ['Password too short'],
+          },
         },
-      }, HttpStatus.UNPROCESSABLE_ENTITY);
-      
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+
       filter.catch(validationException, mockHost);
 
       expect(mockResponse.code).toHaveBeenCalledWith(422);
-      
+
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/schema-validation-failed',
@@ -122,11 +141,11 @@ describe('GlobalExceptionFilter', () => {
     it('should handle generic Error instances with proper mapping', () => {
       const error = new Error('Database connection failed');
       error.name = 'DatabaseError';
-      
+
       filter.catch(error, mockHost);
 
       expect(mockResponse.code).toHaveBeenCalledWith(503);
-      
+
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/supabase-connection-failed',
@@ -139,11 +158,11 @@ describe('GlobalExceptionFilter', () => {
 
     it('should handle unknown errors with fallback', () => {
       const unknownError = 'Some string error';
-      
+
       filter.catch(unknownError, mockHost);
 
       expect(mockResponse.code).toHaveBeenCalledWith(500);
-      
+
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/internal-server-error',
@@ -157,12 +176,15 @@ describe('GlobalExceptionFilter', () => {
     it('should handle missing correlation ID gracefully', () => {
       mockRequest.headers = {};
       const exception = new HttpException('Test error', HttpStatus.BAD_REQUEST);
-      
+
       filter.catch(exception, mockHost);
 
       const [sentData] = mockResponse.send.mock.calls[0];
       expect(sentData.correlationId).toBeUndefined();
-      expect(mockResponse.header).not.toHaveBeenCalledWith('X-Request-Id', expect.any(String));
+      expect(mockResponse.header).not.toHaveBeenCalledWith(
+        'X-Request-Id',
+        expect.any(String),
+      );
     });
   });
 });

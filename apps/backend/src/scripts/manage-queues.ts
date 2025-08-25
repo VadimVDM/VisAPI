@@ -12,10 +12,12 @@ const logger = new Logger('QueueManager');
 async function main() {
   const action = process.argv[2];
   const queueName = process.argv[3];
-  
+
   if (!action) {
     console.error('Usage: npm run queue:manage <action> [queue-name]');
-    console.error('Actions: status, pause, resume, clean-delayed, clean-failed, resume-all');
+    console.error(
+      'Actions: status, pause, resume, clean-delayed, clean-failed, resume-all',
+    );
     process.exit(1);
   }
 
@@ -58,7 +60,7 @@ async function main() {
           QUEUE_NAMES.CBB_SYNC,
           QUEUE_NAMES.WHATSAPP_MESSAGES,
         ];
-        
+
         for (const q of queuesToResume) {
           await queueService.resumeQueue(q);
           logger.log(`Resumed queue: ${q}`);
@@ -87,14 +89,14 @@ async function main() {
       case 'clean-whatsapp-old':
         // Clean up the old 56 WhatsApp messages
         logger.log('Cleaning old WhatsApp messages...');
-        
+
         // Get the whatsapp queue directly
         const whatsappQueue = app.get<Queue>('BullQueue_WHATSAPP_MESSAGES');
-        
+
         // Get all delayed jobs
         const delayedJobs = await whatsappQueue.getDelayed();
         logger.log(`Found ${delayedJobs.length} delayed jobs`);
-        
+
         // Remove all except the latest (job 57)
         let removedCount = 0;
         for (const job of delayedJobs) {
@@ -103,11 +105,11 @@ async function main() {
             logger.log(`Keeping job ${job.id} (test job)`);
             continue;
           }
-          
+
           await job.remove();
           removedCount++;
         }
-        
+
         logger.log(`Removed ${removedCount} old WhatsApp jobs`);
         break;
 
