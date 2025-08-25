@@ -63,7 +63,12 @@
     "docker:logs": "docker-compose logs -f",
     "setup": "pnpm install && pnpm docker:up",
     "clean": "nx reset",
-    "create-admin-key": "nx run backend:create-admin-key"
+    "create-admin-key": "nx run backend:create-admin-key",
+    "docker:build:backend": "docker build -f apps/backend/Dockerfile -t visapi-backend:latest .",
+    "docker:build:backend:prod": "NODE_ENV=production docker build -f apps/backend/Dockerfile -t visapi-backend:prod --build-arg NODE_ENV=production .",
+    "docker:run:backend": "docker run -p 3000:3000 --env-file .env.backend visapi-backend:latest",
+    "docker:size": "docker images visapi-backend --format 'table {{.Repository}}\\t{{.Tag}}\\t{{.Size}}'",
+    "docker:test:backend": "docker build -f apps/backend/Dockerfile --target builder -t visapi-backend-test . && docker run --rm visapi-backend-test pnpm nx test backend"
   },
   "keywords": [],
   "author": "",

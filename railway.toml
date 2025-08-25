@@ -1,0 +1,44 @@
+# Railway configuration for optimized Docker builds
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/backend/Dockerfile"
+
+# Build arguments for versioning and optimization
+[build.args]
+NODE_ENV = "production"
+NX_SKIP_NX_CACHE = "false"
+
+# Railway build optimizations
+[[build.cache]]
+from = "/root/.cache/pnpm"
+to = "/root/.cache/pnpm"
+
+[[build.cache]]
+from = "/app/.nx"
+to = "/app/.nx"
+
+[deploy]
+runtime = "V2"
+numReplicas = 1
+startCommand = "node main.js"
+healthcheckPath = "/api/v1/healthz"
+healthcheckTimeout = 3
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# Multi-region configuration
+[deploy.multiRegionConfig]
+"europe-west4-drams3a" = { numReplicas = 1 }
+
+# Environment-specific settings
+[environments.production]
+region = "europe-west4"
+memoryLimit = "512Mi"
+cpuLimit = "0.5"
+
+[environments.staging]
+region = "europe-west4"
+memoryLimit = "256Mi"
+cpuLimit = "0.25"

@@ -1,0 +1,22 @@
+# Backend-specific Docker ignore
+
+# Test files
+src/**/*.spec.ts
+src/**/*.test.ts
+src/**/__tests__
+src/**/__mocks__
+jest.config.ts
+
+# Development files
+src/scripts/*.js
+.env*
+!.env.example
+
+# Build artifacts
+dist
+coverage
+*.log
+
+# Documentation
+*.md
+!README.md
