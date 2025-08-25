@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
 import { WhatsAppMessageJobData, QUEUE_NAMES } from '@visapi/shared-types';
@@ -44,7 +44,7 @@ interface SendMessageResult {
 
 @Injectable()
 @Processor(QUEUE_NAMES.WHATSAPP_MESSAGES)
-export class WhatsAppMessageProcessor extends WorkerHost {
+export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(WhatsAppMessageProcessor.name);
 
   constructor(
@@ -62,9 +62,49 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     private readonly messageDurationHistogram: Histogram<string>,
   ) {
     super();
+    this.logger.log('WhatsAppMessageProcessor initialized');
+  }
+
+  async onModuleInit() {
+    this.logger.log('WhatsAppMessageProcessor onModuleInit - Starting worker');
+    try {
+      // Log processor registration
+      this.logger.log(`Registering processor for queue: ${QUEUE_NAMES.WHATSAPP_MESSAGES}`);
+      
+      // Log any initialization issues
+      await this.logService.createLog({
+        level: 'info',
+        message: 'WhatsApp message processor started',
+        metadata: {
+          queue_name: QUEUE_NAMES.WHATSAPP_MESSAGES,
+          source: 'processor_init',
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to initialize WhatsApp processor:', error);
+      await this.logService.createLog({
+        level: 'error',
+        message: 'WhatsApp processor initialization failed',
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+          source: 'processor_init',
+        },
+      });
+    }
   }
 
   async process(job: Job<WhatsAppMessageJobData>): Promise<ProcessResult> {
+    this.logger.log(`Processing WhatsApp job ${job.id} for order ${job.data.orderId}`);
+    await this.logService.createLog({
+      level: 'info',
+      message: 'Processing WhatsApp message job',
+      metadata: {
+        job_id: job.id,
+        order_id: job.data.orderId,
+        contact_id: job.data.contactId,
+        source: 'whatsapp_processor',
+      },
+    });
     const startTime = Date.now();
     const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
