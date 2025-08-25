@@ -141,10 +141,12 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         result = await this.sendMessage(order, contactId, messageType);
 
         // Update order with WhatsApp tracking info
+        // Generate unique ID if message_id not provided to avoid duplicate key errors
+        const messageId = result.message_id || `cbb_${Date.now()}_${orderId}_${messageType}`;
         await this.updateOrderWhatsAppStatus(
           orderId,
           messageType,
-          result.message_id || 'sent',
+          messageId,
         );
       } catch (error) {
         // If sending fails, remove idempotency record to allow retry
