@@ -141,12 +141,15 @@ export class WhatsAppMessageProcessor extends WorkerHost {
         result = await this.sendMessage(order, contactId, messageType);
 
         // Update order with WhatsApp tracking info
-        // Generate unique ID if message_id not provided to avoid duplicate key errors
-        const messageId = result.message_id || `cbb_${Date.now()}_${orderId}_${messageType}`;
+        // CBB doesn't return Meta's message ID immediately. Meta sends the actual wamid
+        // (e.g., wamid.HBgMOTcyNTM0MzYyNzE2FQIAERgS...) via webhook later.
+        // Generate a temporary unique ID to avoid duplicate key errors.
+        // This will be updated when we receive Meta's webhook with the real wamid.
+        const tempMessageId = result.message_id || `temp_${orderId}_${messageType}_${Date.now()}`;
         await this.updateOrderWhatsAppStatus(
           orderId,
           messageType,
-          messageId,
+          tempMessageId,
         );
       } catch (error) {
         // If sending fails, remove idempotency record to allow retry
