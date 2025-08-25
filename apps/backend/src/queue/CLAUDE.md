@@ -14,10 +14,11 @@ Handles WhatsApp Business messaging via CBB API:
 
 Features:
 
-- Pre-send idempotency record creation (prevents duplicates on retry)
+- Atomic idempotency with INSERT ON CONFLICT (prevents duplicates)
+- Message ID correlation via `biz_opaque_callback_data`
 - Hebrew translations with RTL support and flag emojis
 - Processing time calculations based on urgency
-- Database tracking in `whatsapp_messages` table
+- Database tracking in `whatsapp_messages` table with temp/real IDs
 
 ### CBB_SYNC
 
@@ -117,8 +118,13 @@ Complete mapping of order data to CBB contact fields:
 
 ### Idempotency Protection
 - **Issue**: Messages sent multiple times on job retry
-- **Fix**: Create idempotency record BEFORE sending message
-- **Impact**: Prevents duplicate WhatsApp messages
+- **Fix**: Atomic INSERT ON CONFLICT for idempotency records
+- **Impact**: Only one job can claim message sending
+
+### Message ID Correlation
+- **Issue**: CBB doesn't return Meta's message ID immediately
+- **Fix**: Correlation data in `biz_opaque_callback_data`
+- **Impact**: Automatic update from temp to real WAMIDs
 
 ### Queue Auto-Resume
 - **Issue**: Queues remained paused in Redis after restart

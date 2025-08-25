@@ -23,6 +23,7 @@ import {
   TemplateManagerService,
   WebhookEvent,
   WebhookVerifyDto,
+  MessageIdUpdaterService,
 } from '@visapi/backend-whatsapp-business';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,6 +44,7 @@ export class WhatsAppWebhookController {
     private readonly deliveryTracker: DeliveryTrackerService,
     private readonly templateManager: TemplateManagerService,
     private readonly slackRateLimiter: SlackRateLimiterService,
+    private readonly messageIdUpdater: MessageIdUpdaterService,
   ) {
     // Use try-catch since these are optional configs
     try {
@@ -283,6 +285,37 @@ export class WhatsAppWebhookController {
         this.logger.log(
           `Processing message status: ${status.id} - ${status.status}`,
         );
+      }
+
+      // Update message ID if this is the first status update with real Meta message ID
+      if (status.id && status.id.startsWith('wamid.') && status.biz_opaque_callback_data) {
+        try {
+          const correlationData = this.messageIdUpdater.parseCorrelationData(
+            status.biz_opaque_callback_data,
+          );
+          
+          if (correlationData) {
+            const updateResult = await this.messageIdUpdater.updateMessageId(
+              status.id,
+              correlationData,
+            );
+            
+            if (updateResult.success) {
+              this.logger.log(
+                `Updated message ID from ${updateResult.previousMessageId} to ${updateResult.newMessageId}`,
+              );
+            } else {
+              this.logger.warn(
+                `Failed to update message ID: ${updateResult.error}`,
+              );
+            }
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error updating message ID for ${status.id}:`,
+            error,
+          );
+        }
       }
 
       const messageStatus = {

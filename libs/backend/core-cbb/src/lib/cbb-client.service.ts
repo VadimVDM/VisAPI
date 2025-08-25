@@ -619,6 +619,7 @@ export class CbbClientService {
     templateName: string,
     languageCode: string,
     parameters: string[],
+    correlationData?: string, // Optional correlation data for biz_opaque_callback_data
   ): Promise<any> {
     this.logger.debug(
       `Sending WhatsApp template '${templateName}' to contact ${contactId}`,
@@ -628,30 +629,35 @@ export class CbbClientService {
     );
 
     // Build the WhatsApp template message format for CBB Dynamic Content API
-    const templatePayload = {
-      messages: [
-        {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: contactId,
-          type: 'template',
-          template: {
-            name: templateName,
-            language: {
-              code: languageCode,
-            },
-            components: [
-              {
-                type: 'body',
-                parameters: parameters.map((param) => ({
-                  type: 'text',
-                  text: param,
-                })),
-              },
-            ],
-          },
+    const message: any = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: contactId,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: {
+          code: languageCode,
         },
-      ],
+        components: [
+          {
+            type: 'body',
+            parameters: parameters.map((param) => ({
+              type: 'text',
+              text: param,
+            })),
+          },
+        ],
+      },
+    };
+
+    // Add correlation data if provided (for message ID correlation)
+    if (correlationData) {
+      message.biz_opaque_callback_data = correlationData;
+    }
+
+    const templatePayload = {
+      messages: [message],
     };
 
     try {
@@ -699,6 +705,7 @@ export class CbbClientService {
       paymentAmount: string;
       processingDays: string;
     },
+    correlationData?: string, // Optional correlation data for message ID tracking
   ): Promise<any> {
     this.logger.debug(
       `Sending order confirmation to ${contactId} for order ${orderData.orderNumber}`,
@@ -721,6 +728,7 @@ export class CbbClientService {
       'order_confirmation_global',
       'he', // Hebrew
       parameters,
+      correlationData, // Pass correlation data for message ID tracking
     );
   }
 }

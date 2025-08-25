@@ -5,6 +5,7 @@ import { CbbClientService } from '@visapi/backend-core-cbb';
 import { WhatsAppMessageJobData, QUEUE_NAMES } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
+import { MessageIdUpdaterService } from '@visapi/backend-whatsapp-business';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 import { WhatsAppTemplateService } from '../services/whatsapp-template.service';
@@ -52,6 +53,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     private readonly logService: LogService,
     private readonly templateService: WhatsAppTemplateService,
     private readonly configService: ConfigService,
+    private readonly messageIdUpdater: MessageIdUpdaterService,
     @InjectMetric('visapi_whatsapp_messages_sent_total')
     private readonly messagesSentCounter: Counter<string>,
     @InjectMetric('visapi_whatsapp_messages_failed_total')
@@ -133,7 +135,21 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       }
 
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
-      await this.createIdempotencyRecord(orderId, messageType, order.client_phone);
+      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone);
+      
+      // If null returned, another job is handling this message
+      if (!messageId) {
+        this.logger.log(
+          `Message for order ${orderId} is being handled by another job, skipping`,
+        );
+        return {
+          status: 'skipped',
+          orderId,
+          contactId,
+          messageType,
+          reason: 'Handled by another job',
+        };
+      }
 
       let result: SendMessageResult;
       try {
@@ -297,7 +313,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   ): Promise<boolean> {
     const { data, error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
-      .select('id, confirmation_sent, status')
+      .select('id, confirmation_sent, status, updated_at')
       .eq('order_id', order.order_id)
       .eq('template_name', this.getTemplateNameForMessageType(messageType))
       .maybeSingle();
@@ -309,15 +325,39 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       return false; // Allow retry if we can't check
     }
 
-    // Only consider message as "already sent" if it was actually sent successfully
-    // Status 'queued' means it was queued but never processed
-    // Status 'sent' or confirmation_sent=true means it was actually sent
     if (!data) {
       return false;
     }
     
-    // Check if message was actually sent (not just queued)
-    return data.confirmation_sent === true || data.status === 'sent';
+    // Message was successfully sent
+    if (data.confirmation_sent === true || data.status === 'sent') {
+      return true;
+    }
+    
+    // Check if a 'pending' status is stale (older than 2 minutes)
+    // This handles cases where a job crashed while sending
+    if (data.status === 'pending') {
+      const updatedAt = new Date(data.updated_at!);
+      const now = new Date();
+      const ageInMs = now.getTime() - updatedAt.getTime();
+      const maxPendingAgeMs = 2 * 60 * 1000; // 2 minutes
+      
+      if (ageInMs > maxPendingAgeMs) {
+        this.logger.warn(
+          `Found stale pending message for order ${order.order_id} (age: ${Math.round(ageInMs/1000)}s), allowing retry`,
+        );
+        return false; // Allow retry for stale pending messages
+      }
+      
+      // Fresh pending status - another job is processing
+      this.logger.log(
+        `Message for order ${order.order_id} is being processed by another job (pending for ${Math.round(ageInMs/1000)}s)`,
+      );
+      return true; // Skip to avoid duplicate
+    }
+    
+    // Status is 'queued' or other - allow processing
+    return false;
   }
 
   /**
@@ -327,58 +367,50 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     orderId: string,
     messageType: string,
     phoneNumber?: string,
-  ): Promise<void> {
+  ): Promise<string | null> {
     const templateName = this.getTemplateNameForMessageType(messageType);
     const now = new Date().toISOString();
+    const tempMessageId = `temp_${orderId}_${messageType}_${Date.now()}`;
 
-    // First check if record exists
-    const { data: existing } = await this.supabaseService.serviceClient
+    // Use INSERT ON CONFLICT for atomic operation
+    // This ensures only ONE job can create/claim the record
+    const { data, error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
-      .select('id')
-      .eq('order_id', orderId)
-      .eq('template_name', templateName)
-      .maybeSingle();
+      .insert({
+        order_id: orderId,
+        phone_number: phoneNumber || '',
+        template_name: templateName,
+        message_id: tempMessageId,
+        status: 'pending',
+        confirmation_sent: false,
+        created_at: now,
+        updated_at: now,
+      })
+      .select('message_id')
+      .single();
 
-    if (existing) {
-      // Update existing record to 'pending' status
-      const { error } = await this.supabaseService.serviceClient
-        .from('whatsapp_messages')
-        .update({
-          status: 'pending',
-          confirmation_sent: false,
-          updated_at: now,
-        })
-        .eq('id', existing.id);
-
-      if (error) {
-        this.logger.error(
-          `Failed to update idempotency record for order ${orderId}:`,
-          error,
-        );
-        throw error;
-      }
-    } else {
-      // Create new record
-      const { error } = await this.supabaseService.serviceClient
-        .from('whatsapp_messages')
-        .insert({
-          order_id: orderId,
-          phone_number: phoneNumber || '',
-          template_name: templateName,
-          status: 'pending',
-          confirmation_sent: false,
-          created_at: now,
-          updated_at: now,
-        });
-
-      if (error && !error.message?.includes('duplicate')) {
-        this.logger.error(
-          `Failed to create idempotency record for order ${orderId}:`,
-          error,
-        );
-        throw error;
-      }
+    // If insert succeeded, we won the race - proceed with sending
+    if (data) {
+      this.logger.debug(
+        `Created idempotency record for order ${orderId}, message_id: ${data.message_id}`,
+      );
+      return data.message_id;
     }
+
+    // If we got a duplicate key error, another job is handling it
+    if (error?.code === '23505' || error?.message?.includes('duplicate')) {
+      this.logger.log(
+        `Another job is already processing message for order ${orderId}, skipping`,
+      );
+      return null; // Signal to skip processing
+    }
+
+    // Any other error is unexpected
+    this.logger.error(
+      `Failed to create idempotency record for order ${orderId}:`,
+      error,
+    );
+    throw error;
   }
 
   /**

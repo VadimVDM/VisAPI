@@ -21,6 +21,30 @@ Essential reference for AI assistants. Updated: August 25, 2025
 - ✅ **CQRS architecture** with repository pattern
 - ✅ **16 test suites passing** (100% success rate)
 
+## Documentation Map
+
+```
+VisAPI/
+├── 📄 CLAUDE.md                                   # Main project guide (you are here)
+├── apps/
+│   └── backend/
+│       ├── 📄 CLAUDE.md                          # Backend architecture & optimization
+│       └── src/
+│           ├── orders/
+│           │   ├── 📄 CLAUDE.md                  # Orders module overview
+│           │   ├── commands/📄 CLAUDE.md         # CQRS commands documentation
+│           │   └── sagas/📄 CLAUDE.md            # Order sync saga patterns
+│           ├── queue/📄 CLAUDE.md                # Queue processing system
+│           └── vizi-webhooks/📄 CLAUDE.md        # Vizi webhook integration
+├── libs/
+│   └── backend/
+│       ├── cache/📄 CLAUDE.md                    # Redis caching decorators
+│       ├── core-cbb/📄 CLAUDE.md                 # CBB WhatsApp integration
+│       ├── repositories/📄 CLAUDE.md             # Repository pattern implementation
+│       └── whatsapp-business/📄 CLAUDE.md        # Meta WhatsApp API & ID correlation
+└── worker/📄 CLAUDE.md                           # Background job processor
+```
+
 ## Project Structure
 
 ```
@@ -163,14 +187,14 @@ GET  /api/v1/queue/metrics           # Queue status
 - Uses `X-ACCESS-TOKEN` header
 - Template-based messaging only
 - Hebrew translations included
-- Dashboard at CBB for manual sending
+- Correlation data in `biz_opaque_callback_data` for ID tracking
 
 ### Webhook Receiving (Meta WABA)
 
 - **Endpoint**: `https://api.visanet.app/api/v1/webhooks/whatsapp`
 - **Verification**: HMAC-SHA256 signature using `WABA_WEBHOOK_SECRET`
-- **Verify Token**: `Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U`
 - **Phone Number ID**: 1182477616994327
+- **Message ID Updates**: Automatic correlation from temp to real WAMIDs
 - **Events Captured**:
   - Message delivery status (sent, delivered, read, failed)
   - Template status updates (approved, rejected)
@@ -179,18 +203,14 @@ GET  /api/v1/queue/metrics           # Queue status
 - **Storage**: All events in `whatsapp_webhook_events` table
 - **Zapier Forwarding**: Raw webhook payloads forwarded unchanged
 
-### Business Rules Engine (Processing Times)
+### Business Rules & Message Tracking
 
-- **Database-driven configuration** via `processing_rules` table
-- **Automatic calculation** on order insert/update via trigger
-- **Default rules**:
-  - Standard: 3 business days (all countries)
-  - Morocco: 5 business days
-  - Vietnam: 7 business days
-  - Urgent: 1 business day (overrides country rules)
-- **Audit trail** in `processing_rules_audit` table
-- **Fallback logic** when database unavailable
-- **CBB field**: `order_days` (ID: 271948)
+- **Processing Times**: Database-driven via `processing_rules` table
+  - Standard: 3 days, Morocco: 5 days, Vietnam: 7 days, Urgent: 1 day
+- **Message ID Tracking**: Automatic update from temporary to real IDs
+  - Correlation via `biz_opaque_callback_data` field
+  - `MessageIdUpdaterService` handles webhook updates
+  - `meta_message_id` column stores real Meta WAMIDs
 
 ## Environment Variables
 
@@ -284,8 +304,14 @@ lsof -i :3000             # Check port usage
 ### Queue Architecture Fixed
 - **Issue**: Hardcoded queue names causing worker mismatch
 - **Solution**: All processors use `QUEUE_NAMES` constants
-- **Idempotency**: Pre-send record creation prevents duplicates
+- **Idempotency**: Atomic INSERT ON CONFLICT prevents duplicates
 - **Auto-resume**: Queues resume automatically on startup
+
+### WhatsApp Message ID Correlation
+- **Issue**: CBB doesn't return Meta's message ID immediately
+- **Solution**: Correlation system using `biz_opaque_callback_data`
+- **Implementation**: MessageIdUpdaterService updates IDs via webhooks
+- **Database**: Added `meta_message_id` column for tracking
 
 ## Known Issues
 
@@ -295,5 +321,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.0.6 Production
+**Version**: v1.0.7 Production
 **Last Updated**: August 25, 2025

@@ -13,6 +13,7 @@ Provides WhatsApp Business messaging capabilities via CBB's API, handling contac
 - Contact CRUD operations with custom field support
 - WhatsApp Business template messaging with parameter support
 - Order confirmation template with Hebrew translations
+- Message ID correlation via `biz_opaque_callback_data`
 - Phone number validation and contact resolution
 
 ## Authentication
@@ -52,17 +53,21 @@ await cbbService.sendWhatsAppTemplate(
   [customerName, country, flag, orderNum, visaType, count, amount, days]
 );
 
-// Send order confirmation template
-await cbbService.sendOrderConfirmation(contactId, {
-  customerName: 'ישראל ישראלי',
-  country: 'בריטניה',
-  countryFlag: '🇬🇧',
-  orderNumber: 'ORD-123',
-  visaType: 'תיירות שנה',
-  applicantCount: '2',
-  paymentAmount: '99',
-  processingDays: '3'
-});
+// Send order confirmation template with correlation data
+await cbbService.sendOrderConfirmation(
+  contactId, 
+  {
+    customerName: 'ישראל ישראלי',
+    country: 'בריטניה',
+    countryFlag: '🇬🇧',
+    orderNumber: 'ORD-123',
+    visaType: 'תיירות שנה',
+    applicantCount: '2',
+    paymentAmount: '99',
+    processingDays: '3'
+  },
+  'orderId:contactId:messageType:tempMessageId' // Correlation data
+);
 
 // Send using flow template
 await cbbService.sendFlow(contactId, flowId);
@@ -125,4 +130,4 @@ WhatsApp Business API requires this specific template format:
 - `ContactNotFoundError`: Specific error for missing contacts
 - Automatic retry with exponential backoff for transient failures
 
-Last Updated: August 22, 2025
+Last Updated: August 25, 2025

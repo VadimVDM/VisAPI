@@ -669,6 +669,7 @@ export type Database = {
           id: string
           is_billable: boolean | null
           message_id: string | null
+          meta_message_id: string | null
           order_id: string | null
           phone_number: string
           pricing_model: string | null
@@ -694,6 +695,7 @@ export type Database = {
           id?: string
           is_billable?: boolean | null
           message_id?: string | null
+          meta_message_id?: string | null
           order_id?: string | null
           phone_number: string
           pricing_model?: string | null
@@ -719,6 +721,7 @@ export type Database = {
           id?: string
           is_billable?: boolean | null
           message_id?: string | null
+          meta_message_id?: string | null
           order_id?: string | null
           phone_number?: string
           pricing_model?: string | null

@@ -139,16 +139,18 @@ Modern layered architecture with enterprise design patterns:
 - ✅ Tracks delivery status: sent → delivered → read → failed
 - ✅ Handles incoming customer messages
 - ✅ Template status monitoring
+- ✅ Message ID correlation (temp → real WAMID)
 - ✅ Conversation-based pricing tracking
 - ✅ Zapier webhook forwarding (raw payload)
 
-#### Business Rules for Processing Times
+#### Business Rules & Message Tracking
 
-- Database function `calculate_processing_days()` determines processing time
-- Automatic calculation via trigger on order insert/update
-- Configurable rules in `processing_rules` table with audit trail
-- Default: 3 days, Morocco: 5 days, Vietnam: 7 days, Urgent: 1 day
-- Fallback logic in `WhatsAppTranslationService` when DB unavailable
+- **Processing Times**: Database function `calculate_processing_days()`
+  - Default: 3 days, Morocco: 5 days, Vietnam: 7 days, Urgent: 1 day
+- **Message ID Tracking**: Automatic correlation system
+  - `MessageIdUpdaterService` handles webhook updates
+  - Correlation via `biz_opaque_callback_data` field
+  - `meta_message_id` column stores real Meta WAMIDs
 
 ## Backend Optimization Implementation (August 24-25, 2025)
 
@@ -303,7 +305,7 @@ Last Updated: August 25, 2025
 
 ---
 
-**Version**: v1.1.0 Production  
+**Version**: v1.1.1 Production  
 **Last Updated**: August 25, 2025
 
 ### Recent Changes Summary (August 25, 2025)

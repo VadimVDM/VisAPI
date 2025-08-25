@@ -105,7 +105,7 @@ export class WhatsAppTemplateService {
       countryFlag: countryFlag,
       orderNumber: order.order_id,
       visaType: visaTypeHebrew,
-      applicantCount: `x${order.visa_quantity || 1}`, // Add 'x' prefix for display (e.g., x1, x2)
+      applicantCount: String(order.visa_quantity || 1), // Just the number (template already includes ×)
       paymentAmount: String(order.amount || 0),
       processingDays: processingDays, // Processing days in business days
     };
