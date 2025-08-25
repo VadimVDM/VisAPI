@@ -16,6 +16,7 @@ import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
 import { LoggingModule } from '@visapi/backend-logging';
+import { WhatsAppBusinessModule } from '@visapi/backend-whatsapp-business';
 import {
   makeCounterProvider,
   makeHistogramProvider,
@@ -145,6 +146,7 @@ import {
     SupabaseModule,
     MetricsModule,
     LoggingModule,
+    WhatsAppBusinessModule,
   ],
   controllers: [QueueController],
   providers: [

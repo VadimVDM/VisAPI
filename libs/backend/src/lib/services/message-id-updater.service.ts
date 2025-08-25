@@ -26,7 +26,7 @@ export class MessageIdUpdaterService {
   constructor(private configService: ConfigService) {
     this.supabase = createClient(
       this.configService.get('SUPABASE_URL')!,
-      this.configService.get('SUPABASE_SERVICE_KEY')!
+      this.configService.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
   }
 
