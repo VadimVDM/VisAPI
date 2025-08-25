@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WhatsAppTranslationService } from './whatsapp-translation.service';
+import { SupabaseService } from '@visapi/core-supabase';
 
 interface OrderData {
   order_id: string;
@@ -8,6 +9,8 @@ interface OrderData {
   product_country: string;
   product_doc_type: string | null;
   product_intent?: string | null;
+  product_entries?: string | null;
+  product_validity?: string | null;
   visa_quantity?: number | null;
   amount?: number;
   urgency?: string | null;
@@ -30,6 +33,7 @@ export interface OrderConfirmationData {
 export class WhatsAppTemplateService {
   constructor(
     private readonly translationService: WhatsAppTranslationService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   /**
@@ -38,16 +42,47 @@ export class WhatsAppTemplateService {
   async prepareOrderConfirmationData(
     order: OrderData,
   ): Promise<OrderConfirmationData> {
+    // Try to get the translated visa type from cbb_contacts first
+    let visaTypeHebrew: string;
+    
+    try {
+      const { data: cbbContact } = await this.supabaseService.serviceClient
+        .from('cbb_contacts')
+        .select('visa_type_translated')
+        .eq('order_id', order.order_id)
+        .single();
+      
+      if (cbbContact?.visa_type_translated) {
+        visaTypeHebrew = cbbContact.visa_type_translated;
+      } else {
+        // Fallback to direct translation
+        visaTypeHebrew = this.translationService.getVisaTypeHebrew(
+          order.product_doc_type ?? 'tourist',
+          order.product_intent ?? undefined,
+          order.product_country,
+          order.product_entries || undefined,
+          order.product_validity || undefined,
+          order.product_days_to_use || undefined,
+        );
+      }
+    } catch (error) {
+      // Fallback to direct translation if there's an error
+      visaTypeHebrew = this.translationService.getVisaTypeHebrew(
+        order.product_doc_type ?? 'tourist',
+        order.product_intent ?? undefined,
+        order.product_country,
+        order.product_entries || undefined,
+        order.product_validity || undefined,
+        order.product_days_to_use || undefined,
+      );
+    }
+
     // Get Hebrew translations
     const countryHebrew = this.translationService.getCountryNameHebrew(
       order.product_country,
     );
     const countryFlag = this.translationService.getCountryFlag(
       order.product_country,
-    );
-    const visaTypeHebrew = this.translationService.getVisaTypeHebrew(
-      order.product_doc_type ?? 'tourist',
-      order.product_intent ?? undefined,
     );
 
     // Use processing_days from order if available (calculated at order creation)

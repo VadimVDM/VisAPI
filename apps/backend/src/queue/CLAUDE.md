@@ -62,6 +62,8 @@ All processors include:
 - Structured logging with correlation IDs
 - Retry logic with exponential backoff
 - Dead Letter Queue (DLQ) support
+- **Auto-Resume on Startup**: Queues automatically resume if found paused
+- **Correct Queue Names**: Uses `QUEUE_NAMES` constants from shared types
 
 ## Hebrew Translations
 
@@ -87,5 +89,42 @@ Processing times are now database-driven (August 25, 2025):
   - Urgent: 1 business day (overrides country)
 - **CBB Integration**: Maps to `order_days` field (ID: 271948)
 - **Fallback Logic**: Service includes hardcoded fallback when DB unavailable
+
+## CBB Custom Fields Mapping (Enhanced August 25, 2025)
+
+Complete mapping of order data to CBB contact fields:
+
+- **customer_name**: Client name from order
+- **visa_country**: Destination country
+- **visa_type**: Document type (tourist, business, etc.)
+- **OrderNumber**: Vizi order ID
+- **visa_quantity**: Number of applicants (x prefix for display)
+- **order_days**: Processing days (ID: 271948)
+- **order_sum_ils**: Total payment amount (ID: 358366)
+- **order_urgent**: Boolean urgency flag (1/0)
+- **order_date**: Travel/entry date (Unix timestamp)
+- **order_date_time**: Order creation timestamp (ID: 100644)
+- **visa_intent**: Purpose of travel
+- **visa_entries**: Single/multiple entry
+- **visa_validity**: Validity with units ("30 days", "6 months", "1 year")
+- **visa_flag**: Country flag emoji
+- **Email**: Client email (system field ID: -12)
+
+## Critical Fixes Applied (August 25, 2025)
+
+### Queue Persistence Issue
+- **Problem**: Queues remained paused after graceful shutdown
+- **Root Cause**: Redis persisted pause state across restarts
+- **Solution**: Auto-resume all queues in `onModuleInit()`
+
+### WhatsApp Processor Registration
+- **Problem**: Processor listening to literal string instead of constant
+- **Fixed**: Changed from `'WHATSAPP_MESSAGES'` to `QUEUE_NAMES.WHATSAPP_MESSAGES`
+- **Impact**: Restored WhatsApp message processing
+
+### Fastify Compatibility
+- **Problem**: `enableShutdownHooks()` incompatible with Node.js 22
+- **Solution**: Disabled and implemented manual shutdown handlers
+- **Result**: Clean shutdown without crashes
 
 Last Updated: August 25, 2025

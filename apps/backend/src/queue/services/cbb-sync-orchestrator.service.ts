@@ -125,6 +125,10 @@ export class CBBSyncOrchestratorService {
           this.translationService.getVisaTypeHebrew(
             order.product_doc_type || 'evisa',
             order.product_intent || undefined,
+            order.product_country,
+            order.product_entries || undefined,
+            order.product_validity || undefined,
+            order.product_days_to_use || undefined,
           );
 
         // Generate Hebrew processing days message using database-driven calculation

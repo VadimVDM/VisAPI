@@ -51,6 +51,9 @@ interface CBBContactRecord {
   client_name?: string;
   product_country?: string;
   product_doc_type?: string;
+  product_intent?: string;
+  product_entries?: string;
+  product_validity?: string;
   is_urgent?: boolean;
   processing_days?: number;
   language_code: string;
@@ -129,6 +132,9 @@ export class CBBFieldMapperService {
       client_name: order.client_name,
       product_country: order.product_country,
       product_doc_type: order.product_doc_type,
+      product_intent: order.product_intent,
+      product_entries: order.product_entries,
+      product_validity: order.product_validity,
       is_urgent: order.is_urgent === true, // Store boolean directly
       processing_days: processingDays,
       language_code:

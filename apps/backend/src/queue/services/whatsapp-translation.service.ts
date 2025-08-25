@@ -181,27 +181,59 @@ export class WhatsAppTranslationService {
   }
 
   /**
-   * Get Hebrew translation for visa type
+   * Get Hebrew translation for visa type with special country rules
    */
-  getVisaTypeHebrew(docType: string, intent?: string): string {
+  getVisaTypeHebrew(
+    docType: string,
+    intent?: string,
+    country?: string,
+    entries?: string,
+    validity?: string,
+    daysToUse?: number,
+  ): string {
     const normalizedDocType = docType?.toLowerCase().trim();
     const normalizedIntent = intent?.toLowerCase().trim();
+    const normalizedCountry = country?.toLowerCase().trim();
+    const normalizedEntries = entries?.toLowerCase().trim();
 
-    // First check if we have a specific intent translation
+    // Special rules for Vietnam
+    if (normalizedCountry === 'vietnam') {
+      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
+      const entriesHebrew = normalizedEntries === 'multiple' ? 'רב פעמית' : 'חד פעמית';
+      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
+      return `${intentHebrew}, ${entriesHebrew}, ${validityHebrew}`;
+    }
+
+    // Special rules for ETA/ESTA documents
+    if (
+      normalizedDocType?.includes('eta') ||
+      normalizedDocType?.includes('esta')
+    ) {
+      const docName = normalizedDocType.toUpperCase().replace('-', ' ');
+      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
+      return `אישור נסיעה ${docName} ${validityHebrew}`;
+    }
+
+    // Special rules for India
+    if (normalizedCountry === 'india') {
+      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
+      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
+      return `${intentHebrew} ${validityHebrew}`;
+    }
+
+    // Special rules for Morocco
+    if (normalizedCountry === 'morocco') {
+      return 'תיירות לחצי שנה';
+    }
+
+    // Special rules for Sri Lanka
+    if (normalizedCountry === 'sri lanka') {
+      return 'תיירות חצי שנה';
+    }
+
+    // Default behavior for other countries
     if (normalizedIntent && VISA_TYPES_HEBREW[normalizedIntent]) {
-      const intentHebrew = VISA_TYPES_HEBREW[normalizedIntent];
-
-      // Check validity if it's part of the doc type
-      if (
-        normalizedDocType?.includes('month') ||
-        normalizedDocType?.includes('year')
-      ) {
-        const validity = this.extractValidity(normalizedDocType);
-        const validityHebrew = VALIDITY_HEBREW[validity] || validity;
-        return `${intentHebrew} ${validityHebrew}`;
-      }
-
-      return intentHebrew;
+      return VISA_TYPES_HEBREW[normalizedIntent];
     }
 
     // Fall back to doc type translation
@@ -209,20 +241,50 @@ export class WhatsAppTranslationService {
       return VISA_TYPES_HEBREW[normalizedDocType];
     }
 
-    // Try to extract type and validity separately
-    for (const [key, value] of Object.entries(VISA_TYPES_HEBREW)) {
-      if (normalizedDocType?.includes(key)) {
-        // Check if there's also a validity period
-        const validity = this.extractValidity(normalizedDocType);
-        if (validity && VALIDITY_HEBREW[validity]) {
-          return `${value} ${VALIDITY_HEBREW[validity]}`;
-        }
-        return value;
-      }
-    }
-
     // Default fallback
     return docType || 'ויזה';
+  }
+
+  /**
+   * Get Hebrew string for validity period
+   */
+  private getValidityHebrewString(
+    validity?: string,
+    daysToUse?: number,
+  ): string {
+    // Handle specific days
+    if (daysToUse) {
+      if (daysToUse === 30) return 'לחודש';
+      if (daysToUse === 60) return 'לחודשיים';
+      if (daysToUse === 90) return '90 ימים';
+      if (daysToUse === 180) return 'לחצי שנה';
+      if (daysToUse === 365) return 'לשנה';
+      if (daysToUse === 730) return 'לשנתיים';
+      return `${daysToUse} ימים`;
+    }
+
+    // Handle validity strings
+    const normalizedValidity = validity?.toLowerCase().trim();
+    switch (normalizedValidity) {
+      case 'month':
+      case '1month':
+        return 'לחודש';
+      case 'year':
+      case '1year':
+        return 'לשנה';
+      case '3months':
+        return 'ל-3 חודשים';
+      case '6months':
+        return 'לחצי שנה';
+      case '2years':
+        return 'לשנתיים';
+      case '5years':
+        return 'ל-5 שנים';
+      case '10years':
+        return 'ל-10 שנים';
+      default:
+        return '30 ימים'; // Default
+    }
   }
 
   /**
