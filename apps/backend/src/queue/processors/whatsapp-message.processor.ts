@@ -119,11 +119,12 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       }
 
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
-      await this.createIdempotencyRecord(orderId, messageType);
+      await this.createIdempotencyRecord(orderId, messageType, order.client_phone);
 
+      let result: SendMessageResult;
       try {
         // Send the appropriate message
-        const result = await this.sendMessage(order, contactId, messageType);
+        result = await this.sendMessage(order, contactId, messageType);
 
         // Update order with WhatsApp tracking info
         await this.updateOrderWhatsAppStatus(
@@ -300,6 +301,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
   private async createIdempotencyRecord(
     orderId: string,
     messageType: string,
+    phoneNumber?: string,
   ): Promise<void> {
     const templateName = this.getTemplateNameForMessageType(messageType);
     const now = new Date().toISOString();
@@ -308,6 +310,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       .from('whatsapp_messages')
       .insert({
         order_id: orderId,
+        phone_number: phoneNumber || '',
         template_name: templateName,
         status: 'pending',
         confirmation_sent: false,
