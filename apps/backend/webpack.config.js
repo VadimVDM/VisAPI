@@ -15,6 +15,9 @@ module.exports = {
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,
+      // Use 'all' to let webpack determine external dependencies
+      // This will include all node_modules as external and generate proper package.json
+      externalDependencies: 'all',
     }),
   ],
 };

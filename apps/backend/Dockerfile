@@ -1,30 +1,44 @@
-# syntax=docker/dockerfile:1
-# Build optimized backend image using August 2025 best practices
+# syntax=docker/dockerfile:1.7
+# Optimized NestJS backend for Railway deployment - December 2024
 
-# Stage 1: Dependencies installer
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+ARG NODE_VERSION=22-alpine
+ARG PNPM_VERSION=10.15.0
+
+########################
+# Stage 1: Dependencies
+########################
+FROM node:${NODE_VERSION} AS deps
 WORKDIR /app
 
-# Update to latest pnpm version
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+# Build tooling for native deps (bcrypt, etc)
+RUN apk add --no-cache python3 make g++ libc6-compat
 
-# Copy package files for dependency resolution
+# Enable corepack and cache its downloads
+RUN corepack enable
+RUN --mount=type=cache,target=/root/.local/share/corepack \
+    corepack prepare pnpm@${PNPM_VERSION} --activate
+
+# Copy package files
 COPY package.json pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
 
-# Install ALL dependencies
-RUN pnpm install --frozen-lockfile
+# Install with pnpm store cache for faster rebuilds
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
+########################
 # Stage 2: Builder
-FROM node:22-alpine AS builder
-RUN apk add --no-cache libc6-compat
+########################
+FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
-# Install pnpm for build commands
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+# Minimal deps for build
+RUN apk add --no-cache libc6-compat
+RUN corepack enable
+RUN --mount=type=cache,target=/root/.local/share/corepack \
+    corepack prepare pnpm@${PNPM_VERSION} --activate
 
-# Copy installed dependencies
+# Copy dependencies from previous stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json /app/pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
@@ -34,60 +48,77 @@ COPY apps/backend ./apps/backend
 COPY libs ./libs
 COPY migrations ./migrations
 
-# Build the application - this generates dist/apps/backend with bundled code
+# Build with production optimizations (remove --skip-nx-cache for faster builds with Nx Cloud)
 ENV NODE_ENV=production
-RUN pnpm nx build backend --skip-nx-cache
+RUN pnpm nx build backend
 
-# Stage 3: Production dependencies (using generated package.json)
-FROM node:22-alpine AS prod-deps
-RUN apk add --no-cache libc6-compat
+########################
+# Stage 3: Production deps
+########################
+FROM node:${NODE_VERSION} AS prod-deps
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+# Need libc6-compat for bcrypt and other native deps, jq for JSON manipulation
+RUN apk add --no-cache libc6-compat jq
+RUN corepack enable
+RUN --mount=type=cache,target=/root/.local/share/corepack \
+    corepack prepare pnpm@${PNPM_VERSION} --activate
 
-# Copy the GENERATED package.json from build output (this has minimal deps)
+# Copy generated package.json from build
 COPY --from=builder /app/dist/apps/backend/package.json ./
-COPY --from=builder /app/dist/apps/backend/pnpm-lock.yaml ./
 
-# Install ONLY the production dependencies needed by the bundled app
-RUN pnpm install --prod --frozen-lockfile
+# Add tslib manually since webpack doesn't include it
+RUN echo '{}' > package.json.tmp && \
+    jq '.dependencies.tslib = "^2.8.1"' < package.json > package.json.tmp && \
+    mv package.json.tmp package.json
 
-# Stage 4: Final minimal runtime
-FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat tini
+# Install production deps with cache (no lockfile as it doesn't match generated package.json)
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --prod --ignore-scripts
 
-# Create non-root user
+########################
+# Stage 4: Runner
+########################
+FROM node:${NODE_VERSION} AS runner
+
+# tini for signal handling, libc6-compat for native deps
+RUN apk add --no-cache tini libc6-compat
+
+# Non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 WORKDIR /app
 
-# Copy built application (single bundled file + assets)
+# Copy built application
 COPY --from=builder --chown=1001:1001 /app/dist/apps/backend/main.js ./
 COPY --from=builder --chown=1001:1001 /app/dist/apps/backend/assets ./assets
 COPY --from=builder --chown=1001:1001 /app/migrations ./migrations
 
-# Copy minimal production dependencies
+# Copy production node_modules (needed for native deps like bcrypt)
 COPY --from=prod-deps --chown=1001:1001 /app/node_modules ./node_modules
 
-# Set production environment
+# Metadata
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.source="https://github.com/visanet/visapi" \
+      org.opencontainers.image.revision="${GIT_COMMIT}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.title="VisAPI Backend" \
+      org.opencontainers.image.description="Enterprise workflow automation for Visanet"
+
+# Production settings (reduced source maps overhead)
 ENV NODE_ENV=production \
     PORT=3000 \
-    NODE_OPTIONS="--max-old-space-size=512 --enable-source-maps"
+    NODE_OPTIONS="--max-old-space-size=512"
 
-# Switch to non-root user
 USER nodejs
-
-# Expose port
 EXPOSE 3000
 
-# Health check using wget (Alpine has it by default)
+# Health check (quiet output)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/healthz || exit 1
+    CMD wget -q -O - http://127.0.0.1:3000/api/v1/healthz >/dev/null || exit 1
 
-# Use tini for proper signal handling
+# Proper signal handling with tini
 ENTRYPOINT ["/sbin/tini", "--"]
-
-# Start the application
 CMD ["node", "main.js"]
