@@ -34,6 +34,14 @@ export class OrderSyncService {
   async queueCBBSync(options: OrderSyncOptions): Promise<void> {
     const { orderId, branch, whatsappAlertsEnabled } = options;
 
+    // Skip test orders (ending with -TEST)
+    if (orderId.endsWith('-TEST')) {
+      this.logger.debug(
+        `CBB sync skipped for test order ${orderId} (test orders ending with -TEST are ignored)`,
+      );
+      return;
+    }
+
     // Only sync IL branch orders
     if (!this.shouldSyncWithCBB(branch)) {
       this.logger.debug(

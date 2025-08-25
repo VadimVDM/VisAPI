@@ -1,6 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { CbbClientService } from '@visapi/backend-core-cbb';
 import { WhatsAppMessageJobData, QUEUE_NAMES } from '@visapi/shared-types';
@@ -45,9 +44,9 @@ interface SendMessageResult {
 @Injectable()
 @Processor(QUEUE_NAMES.WHATSAPP_MESSAGES)
 export class WhatsAppMessageProcessor extends WorkerHost {
+  private readonly logger = new Logger(WhatsAppMessageProcessor.name);
+
   constructor(
-    @InjectPinoLogger(WhatsAppMessageProcessor.name)
-    private readonly logger: PinoLogger,
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
@@ -67,9 +66,23 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     const startTime = Date.now();
     const { orderId, contactId, messageType = 'order_confirmation' } = job.data;
 
+    // Skip test orders (ending with -TEST)
+    if (orderId.endsWith('-TEST')) {
+      this.logger.log(
+        `Skipping WhatsApp message for test order ${orderId} (test orders ending with -TEST are ignored)`,
+      );
+      return {
+        status: 'skipped',
+        orderId,
+        contactId,
+        messageType,
+        reason: 'Test order',
+      };
+    }
+
     // Only log individual job processing in development
     if (!this.configService.isProduction) {
-      this.logger.info(`Processing WhatsApp message job ${job.id}`, {
+      this.logger.log(`Processing WhatsApp message job ${job.id}`, {
         order_id: orderId,
         contact_id: contactId,
         message_type: messageType,
@@ -107,7 +120,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Check for duplicate messages
       if (await this.isMessageAlreadySent(order, messageType)) {
-        this.logger.info(
+        this.logger.log(
           `${messageType} already sent for order ${orderId}, skipping`,
         );
         return {
@@ -146,7 +159,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
       // Only log success in development
       if (!this.configService.isProduction) {
-        this.logger.info(
+        this.logger.log(
           `WhatsApp ${messageType} sent successfully for order ${orderId}`,
           {
             contact_id: contactId,
@@ -235,7 +248,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
 
         // Only log individual sends in development
         if (!this.configService.isProduction) {
-          this.logger.info(
+          this.logger.log(
             `Sending WhatsApp order confirmation template to contact ${contactId} for order ${order.order_id}`,
           );
         }
@@ -291,13 +304,19 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       return false; // Allow retry if we can't check
     }
 
-    // Message exists - don't send again regardless of status
-    // This prevents duplicates even if the previous attempt had errors
-    return data !== null;
+    // Only consider message as "already sent" if it was actually sent successfully
+    // Status 'queued' means it was queued but never processed
+    // Status 'sent' or confirmation_sent=true means it was actually sent
+    if (!data) {
+      return false;
+    }
+    
+    // Check if message was actually sent (not just queued)
+    return data.confirmation_sent === true || data.status === 'sent';
   }
 
   /**
-   * Create idempotency record BEFORE sending message
+   * Create or update idempotency record BEFORE sending message
    */
   private async createIdempotencyRecord(
     orderId: string,
@@ -307,24 +326,53 @@ export class WhatsAppMessageProcessor extends WorkerHost {
     const templateName = this.getTemplateNameForMessageType(messageType);
     const now = new Date().toISOString();
 
-    const { error } = await this.supabaseService.serviceClient
+    // First check if record exists
+    const { data: existing } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
-      .insert({
-        order_id: orderId,
-        phone_number: phoneNumber || '',
-        template_name: templateName,
-        status: 'pending',
-        confirmation_sent: false,
-        created_at: now,
-        updated_at: now,
-      });
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('template_name', templateName)
+      .maybeSingle();
 
-    if (error && !error.message?.includes('duplicate')) {
-      this.logger.error(
-        `Failed to create idempotency record for order ${orderId}:`,
-        error,
-      );
-      throw error;
+    if (existing) {
+      // Update existing record to 'pending' status
+      const { error } = await this.supabaseService.serviceClient
+        .from('whatsapp_messages')
+        .update({
+          status: 'pending',
+          confirmation_sent: false,
+          updated_at: now,
+        })
+        .eq('id', existing.id);
+
+      if (error) {
+        this.logger.error(
+          `Failed to update idempotency record for order ${orderId}:`,
+          error,
+        );
+        throw error;
+      }
+    } else {
+      // Create new record
+      const { error } = await this.supabaseService.serviceClient
+        .from('whatsapp_messages')
+        .insert({
+          order_id: orderId,
+          phone_number: phoneNumber || '',
+          template_name: templateName,
+          status: 'pending',
+          confirmation_sent: false,
+          created_at: now,
+          updated_at: now,
+        });
+
+      if (error && !error.message?.includes('duplicate')) {
+        this.logger.error(
+          `Failed to create idempotency record for order ${orderId}:`,
+          error,
+        );
+        throw error;
+      }
     }
   }
 
@@ -435,7 +483,7 @@ export class WhatsAppMessageProcessor extends WorkerHost {
       throw error;
     } else if (!this.configService.isProduction) {
       // Only log status updates in development
-      this.logger.info(
+      this.logger.log(
         `Created WhatsApp message record for order ${orderId}: ${messageType}, message_id=${messageId}`,
       );
     }

@@ -127,6 +127,35 @@ export class ViziWebhooksController {
     const order = isRecord(bodyAsRecord.order) ? bodyAsRecord.order : undefined;
     const form = isRecord(bodyAsRecord.form) ? bodyAsRecord.form : undefined;
 
+    // Check if this is a test order (ends with -TEST)
+    const orderId = order && hasProperty(order, 'id') ? String(order.id) : undefined;
+    if (orderId && orderId.endsWith('-TEST')) {
+      this.logger.log(
+        `Skipping test order: ${orderId} (test orders ending with -TEST are ignored)`,
+      );
+
+      // Log the skipped test order
+      await this.logService.createLog({
+        level: 'info',
+        message: `Test order ${orderId} skipped (ends with -TEST)`,
+        metadata: {
+          webhook_type: 'vizi_order',
+          order_id: orderId,
+          skipped_reason: 'test_order',
+          correlationId,
+          source: 'webhook',
+        },
+        correlation_id: correlationId,
+      });
+
+      // Return success response to acknowledge webhook receipt
+      return {
+        status: 'skipped',
+        message: 'Test order skipped (ends with -TEST)',
+        orderId,
+      };
+    }
+
     try {
       // Normalize branch to lowercase if present
       if (
