@@ -137,7 +137,24 @@ export class CBBSyncOrchestratorService {
           order.product_country,
           order.is_urgent === true,
         );
-        translations.processingDaysTranslated = `תוך ${processingDays} ימי עסקים`;
+        
+        // Special formatting for urgent orders and Thailand/Schengen
+        const countryNormalized = order.product_country?.toLowerCase().trim();
+        const isThailandOrSchengen = countryNormalized === 'thailand' || 
+                                     countryNormalized === 'schengen' || 
+                                     countryNormalized === 'schengen area';
+        
+        if (order.is_urgent === true && !isThailandOrSchengen) {
+          // Urgent (non-Thailand/Schengen): "תוך יום אחד ⚡️"
+          translations.processingDaysTranslated = 'תוך יום אחד ⚡️';
+        } else if (isThailandOrSchengen) {
+          // Thailand/Schengen: 30 days base, 15 if urgent
+          const days = order.is_urgent === true ? '15' : '30';
+          translations.processingDaysTranslated = `תוך ${days} ימים`;
+        } else {
+          // Regular processing days
+          translations.processingDaysTranslated = `תוך ${processingDays} ימי עסקים`;
+        }
       }
 
       cbbContact = await this.fieldMapper.saveCBBContact(order, translations);
