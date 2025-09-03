@@ -6,9 +6,11 @@ import { PdfService } from './pdf.service';
 import { PdfJobService } from './services/pdf-job.service';
 import { PdfStatusService } from './services/pdf-status.service';
 import { CacheModule } from '@visapi/backend-cache';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     BullModule.registerQueue({
       name: QUEUE_NAMES.PDF,
       defaultJobOptions: {
