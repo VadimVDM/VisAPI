@@ -1,7 +1,7 @@
 {
   "name": "worker",
-  "$schema": "../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "worker/src",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/worker/src",
   "projectType": "application",
   "targets": {
     "build": {
@@ -38,7 +38,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "worker/jest.config.ts",
+        "jestConfig": "apps/worker/jest.config.ts",
         "passWithNoTests": true
       }
     }

@@ -64,7 +64,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
         preferCSSPageSize: false,
       });
 
-      return await this.savePdf(pdfBuffer, options);
+      return await this.savePdf(Buffer.from(pdfBuffer), options);
     } finally {
       await page.close();
     }
@@ -81,7 +81,8 @@ export class PdfGeneratorService implements OnModuleDestroy {
       });
 
       // Wait for any dynamic content
-      await page.waitForTimeout(2000);
+      await page.waitForFunction(() => document.readyState === 'complete');
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Generate PDF
       const pdfBuffer = await page.pdf({
@@ -95,7 +96,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
         preferCSSPageSize: false,
       });
 
-      return await this.savePdf(pdfBuffer, options);
+      return await this.savePdf(Buffer.from(pdfBuffer), options);
     } finally {
       await page.close();
     }
@@ -165,7 +166,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
     const storagePath = `pdfs/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${filename}`;
     
     const { data, error } = await this.supabase
-      .getClient()
+      .client
       .storage
       .from('documents')
       .upload(storagePath, buffer, {
@@ -181,13 +182,13 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
     // Generate signed URL (valid for 1 hour)
     const { data: urlData } = await this.supabase
-      .getClient()
+      .client
       .storage
       .from('documents')
       .createSignedUrl(storagePath, 3600);
 
     const publicUrl = this.supabase
-      .getClient()
+      .client
       .storage
       .from('documents')
       .getPublicUrl(storagePath).data.publicUrl;
