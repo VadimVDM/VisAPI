@@ -29,6 +29,7 @@ import { CacheModule } from '@visapi/backend-cache';
 import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
+import { PdfModule } from '../pdf/pdf.module';
 import Redis from 'ioredis';
 
 // Initialize Sentry if DSN is configured
@@ -160,6 +161,7 @@ if (sentryConfig.dsn) {
     SlackModule,
     EmailModule,
     WhatsAppWebhooksModule,
+    PdfModule,
   ],
   controllers: [AppController],
   providers: [

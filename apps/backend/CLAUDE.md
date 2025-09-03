@@ -68,6 +68,7 @@ Modern layered architecture with enterprise design patterns:
 - BullMQ job processing with Redis backing
 - `whatsapp-messages` queue for order confirmations
 - `cbb-sync` queue for contact synchronization
+- `pdf` queue for PDF generation (processed by Worker)
 - Uses `QUEUE_NAMES` constants (never hardcode queue names)
 
 ### Workflows Module
@@ -76,6 +77,14 @@ Modern layered architecture with enterprise design patterns:
 - Step configuration
 - Cron expression validation
 - Trigger management
+
+### PDF Module
+
+- REST API for PDF generation requests
+- Job queuing and status tracking
+- Template management
+- Preview mode support
+- Webhook callbacks on completion
 
 ### Health Module
 
@@ -316,6 +325,14 @@ Last Updated: August 25, 2025
 ✅ **Redis Rate Limiting**: Multi-instance scaling with shared state  
 ✅ **Migration Consolidation**: Single source of truth for database changes  
 ✅ **RFC 7807 Error Handling**: Standardized error responses with 26 error codes  
+✅ **WhatsApp Webhook Enhancement**: Fixed race condition in message ID correlation
 ✅ **Build Optimization**: All changes compile successfully in production mode
 
-**Impact**: Production-ready performance enhancements with improved error handling, better scaling capabilities, and unified migration management.
+**WhatsApp Integration Fixes**
+
+✅ **Race Condition Resolution**: Fixed timing issue between correlation and delivery updates
+✅ **Fallback Correlation**: Enhanced support for legacy biz_opaque_callback_data formats  
+✅ **Error Recovery**: Automatic retry logic for failed message ID correlations
+✅ **Delivery Tracking**: Robust status updates with proper sequencing
+
+**Impact**: Production-ready performance enhancements with bulletproof WhatsApp message processing, improved error handling, better scaling capabilities, and unified migration management.

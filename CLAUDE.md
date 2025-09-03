@@ -1,6 +1,6 @@
 # VisAPI Project Guide
 
-Essential reference for AI assistants. Updated: August 25, 2025
+Essential reference for AI assistants. Updated: September 3, 2025
 
 ## Overview
 
@@ -10,14 +10,16 @@ Essential reference for AI assistants. Updated: August 25, 2025
 
 - **Frontend**: https://app.visanet.app (Vercel)
 - **Backend**: https://api.visanet.app (Railway)
+- **Worker**: Background processor (Railway - same project)
 - **Database**: Supabase (pangdzwamawwgmvxnwkk)
-- **Redis**: Railway integrated service
+- **Redis**: Railway integrated service (bitnami/redis:7.2.5)
 
 ### Current Status
 
 - ✅ **Production stable** with Vizi webhook integration
 - ✅ **WhatsApp messaging** via CBB API with idempotency protection
 - ✅ **Queue architecture** - Separate backend/worker apps with distinct responsibilities
+- ✅ **PDF generation** - HTML/URL to PDF with Puppeteer and templates
 - ✅ **CQRS architecture** with repository pattern
 - ✅ **16 test suites passing** (100% success rate)
 
@@ -35,6 +37,7 @@ VisAPI/
 │           │   ├── commands/📄 CLAUDE.md         # CQRS commands documentation
 │           │   └── sagas/📄 CLAUDE.md            # Order sync saga patterns
 │           ├── queue/📄 CLAUDE.md                # Queue processing system
+│           ├── pdf/📄 CLAUDE.md                  # PDF generation module
 │           └── vizi-webhooks/📄 CLAUDE.md        # Vizi webhook integration
 ├── libs/
 │   └── backend/
@@ -52,6 +55,7 @@ VisAPI/
 ├── apps/
 │   ├── frontend/          # Next.js 15 dashboard (Vercel)
 │   └── backend/           # NestJS 11.1 API (Railway)
+├── worker/                # Background job processor (Railway)
 ├── libs/
 │   ├── frontend/          # React components and hooks
 │   ├── backend/           # NestJS modules and services
@@ -116,6 +120,11 @@ GET  /api/v1/webhooks/whatsapp        # WhatsApp webhook verification
 POST /api/v1/webhooks/whatsapp        # WhatsApp events from Meta
 POST /api/v1/whatsapp/templates/sync  # Manual template sync
 GET  /api/v1/whatsapp/templates       # List approved templates
+POST /api/v1/pdf/generate             # Generate PDF from HTML/URL/template
+GET  /api/v1/pdf/status/{jobId}       # Check PDF generation status
+POST /api/v1/pdf/generate/batch       # Batch PDF generation
+GET  /api/v1/pdf/templates            # List available PDF templates
+POST /api/v1/pdf/preview              # Preview PDF without saving
 GET  /api/v1/healthz                  # Health check
 POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
@@ -137,6 +146,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - **cbb-sync**: Synchronize orders with CBB contacts
 
 ### Worker App Queues  
+- **pdf**: PDF generation jobs (concurrency: 3)
 - **critical**: High-priority generic jobs
 - **default**: Standard priority jobs
 - **bulk**: Low-priority batch operations
@@ -299,6 +309,15 @@ lsof -i :3000             # Check port usage
 9. **Build scripts**: Exclude `src/scripts/**` from tsconfig.app.json
 10. **CBB sync**: Orders auto-trigger sync via OrderSyncSaga
 
+## Recent Updates (September 3, 2025)
+
+### PDF Generation System Added
+- **Puppeteer Integration**: Chromium-based PDF generation in Worker
+- **Template Engine**: Handlebars templates with examples
+- **Storage**: Supabase bucket integration with signed URLs
+- **Queue Processing**: BullMQ with job tracking and webhooks
+- **API Endpoints**: Generate, batch, preview, and status tracking
+
 ## Critical Fixes (August 25, 2025)
 
 ### Queue Architecture Fixed
@@ -323,5 +342,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.0.7 Production
-**Last Updated**: August 25, 2025
+**Version**: v1.1.0 Production
+**Last Updated**: September 3, 2025

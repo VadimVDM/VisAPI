@@ -1,0 +1,202 @@
+# Full Stack Development Environment - September 2025
+# Includes API, Worker, and all supporting services
+version: '3.9'
+
+services:
+  # PostgreSQL for local development
+  postgres:
+    image: postgres:16
+    container_name: visapi-postgres
+    environment:
+      POSTGRES_DB: visapi_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for BullMQ queues and caching
+  redis:
+    image: redis:8-alpine
+    container_name: visapi-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # Backend API Service
+  api:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: runner
+    container_name: visapi-api
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/visapi_dev
+      REDIS_URL: redis://redis:6379
+      REDIS_PUBLIC_URL: redis://redis:6379
+      # Add your Supabase and other API keys here
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      CBB_API_BASE_URL: ${CBB_API_BASE_URL}
+      CBB_ACCESS_TOKEN: ${CBB_ACCESS_TOKEN}
+      WABA_PHONE_NUMBER_ID: ${WABA_PHONE_NUMBER_ID}
+      WABA_ACCESS_TOKEN: ${WABA_ACCESS_TOKEN}
+      WABA_WEBHOOK_SECRET: ${WABA_WEBHOOK_SECRET}
+      WABA_VERIFY_TOKEN: ${WABA_VERIFY_TOKEN}
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot reload for development
+      - ./apps/backend/src:/app/apps/backend/src:ro
+      - ./libs:/app/libs:ro
+    restart: unless-stopped
+    command: ["node", "main.js"]
+
+  # Worker Service for Background Jobs
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+      target: runner
+    container_name: visapi-worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/visapi_dev
+      REDIS_URL: redis://redis:6379
+      REDIS_PUBLIC_URL: redis://redis:6379
+      # Puppeteer configuration
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      # Add same API keys as backend
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      CBB_API_BASE_URL: ${CBB_API_BASE_URL}
+      CBB_ACCESS_TOKEN: ${CBB_ACCESS_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot reload for development
+      - ./worker/src:/app/worker/src:ro
+      - ./libs:/app/libs:ro
+      # Templates for PDF generation
+      - ./templates:/app/templates:ro
+    restart: unless-stopped
+    command: ["node", "main.js"]
+
+  # Frontend (optional - usually runs separately with pnpm dev)
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/frontend/Dockerfile
+  #   container_name: visapi-frontend
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://api:3000/api
+  #     NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+  #     NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+  #   ports:
+  #     - '3001:3000'
+  #   depends_on:
+  #     - api
+  #   restart: unless-stopped
+
+  # Bull Board for Queue Monitoring
+  bull-board:
+    image: deadly0/bull-board:latest
+    container_name: visapi-bull-board
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ''
+    ports:
+      - '3002:3000'
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Redis Commander for Redis Management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: visapi-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Adminer for Database Management
+  adminer:
+    image: adminer:latest
+    container_name: visapi-adminer
+    ports:
+      - '8080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # MinIO for S3-compatible local storage (optional)
+  # Useful for testing file uploads without Supabase
+  minio:
+    image: minio/minio:latest
+    container_name: visapi-minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  # Mailhog for Email Testing (catches all emails)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: visapi-mailhog
+    ports:
+      - '1025:1025' # SMTP server
+      - '8025:8025' # Web UI
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  default:
+    name: visapi-network
+    driver: bridge

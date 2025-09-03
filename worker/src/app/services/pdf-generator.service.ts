@@ -1,238 +1,240 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { SupabaseService } from '@visapi/core-supabase';
 import * as puppeteer from 'puppeteer-core';
-import { PdfTemplateService } from './pdf-template.service';
-import { StorageService } from '@visapi/core-supabase';
-import { v4 as uuidv4 } from 'uuid';
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import { nanoid } from 'nanoid';
 
-export interface PdfGenerationOptions {
-  format?: 'A4' | 'Letter' | 'Legal';
-  orientation?: 'portrait' | 'landscape';
-  margin?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
-  };
-  printBackground?: boolean;
-  displayHeaderFooter?: boolean;
-  headerTemplate?: string;
-  footerTemplate?: string;
-}
-
-export interface PdfGenerationResult {
-  jobId: string;
+interface GenerateOptions {
   filename: string;
-  publicUrl: string;
-  signedUrl: string;
-  size: number;
+  options: {
+    format: string;
+    orientation: 'portrait' | 'landscape';
+    margins: { top: number; bottom: number; left: number; right: number };
+    pageNumbers: boolean;
+    headerTemplate?: string;
+    footerTemplate?: string;
+    printBackground: boolean;
+  };
+  preview?: boolean;
 }
 
 @Injectable()
 export class PdfGeneratorService implements OnModuleDestroy {
   private readonly logger = new Logger(PdfGeneratorService.name);
+  private readonly tempDir = '/tmp/pdf-generator';
   private browser: puppeteer.Browser | null = null;
 
-  constructor(
-    private readonly templateService: PdfTemplateService,
-    private readonly storageService: StorageService
-  ) {}
-
-  /**
-   * Initialize Puppeteer browser
-   */
-  private async getBrowser(): Promise<puppeteer.Browser> {
-    if (!this.browser) {
-      this.logger.log('Launching Puppeteer browser');
-      
-      // Use Chrome/Chromium executable path based on environment
-      const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || 
-        process.platform === 'darwin' 
-          ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-          : process.platform === 'win32'
-          ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-          : '/usr/bin/google-chrome-stable'; // Linux
-
-      this.browser = await puppeteer.launch({
-        headless: true,
-        executablePath,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--single-process', // Important for containerized environments
-          '--no-zygote',
-        ],
-      });
-    }
-    return this.browser;
+  constructor(private readonly supabase: SupabaseService) {
+    this.ensureTempDir();
   }
 
-  /**
-   * Generate PDF from template
-   */
-  async generateFromTemplate(
-    templateName: string,
-    data: any,
-    options: PdfGenerationOptions = {}
-  ): Promise<PdfGenerationResult> {
-    const jobId = uuidv4();
-    const startTime = Date.now();
-
-    try {
-      // Render HTML from template
-      const html = await this.templateService.renderTemplate(templateName, data);
-
-      // Generate PDF
-      const pdfBuffer = await this.generatePdfFromHtml(html, options);
-
-      // Upload to storage
-      const filename = `${templateName}-${Date.now()}.pdf`;
-      const storagePath = `${data.workflowId || 'general'}/${jobId}/${filename}`;
-      
-      const uploadResult = await this.storageService.uploadFile(storagePath, pdfBuffer, {
-        contentType: 'application/pdf',
-        cacheControl: '86400', // 24 hours
-      });
-
-      const result: PdfGenerationResult = {
-        jobId,
-        filename,
-        publicUrl: uploadResult.publicUrl,
-        signedUrl: uploadResult.signedUrl!,
-        size: pdfBuffer.length,
-      };
-
-      this.logger.log(
-        `PDF generated successfully: ${templateName} (${pdfBuffer.length} bytes) in ${Date.now() - startTime}ms`
-      );
-
-      return result;
-    } catch (error) {
-      this.logger.error(`Failed to generate PDF: ${templateName}`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate PDF from HTML string
-   */
-  async generatePdfFromHtml(
-    html: string,
-    options: PdfGenerationOptions = {}
-  ): Promise<Buffer> {
-    const browser = await this.getBrowser();
-    const page = await browser.newPage();
-
+  async generateFromHtml(html: string, options: GenerateOptions) {
+    const page = await this.getPage();
+    
     try {
       // Set content
       await page.setContent(html, {
         waitUntil: 'networkidle0',
+        timeout: 30000,
       });
 
-      // Default PDF options
-      const pdfOptions: puppeteer.PDFOptions = {
-        format: options.format || 'A4',
-        landscape: options.orientation === 'landscape',
-        margin: options.margin || {
-          top: '1cm',
-          right: '1cm',
-          bottom: '1cm',
-          left: '1cm',
-        },
-        printBackground: options.printBackground !== false,
-        displayHeaderFooter: options.displayHeaderFooter || false,
-        headerTemplate: options.headerTemplate,
-        footerTemplate: options.footerTemplate,
-      };
+      // Add page numbers if requested
+      if (options.options.pageNumbers) {
+        await page.addStyleTag({
+          content: `
+            @page {
+              @bottom-right {
+                content: counter(page) " / " counter(pages);
+              }
+            }
+          `,
+        });
+      }
 
       // Generate PDF
-      const pdfBuffer = await page.pdf(pdfOptions);
+      const pdfBuffer = await page.pdf({
+        format: options.options.format as any,
+        landscape: options.options.orientation === 'landscape',
+        margin: options.options.margins,
+        displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
+        headerTemplate: options.options.headerTemplate || '',
+        footerTemplate: options.options.footerTemplate || '',
+        printBackground: options.options.printBackground,
+        preferCSSPageSize: false,
+      });
 
-      return Buffer.from(pdfBuffer);
+      return await this.savePdf(pdfBuffer, options);
     } finally {
       await page.close();
     }
   }
 
-  /**
-   * Generate PDF from URL
-   */
-  async generateFromUrl(
-    url: string,
-    options: PdfGenerationOptions = {}
-  ): Promise<PdfGenerationResult> {
-    const jobId = uuidv4();
-    const startTime = Date.now();
-
+  async generateFromUrl(url: string, options: GenerateOptions) {
+    const page = await this.getPage();
+    
     try {
-      const browser = await this.getBrowser();
-      const page = await browser.newPage();
+      // Navigate to URL
+      await page.goto(url, {
+        waitUntil: 'networkidle0',
+        timeout: 30000,
+      });
 
-      try {
-        // Navigate to URL
-        await page.goto(url, {
-          waitUntil: 'networkidle0',
-          timeout: 30000,
-        });
+      // Wait for any dynamic content
+      await page.waitForTimeout(2000);
 
-        // Generate PDF
-        const pdfOptions: puppeteer.PDFOptions = {
-          format: options.format || 'A4',
-          landscape: options.orientation === 'landscape',
-          margin: options.margin || {
-            top: '1cm',
-            right: '1cm',
-            bottom: '1cm',
-            left: '1cm',
-          },
-          printBackground: options.printBackground !== false,
-          displayHeaderFooter: options.displayHeaderFooter || false,
-          headerTemplate: options.headerTemplate,
-          footerTemplate: options.footerTemplate,
-        };
+      // Generate PDF
+      const pdfBuffer = await page.pdf({
+        format: options.options.format as any,
+        landscape: options.options.orientation === 'landscape',
+        margin: options.options.margins,
+        displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
+        headerTemplate: options.options.headerTemplate || '',
+        footerTemplate: options.options.footerTemplate || '',
+        printBackground: options.options.printBackground,
+        preferCSSPageSize: false,
+      });
 
-        const pdfBuffer = await page.pdf(pdfOptions);
-
-        // Upload to storage
-        const filename = `web-${Date.now()}.pdf`;
-        const storagePath = `web/${jobId}/${filename}`;
-        
-        const uploadResult = await this.storageService.uploadFile(storagePath, Buffer.from(pdfBuffer), {
-          contentType: 'application/pdf',
-          cacheControl: '86400', // 24 hours
-        });
-
-        const result: PdfGenerationResult = {
-          jobId,
-          filename,
-          publicUrl: uploadResult.publicUrl,
-          signedUrl: uploadResult.signedUrl!,
-          size: pdfBuffer.length,
-        };
-
-        this.logger.log(
-          `PDF generated from URL successfully: ${url} (${pdfBuffer.length} bytes) in ${Date.now() - startTime}ms`
-        );
-
-        return result;
-      } finally {
-        await page.close();
-      }
-    } catch (error) {
-      this.logger.error(`Failed to generate PDF from URL: ${url}`, error);
-      throw error;
+      return await this.savePdf(pdfBuffer, options);
+    } finally {
+      await page.close();
     }
   }
 
-  /**
-   * Clean up browser on module destroy
-   */
+  private async getPage(): Promise<puppeteer.Page> {
+    if (!this.browser) {
+      this.browser = await this.launchBrowser();
+    }
+
+    const page = await this.browser.newPage();
+    
+    // Set viewport for consistent rendering
+    await page.setViewport({
+      width: 1920,
+      height: 1080,
+      deviceScaleFactor: 1,
+    });
+
+    // Set user agent
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    return page;
+  }
+
+  private async launchBrowser(): Promise<puppeteer.Browser> {
+    const browser = await puppeteer.launch({
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process', // Required for Docker
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--allow-running-insecure-content',
+      ],
+    });
+
+    this.logger.log('Puppeteer browser launched');
+    return browser;
+  }
+
+  private async savePdf(buffer: Buffer, options: GenerateOptions) {
+    const filename = `${options.filename}.pdf`;
+    const size = buffer.length;
+
+    if (options.preview) {
+      // For preview, return base64 or temp URL
+      return {
+        filename,
+        size,
+        base64: buffer.toString('base64'),
+        url: null,
+        signedUrl: null,
+      };
+    }
+
+    // Save to Supabase Storage
+    const storagePath = `pdfs/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${filename}`;
+    
+    const { data, error } = await this.supabase
+      .getClient()
+      .storage
+      .from('documents')
+      .upload(storagePath, buffer, {
+        contentType: 'application/pdf',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      this.logger.error('Failed to upload PDF to storage:', error);
+      throw error;
+    }
+
+    // Generate signed URL (valid for 1 hour)
+    const { data: urlData } = await this.supabase
+      .getClient()
+      .storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+
+    const publicUrl = this.supabase
+      .getClient()
+      .storage
+      .from('documents')
+      .getPublicUrl(storagePath).data.publicUrl;
+
+    return {
+      filename,
+      size,
+      base64: null,
+      url: publicUrl,
+      signedUrl: urlData?.signedUrl,
+      storagePath,
+    };
+  }
+
+  async cleanupTempFiles(jobId: string) {
+    try {
+      const tempPath = path.join(this.tempDir, jobId);
+      if (await this.fileExists(tempPath)) {
+        await fs.rmdir(tempPath, { recursive: true });
+        this.logger.log(`Cleaned up temp files for job ${jobId}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to cleanup temp files for job ${jobId}:`, error);
+    }
+  }
+
+  private async ensureTempDir() {
+    try {
+      await fs.mkdir(this.tempDir, { recursive: true });
+    } catch (error) {
+      this.logger.warn('Failed to create temp directory:', error);
+    }
+  }
+
+  private async fileExists(path: string): Promise<boolean> {
+    try {
+      await fs.access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     if (this.browser) {
-      this.logger.log('Closing Puppeteer browser');
       await this.browser.close();
-      this.browser = null;
+      this.logger.log('Puppeteer browser closed');
     }
   }
 }

@@ -1,43 +1,60 @@
 # Worker Service
 
-Separate NestJS application for processing generic background jobs.
+Background job processor for PDF generation and other async tasks.
 
-## Purpose
+## Architecture
 
-Handles non-order-specific background jobs that don't require direct database access to orders/CBB data.
+Separate NestJS application deployed on Railway alongside API and Redis.
 
-## Queue Responsibilities
+## Primary Responsibilities
 
-### CRITICAL Queue
-- High-priority generic jobs
-- Concurrency: 5
+### PDF Queue
+- **Purpose**: Generate PDFs from HTML/URL/templates
+- **Processor**: `PdfProcessor` with Puppeteer integration
+- **Concurrency**: 3 simultaneous jobs
+- **Storage**: Supabase documents bucket
 
-### DEFAULT Queue  
-- Standard priority jobs
-- Concurrency: 10
+### Other Queues
+- **critical**: High-priority jobs (concurrency: 5)
+- **default**: Standard jobs (concurrency: 10)
+- **bulk**: Batch operations (concurrency: 20)
 
-### BULK Queue
-- Low-priority batch operations
-- Concurrency: 20
+## Key Services
 
-## Job Types Processed
+### PdfGeneratorService
+- Puppeteer-based PDF generation
+- Chromium browser management
+- Supabase storage integration
 
-- `slack.send` - Slack notifications
-- `whatsapp.send` - Generic WhatsApp messages (NOT order confirmations)
-- `pdf.generate` - PDF generation
-- `workflow.process` - Workflow execution
-- `logs.prune` - Log cleanup
-
-## Important Notes
-
-**CRITICAL**: This worker does NOT process:
-- `whatsapp-messages` queue (handled by backend)
-- `cbb-sync` queue (handled by backend)
-
-The backend app handles all order-specific processing.
+### PdfTemplateService
+- Handlebars template compilation
+- Dynamic template loading
+- Built-in examples (invoice, receipt, report)
 
 ## Deployment
 
-Deployed separately on Render as the "Worker" service alongside the "Gateway" (backend) service.
+```toml
+# railway.worker.toml
+[build]
+dockerfilePath = "worker/Dockerfile"
 
-Last Updated: August 25, 2025
+[deploy]
+runtime = "V2"
+numReplicas = 1
+```
+
+## Environment
+
+```bash
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+NODE_ENV=production
+REDIS_URL=redis://...
+```
+
+## Important Notes
+
+- Does NOT process order-specific queues (`whatsapp-messages`, `cbb-sync`)
+- Shares Redis with backend API
+- Includes Chromium for PDF generation
+
+**Last Updated**: September 3, 2025
