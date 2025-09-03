@@ -35,8 +35,7 @@ numReplicas = 1
 
 # Environment-specific overrides
 [environments.production.deploy]
-# Scale up for production if needed
-multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 2 } }
+multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 1 } }
 
 [environments.staging.deploy]
 # Single replica for staging
