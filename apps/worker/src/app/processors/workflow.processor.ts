@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { JOB_NAMES, QUEUE_NAMES, WorkflowSchema, WorkflowStep } from '@visapi/shared-types';
 import { Queue } from 'bullmq';
@@ -17,9 +16,9 @@ interface WorkflowJobData {
 
 @Injectable()
 export class WorkflowProcessor {
+  private readonly logger = new Logger(WorkflowProcessor.name);
+
   constructor(
-    @InjectPinoLogger(WorkflowProcessor.name)
-    private readonly logger: PinoLogger,
     private readonly supabase: SupabaseService,
     @InjectQueue(QUEUE_NAMES.DEFAULT) private defaultQueue: Queue,
     @InjectQueue(QUEUE_NAMES.CRITICAL) private criticalQueue: Queue,
@@ -29,10 +28,7 @@ export class WorkflowProcessor {
   async process(data: WorkflowJobData): Promise<void> {
     const { workflowId, trigger, context = {} } = data;
 
-    this.logger.info(
-      { workflowId, trigger },
-      'Starting workflow processing',
-    );
+    this.logger.log(`Starting workflow processing for ${workflowId}`);
 
     try {
       // Fetch the workflow from database
@@ -43,10 +39,7 @@ export class WorkflowProcessor {
       }
 
       if (!workflow.enabled) {
-        this.logger.warn(
-          { workflowId },
-          'Workflow is disabled, skipping execution',
-        );
+        this.logger.warn(`Workflow ${workflowId} is disabled, skipping execution`);
         return;
       }
 
@@ -58,15 +51,9 @@ export class WorkflowProcessor {
         await this.executeStep(step, workflowContext);
       }
 
-      this.logger.info(
-        { workflowId, stepCount: steps.length },
-        'Workflow processing completed successfully',
-      );
+      this.logger.log(`Workflow ${workflowId} completed successfully with ${steps.length} steps`);
     } catch (error) {
-      this.logger.error(
-        { error, workflowId },
-        'Failed to process workflow',
-      );
+      this.logger.error(`Failed to process workflow ${workflowId}`, (error as any)?.stack);
       throw error;
     }
   }
@@ -79,10 +66,7 @@ export class WorkflowProcessor {
       .single();
 
     if (error) {
-      this.logger.error(
-        { error, workflowId },
-        'Failed to fetch workflow',
-      );
+      this.logger.error(`Failed to fetch workflow ${workflowId}`, (error as any)?.stack);
       return null;
     }
 
@@ -93,10 +77,7 @@ export class WorkflowProcessor {
     step: WorkflowStep,
     context: Record<string, any>,
   ): Promise<void> {
-    this.logger.info(
-      { stepId: step.id, stepType: step.type },
-      'Executing workflow step',
-    );
+    this.logger.log(`Executing workflow step ${step.id} of type ${step.type}`);
 
     try {
       // Resolve any template variables in the step config
@@ -142,20 +123,14 @@ export class WorkflowProcessor {
           break;
 
         default:
-          this.logger.warn(
-            { stepType: step.type },
-            'Unknown step type, skipping',
-          );
+          this.logger.warn(`Unknown step type ${step.type}, skipping`);
       }
 
-      this.logger.info(
-        { stepId: step.id, stepType: step.type },
-        'Workflow step executed successfully',
-      );
+      this.logger.log(`Workflow step ${step.id} executed successfully`);
     } catch (error) {
       this.logger.error(
-        { error, stepId: step.id, stepType: step.type },
-        'Failed to execute workflow step',
+        `Failed to execute workflow step ${step.id} of type ${step.type}: ${(error as any)?.message}`,
+        (error as any)?.stack,
       );
       
       // Check if step has retry configuration
