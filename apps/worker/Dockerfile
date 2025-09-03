@@ -31,7 +31,14 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 ENV NODE_ENV=production
 RUN pnpm nx build worker --configuration=production
 
-RUN pnpm prune --production
+# Ensure tslib is in the generated package.json
+RUN cd dist/apps/worker && \
+    if ! grep -q "tslib" package.json; then \
+      npm pkg set dependencies.tslib="^2.8.1"; \
+    fi
+
+# Install dependencies for the built app
+RUN cd dist/apps/worker && pnpm install --production
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
@@ -59,7 +66,6 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./
 
 RUN mkdir -p /tmp/pdf-generator /app/templates/pdf/examples && \
