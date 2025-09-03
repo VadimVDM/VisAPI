@@ -10,7 +10,7 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml nx.json tsconfig.base.json ./
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 RUN pnpm install --frozen-lockfile --prefer-offline
 
 # Stage 2: Builder
@@ -26,7 +26,7 @@ COPY nx.json tsconfig.base.json ./
 COPY libs ./libs
 COPY apps/worker ./apps/worker
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
 ENV NODE_ENV=production
 RUN pnpm nx build worker --configuration=production
@@ -34,8 +34,8 @@ RUN pnpm nx build worker --configuration=production
 # Copy the worker's package.json to the dist folder
 COPY apps/worker/package.json dist/apps/worker/
 
-# Install production dependencies
-RUN cd dist/apps/worker && pnpm install --production --frozen-lockfile
+# Install production dependencies (no lockfile in dist, so can't use frozen-lockfile)
+RUN cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
