@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from './supabase.service';
-import { PinoLogger } from 'nestjs-pino';
 
 export interface StorageUploadOptions {
   contentType?: string;
@@ -16,15 +15,11 @@ export interface StorageFile {
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private readonly BUCKET_NAME = 'receipts';
   private readonly SIGNED_URL_EXPIRY = 24 * 60 * 60; // 24 hours in seconds
 
-  constructor(
-    private readonly supabase: SupabaseService,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(StorageService.name);
-  }
+  constructor(private readonly supabase: SupabaseService) {}
 
   /**
    * Upload a file to Supabase storage
@@ -51,7 +46,7 @@ export class StorageService {
         });
 
       if (error) {
-        this.logger.error({ error, path }, 'Failed to upload file to storage');
+        this.logger.error(`Failed to upload file to storage: ${path}`, error.stack);
         throw error;
       }
 
@@ -61,7 +56,7 @@ export class StorageService {
       // Generate signed URL for temporary access
       const signedUrl = await this.createSignedUrl(path);
 
-      this.logger.info({ path, publicUrl }, 'File uploaded successfully');
+      this.logger.log(`File uploaded successfully: ${path}`);
 
       return {
         path: data.path,
@@ -69,7 +64,7 @@ export class StorageService {
         signedUrl,
       };
     } catch (error) {
-      this.logger.error({ error, path }, 'Error uploading file');
+      this.logger.error(`Error uploading file: ${path}`, (error as any)?.stack);
       throw error;
     }
   }
@@ -84,16 +79,13 @@ export class StorageService {
         .remove([path]);
 
       if (error) {
-        this.logger.error(
-          { error, path },
-          'Failed to delete file from storage',
-        );
+        this.logger.error(`Failed to delete file from storage: ${path}`, error.stack);
         throw error;
       }
 
-      this.logger.info({ path }, 'File deleted successfully');
+      this.logger.log(`File deleted successfully: ${path}`);
     } catch (error) {
-      this.logger.error({ error, path }, 'Error deleting file');
+      this.logger.error(`Error deleting file: ${path}`, (error as any)?.stack);
       throw error;
     }
   }
@@ -111,13 +103,13 @@ export class StorageService {
         .createSignedUrl(path, expiresIn);
 
       if (error) {
-        this.logger.error({ error, path }, 'Failed to create signed URL');
+        this.logger.error(`Failed to create signed URL: ${path}`, error.stack);
         throw error;
       }
 
       return data.signedUrl;
     } catch (error) {
-      this.logger.error({ error, path }, 'Error creating signed URL');
+      this.logger.error(`Error creating signed URL: ${path}`, (error as any)?.stack);
       throw error;
     }
   }
@@ -145,13 +137,13 @@ export class StorageService {
         });
 
       if (error) {
-        this.logger.error({ error, path }, 'Failed to check if file exists');
+        this.logger.error(`Failed to check if file exists: ${path}`, error.stack);
         return false;
       }
 
       return data.length > 0;
     } catch (error) {
-      this.logger.error({ error, path }, 'Error checking file existence');
+      this.logger.error(`Error checking file existence: ${path}`, (error as any)?.stack);
       return false;
     }
   }
@@ -169,13 +161,13 @@ export class StorageService {
         });
 
       if (error) {
-        this.logger.error({ error, prefix }, 'Failed to list files');
+        this.logger.error(`Failed to list files: ${prefix}`, error.stack);
         throw error;
       }
 
       return data.map((file) => `${prefix}/${file.name}`);
     } catch (error) {
-      this.logger.error({ error, prefix }, 'Error listing files');
+      this.logger.error(`Error listing files: ${prefix}`, (error as any)?.stack);
       throw error;
     }
   }
