@@ -36,7 +36,7 @@ Separate NestJS application deployed on Railway alongside API and Redis.
 ```toml
 # railway.worker.toml
 [build]
-dockerfilePath = "worker/Dockerfile"
+dockerfilePath = "apps/worker/Dockerfile"
 
 [deploy]
 runtime = "V2"

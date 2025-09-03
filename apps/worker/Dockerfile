@@ -24,7 +24,7 @@ COPY --from=deps /app/pnpm-lock.yaml ./
 
 COPY nx.json tsconfig.base.json ./
 COPY libs ./libs
-COPY worker ./worker
+COPY apps/worker ./apps/worker
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -59,7 +59,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/dist/worker ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./dist
 
 RUN mkdir -p /tmp/pdf-generator /app/templates/pdf/examples && \
     chown -R nodejs:nodejs /tmp/pdf-generator /app/templates

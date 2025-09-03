@@ -79,7 +79,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: worker/Dockerfile
+      dockerfile: apps/worker/Dockerfile
       target: runner
     container_name: visapi-worker
     environment:

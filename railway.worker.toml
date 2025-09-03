@@ -1,7 +1,7 @@
 [build]
 builder = "DOCKERFILE"
-watchPatterns = ["worker/**","libs/backend/**","libs/shared/**","package.json","pnpm-lock.yaml"]
-dockerfilePath = "worker/Dockerfile"
+watchPatterns = ["apps/worker/**","libs/backend/**","libs/shared/**","package.json","pnpm-lock.yaml"]
+dockerfilePath = "apps/worker/Dockerfile"
 
 [deploy]
 runtime = "V2"
