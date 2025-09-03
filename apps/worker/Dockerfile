@@ -59,7 +59,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./
 
 RUN mkdir -p /tmp/pdf-generator /app/templates/pdf/examples && \
     chown -R nodejs:nodejs /tmp/pdf-generator /app/templates
@@ -69,4 +69,4 @@ USER nodejs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "console.log('Worker healthy')" || exit 1
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "main.js"]
