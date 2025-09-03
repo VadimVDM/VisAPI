@@ -295,8 +295,10 @@ export function validateProductionEnv(config: EnvSchema): void {
     // Railway internal Redis connections are secure without TLS
     // Both redis:// (internal) and rediss:// (external) are acceptable
 
+    // JWT_SECRET is only needed for JWT-based auth, which we're not using (API keys instead)
+    // Keep as warning instead of error
     if (!config.JWT_SECRET) {
-      errors.push('JWT_SECRET is required in production');
+      console.warn('⚠️  JWT_SECRET not configured - JWT authentication disabled (API keys only)');
     }
 
     // Warn about missing optional services
@@ -314,10 +316,10 @@ export function validateProductionEnv(config: EnvSchema): void {
       console.warn('⚠️  Slack integration not configured');
     }
 
-    // Swagger documentation security
+    // Swagger documentation security - warn instead of error since it's optional
     if (!config.SWAGGER_PASSWORD || config.SWAGGER_PASSWORD.length < 8) {
-      errors.push(
-        'SWAGGER_PASSWORD is required in production and must be at least 8 characters',
+      console.warn(
+        '⚠️  SWAGGER_PASSWORD not configured or too short - Swagger documentation will be disabled in production',
       );
     }
   }
