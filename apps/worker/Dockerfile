@@ -51,6 +51,7 @@ RUN apk update && apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production \
+    SERVICE_NAME=worker \
     NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN addgroup -g 1001 -S nodejs && \

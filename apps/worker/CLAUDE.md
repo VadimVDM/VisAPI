@@ -46,9 +46,21 @@ numReplicas = 1
 ## Environment
 
 ```bash
+# Service identification
+SERVICE_NAME=worker
+
+# Puppeteer configuration
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Environment
 NODE_ENV=production
+
+# Redis for queue processing
 REDIS_URL=redis://...
+
+# Supabase for database and storage (no direct DATABASE_URL needed)
+SUPABASE_URL=https://...
+SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
 ## Important Notes

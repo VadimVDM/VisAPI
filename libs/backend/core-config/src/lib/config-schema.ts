@@ -13,6 +13,9 @@ export const EnvSchema = z.object({
   // Node environment
   NODE_ENV: NodeEnv.default('development'),
 
+  // Service identification (to distinguish API from Worker)
+  SERVICE_NAME: z.string().default('api'),
+
   // Server configuration
   PORT: z
     .string()
@@ -284,9 +287,9 @@ export function validateProductionEnv(config: EnvSchema): void {
   const errors: string[] = [];
 
   if (config.NODE_ENV === 'production') {
-    // Required in production
-    if (!config.DATABASE_URL) {
-      errors.push('DATABASE_URL is required in production');
+    // DATABASE_URL only required for API service (Worker uses Supabase)
+    if (config.SERVICE_NAME === 'api' && !config.DATABASE_URL) {
+      errors.push('DATABASE_URL is required for API service in production');
     }
 
     if (!config.REDIS_URL) {
