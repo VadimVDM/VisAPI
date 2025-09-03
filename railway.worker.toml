@@ -1,14 +1,47 @@
+# Railway configuration for Worker service
+# Background job processor for PDF generation and async tasks
+# Using Docker with multi-stage build and Puppeteer/Chromium
+
 [build]
 builder = "DOCKERFILE"
-watchPatterns = ["apps/worker/**","libs/backend/**","libs/shared/**","package.json","pnpm-lock.yaml"]
 dockerfilePath = "apps/worker/Dockerfile"
 
+# Watch only worker-related files for rebuilds
+watchPatterns = [
+  "apps/worker/**",
+  "libs/backend/**",
+  "libs/shared/**",
+  "package.json",
+  "pnpm-lock.yaml"
+]
+
 [deploy]
-runtime = "V2"
-numReplicas = 1
-overlapSeconds = 60
-drainingSeconds = 30
-sleepApplication = false
-multiRegionConfig = {"europe-west4-drams3a":{"numReplicas":1}}
+# Start command handled by Dockerfile CMD (omitted to use Dockerfile default)
+
+# No health check path for worker (it's a background processor)
+# Workers don't expose HTTP endpoints
+
+# Restart policy for production stability
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
+
+# Graceful shutdown for queue processing
+overlapSeconds = 60
+drainingSeconds = 30
+
+# Multi-region configuration for production
+[deploy.multiRegionConfig."europe-west4-drams3a"]
+numReplicas = 1
+
+# Environment-specific overrides
+[environments.production.deploy]
+multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 1 } }
+
+[environments.staging.deploy]
+# Single replica for staging
+multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 1 } }
+
+# PR environment configuration
+[environments.pr.deploy]
+# Minimal resources for PR previews - workers are optional in PR envs
+multiRegionConfig = { "europe-west4-drams3a" = { numReplicas = 0 } }
