@@ -357,7 +357,9 @@ export function getValidatedConfig() {
     },
     // Database access through Supabase only (no direct DATABASE_URL)
     redis: {
-      url: env.REDIS_URL,
+      // Use public URL if available (for Railway Worker service)
+      // Falls back to internal URL if public URL is not set
+      url: env.REDIS_PUBLIC_URL || env.REDIS_URL,
       publicUrl: env.REDIS_PUBLIC_URL,
     },
     supabase: {
