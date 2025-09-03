@@ -31,14 +31,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 ENV NODE_ENV=production
 RUN pnpm nx build worker --configuration=production
 
-# Ensure tslib is in the generated package.json
-RUN cd dist/apps/worker && \
-    if ! grep -q "tslib" package.json; then \
-      npm pkg set dependencies.tslib="^2.8.1"; \
-    fi
+# Copy the worker's package.json to the dist folder
+COPY apps/worker/package.json dist/apps/worker/
 
-# Install dependencies for the built app
-RUN cd dist/apps/worker && pnpm install --production
+# Install production dependencies
+RUN cd dist/apps/worker && pnpm install --production --frozen-lockfile
 
 # Stage 3: Runner
 FROM node:22-alpine AS runner
