@@ -167,9 +167,8 @@ async function bootstrap() {
     Logger.log(
       `REDIS_URL: ${configService.redisUrl ? '[REDACTED]' : 'NOT SET'}`,
     );
-    Logger.log(
-      `DATABASE_URL: ${configService.databaseUrl ? '[REDACTED]' : 'NOT SET'}`,
-    );
+    // All database access through Supabase (no direct DATABASE_URL)
+    Logger.log('Database: Using Supabase for all database operations');
   } catch (error) {
     Logger.error(
       `Failed to start server: ${(error as Error).message}`,

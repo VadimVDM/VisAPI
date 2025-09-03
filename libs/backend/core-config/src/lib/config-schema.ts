@@ -41,8 +41,8 @@ export const EnvSchema = z.object({
       ),
     ),
 
-  // Database configuration (required in production)
-  DATABASE_URL: z.string().url().optional(),
+  // Database configuration (deprecated - using Supabase for all database access)
+  // DATABASE_URL: z.string().url().optional(), // Removed - use Supabase instead
 
   // Redis configuration
   REDIS_URL: z
@@ -287,10 +287,7 @@ export function validateProductionEnv(config: EnvSchema): void {
   const errors: string[] = [];
 
   if (config.NODE_ENV === 'production') {
-    // DATABASE_URL only required for API service (Worker uses Supabase)
-    if (config.SERVICE_NAME === 'api' && !config.DATABASE_URL) {
-      errors.push('DATABASE_URL is required for API service in production');
-    }
+    // No DATABASE_URL needed - all services use Supabase
 
     if (!config.REDIS_URL) {
       errors.push('REDIS_URL is required in production');
@@ -356,9 +353,7 @@ export function getValidatedConfig() {
     cors: {
       origin: env.CORS_ORIGIN,
     },
-    database: {
-      url: env.DATABASE_URL,
-    },
+    // Database access through Supabase only (no direct DATABASE_URL)
     redis: {
       url: env.REDIS_URL,
       publicUrl: env.REDIS_PUBLIC_URL,

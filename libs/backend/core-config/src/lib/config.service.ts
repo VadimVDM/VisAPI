@@ -67,9 +67,10 @@ export class ConfigService {
     return this.get<string[]>('cors.origin');
   }
 
-  get databaseUrl(): string {
-    return this.get<string>('database.url');
-  }
+  // Deprecated - use Supabase for all database access
+  // get databaseUrl(): string {
+  //   return this.get<string>('database.url');
+  // }
 
   get redisUrl(): string {
     return this.get<string>('redis.url');

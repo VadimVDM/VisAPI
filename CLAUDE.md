@@ -227,8 +227,7 @@ GET  /api/v1/queue/metrics           # Queue status
 See `.env.example` for complete template. Key variables:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://...
+# Database (all access through Supabase - no direct DATABASE_URL needed)
 SUPABASE_URL=https://...
 SUPABASE_SERVICE_KEY=...
 
