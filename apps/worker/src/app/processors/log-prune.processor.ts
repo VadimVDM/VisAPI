@@ -1,31 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { Injectable, Logger } from '@nestjs/common';
 import { LogService } from '@visapi/backend-logging';
 import { LogPruneJobData, LogPruneJobResult } from '@visapi/shared-types';
 import { Job } from 'bullmq';
 
 @Injectable()
 export class LogPruneProcessor {
+  private readonly logger = new Logger(LogPruneProcessor.name);
+
   constructor(
-    @InjectPinoLogger(LogPruneProcessor.name)
-    private readonly logger: PinoLogger,
     private readonly logService: LogService,
   ) {}
 
   async process(job: Job<LogPruneJobData>): Promise<LogPruneJobResult> {
     const { olderThanDays } = job.data;
 
-    this.logger.info(
-      { olderThanDays },
-      'Starting log pruning process',
+    this.logger.log(
+      `Starting log pruning process for logs older than ${olderThanDays} days`,
     );
 
     try {
       const result = await this.logService.pruneOldLogs(olderThanDays);
       
-      this.logger.info(
-        { deleted: result.deleted, olderThanDays },
-        'Log pruning completed successfully',
+      this.logger.log(
+        `Log pruning completed successfully: deleted ${result.deleted} logs older than ${olderThanDays} days`,
       );
 
       return {
@@ -35,8 +32,8 @@ export class LogPruneProcessor {
       };
     } catch (error) {
       this.logger.error(
-        { error, olderThanDays },
-        'Log pruning failed',
+        `Log pruning failed for logs older than ${olderThanDays} days: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
       );
 
       return {
