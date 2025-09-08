@@ -78,14 +78,17 @@ describe('GlobalExceptionFilter', () => {
       const sentData = sentDataCall[0] as Record<string, unknown>;
       expect(sentData).toMatchObject({
         type: expect.stringContaining('https://api.visanet.app/problems/'),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         title: expect.any(String),
         status: 400,
         detail: 'Test validation error',
         instance: '/api/test',
         correlationId: 'test-correlation-id',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         timestamp: expect.stringMatching(
           /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/,
         ),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         code: expect.stringMatching(/^[A-Z]+-\d{3}$/),
       });
     });

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HealthCheckError } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './redis.health';
 import { RedisService } from '@visapi/util-redis';
+import { ConfigService } from '@visapi/core-config';
 
 describe('RedisHealthIndicator', () => {
   let indicator: RedisHealthIndicator;
@@ -14,12 +15,20 @@ describe('RedisHealthIndicator', () => {
       checkConnection: jest.fn(),
     };
 
+    const mockConfigService = {
+      isProduction: false,
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RedisHealthIndicator,
         {
           provide: RedisService,
           useValue: mockRedisService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();

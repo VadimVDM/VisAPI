@@ -3,7 +3,19 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { CacheService } from '@visapi/backend-cache';
-import { GeneratePdfDto } from '../dto/generate-pdf.dto';
+import { GeneratePdfDto, JobMetadata } from '../dto/generate-pdf.dto';
+
+interface JobCacheData {
+  jobId: string;
+  status: string;
+  progress?: number;
+  createdAt: string;
+  updatedAt?: string;
+  dto?: GeneratePdfDto;
+  result?: unknown;
+  error?: string;
+  metadata?: JobMetadata;
+}
 
 @Injectable()
 export class PdfJobService {
@@ -36,10 +48,10 @@ export class PdfJobService {
 
   async updateJobProgress(jobId: string, progress: number, status?: string) {
     const cacheKey = `${this.JOB_CACHE_PREFIX}${jobId}`;
-    const jobData = await this.cacheService.get<any>(cacheKey);
+    const jobData = await this.cacheService.get<JobCacheData>(cacheKey);
 
     if (jobData) {
-      const updated = {
+      const updated: JobCacheData = {
         ...jobData,
         progress,
         status: status || jobData.status,
@@ -51,9 +63,9 @@ export class PdfJobService {
     }
   }
 
-  async completeJob(jobId: string, result: any) {
+  async completeJob(jobId: string, result: unknown) {
     const cacheKey = `${this.JOB_CACHE_PREFIX}${jobId}`;
-    const jobData = await this.cacheService.get<any>(cacheKey);
+    const jobData = await this.cacheService.get<JobCacheData>(cacheKey);
 
     if (jobData) {
       const completed = {
@@ -78,7 +90,7 @@ export class PdfJobService {
 
   async failJob(jobId: string, error: string) {
     const cacheKey = `${this.JOB_CACHE_PREFIX}${jobId}`;
-    const jobData = await this.cacheService.get<any>(cacheKey);
+    const jobData = await this.cacheService.get<JobCacheData>(cacheKey);
 
     if (jobData) {
       const failed = {
@@ -102,7 +114,7 @@ export class PdfJobService {
     return await this.pdfQueue.getJob(jobId);
   }
 
-  private async sendWebhook(url: string, data: any) {
+  private async sendWebhook(url: string, data: unknown) {
     try {
       const response = await fetch(url, {
         method: 'POST',

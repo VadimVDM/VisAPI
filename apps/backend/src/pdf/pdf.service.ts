@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
 import { GeneratePdfDto, PdfSource, PdfPriority } from './dto/generate-pdf.dto';
 import { PdfJobService } from './services/pdf-job.service';
@@ -36,9 +36,9 @@ export class PdfService {
       }
     );
 
-    await this.pdfJobService.trackJob(job.id!, dto);
+    await this.pdfJobService.trackJob(jobId, dto);
 
-    this.logger.log(`PDF generation job queued: ${job.id}`);
+    this.logger.log(`PDF generation job queued: ${jobId}`);
     return job;
   }
 
@@ -71,15 +71,19 @@ export class PdfService {
     );
 
     // Wait for completion (max 30 seconds for preview)
+    const queueEvents = new QueueEvents(QUEUE_NAMES.PDF, {
+      connection: this.pdfQueue.opts.connection,
+    });
+    
     const result = await job.waitUntilFinished(
-      (this.pdfQueue as any).events,
+      queueEvents,
       30000
     );
 
     return result;
   }
 
-  async getAvailableTemplates() {
+  getAvailableTemplates() {
     return [
       {
         name: 'invoice',

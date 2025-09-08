@@ -9,6 +9,8 @@ import { LogService } from '@visapi/backend-logging';
 import { OrdersService } from '../orders/orders.service';
 import { IdempotencyService } from '@visapi/util-redis';
 import { OrdersRepository } from '@visapi/backend-repositories';
+import { QueueService } from '../queue/queue.service';
+import { SupabaseService } from '@visapi/core-supabase';
 
 describe('ViziWebhooksController', () => {
   let controller: ViziWebhooksController;
@@ -56,6 +58,16 @@ describe('ViziWebhooksController', () => {
       update: jest.fn(),
     };
 
+    const mockQueueService = {
+      addJob: jest.fn(),
+    };
+
+    const mockSupabaseService = {
+      client: {
+        from: jest.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ViziWebhooksController],
       providers: [
@@ -94,6 +106,14 @@ describe('ViziWebhooksController', () => {
         {
           provide: OrdersRepository,
           useValue: mockOrdersRepository,
+        },
+        {
+          provide: QueueService,
+          useValue: mockQueueService,
+        },
+        {
+          provide: SupabaseService,
+          useValue: mockSupabaseService,
         },
         Reflector,
       ],

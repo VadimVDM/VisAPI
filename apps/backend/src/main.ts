@@ -8,6 +8,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
 import fastifyHelmet from '@fastify/helmet';
+import type { FastifyInstance } from 'fastify';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
 // Read version from package.json at build time
 const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
@@ -52,11 +53,14 @@ async function bootstrap() {
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
     const fastifyInstance = app.getHttpAdapter().getInstance();
-    // Fastify uses server.trustProxy property
-    (fastifyInstance as any).server = {
-      ...(fastifyInstance as any).server,
-      trustProxy: true,
+    // Fastify uses trustProxy option
+    const fastifyServer = fastifyInstance as FastifyInstance & { 
+      server?: { trustProxy?: boolean } 
     };
+    if (!fastifyServer.server) {
+      fastifyServer.server = {};
+    }
+    fastifyServer.server.trustProxy = true;
     Logger.log('Trust proxy enabled for production environment');
   }
 

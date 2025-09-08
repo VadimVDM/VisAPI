@@ -18,6 +18,30 @@ import {
 } from './dto/retrigger-orders.dto';
 import { OrdersService } from '../orders/orders.service';
 
+// Type definitions for webhook metadata
+interface WebhookMetadata {
+  webhook_type?: string;
+  webhook_data?: ViziWebhookDto;
+  order_id?: string;
+  form_id?: string;
+  order_db_id?: string;
+  result_status?: string;
+  correlationId?: string;
+  source?: string;
+  retrigger?: boolean;
+  error?: unknown;
+  webhook_id?: string;
+  type?: string;
+  data?: unknown;
+  country?: string;
+  workflow_name?: string;
+}
+
+interface LogRecord {
+  metadata: WebhookMetadata | null;
+  created_at?: string;
+}
+
 @Injectable()
 export class ViziWebhooksService {
   private readonly logger = new Logger(ViziWebhooksService.name);
@@ -504,7 +528,7 @@ export class ViziWebhooksService {
 
     // Filter for the specific order
     for (const log of data) {
-      const metadata = log.metadata as Record<string, any>;
+      const metadata = log.metadata as WebhookMetadata | null;
 
       // Check if this is a vizi_order log with webhook_data
       if (metadata?.webhook_type === 'vizi_order' && metadata?.webhook_data) {
@@ -565,7 +589,7 @@ export class ViziWebhooksService {
 
     // Filter for vizi_order logs with webhook_data
     for (const log of data) {
-      const metadata = log.metadata as Record<string, any>;
+      const metadata = log.metadata as WebhookMetadata | null;
 
       // Check if this is a vizi_order log with webhook_data
       if (metadata?.webhook_type === 'vizi_order' && metadata?.webhook_data) {

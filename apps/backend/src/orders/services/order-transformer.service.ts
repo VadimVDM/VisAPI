@@ -201,14 +201,14 @@ export class OrderTransformerService {
       if (isNaN(parsedDate.getTime())) {
         const dateStr =
           typeof date === 'object' ? JSON.stringify(date) : String(date);
-        this.logger.warn('Invalid entry date format:', dateStr);
+        this.logger.warn(`Invalid entry date format: ${dateStr}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
       const dateStr =
         typeof date === 'object' ? JSON.stringify(date) : String(date);
-      this.logger.warn('Failed to parse entry date:', dateStr);
+      this.logger.warn(`Failed to parse entry date: ${dateStr}`);
       return undefined;
     }
   }

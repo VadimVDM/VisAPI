@@ -43,13 +43,14 @@ export class PdfController {
     @Body(ValidationPipe) dto: GeneratePdfDto,
   ): Promise<PdfJobResponseDto> {
     const job = await this.pdfService.generatePdf(dto);
+    const jobId = job.id || job.opts?.jobId as string;
     
     return {
-      jobId: job.id!,
+      jobId,
       status: 'queued',
       createdAt: new Date().toISOString(),
       estimatedCompletionTime: this.calculateEstimatedTime(dto.priority),
-      trackingUrl: `/api/v1/pdf/status/${job.id}`,
+      trackingUrl: `/api/v1/pdf/status/${jobId}`,
     };
   }
 
@@ -80,13 +81,16 @@ export class PdfController {
   ): Promise<PdfJobResponseDto[]> {
     const jobs = await this.pdfService.generateBatch(dtos);
     
-    return jobs.map(job => ({
-      jobId: job.id!,
-      status: 'queued',
-      createdAt: new Date().toISOString(),
-      estimatedCompletionTime: this.calculateEstimatedTime('normal'),
-      trackingUrl: `/api/v1/pdf/status/${job.id}`,
-    }));
+    return jobs.map(job => {
+      const jobId = job.id || job.opts?.jobId as string;
+      return {
+        jobId,
+        status: 'queued',
+        createdAt: new Date().toISOString(),
+        estimatedCompletionTime: this.calculateEstimatedTime('normal'),
+        trackingUrl: `/api/v1/pdf/status/${jobId}`,
+      };
+    });
   }
 
   @Get('templates')
@@ -107,7 +111,7 @@ export class PdfController {
   async previewPdf(
     @Body(ValidationPipe) dto: GeneratePdfDto,
     @Query('format') format: 'base64' | 'url' = 'url',
-  ) {
+  ): Promise<{ data: string; format: string }> {
     return this.pdfService.previewPdf(dto, format);
   }
 

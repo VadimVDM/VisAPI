@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { JobMetadata } from './generate-pdf.dto';
 
 export enum JobStatus {
   QUEUED = 'queued',
@@ -60,5 +61,5 @@ export class PdfJobStatusDto {
   attempts?: number;
 
   @ApiPropertyOptional({ description: 'Job metadata' })
-  metadata?: Record<string, any>;
+  metadata?: JobMetadata;
 }

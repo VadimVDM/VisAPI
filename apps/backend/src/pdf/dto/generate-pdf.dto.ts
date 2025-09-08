@@ -26,6 +26,12 @@ export enum PdfPriority {
   LOW = 'low',
 }
 
+// Type for template data - can be extended based on template requirements
+export type TemplateData = Record<string, string | number | boolean | null | undefined | TemplateData | TemplateData[]>;
+
+// Type for job metadata
+export type JobMetadata = Record<string, string | number | boolean | null | undefined>;
+
 export class PdfOptionsDto {
   @ApiPropertyOptional({ enum: PdfFormat, default: PdfFormat.A4 })
   @IsEnum(PdfFormat)
@@ -91,7 +97,7 @@ export class GeneratePdfDto {
   @ApiProperty({ description: 'Data to populate template or HTML', example: { name: 'John Doe', amount: 100 } })
   @IsObject()
   @IsOptional()
-  data?: Record<string, any>;
+  data?: TemplateData;
 
   @ApiPropertyOptional({ description: 'Output filename without extension', example: 'invoice-2025-01' })
   @IsString()
@@ -117,5 +123,5 @@ export class GeneratePdfDto {
   @ApiPropertyOptional({ description: 'Metadata to attach to the job' })
   @IsObject()
   @IsOptional()
-  metadata?: Record<string, any>;
+  metadata?: JobMetadata;
 }

@@ -12,16 +12,21 @@ const nextConfig = {
   nx: {
     svgr: false,
   },
-  // Remove standalone output for Vercel deployment - Vercel handles this automatically
-  // output: 'standalone',
+  // Use 'export' to skip SSR and avoid Next.js 15 static generation issues
+  output: 'export',
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // outputFileTracingRoot: path.join(__dirname, '../../'),
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   
   // Temporarily disable static page generation for error pages to work around Next.js 15 Html import issue
   trailingSlash: false,
+  
+  // Skip generating static error pages due to Next.js 15 issue
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
   
   // Image configuration for SVG support
   images: {
