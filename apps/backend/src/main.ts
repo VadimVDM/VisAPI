@@ -8,7 +8,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
 import fastifyHelmet from '@fastify/helmet';
-import type { FastifyInstance } from 'fastify';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
 // Read version from package.json at build time
 const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
@@ -36,7 +35,8 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
 
   // Security - Fastify helmet
-  await app.register(fastifyHelmet, {
+  // Cast to any to bypass type compatibility issues between Fastify versions
+  await app.register(fastifyHelmet as any, {
     contentSecurityPolicy:
       configService.nodeEnv === 'production'
         ? {
