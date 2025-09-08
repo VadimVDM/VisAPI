@@ -52,15 +52,11 @@ async function bootstrap() {
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
-    const fastifyInstance = app.getHttpAdapter().getInstance();
-    // Fastify uses trustProxy option
-    const fastifyServer = fastifyInstance as FastifyInstance & { 
-      server?: { trustProxy?: boolean } 
-    };
-    if (!fastifyServer.server) {
-      fastifyServer.server = {};
+    const fastifyInstance = app.getHttpAdapter().getInstance() as any;
+    // Set trust proxy for Fastify
+    if (fastifyInstance && fastifyInstance.server) {
+      (fastifyInstance.server as any).trustProxy = true;
     }
-    fastifyServer.server.trustProxy = true;
     Logger.log('Trust proxy enabled for production environment');
   }
 

@@ -27,7 +27,11 @@ export enum PdfPriority {
 }
 
 // Type for template data - can be extended based on template requirements
-export type TemplateData = Record<string, string | number | boolean | null | undefined | TemplateData | TemplateData[]>;
+export type TemplateDataValue = string | number | boolean | null | undefined | TemplateDataObject | TemplateDataValue[];
+export interface TemplateDataObject {
+  [key: string]: TemplateDataValue;
+}
+export type TemplateData = TemplateDataObject;
 
 // Type for job metadata
 export type JobMetadata = Record<string, string | number | boolean | null | undefined>;
