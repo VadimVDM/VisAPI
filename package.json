@@ -91,7 +91,7 @@
     "@nx/react": "21.4.1",
     "@nx/vite": "21.4.1",
     "@nx/web": "21.4.1",
-    "@nx/webpack": "21.4.1",
+    "@nx/webpack": "21.5.2",
     "@nx/workspace": "21.4.1",
     "@playwright/test": "^1.55.0",
     "@supabase/supabase-js": "^2.57.2",
