@@ -128,7 +128,8 @@ export class ViziWebhooksController {
     const form = isRecord(bodyAsRecord.form) ? bodyAsRecord.form : undefined;
 
     // Check if this is a test order (ends with -TEST)
-    const orderId = order && hasProperty(order, 'id') ? String(order.id) : undefined;
+    const orderId = order && hasProperty(order, 'id') ?
+      (typeof order.id === 'string' ? order.id : JSON.stringify(order.id)) : undefined;
     if (orderId && orderId.endsWith('-TEST')) {
       this.logger.log(
         `Skipping test order: ${orderId} (test orders ending with -TEST are ignored)`,
@@ -216,7 +217,8 @@ export class ViziWebhooksController {
     const webhookValidation = {
       hasOrder: !!order,
       hasForm: !!form,
-      orderId: order && hasProperty(order, 'id') ? String(order.id) : undefined,
+      orderId: order && hasProperty(order, 'id') ?
+        (typeof order.id === 'string' ? order.id : JSON.stringify(order.id)) : undefined,
       formId: form && hasProperty(form, 'id') ? String(form.id) : undefined,
       country:
         form && hasProperty(form, 'country') ? String(form.country) : undefined,

@@ -61,7 +61,7 @@ async function cleanupQueues() {
         if (!queueGroups.has(queueName)) {
           queueGroups.set(queueName, []);
         }
-        queueGroups.get(queueName)!.push(key);
+        queueGroups.get(queueName)?.push(key);
       }
     }
 

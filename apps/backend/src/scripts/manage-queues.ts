@@ -5,7 +5,6 @@ import { QueueService } from '../queue/queue.service';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
 
 const logger = new Logger('QueueManager');
 

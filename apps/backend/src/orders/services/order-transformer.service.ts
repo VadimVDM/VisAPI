@@ -200,14 +200,14 @@ export class OrderTransformerService {
       const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
         const dateStr =
-          typeof date === 'object' ? JSON.stringify(date) : String(date);
+          typeof date === 'object' && date !== null ? JSON.stringify(date) : String(date);
         this.logger.warn(`Invalid entry date format: ${dateStr}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
       const dateStr =
-        typeof date === 'object' ? JSON.stringify(date) : String(date);
+        typeof date === 'object' && date !== null ? JSON.stringify(date) : String(date);
       this.logger.warn(`Failed to parse entry date: ${dateStr}`);
       return undefined;
     }

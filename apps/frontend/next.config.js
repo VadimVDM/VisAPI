@@ -35,12 +35,15 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
-  // Skip problematic pages during CI builds
-  ...(process.env.NODE_ENV === 'production' && process.env.CI === 'true' && {
+  // Skip problematic pages during builds to avoid Next.js 15 Html import issues
+  ...(process.env.NODE_ENV === 'production' && {
     skipTrailingSlashRedirect: true,
     skipMiddlewareUrlNormalize: true,
     // exportPathMap is not compatible with app directory
     // Use generateStaticParams in page components instead
+    experimental: {
+      optimizePackageImports: ['lucide-react'],
+    },
   }),
   
   // Webpack configuration for SVGR

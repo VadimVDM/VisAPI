@@ -43,8 +43,8 @@ export class PdfController {
     @Body(ValidationPipe) dto: GeneratePdfDto,
   ): Promise<PdfJobResponseDto> {
     const job = await this.pdfService.generatePdf(dto);
-    const jobId = job.id || job.opts?.jobId as string;
-    
+    const jobId = job.id || job.opts?.jobId || `job-${Date.now()}`;
+
     return {
       jobId,
       status: 'queued',
@@ -82,7 +82,7 @@ export class PdfController {
     const jobs = await this.pdfService.generateBatch(dtos);
     
     return jobs.map(job => {
-      const jobId = job.id || job.opts?.jobId as string;
+      const jobId = job.id || job.opts?.jobId || `job-${Date.now()}-${Math.random()}`;
       return {
         jobId,
         status: 'queued',
@@ -98,7 +98,7 @@ export class PdfController {
     summary: 'List available PDF templates',
     description: 'Returns list of available PDF templates with their variables'
   })
-  async getTemplates() {
+  getTemplates() {
     return this.pdfService.getAvailableTemplates();
   }
 

@@ -35,8 +35,8 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
 
   // Security - Fastify helmet
-  // Cast to any to bypass type compatibility issues between Fastify versions
-  await app.register(fastifyHelmet as any, {
+  // Type assertion for Fastify helmet compatibility
+  await app.register(fastifyHelmet as Parameters<NestFastifyApplication['register']>[0], {
     contentSecurityPolicy:
       configService.nodeEnv === 'production'
         ? {
@@ -52,10 +52,12 @@ async function bootstrap() {
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
-    const fastifyInstance = app.getHttpAdapter().getInstance() as any;
+    const fastifyInstance = app.getHttpAdapter().getInstance();
     // Set trust proxy for Fastify
-    if (fastifyInstance && fastifyInstance.server) {
-      (fastifyInstance.server as any).trustProxy = true;
+    if (fastifyInstance && 'server' in fastifyInstance && fastifyInstance.server) {
+      // Safely access trustProxy property
+      const server = fastifyInstance.server as { trustProxy?: boolean };
+      server.trustProxy = true;
     }
     Logger.log('Trust proxy enabled for production environment');
   }
