@@ -35,8 +35,8 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
 
   // Security - Fastify helmet
-  // Type assertion for Fastify helmet compatibility
-  await app.register(fastifyHelmet as Parameters<NestFastifyApplication['register']>[0], {
+  // Cast to unknown first then to the expected type to handle version mismatch
+  await app.register(fastifyHelmet as unknown as Parameters<NestFastifyApplication['register']>[0], {
     contentSecurityPolicy:
       configService.nodeEnv === 'production'
         ? {
