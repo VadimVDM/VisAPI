@@ -58,21 +58,21 @@ class CacheServiceStub {
 }
 
 class StatusMessageGeneratorStub {
-  generateStatusMessage(fields: Record<string, unknown>): Promise<string | null> {
+  generateStatusMessage(fields: Record<string, unknown>): string | null {
     const status = fields['Status'] as string;
     const domainBranch = fields['Domain Branch'] as string;
 
     // Only generate for IL domain with Active status
     if (domainBranch === 'IL 🇮🇱' && status?.includes('Active')) {
-      return Promise.resolve(`*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳
+      return `*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳
 
 בקשתכם עבור תיירות לחצי שנה לבריטניה הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות בבריטניה 🇬🇧
 
 בדרך כלל התהליך נמשך עד 3 ימי עסקים.
 
-נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.`);
+נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.`;
     }
-    return Promise.resolve(null);
+    return null;
   }
 }
 
