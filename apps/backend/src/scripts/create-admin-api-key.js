@@ -104,6 +104,7 @@ async function createAdminKey() {
           'logs:write',
           'queues:read',
           'integrations:airtable:read',
+          'integrations:airtable:write',
         ],
         created_by: userId,
         expires_at: new Date(
