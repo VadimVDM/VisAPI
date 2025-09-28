@@ -170,7 +170,7 @@ export class WhatsAppTranslationService {
   }
 
   /**
-   * Get Hebrew translation for visa type with special country rules
+   * Get Hebrew translation for visa type - dynamically constructed from intent + validity
    */
   getVisaTypeHebrew(
     docType: string,
@@ -182,59 +182,34 @@ export class WhatsAppTranslationService {
   ): string {
     const normalizedDocType = docType?.toLowerCase().trim();
     const normalizedIntent = intent?.toLowerCase().trim();
-    const normalizedCountry = country?.toLowerCase().trim();
     const normalizedEntries = entries?.toLowerCase().trim();
 
-    // Special rules for Vietnam
-    if (normalizedCountry === 'vietnam') {
-      const intentHebrew =
-        VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
-      const entriesHebrew =
-        normalizedEntries === 'multiple' ? 'רב פעמית' : 'חד פעמית';
-      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
-      return `${intentHebrew}, ${entriesHebrew}, ${validityHebrew}`;
-    }
+    // Get Hebrew intent (default to tourism if not provided)
+    const intentHebrew =
+      VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
 
-    // Special rules for ETA/ESTA documents
+    // Get Hebrew validity period
+    const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
+
+    // Special handling for ETA/ESTA documents
     if (
       normalizedDocType?.includes('eta') ||
       normalizedDocType?.includes('esta')
     ) {
       const docName = normalizedDocType.toUpperCase().replace('-', ' ');
-      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
       return `אישור נסיעה ${docName} ${validityHebrew}`;
     }
 
-    // Special rules for India
-    if (normalizedCountry === 'india') {
-      const intentHebrew =
-        VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
-      const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
+    // Build dynamic visa type string
+    // Format: "[Intent] [Validity]" or "[Intent], [Entries], [Validity]" for countries that need entries
+    if (normalizedEntries === 'multiple') {
+      // For multiple entries, include it in the description
+      const entriesHebrew = 'רב פעמית';
+      return `${intentHebrew}, ${entriesHebrew}, ${validityHebrew}`;
+    } else {
+      // For single entry or when not specified, just use intent + validity
       return `${intentHebrew} ${validityHebrew}`;
     }
-
-    // Special rules for Morocco
-    if (normalizedCountry === 'morocco') {
-      return 'תיירות לחצי שנה';
-    }
-
-    // Special rules for Sri Lanka
-    if (normalizedCountry === 'sri lanka') {
-      return 'תיירות חצי שנה';
-    }
-
-    // Default behavior for other countries
-    if (normalizedIntent && VISA_TYPES_HEBREW[normalizedIntent]) {
-      return VISA_TYPES_HEBREW[normalizedIntent];
-    }
-
-    // Fall back to doc type translation
-    if (VISA_TYPES_HEBREW[normalizedDocType]) {
-      return VISA_TYPES_HEBREW[normalizedDocType];
-    }
-
-    // Default fallback
-    return docType || 'ויזה';
   }
 
   /**
