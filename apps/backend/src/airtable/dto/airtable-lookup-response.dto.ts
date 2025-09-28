@@ -32,4 +32,15 @@ export class AirtableLookupResponseDto {
 
   @ApiPropertyOptional({ type: AirtableRecordDto })
   record?: AirtableRecordDto;
+
+  @ApiPropertyOptional({
+    description: 'Formatted status message for WhatsApp/customer communication (IL orders only).'
+  })
+  statusMessage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Applications data when status is Issue 🛑.',
+    type: [Object]
+  })
+  applications?: Record<string, unknown>[];
 }

@@ -180,6 +180,11 @@ const registeredQueues = () => BullModule.registerQueue(
       buckets: [0.5, 1, 2, 5, 10, 20, 30],
     }),
   ],
-  exports: [QueueService, BullModule, CBBSyncOrchestratorService],
+  exports: [
+    QueueService,
+    BullModule,
+    CBBSyncOrchestratorService,
+    WhatsAppTranslationService, // Export for use in other modules
+  ],
 })
 export class QueueModule {}

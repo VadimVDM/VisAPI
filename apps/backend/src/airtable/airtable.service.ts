@@ -15,6 +15,7 @@ import {
   AirtableLookupStatus,
   AirtableRecordDto,
 } from './dto/airtable-lookup-response.dto';
+import { StatusMessageGeneratorService } from './services/status-message-generator.service';
 
 export type AirtableLookupField = 'email' | 'orderId' | 'phone';
 
@@ -55,6 +56,7 @@ export class AirtableLookupService {
   constructor(
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
+    private readonly statusMessageGenerator: StatusMessageGeneratorService,
   ) {}
 
   async lookup(
@@ -134,10 +136,30 @@ export class AirtableLookupService {
         message: 'none',
       };
     } else if (matches.length === 1) {
+      const mappedRecord = this.mapRecord(matches[0]);
+      const fullFields = matches[0].fields || {};
+
+      // Generate status message for IL orders
+      const statusMessage = await this.statusMessageGenerator.generateStatusMessage(
+        fullFields
+      );
+
+      // Extract applications if status is Issue
+      let applications: Record<string, unknown>[] | undefined;
+      if (fullFields['Status']?.toString().includes('Issue')) {
+        // Check if we have expanded data with Applications
+        const expanded = (matches[0] as any).expanded;
+        if (expanded?.Applications_expanded) {
+          applications = expanded.Applications_expanded;
+        }
+      }
+
       response = {
         status: AirtableLookupStatus.FOUND,
         message: 'found',
-        record: this.mapRecord(matches[0]),
+        record: mappedRecord,
+        ...(statusMessage && { statusMessage }),
+        ...(applications && { applications }),
       };
     } else {
       response = {
@@ -156,8 +178,8 @@ export class AirtableLookupService {
     const fields = record.fields ?? {};
     const filteredFields: Record<string, unknown> = {};
 
-    // Include Status, ID, Email, and Phone fields
-    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone'];
+    // Include Status, ID, Email, Phone, and Domain Branch fields
+    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone', 'Domain Branch'];
     for (const fieldName of fieldsToInclude) {
       if (fieldName in fields) {
         filteredFields[fieldName] = fields[fieldName];

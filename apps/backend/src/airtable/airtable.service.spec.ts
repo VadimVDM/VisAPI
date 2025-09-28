@@ -55,20 +55,36 @@ class CacheServiceStub {
   }
 }
 
+class StatusMessageGeneratorStub {
+  async generateStatusMessage(fields: Record<string, unknown>): Promise<string | null> {
+    const status = fields['Status'] as string;
+    const domainBranch = fields['Domain Branch'] as string;
+
+    // Only generate for IL domain with Active status
+    if (domainBranch === 'IL 🇮🇱' && status?.includes('Active')) {
+      return '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳\n\nבקשתכם עבור תיירות לחצי שנה לבריטניה הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות בבריטניה 🇬🇧\n\nבדרך כלל התהליך נמשך עד 3 ימי עסקים.\n\nנעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.';
+    }
+    return null;
+  }
+}
+
 describe('AirtableLookupService', () => {
   const createService = (
     options?: {
       config?: ConfigServiceStub;
       cache?: CacheServiceStub;
+      statusMessageGenerator?: StatusMessageGeneratorStub;
     },
   ) => {
     const config =
       options?.config ?? new ConfigServiceStub('key', 'base', 'tbl123');
     const cache = options?.cache ?? new CacheServiceStub();
+    const statusMessageGenerator = options?.statusMessageGenerator ?? new StatusMessageGeneratorStub();
 
     const service = new AirtableLookupService(
       config as unknown as ConfigService,
       cache as unknown as CacheServiceStub,
+      statusMessageGenerator as any,
     );
 
     return { service, cache };
@@ -97,7 +113,8 @@ describe('AirtableLookupService', () => {
         Email: 'test@example.com',
         Status: 'Active 🔵',
         Name: 'Test User',
-        Phone: '1234567890'
+        Phone: '1234567890',
+        'Domain Branch': 'US 🇺🇸'
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     };
@@ -122,7 +139,8 @@ describe('AirtableLookupService', () => {
         ID: 'IL250928IN7',
         Status: 'Active 🔵',
         Email: 'test@example.com',
-        Phone: '1234567890'
+        Phone: '1234567890',
+        'Domain Branch': 'US 🇺🇸'
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     });
@@ -144,7 +162,8 @@ describe('AirtableLookupService', () => {
         Phone: '972507921512',
         Status: 'Processing 🟡',
         Name: 'Phone User',
-        Email: 'phoneuser@example.com'
+        Email: 'phoneuser@example.com',
+        'Domain Branch': 'IL 🇮🇱'
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     };
@@ -169,7 +188,8 @@ describe('AirtableLookupService', () => {
         ID: 'IL250928LK1',
         Status: 'Processing 🟡',
         Phone: '972507921512',
-        Email: 'phoneuser@example.com'
+        Email: 'phoneuser@example.com',
+        'Domain Branch': 'IL 🇮🇱'
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     });
@@ -191,7 +211,8 @@ describe('AirtableLookupService', () => {
         Phone: '9720507921512',  // Stored with zero
         Status: 'Completed ✅',
         Name: 'Israeli User',
-        Email: 'israeli@example.com'
+        Email: 'israeli@example.com',
+        'Domain Branch': 'IL 🇮🇱'
       },
       createdTime: '2024-01-02T00:00:00.000Z',
     };
@@ -221,7 +242,8 @@ describe('AirtableLookupService', () => {
         ID: 'IL250928MA3',
         Status: 'Completed ✅',
         Phone: '9720507921512',
-        Email: 'israeli@example.com'
+        Email: 'israeli@example.com',
+        'Domain Branch': 'IL 🇮🇱'
       },
       createdTime: '2024-01-02T00:00:00.000Z',
     });
@@ -231,6 +253,106 @@ describe('AirtableLookupService', () => {
       JSON.stringify({ field: 'phone', value: '972507921512' }),
       expect.any(Object)
     );
+  });
+
+  it('generates status message for IL orders with Active status', async () => {
+    const { service, cache } = createService();
+    const pythonRecord = {
+      id: 'recIL123',
+      fields: {
+        ID: 'IL250928UK1',
+        Email: 'israeli@example.com',
+        Status: 'Active 🔵',
+        Phone: '972507921512',
+        'Domain Branch': 'IL 🇮🇱',
+        Country: 'United Kingdom',
+        Type: 'eVisa',
+        Intent: 'Tourism',
+        Validity: '6 Months',
+        Priority: 'Regular',
+        'Processing Time': 3,
+      },
+      createdTime: '2024-01-01T00:00:00.000Z',
+    };
+
+    jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
+      .mockResolvedValue({
+        response: {
+          status: 'ok',
+          matches: [pythonRecord],
+        },
+      });
+
+    const result = await service.lookup('email', 'israeli@example.com');
+
+    expect(result.status).toBe(AirtableLookupStatus.FOUND);
+    expect(result.statusMessage).toBeDefined();
+    expect(result.statusMessage).toContain('*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳');
+    expect(result.statusMessage).toContain('בריטניה');
+    expect(result.statusMessage).toContain('🇬🇧');
+    expect(result.statusMessage).toContain('3 ימי עסקים');
+  });
+
+  it('includes applications data for Issue status', async () => {
+    const { service } = createService();
+    const pythonRecord = {
+      id: 'recIssue123',
+      fields: {
+        ID: 'IL250928IN9',
+        Email: 'issue@example.com',
+        Status: 'Issue 🛑',
+        Phone: '972501234567',
+        'Domain Branch': 'IL 🇮🇱',
+        'Applications ↗': ['recApp1', 'recApp2'],
+      },
+      expanded: {
+        Applications_expanded: [
+          {
+            id: 'recApp1',
+            fields: {
+              UUID: 'app_IL250928IN9-1',
+              Status: 'Issue - Missing Document',
+              'Applicant Name': 'John Doe',
+              'Passport Number': '123456789',
+              'Issue Description': 'Passport photo unclear',
+            },
+          },
+          {
+            id: 'recApp2',
+            fields: {
+              UUID: 'app_IL250928IN9-2',
+              Status: 'Issue - Incorrect Info',
+              'Applicant Name': 'Jane Doe',
+              'Passport Number': '987654321',
+              'Issue Description': 'Birth date mismatch',
+            },
+          },
+        ],
+      },
+      createdTime: '2024-01-01T00:00:00.000Z',
+    };
+
+    jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
+      .mockResolvedValue({
+        response: {
+          status: 'ok',
+          matches: [pythonRecord],
+        },
+      });
+
+    const result = await service.lookup('email', 'issue@example.com');
+
+    expect(result.status).toBe(AirtableLookupStatus.FOUND);
+    expect(result.applications).toBeDefined();
+    expect(result.applications).toHaveLength(2);
+    expect(result.applications![0]).toHaveProperty('id', 'recApp1');
+    expect(result.applications![0].fields).toHaveProperty('Status', 'Issue - Missing Document');
+    expect(result.applications![1]).toHaveProperty('id', 'recApp2');
+    expect(result.applications![1].fields).toHaveProperty('Status', 'Issue - Incorrect Info');
   });
 
   it('returns multiple status when more than one record is returned', async () => {
