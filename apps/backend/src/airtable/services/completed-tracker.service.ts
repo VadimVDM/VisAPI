@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, forwardRef, Inject } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 import { RedisService } from '@visapi/util-redis';
 import { SupabaseService } from '@visapi/core-supabase';
@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Redis } from 'ioredis';
+import { VisaApprovalProcessorService } from './visa-approval-processor.service';
 
 interface CompletedRecord {
   id: string;
@@ -45,6 +46,8 @@ export class CompletedTrackerService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly supabaseService: SupabaseService,
+    @Inject(forwardRef(() => VisaApprovalProcessorService))
+    private readonly visaProcessor: VisaApprovalProcessorService,
   ) {
     this.redis = this.redisService.getClient();
   }
@@ -193,6 +196,17 @@ export class CompletedTrackerService implements OnModuleInit {
       this.logger.log(
         `Check completed: ${genuinelyNew.length} new, ${alreadyProcessed} already processed, ${recentRecords.length} total checked`
       );
+
+      // Process new records for visa approvals
+      if (genuinelyNew.length > 0) {
+        try {
+          await this.visaProcessor.processCompletedRecords(genuinelyNew);
+          this.logger.log(`Processed ${genuinelyNew.length} records for visa approvals`);
+        } catch (error) {
+          this.logger.error('Failed to process visa approvals:', error);
+          // Don't throw - we still want to mark the check as successful
+        }
+      }
 
       // Log to database
       await this.logToDatabase('check', {

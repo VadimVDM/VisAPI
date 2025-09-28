@@ -48,7 +48,13 @@ export interface WhatsAppJobResult {
 export interface WhatsAppMessageJobData {
   orderId: string;
   contactId: string;                       // CBB contact ID (phone number)
-  messageType: 'order_confirmation' | 'status_update' | 'document_ready';
+  messageType: 'order_confirmation' | 'status_update' | 'document_ready' | 'visa_approval';
+  cbbId?: string;                         // CBB contact ID for visa approval
+  phone?: string;                         // Phone number for visa approval
+  templateName?: string;                  // Template name for visa approval
+  templateParams?: string[];              // Template parameters for visa approval
+  documentUrl?: string;                   // Visa document URL for attachment
+  visaDetails?: any;                      // Full visa details object
 }
 
 export interface LogPruneJobData {

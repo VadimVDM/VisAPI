@@ -194,7 +194,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       let result: SendMessageResult;
       try {
         // Send the appropriate message
-        result = await this.sendMessage(order, contactId, messageType);
+        result = await this.sendMessage(order, contactId, messageType, job);
 
         // Update order with WhatsApp tracking info
         // CBB doesn't return Meta's message ID immediately. Meta sends the actual wamid
@@ -301,6 +301,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     order: OrderData,
     contactId: string,
     messageType: string,
+    job?: Job<WhatsAppMessageJobData>,
   ): Promise<SendMessageResult> {
     switch (messageType) {
       case 'order_confirmation':
@@ -339,6 +340,35 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         );
         throw new Error('Document ready template not yet implemented');
 
+      case 'visa_approval':
+        if (!job?.data) {
+          throw new Error('Visa approval requires job data');
+        }
+
+        const { templateParams, documentUrl, cbbId, phone } = job.data;
+
+        // Send visa approval with document attachment
+        const visaResult = await this.cbbClient.sendTemplateMessage(
+          cbbId || contactId,
+          'visa_approval_file_phone',
+          templateParams || [],
+          documentUrl, // Document attachment URL
+        );
+
+        // Update order visa notification status
+        if (visaResult.message_id) {
+          await this.supabaseService.serviceClient
+            .from('orders')
+            .update({
+              visa_notification_sent: true,
+              visa_notification_sent_at: new Date().toISOString(),
+              visa_notification_message_id: visaResult.message_id,
+            })
+            .eq('order_id', order.order_id);
+        }
+
+        return visaResult;
+
       default:
         throw new Error(`Unknown message type: ${messageType}`);
     }
@@ -351,6 +381,19 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     order: OrderData,
     messageType: string,
   ): Promise<boolean> {
+    // Special check for visa approvals - they're tracked in the orders table
+    if (messageType === 'visa_approval') {
+      const { data: orderData, error: orderError } = await this.supabaseService.serviceClient
+        .from('orders')
+        .select('visa_notification_sent')
+        .eq('order_id', order.order_id)
+        .single();
+
+      if (!orderError && orderData?.visa_notification_sent === true) {
+        return true;
+      }
+    }
+
     const { data, error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
       .select('id, confirmation_sent, status, updated_at')
@@ -517,10 +560,17 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   /**
    * Get template name for message type
    */
-  private getTemplateNameForMessageType(messageType: string): string {
+  private getTemplateNameForMessageType(messageType: string, templateName?: string): string {
+    // If explicit template name provided, use it
+    if (templateName) {
+      return templateName;
+    }
+
     switch (messageType) {
       case 'order_confirmation':
         return 'order_confirmation_global';
+      case 'visa_approval':
+        return 'visa_approval_file_phone';
       case 'status_update':
         return 'status_update'; // When implemented
       case 'document_ready':
