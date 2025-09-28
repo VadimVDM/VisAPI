@@ -199,15 +199,27 @@ export class OrderTransformerService {
       // Handle various date formats
       const parsedDate = new Date(date as string | number | Date);
       if (isNaN(parsedDate.getTime())) {
-        const dateStr =
-          typeof date === 'object' && date !== null ? JSON.stringify(date) : String(date ?? 'unknown');
+        let dateStr: string;
+        if (typeof date === 'object' && date !== null) {
+          dateStr = JSON.stringify(date);
+        } else if (date != null && typeof date !== 'object') {
+          dateStr = String(date as string | number | boolean);
+        } else {
+          dateStr = 'unknown';
+        }
         this.logger.warn(`Invalid entry date format: ${dateStr}`);
         return undefined;
       }
       return parsedDate.toISOString();
     } catch {
-      const dateStr =
-        typeof date === 'object' && date !== null ? JSON.stringify(date) : String(date ?? 'unknown');
+      let dateStr: string;
+      if (typeof date === 'object' && date !== null) {
+        dateStr = JSON.stringify(date);
+      } else if (date != null && typeof date !== 'object') {
+        dateStr = String(date as string | number | boolean);
+      } else {
+        dateStr = 'unknown';
+      }
       this.logger.warn(`Failed to parse entry date: ${dateStr}`);
       return undefined;
     }

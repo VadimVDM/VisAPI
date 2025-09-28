@@ -226,8 +226,8 @@ export const EnvSchema = z.object({
   // Airtable integration
   AIRTABLE_API_KEY: z.string().optional(),
   AIRTABLE_BASE_ID: z.string().optional(),
-  AIRTABLE_TABLE_NAME: z.string().optional(),
-  AIRTABLE_VIEW: z.string().optional(),
+  AIRTABLE_TABLE_ID: z.string().optional(),
+  AIRTABLE_VIEW_ID: z.string().optional(),
 
   // Grafana monitoring
   GRAFANA_REMOTE_WRITE_ENABLED: z
@@ -454,8 +454,8 @@ export function getValidatedConfig() {
     airtable: {
       apiKey: env.AIRTABLE_API_KEY,
       baseId: env.AIRTABLE_BASE_ID,
-      tableName: env.AIRTABLE_TABLE_NAME,
-      view: env.AIRTABLE_VIEW,
+      tableId: env.AIRTABLE_TABLE_ID,
+      viewId: env.AIRTABLE_VIEW_ID,
     },
     monitoring: {
       grafana: {

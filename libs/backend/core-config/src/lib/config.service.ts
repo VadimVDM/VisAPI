@@ -244,11 +244,11 @@ export class ConfigService {
     return this.airtableConfig?.baseId;
   }
 
-  get airtableTableName(): string | undefined {
-    return this.airtableConfig?.tableName;
+  get airtableTableId(): string | undefined {
+    return this.airtableConfig?.tableId;
   }
 
-  get airtableView(): string | undefined {
-    return this.airtableConfig?.view;
+  get airtableViewId(): string | undefined {
+    return this.airtableConfig?.viewId;
   }
 }

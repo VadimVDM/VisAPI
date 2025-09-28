@@ -10,8 +10,8 @@ The script reads a JSON payload from STDIN with the following structure:
 Environment variables provide Airtable credentials:
 - AIRTABLE_API_KEY
 - AIRTABLE_BASE_ID
-- AIRTABLE_TABLE_NAME
-- AIRTABLE_VIEW (optional)
+- AIRTABLE_TABLE_ID
+- AIRTABLE_VIEW_ID (optional)
 
 The script outputs a JSON response containing the lookup matches. It never raises
 unhandled exceptions so that the Node.js caller can provide consistent error
@@ -92,16 +92,16 @@ def query_airtable(
   table: Any,
   field_name: str,
   value: str,
-  view: str | None,
+  view_id: str | None,
 ) -> List[Dict[str, Any]]:
   lowered_value = value.lower()
   formula = "LOWER({{{}}}) = '{}'".format(field_name, sanitize_formula_value(lowered_value))
 
   # Attempt to limit results to minimise Airtable pagination cost.
   try:
-    records = table.all(view=view or None, formula=formula, max_records=3)
+    records = table.all(view=view_id or None, formula=formula, max_records=3)
   except TypeError:
-    records = table.all(view=view or None, formula=formula)
+    records = table.all(view=view_id or None, formula=formula)
 
   if not isinstance(records, list):
     emit_error("Unexpected response format from Airtable", "QUERY_ERROR")
@@ -121,19 +121,19 @@ def main() -> None:
 
   api_key = os.getenv("AIRTABLE_API_KEY")
   base_id = os.getenv("AIRTABLE_BASE_ID")
-  table_name = os.getenv("AIRTABLE_TABLE_NAME")
-  view = os.getenv("AIRTABLE_VIEW") or None
+  table_id = os.getenv("AIRTABLE_TABLE_ID")
+  view_id = os.getenv("AIRTABLE_VIEW_ID") or None
 
-  if not api_key or not base_id or not table_name:
+  if not api_key or not base_id or not table_id:
     emit_error(
-      "Airtable credentials not configured. Ensure AIRTABLE_API_KEY, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_NAME are set.",
+      "Airtable credentials not configured. Ensure AIRTABLE_API_KEY, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_ID are set.",
       "CONFIGURATION_ERROR",
     )
 
   table_class = import_pyairtable()
 
   try:
-    table = table_class(api_key, base_id, table_name)
+    table = table_class(api_key, base_id, table_id)
   except Exception as exc:
     emit_error(
       "Failed to initialise Airtable client",
@@ -144,7 +144,7 @@ def main() -> None:
   field_name = normalise_field(field)
 
   try:
-    matches = query_airtable(table, field_name, value, view)
+    matches = query_airtable(table, field_name, value, view_id)
   except Exception as exc:
     emit_error(
       "Airtable query failed",

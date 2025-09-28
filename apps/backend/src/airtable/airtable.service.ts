@@ -6,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
+import { CacheService } from '@visapi/backend-cache';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -50,8 +51,12 @@ export class AirtableLookupService {
     'airtable_lookup.py',
   );
   private readonly executionTimeoutMs = 15000;
+  private readonly cacheTtlSeconds = 300; // 5 minutes default TTL
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   async lookup(
     field: AirtableLookupField,
@@ -65,13 +70,24 @@ export class AirtableLookupService {
 
     const apiKey = this.configService.airtableApiKey;
     const baseId = this.configService.airtableBaseId;
-    const tableName = this.configService.airtableTableName;
-    const view = this.configService.airtableView;
+    const tableId = this.configService.airtableTableId;
+    const viewId = this.configService.airtableViewId;
 
-    if (!apiKey || !baseId || !tableName) {
+    if (!apiKey || !baseId || !tableId) {
       throw new ServiceUnavailableException(
-        'Airtable integration is not configured. Please set AIRTABLE_API_KEY, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_NAME.',
+        'Airtable integration is not configured. Please set AIRTABLE_API_KEY, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_ID.',
       );
+    }
+
+    const cacheKey = this.cacheService.generateKey('airtable:lookup', [
+      field,
+      sanitizedValue,
+    ]);
+    const cached = await this.cacheService.get<AirtableLookupResponseDto>(
+      cacheKey,
+    );
+    if (cached) {
+      return cached;
     }
 
     if (!existsSync(this.scriptPath)) {
@@ -88,8 +104,8 @@ export class AirtableLookupService {
       const { response } = await this.executePythonScript(payload, {
         AIRTABLE_API_KEY: apiKey,
         AIRTABLE_BASE_ID: baseId,
-        AIRTABLE_TABLE_NAME: tableName,
-        ...(view ? { AIRTABLE_VIEW: view } : {}),
+        AIRTABLE_TABLE_ID: tableId,
+        ...(viewId ? { AIRTABLE_VIEW_ID: viewId } : {}),
       });
       pythonResponse = response;
     } catch (error) {
@@ -111,25 +127,29 @@ export class AirtableLookupService {
 
     const matches = pythonResponse.matches ?? [];
 
+    let response: AirtableLookupResponseDto;
+
     if (matches.length === 0) {
-      return {
+      response = {
         status: AirtableLookupStatus.NONE,
         message: 'none',
       };
-    }
-
-    if (matches.length === 1) {
-      return {
+    } else if (matches.length === 1) {
+      response = {
         status: AirtableLookupStatus.FOUND,
         message: 'found',
         record: this.mapRecord(matches[0]),
       };
+    } else {
+      response = {
+        status: AirtableLookupStatus.MULTIPLE,
+        message: 'multiple found',
+      };
     }
 
-    return {
-      status: AirtableLookupStatus.MULTIPLE,
-      message: 'multiple found',
-    };
+    await this.cacheService.set(cacheKey, response, this.cacheTtlSeconds);
+
+    return response;
   }
 
   private mapRecord(record: PythonAirtableRecord): AirtableRecordDto {
@@ -169,8 +189,8 @@ export class AirtableLookupService {
         reject(new Error('Airtable lookup timed out'));
       }, this.executionTimeoutMs);
 
-      child.stdout.on('data', (chunk) => stdout.push(chunk));
-      child.stderr.on('data', (chunk) => stderr.push(chunk));
+      child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
+      child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
       child.on('error', (error) => {
         if (settled) {
           return;
@@ -213,7 +233,7 @@ export class AirtableLookupService {
         try {
           const response = JSON.parse(stdoutContent) as PythonLookupResponse;
           resolve({ response });
-        } catch (error) {
+        } catch {
           const parseError = new Error('Failed to parse python script output');
           (parseError as Error & { stdout?: string }).stdout = stdoutContent;
           reject(parseError);
