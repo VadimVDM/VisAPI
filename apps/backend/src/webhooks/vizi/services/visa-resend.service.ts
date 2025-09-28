@@ -83,7 +83,7 @@ export class ViziVisaResendService {
       );
 
       // Step 2: Reset visa_notification_sent flag in our database
-      const { error: resetError } = await this.supabase.client
+      const { error: resetError } = await this.supabase.serviceClient
         .from('orders')
         .update({
           visa_notification_sent: false,
@@ -120,7 +120,16 @@ export class ViziVisaResendService {
             const getString = (value: unknown): string | undefined => {
               if (typeof value === 'string') return value;
               if (value === null || value === undefined) return undefined;
-              return String(value);
+              // Handle objects by converting to JSON
+              if (typeof value === 'object') {
+                return JSON.stringify(value);
+              }
+              // Handle numbers, booleans, etc.
+              if (typeof value === 'number' || typeof value === 'boolean') {
+                return String(value);
+              }
+              // Default for any other type
+              return undefined;
             };
 
             return {
