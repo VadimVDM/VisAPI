@@ -357,8 +357,8 @@ export class WhatsAppTranslationService {
       const { data, error } = (await this.supabaseService.serviceClient.rpc(
         'calculate_processing_days',
         {
-          p_country: country?.toLowerCase().trim() || null,
-          p_urgency: urgency?.toLowerCase().trim() || null,
+          p_country: country?.toLowerCase().trim() || '',
+          p_urgency: urgency?.toLowerCase().trim() || undefined,
         },
       )) as RpcResponse;
 

@@ -50,7 +50,7 @@ export class PdfStatusService {
     const progress = job.progress || 0;
 
     return {
-      jobId: job.id,
+      jobId: job.id || '',
       status: this.mapQueueStatus(state),
       progress: typeof progress === 'object' && progress !== null && 'percentage' in progress
         ? ((progress as Record<string, unknown>).percentage as number) || 0

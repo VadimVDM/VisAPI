@@ -119,8 +119,8 @@ export class OrdersService {
     const { data } = await this.getOrders(
       {
         order_status: filters.status,
-        startDate: filters.from_date,
-        endDate: filters.to_date,
+        dateFrom: filters.from_date,
+        dateTo: filters.to_date,
       },
       {
         page: filters.offset

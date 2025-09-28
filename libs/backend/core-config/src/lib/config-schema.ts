@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import packageInfo from '../../../../../package.json';
 
-const APPLICATION_NAME = packageInfo?.name ?? 'VisAPI';
-const APPLICATION_VERSION = packageInfo?.version ?? '0.0.0';
+// Application metadata - update version as needed
+const APPLICATION_NAME = 'VisAPI';
+const APPLICATION_VERSION = '1.0.0';
 
 /**
  * Environment enumeration

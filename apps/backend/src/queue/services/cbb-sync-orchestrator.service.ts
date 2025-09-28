@@ -12,7 +12,8 @@ import { OrderData, ApplicantData } from './cbb-order.types';
 import { CBBContactRecord } from '@visapi/backend-queue';
 
 // Define a proper type for the CBB contact record from Supabase
-interface CBBContact extends CBBContactRecord {
+interface CBBContact {
+  id: string;
   order_id: string;
   client_phone: string;
   client_email: string;
@@ -121,10 +122,10 @@ export class CBBSyncOrchestratorService {
       client_email: order.client_email,
       client_name: order.client_name,
       product_country: order.product_country,
-      product_doc_type: order.product_doc_type,
-      product_intent: order.product_intent,
-      product_entries: order.product_entries,
-      product_validity: order.product_validity,
+      product_doc_type: order.product_doc_type || undefined,
+      product_intent: order.product_intent ?? undefined,
+      product_entries: order.product_entries ?? undefined,
+      product_validity: order.product_validity ?? undefined,
       is_urgent: order.is_urgent === true, // Store boolean directly
       processing_days: processingDays,
       language_code:
@@ -399,7 +400,7 @@ export class CBBSyncOrchestratorService {
           order,
           contact.id,
           hasWhatsApp,
-          cbbContact,
+          cbbContact as any,
         );
       } else {
         this.logger.warn(
@@ -410,7 +411,7 @@ export class CBBSyncOrchestratorService {
       // 12. Log success
       await this.logSyncSuccess(
         order,
-        contact?.id,
+        contact?.id || '',
         isNewContact,
         hasWhatsApp,
         cbbContact,
@@ -627,7 +628,7 @@ export class CBBSyncOrchestratorService {
 
     const { error } = await this.supabaseService.serviceClient
       .from('orders')
-      .update(updateData)
+      .update(updateData as any)
       .eq('order_id', orderId);
 
     if (error) {
@@ -771,7 +772,7 @@ export class CBBSyncOrchestratorService {
       order.webhook_received_at,
       order.order_id,
     );
-    const gender = this.extractGender(order.applicants_data, order.order_id);
+    const gender = this.extractGender(order.applicants_data || [], order.order_id);
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
     const visaValidityWithUnits = this.getVisaValidityWithUnits(

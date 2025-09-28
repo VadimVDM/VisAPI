@@ -256,7 +256,7 @@ export class WhatsAppWebhookController {
         break;
 
       case 'message_template_status_update':
-        await this.processTemplateStatusWebhook(value as TemplateStatusUpdate, _eventId);
+        await this.processTemplateStatusWebhook(value as unknown as TemplateStatusUpdate, _eventId);
         break;
 
       case 'account_update':
@@ -362,7 +362,7 @@ export class WhatsAppWebhookController {
         messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
-      this.deliveryTracker.updateMessageStatus(messageStatus);
+      this.deliveryTracker.updateMessageStatus(messageStatus as any);
 
       await this.updateMessageInDatabase(messageStatus);
 
@@ -561,7 +561,19 @@ export class WhatsAppWebhookController {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
-        .insert([data]);
+        .insert({
+          method: (data.method as string) || 'POST',
+          status: (data.status as string) || 'received',
+          event_type: data.event_type as string | null,
+          message_id: data.message_id as string | null,
+          phone_number: data.phone_number as string | null,
+          details: data.details ? (data.details as any) : null,
+          payload: data.payload ? (data.payload as any) : (data as any),
+          challenge: data.challenge as string | null,
+          signature_verified: data.signature_verified as boolean | null,
+          processing_status: data.processing_status as string | null,
+          created_at: new Date().toISOString(),
+        });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to track webhook event: ${errorMessage}`);
@@ -572,15 +584,15 @@ export class WhatsAppWebhookController {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
-        .insert([{
+        .insert({
           method: 'POST',
           status: 'received',
-          event_type: data.event_type as string,
-          message_id: data.message_id as string,
-          phone_number: data.phone_number as string,
-          details: data.details as object,
+          event_type: data.event_type as string | null,
+          message_id: data.message_id as string | null,
+          phone_number: data.phone_number as string | null,
+          details: data.details ? (data.details as any) : null,
           created_at: new Date().toISOString(),
-        }]);
+        });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to track incoming message: ${errorMessage}`);

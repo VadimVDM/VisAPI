@@ -1,10 +1,9 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersRepository, OrderRecord } from '@visapi/backend-repositories';
-import { CommandBus } from '@nestjs/cqrs';
 import { ResyncCBBContactDto, ResyncCBBResultDto } from '../dto/resync-cbb-contact.dto';
-import { ResyncCBBContactCommand } from '../../../orders/commands/resync-cbb-contact.command';
 import { CBBContactSyncResult } from '@visapi/shared-types';
+import { CBBSyncOrchestratorService } from '../../../queue/services/cbb-sync-orchestrator.service';
 
 @Injectable()
 export class ViziCbbResyncService {
@@ -12,7 +11,7 @@ export class ViziCbbResyncService {
 
   constructor(
     private readonly ordersRepository: OrdersRepository,
-    private readonly commandBus: CommandBus,
+    private readonly cbbSyncOrchestrator: CBBSyncOrchestratorService,
     private readonly logService: LogService,
   ) {}
 
@@ -47,8 +46,8 @@ export class ViziCbbResyncService {
         };
       }
 
-      const result: CBBContactSyncResult = await this.commandBus.execute(
-        new ResyncCBBContactCommand(order.order_id, correlationId),
+      const result: CBBContactSyncResult = await this.cbbSyncOrchestrator.syncOrderToCBB(
+        order.order_id,
       );
 
       this.logger.log(
@@ -128,8 +127,6 @@ export class ViziCbbResyncService {
           : 'CBB contact updated successfully';
       case 'no_whatsapp':
         return 'CBB contact synced, but WhatsApp not available for the user.';
-      case 'skipped':
-        return 'CBB sync skipped as the order was already processed or is not eligible.';
       default:
         return `CBB resync failed with error: ${result.error || 'Unknown error'}`;
     }

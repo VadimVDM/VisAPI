@@ -376,7 +376,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     
     // Check if a 'pending' status is stale (older than 2 minutes)
     // This handles cases where a job crashed while sending
-    if (data.status === 'pending') {
+    if (data.status === 'pending' && data.updated_at) {
       const updatedAt = new Date(data.updated_at);
       const now = new Date();
       const ageInMs = now.getTime() - updatedAt.getTime();

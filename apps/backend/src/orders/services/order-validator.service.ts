@@ -48,7 +48,7 @@ export class OrderValidatorService {
 
     requiredFields.forEach((field) => {
       if (orderData[field] === null || orderData[field] === undefined) {
-        missingFields.push(field);
+        missingFields.push(field as string);
       }
     });
 
