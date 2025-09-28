@@ -172,7 +172,13 @@ export class OrderTransformerService {
       const cleanCode = (phone.code || '')
         .replace(/^\+/, '')
         .replace(/\D/g, '');
-      const cleanNumber = (phone.number || '').replace(/\D/g, '');
+      let cleanNumber = (phone.number || '').replace(/\D/g, '');
+
+      // Remove leading zero from the phone number if present
+      // This handles cases where local format includes leading zero
+      if (cleanNumber.startsWith('0')) {
+        cleanNumber = cleanNumber.substring(1);
+      }
 
       if (!cleanCode || !cleanNumber) {
         return '0000000000';
