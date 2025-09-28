@@ -6,13 +6,23 @@ Real-time order data lookup with intelligent phone number retry logic.
 
 Searches Visanet's Airtable base by email, order ID, or phone number, returning key order details for verification (ID, Status, Email, Phone).
 
-## API Endpoint
+## API Endpoints
 
+### Lookup Endpoint
 ```
 POST /api/v1/airtable/lookup
 ```
 
-### Request
+Searches across all records in the table without view filtering.
+
+### Completed Endpoint
+```
+POST /api/v1/airtable/completed
+```
+
+Searches only within the completed/sent view (`viwgYjpU6K6nXq8ii`). Always expands linked Application records.
+
+### Request (Both Endpoints)
 ```json
 {
   "field": "orderid" | "email" | "phone",
@@ -20,7 +30,7 @@ POST /api/v1/airtable/lookup
 }
 ```
 
-### Response
+### Response (Both Endpoints)
 ```json
 {
   "status": "found" | "none" | "multiple",
@@ -33,7 +43,8 @@ POST /api/v1/airtable/lookup
       "Email": "customer@example.com",
       "Phone": "972507921512"
     }
-  }
+  },
+  "applications": [...]  // Included when available
 }
 ```
 
@@ -41,9 +52,12 @@ POST /api/v1/airtable/lookup
 
 ### Service Layer (`airtable.service.ts`)
 - Python subprocess execution for Airtable API calls
-- Redis caching (5-minute TTL)
+- Redis caching (5-minute TTL) with separate namespaces
+  - `airtable:lookup:*` for general lookups
+  - `airtable:completed:*` for completed view lookups
 - Production/development path resolution
 - Error handling with specific codes
+- Two methods: `lookup()` and `completed()` with identical logic except view filtering
 
 ### Python Script (`scripts/airtable_lookup.py`)
 - pyairtable library integration
@@ -107,9 +121,12 @@ The retry happens automatically within the same request for seamless user experi
 
 ## Caching
 
-- **Key Format**: `airtable:lookup:[field]:[value]`
+- **Key Format**:
+  - Lookup: `airtable:lookup:[field]:[value]`
+  - Completed: `airtable:completed:[field]:[value]`
 - **TTL**: 300 seconds (5 minutes)
 - **Service**: Redis via CacheService
+- **Namespace Separation**: Each endpoint has its own cache namespace
 
 ## Error Codes
 
@@ -132,9 +149,17 @@ echo '{"field":"orderid","key":"IL250928IN7"}' | \
   python3 airtable_lookup.py | jq .
 ```
 
-### Production Test
+### Production Test - Lookup
 ```bash
 curl -X POST https://api.visanet.app/api/v1/airtable/lookup \
+  -H "X-API-Key: vizi_admin_..." \
+  -H "Content-Type: application/json" \
+  -d '{"field":"orderid","key":"IL250928IN7"}'
+```
+
+### Production Test - Completed
+```bash
+curl -X POST https://api.visanet.app/api/v1/airtable/completed \
   -H "X-API-Key: vizi_admin_..." \
   -H "Content-Type: application/json" \
   -d '{"field":"orderid","key":"IL250928IN7"}'
@@ -168,6 +193,15 @@ Check if:
 The system automatically retries Israeli numbers (972) with/without zero after country code.
 If still not found, the number might be stored in a different format.
 
+## Key Differences Between Endpoints
+
+| Feature | `/lookup` | `/completed` |
+|---------|-----------|--------------|
+| View Filter | None (all records) | `viwgYjpU6K6nXq8ii` only |
+| Cache Namespace | `airtable:lookup:*` | `airtable:completed:*` |
+| Application Expansion | Only for "Issue" status | Always expanded |
+| Use Case | General record search | Tracking completed/sent records |
+
 ---
 
-**Version**: 1.0.0 | **Updated**: September 28, 2025
+**Version**: 1.1.0 | **Updated**: September 28, 2025

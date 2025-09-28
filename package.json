@@ -66,6 +66,7 @@
     "setup": "pnpm install && pnpm docker:up",
     "clean": "nx reset",
     "create-admin-key": "nx run backend:create-admin-key",
+    "bootstrap-completed-tracker": "node apps/backend/src/scripts/bootstrap-completed-tracker.js",
     "docker:build:backend": "docker build -f apps/backend/Dockerfile -t visapi-backend:latest .",
     "docker:build:backend:prod": "NODE_ENV=production docker build -f apps/backend/Dockerfile -t visapi-backend:prod --build-arg NODE_ENV=production .",
     "docker:run:backend": "docker run -p 3000:3000 --env-file .env.backend visapi-backend:latest",
