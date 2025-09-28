@@ -282,9 +282,9 @@ export class CompletedTrackerService implements OnModuleInit {
       this.logger.log(`Processing new completed record: ${record.id}`);
 
       // Extract relevant fields
-      const orderId = record.fields['ID'] as string;
-      const status = record.fields['Status'] as string;
-      const completedTimestamp = record.fields['Completed Timestamp'] as string;
+      const orderId = record.fields['ID'];
+      const status = record.fields['Status'];
+      const completedTimestamp = record.fields['Completed Timestamp'];
 
       // Check if we have expanded application data
       const applications = record.expanded?.Applications_expanded || [];

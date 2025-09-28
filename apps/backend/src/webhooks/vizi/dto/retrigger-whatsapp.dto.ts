@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
+
+export enum WhatsAppMessageType {
+  ORDER_CONFIRMATION = 'order_confirmation',
+  VISA_APPROVAL = 'visa_approval',
+}
 
 /**
  * DTO for retriggering WhatsApp notifications
@@ -36,6 +41,15 @@ export class RetriggerWhatsAppDto {
   @IsOptional()
   @IsBoolean()
   force?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Type of WhatsApp message to send',
+    enum: WhatsAppMessageType,
+    default: WhatsAppMessageType.ORDER_CONFIRMATION,
+  })
+  @IsOptional()
+  @IsEnum(WhatsAppMessageType)
+  messageType?: WhatsAppMessageType;
 }
 
 /**

@@ -72,6 +72,12 @@ export interface OrderRecord {
   cbb_contact_id?: string;
   cbb_contact_uuid?: string;
   cbb_synced_at?: string;
+
+  // Visa approval tracking
+  visa_details?: Json;
+  visa_notification_sent?: boolean;
+  visa_notification_sent_at?: string;
+  visa_notification_message_id?: string;
 }
 
 export interface CreateOrderData {
