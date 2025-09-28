@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 ResponsePayload = Dict[str, Any]
 
@@ -32,7 +32,7 @@ def emit(payload: ResponsePayload) -> None:
   sys.exit(0)
 
 
-def emit_error(message: str, code: str, details: Any | None = None) -> None:
+def emit_error(message: str, code: str, details: Optional[Any] = None) -> None:
   error_payload: ResponsePayload = {
     "status": "error",
     "error": message,
@@ -92,7 +92,7 @@ def query_airtable(
   table: Any,
   field_name: str,
   value: str,
-  view_id: str | None,
+  view_id: Optional[str],
 ) -> List[Dict[str, Any]]:
   lowered_value = value.lower()
   formula = "LOWER({{{}}}) = '{}'".format(field_name, sanitize_formula_value(lowered_value))

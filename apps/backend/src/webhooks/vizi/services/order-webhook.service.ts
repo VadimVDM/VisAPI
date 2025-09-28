@@ -99,7 +99,7 @@ export class ViziOrderWebhookService {
 
     let dbOrderId: string;
     try {
-      dbOrderId = await this.ordersService.createOrder(webhookData);
+      dbOrderId = await this.ordersService.createOrder(webhookData, correlationId);
       this.logger.log(
         `Order saved to database: ${this.safeStringify(order.id)} (DB ID: ${dbOrderId})`,
       );

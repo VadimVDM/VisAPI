@@ -46,11 +46,12 @@ class CacheServiceStub {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    return (this.store.has(key) ? (this.store.get(key) as unknown as T) : null);
+    return Promise.resolve(this.store.has(key) ? (this.store.get(key) as unknown as T) : null);
   }
 
   async set<T>(key: string, value: T, _ttl?: number): Promise<void> {
     this.store.set(key, value as unknown as AirtableLookupResponseDto);
+    return Promise.resolve();
   }
 }
 
@@ -67,7 +68,7 @@ describe('AirtableLookupService', () => {
 
     const service = new AirtableLookupService(
       config as unknown as ConfigService,
-      cache as unknown as any,
+      cache as unknown as CacheServiceStub,
     );
 
     return { service, cache };
@@ -96,6 +97,7 @@ describe('AirtableLookupService', () => {
     };
 
     jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
       .mockResolvedValue({
         response: {
@@ -133,6 +135,7 @@ describe('AirtableLookupService', () => {
     ];
 
     jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
       .mockResolvedValue({
         response: {
@@ -151,6 +154,7 @@ describe('AirtableLookupService', () => {
     const { service } = createService();
 
     jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
       .mockResolvedValue({
         response: {
@@ -176,6 +180,7 @@ describe('AirtableLookupService', () => {
     const { service } = createService({ cache });
 
     const pythonSpy = jest.spyOn(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       AirtableLookupService.prototype as any,
       'executePythonScript',
     );

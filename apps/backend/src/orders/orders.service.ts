@@ -6,6 +6,8 @@ import {
   OrderFilters,
 } from '@visapi/backend-repositories';
 import { OrderTransformerService } from './services/order-transformer.service';
+import { OrderSyncService } from './services/order-sync.service';
+import { EventBusService, OrderCreatedEvent } from '@visapi/backend-events';
 
 export interface OrderStats {
   totalOrders: number;
@@ -24,28 +26,66 @@ export class OrdersService {
   constructor(
     private readonly ordersRepository: OrdersRepository,
     private readonly orderTransformerService: OrderTransformerService,
+    private readonly orderSyncService: OrderSyncService,
+    private readonly eventBusService: EventBusService,
   ) {}
 
   async createOrder(
     webhookData: ViziWebhookDto,
-    _correlationId?: string,
+    correlationId?: string,
   ): Promise<string> {
     const orderData = this.orderTransformerService.transformWebhookToOrder(webhookData);
-    const newOrder = await this.ordersRepository.create(orderData);
-    return newOrder.id;
-  }
 
-  syncOrderToCBB(
-    orderId: string,
-    branch: string,
-    whatsappAlertsEnabled: boolean,
-    _correlationId?: string,
-  ): void {
-    // This is a simplified implementation.
-    // You might want to move the logic from the SyncOrderToCBBCommandHandler here.
-    this.logger.log(
-      `Syncing order ${orderId} to CBB for branch ${branch}. WhatsApp alerts: ${whatsappAlertsEnabled}`,
-    );
+    try {
+      const newOrder = await this.ordersRepository.create(orderData);
+
+      // Publish domain event for audit trail
+      await this.eventBusService.publish(
+        new OrderCreatedEvent(
+          newOrder.order_id,
+          newOrder.client_email,
+          newOrder.branch,
+          newOrder.amount,
+          correlationId,
+          newOrder.id,
+        ),
+      );
+
+      // Trigger CBB sync for IL branch orders (streamlined without CQRS)
+      await this.orderSyncService.queueCBBSync({
+        orderId: newOrder.order_id,
+        branch: newOrder.branch,
+        whatsappAlertsEnabled: newOrder.whatsapp_alerts_enabled,
+      });
+
+      this.logger.log(
+        `Order ${newOrder.order_id} created successfully and queued for processing`,
+      );
+
+      return newOrder.id;
+    } catch (error) {
+      // Handle duplicate orders gracefully
+      const isDuplicateError =
+        error instanceof Error &&
+        (('code' in error && error.code === '23505') ||
+          error.message?.includes('duplicate key'));
+
+      if (isDuplicateError) {
+        this.logger.warn(
+          `Order ${orderData.order_id} already exists, returning existing order`,
+        );
+
+        const existingOrder = await this.ordersRepository.findOne({
+          order_id: orderData.order_id,
+        });
+
+        if (existingOrder) {
+          return existingOrder.id;
+        }
+      }
+
+      throw error;
+    }
   }
 
   async getOrderById(
