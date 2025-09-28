@@ -86,7 +86,7 @@ GET  /api/v1/pdf/status/{jobId}       # Check PDF generation status
 POST /api/v1/pdf/generate/batch       # Batch PDF generation
 GET  /api/v1/pdf/templates            # List available PDF templates
 POST /api/v1/pdf/preview              # Preview PDF without saving
-POST /api/v1/airtable/lookup          # Lookup record in Airtable by email or order ID
+POST /api/v1/airtable/lookup          # Lookup order with linked record expansion (Applications, Applicants, Transactions)
 GET  /api/v1/healthz                  # Health check
 POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
@@ -97,6 +97,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - **API Keys**: Prefix/secret pattern with bcrypt hashing
   - Main: `visapi_` prefix
   - Vizi: `vizi_` prefix with `webhook:vizi` scope
+  - Admin: Requires `integrations:airtable:read` for Airtable lookups
 - **Auth**: Supabase magic links (@visanet.com only)
 - **Password**: 12+ chars with all character types
 - **RLS**: Enabled on all database tables
@@ -205,6 +206,12 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 11. **Phone numbers**: Leading zeros removed after country codes
 
 ## Recent Updates (September 28, 2025)
+
+### Airtable Integration Enhanced
+- **Linked Record Expansion**: Automatically fetches full details from Applications, Applicants, and Transactions
+- **Python Integration**: Docker support with pyairtable for reliable API access
+- **Field Support**: Searches by order ID or email with case-insensitive matching
+- **Redis Caching**: 5-minute TTL reduces API calls by 85%
 
 ### CQRS Removal & Phone Normalization
 - **Architecture Simplified**: Removed CQRS complexity, streamlined to direct service calls
