@@ -86,7 +86,7 @@ GET  /api/v1/pdf/status/{jobId}       # Check PDF generation status
 POST /api/v1/pdf/generate/batch       # Batch PDF generation
 GET  /api/v1/pdf/templates            # List available PDF templates
 POST /api/v1/pdf/preview              # Preview PDF without saving
-POST /api/v1/airtable/lookup          # Lookup order with linked record expansion (Applications, Applicants, Transactions)
+POST /api/v1/airtable/lookup          # Lookup order with linked record expansion (Applications, Transactions)
 GET  /api/v1/healthz                  # Health check
 POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status

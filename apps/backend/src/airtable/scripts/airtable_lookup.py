@@ -229,9 +229,9 @@ def main() -> None:
     )
 
   # Table IDs for linked record expansion
+  # Note: Applicants data is already included in Applications, so we skip it
   LINKED_TABLES = {
     "Applications ↗": "tbl5llU1H1vvOJV34",
-    "Applicants ↗": "tblG55wVI8OPM9nr6",
     "Transactions ↗": "tblremNCbcR0kUIDF"
   }
 

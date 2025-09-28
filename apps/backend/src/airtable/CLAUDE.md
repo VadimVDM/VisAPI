@@ -138,22 +138,21 @@ curl -X POST https://api.visanet.app/api/v1/airtable/lookup \
 When a single record is found, automatically fetches:
 
 ### Applications
-- Full visa application details
+- Full visa application details including all applicant data
 - Assigned agent information
 - Processing status and dates
+- Personal info (names, birth date, nationality)
+- Passport details (number, issue/expiry dates)
 - Photo URLs (passport & face)
-
-### Applicants
-- Personal information
-- Passport details
-- Nationality and birth data
-- Document photo URLs
+- Fix URL for admin corrections
 
 ### Transactions
 - Payment amount and currency
 - Transaction status
 - Stripe payment ID
 - Net amount after fees
+
+**Note**: Applicants table is not separately expanded as Applications contains all relevant applicant data.
 
 ## Performance
 
