@@ -3,7 +3,7 @@ import { ConfigModule } from '@visapi/core-config';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { RedisModule } from '@visapi/util-redis';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { AuthModule } from '../auth/auth.module';
 import { QueueModule } from '../queue/queue.module';
 import { AirtableController } from './airtable.controller';

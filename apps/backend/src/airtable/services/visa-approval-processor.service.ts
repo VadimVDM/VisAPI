@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 
 interface VisaApplication {
@@ -18,6 +18,7 @@ interface VisaDetails {
   applications: VisaApplication[];
   processedAt: string;
   sourceView: string;
+  [key: string]: unknown; // Allow indexing for JSONB compatibility
 }
 
 interface ApplicationFields {
@@ -157,8 +158,8 @@ export class VisaApprovalProcessorService {
     orderId: string,
     visaDetails: VisaDetails,
   ): Promise<void> {
-    const { data, error } = await this.supabase
-      .getClient()
+    const { error } = await this.supabase
+      .client
       .from('orders')
       .update({
         visa_details: visaDetails,
@@ -180,9 +181,9 @@ export class VisaApprovalProcessorService {
    */
   private async shouldSendNotification(orderId: string): Promise<boolean> {
     const { data: order, error } = await this.supabase
-      .getClient()
+      .client
       .from('orders')
-      .select('visa_notification_sent, cbb_contact_uuid, notifications_enabled')
+      .select('visa_notification_sent, cbb_contact_uuid')
       .eq('order_id', orderId)
       .single();
 
@@ -197,11 +198,9 @@ export class VisaApprovalProcessorService {
     // Check conditions:
     // 1. Notification not already sent
     // 2. Has CBB contact synced
-    // 3. Notifications are enabled
     return (
       !order.visa_notification_sent &&
-      order.cbb_contact_uuid !== null &&
-      order.notifications_enabled !== false
+      order.cbb_contact_uuid !== null
     );
   }
 
@@ -214,7 +213,7 @@ export class VisaApprovalProcessorService {
   ): Promise<void> {
     // Get order and CBB contact details
     const { data: order, error } = await this.supabase
-      .getClient()
+      .client
       .from('orders')
       .select(`
         *,
@@ -232,7 +231,7 @@ export class VisaApprovalProcessorService {
       throw new Error(`Failed to get order for notification: ${error?.message}`);
     }
 
-    const cbbContact = order.cbb_contacts;
+    const cbbContact = (order as any)?.cbb_contacts;
     if (!cbbContact || !cbbContact.notifications_enabled) {
       this.logger.debug(`Skipping notification for ${orderId} - CBB notifications disabled`);
       return;
@@ -248,7 +247,7 @@ export class VisaApprovalProcessorService {
     // Queue messages for each application
     for (let i = 0; i < maxApplications; i++) {
       const application = visaDetails.applications[i];
-      const country = application.country || this.extractCountryFromOrder(order);
+      const country = application.country || this.extractCountryFromOrder(order as Record<string, unknown>);
       const isFirstMessage = i === 0;
 
       // Determine template and params based on message index
@@ -259,7 +258,7 @@ export class VisaApprovalProcessorService {
         // First message uses the original template
         templateName = 'visa_approval_file_phone';
         templateParams = [
-          cbbContact.name_hebrew || order.first_name,
+          cbbContact?.name_hebrew || (order as any)?.first_name || 'לקוח יקר',
           country || 'המדינה המבוקשת',
         ];
       } else {
@@ -269,7 +268,7 @@ export class VisaApprovalProcessorService {
         templateName = 'visa_approval_file_multi_he';
         templateParams = [
           // this.getNumberEmoji(i + 1), // Application number emoji (1-based) - commented out for now
-          application.fullName || application.applicantName || `Applicant ${i + 1}`,
+          application.applicantName || `Applicant ${i + 1}`,
         ];
       }
 
@@ -280,10 +279,10 @@ export class VisaApprovalProcessorService {
         'send-visa-approval',
         {
           orderId,
-          contactId: cbbContact.cbb_id,
+          contactId: cbbContact?.cbb_id,
           messageType: 'visa_approval' as const,
-          cbbId: cbbContact.cbb_id,
-          phone: cbbContact.phone,
+          cbbId: cbbContact?.cbb_id,
+          phone: cbbContact?.phone,
           templateName,
           templateParams,
           documentUrl: application.visaUrl,
