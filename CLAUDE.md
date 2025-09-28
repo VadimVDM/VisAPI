@@ -68,6 +68,7 @@ pnpm docker:down           # Stop services
 
 # Admin Operations
 pnpm create-admin-key      # Generate admin API key for retrigger ops
+pnpm bootstrap-completed-tracker # Initialize Airtable completed records tracker
 ```
 
 ## Key APIs
@@ -87,7 +88,10 @@ POST /api/v1/pdf/generate/batch       # Batch PDF generation
 GET  /api/v1/pdf/templates            # List available PDF templates
 POST /api/v1/pdf/preview              # Preview PDF without saving
 POST /api/v1/airtable/lookup          # Lookup order by email/ID/phone with linked record expansion
-POST /api/v1/airtable/completed       # Track completed records from view viwgYjpU6K6nXq8ii
+POST /api/v1/airtable/completed       # Lookup in completed view viwgYjpU6K6nXq8ii
+POST /api/v1/airtable/completed/check # Manually check for new completed records
+POST /api/v1/airtable/completed/bootstrap # Bootstrap tracker with existing records
+GET  /api/v1/airtable/completed/stats # Get tracker statistics
 GET  /api/v1/healthz                  # Health check
 POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
@@ -211,9 +215,14 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 ### Airtable Integration Enhanced
 - **Linked Record Expansion**: Automatically fetches full details from Applications, Applicants, and Transactions
 - **Python Integration**: Docker support with pyairtable for reliable API access
-- **Field Support**: Searches by order ID or email with case-insensitive matching
+- **Field Support**: Searches by order ID, email, or phone with case-insensitive matching
 - **Redis Caching**: 5-minute TTL reduces API calls by 85%
-- **Completed View Tracking**: New `/api/v1/airtable/completed` endpoint for view viwgYjpU6K6nXq8ii
+- **Completed Records Tracker**:
+  - Tracks NEW records entering completed view (viwgYjpU6K6nXq8ii)
+  - Uses "Completed Timestamp" field for incremental checks
+  - Redis Set deduplication prevents re-processing
+  - Automatic checks every 10 minutes via cron
+  - Bootstrap command loads initial ~700 records
 
 ### CQRS Removal & Phone Normalization
 - **Architecture Simplified**: Removed CQRS complexity, streamlined to direct service calls

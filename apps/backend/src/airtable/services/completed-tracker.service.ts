@@ -6,7 +6,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
+import { Redis } from 'ioredis';
 
 interface CompletedRecord {
   id: string;
@@ -27,7 +27,7 @@ interface TrackingResult {
 @Injectable()
 export class CompletedTrackerService implements OnModuleInit {
   private readonly logger = new Logger(CompletedTrackerService.name);
-  private redis: any; // Will be initialized in constructor
+  private redis: Redis;
 
   // Redis keys
   private readonly PROCESSED_IDS_KEY = 'airtable:completed:processed_ids';
@@ -185,7 +185,7 @@ export class CompletedTrackerService implements OnModuleInit {
       const currentTotal = await this.redis.scard(this.PROCESSED_IDS_KEY);
       await this.redis.hset(this.STATS_KEY,
         'last_successful_check', checkStartTime.toISOString(),
-        'total_processed', currentTotal.toString(),
+        'total_processed', String(currentTotal),
         'last_new_count', genuinelyNew.length.toString(),
       );
 
@@ -232,7 +232,7 @@ export class CompletedTrackerService implements OnModuleInit {
 
     return {
       ...stats,
-      total_processed_current: processedCount.toString(),
+      total_processed_current: String(processedCount),
     };
   }
 
@@ -389,7 +389,7 @@ export class CompletedTrackerService implements OnModuleInit {
         }
 
         try {
-          const response = JSON.parse(stdoutContent);
+          const response = JSON.parse(stdoutContent) as { status: string; matches?: CompletedRecord[]; error?: string };
           if (response.status === 'ok') {
             resolve(response.matches || []);
           } else {

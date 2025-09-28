@@ -90,7 +90,16 @@ Modern layered architecture with enterprise design patterns:
 
 - `/api/v1/airtable/lookup` endpoint secured by API keys (`integrations:airtable:read` scope)
 - `/api/v1/airtable/completed` endpoint for tracking records in view viwgYjpU6K6nXq8ii
-- Python subprocess execution (`src/airtable/scripts/airtable_lookup.py`) with pyairtable
+- **Completed Records Tracker** (`CompletedTrackerService`):
+  - Tracks NEW records entering completed view using "Completed Timestamp" field
+  - Redis Set-based deduplication (prevents re-processing on status toggles)
+  - Automatic checks every 10 minutes via `@Cron(EVERY_10_MINUTES)`
+  - Bootstrap command: `pnpm bootstrap-completed-tracker`
+  - Manual check: `POST /api/v1/airtable/completed/check`
+  - Statistics: `GET /api/v1/airtable/completed/stats`
+- Python subprocess execution with dedicated scripts:
+  - `airtable_lookup.py` - General lookups with phone retry logic
+  - `airtable_completed_tracker.py` - Bootstrap & incremental modes
 - Searches by `orderid`, `email`, or `phone` field with case-insensitive matching
 - **Automatic linked record expansion**: Fetches full details from Applications, Applicants, and Transactions tables
 - Redis caching (5 min TTL) reduces API calls with separate namespaces for each endpoint
@@ -219,4 +228,4 @@ Modern layered architecture with enterprise design patterns:
 - **Vizi**: Split into focused services for webhooks, workflows, and admin operations
 - **CBB**: Orchestrator delegates to specialized contact sync and WhatsApp services
 - **Phone Processing**: Universal normalization at webhook transformation layer
-- **Airtable Completed**: New endpoint for tracking records in completed/sent view
+- **Airtable Completed Tracker**: Full tracking system for new completed records with Redis deduplication

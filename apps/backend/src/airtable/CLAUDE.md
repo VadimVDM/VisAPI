@@ -193,14 +193,80 @@ Check if:
 The system automatically retries Israeli numbers (972) with/without zero after country code.
 If still not found, the number might be stored in a different format.
 
+## Completed Records Tracker
+
+The module includes a sophisticated tracking system for monitoring new records entering the completed view.
+
+### Architecture
+
+- **CompletedTrackerService**: Main tracking service with Redis deduplication
+- **Hybrid Approach**: Timestamp-based queries + Redis Set deduplication
+- **Automatic Checks**: Every 10 minutes via `@Cron(EVERY_10_MINUTES)`
+- **Manual Operations**: Bootstrap, check, stats, reset endpoints
+
+### How It Works
+
+1. **Bootstrap Phase** (one-time):
+   ```bash
+   pnpm bootstrap-completed-tracker
+   ```
+   - Loads all existing ~700 completed records
+   - Stores IDs in Redis Set `airtable:completed:processed_ids`
+   - Sets initial checkpoint timestamp
+
+2. **Incremental Checks** (every 10 minutes):
+   - Queries: `{Completed Timestamp} > last_check`
+   - Checks each record against Redis Set
+   - New records → Process and add to Set
+   - Existing records → Skip (prevents re-triggers)
+
+3. **Redis Keys**:
+   - `airtable:completed:processed_ids` - Set of all processed record IDs
+   - `airtable:completed:last_check` - Timestamp of last check
+   - `airtable:completed:bootstrap` - Bootstrap completion flag
+   - `airtable:completed:stats` - Tracking statistics
+
+### API Endpoints
+
+```bash
+# Manual check for new records
+POST /api/v1/airtable/completed/check
+
+# Bootstrap with existing records
+POST /api/v1/airtable/completed/bootstrap
+
+# Get tracking statistics
+GET /api/v1/airtable/completed/stats
+```
+
+### Python Script
+
+`airtable_completed_tracker.py` supports two modes:
+
+```json
+// Bootstrap mode - fetch all
+{
+  "mode": "bootstrap",
+  "view_id": "viwgYjpU6K6nXq8ii"
+}
+
+// Incremental mode - fetch new only
+{
+  "mode": "incremental",
+  "view_id": "viwgYjpU6K6nXq8ii",
+  "after_timestamp": "2025-09-28T10:00:00Z"
+}
+```
+
 ## Key Differences Between Endpoints
 
-| Feature | `/lookup` | `/completed` |
-|---------|-----------|--------------|
-| View Filter | None (all records) | `viwgYjpU6K6nXq8ii` only |
-| Cache Namespace | `airtable:lookup:*` | `airtable:completed:*` |
-| Application Expansion | Only for "Issue" status | Always expanded |
-| Use Case | General record search | Tracking completed/sent records |
+| Feature | `/lookup` | `/completed` | `/completed/check` |
+|---------|-----------|--------------|-------------------|
+| View Filter | None (all records) | `viwgYjpU6K6nXq8ii` only | `viwgYjpU6K6nXq8ii` only |
+| Cache Namespace | `airtable:lookup:*` | `airtable:completed:*` | N/A (not cached) |
+| Application Expansion | Only for "Issue" status | Always expanded | Always expanded |
+| Use Case | General record search | Lookup in completed view | Track NEW completed records |
+| Returns | Single record | Single record | Array of new records |
 
 ---
 
