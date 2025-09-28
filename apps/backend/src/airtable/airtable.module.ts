@@ -32,6 +32,10 @@ import { QUEUE_NAMES } from '@visapi/shared-types';
     CompletedTrackerService,
     VisaApprovalProcessorService,
   ],
-  exports: [AirtableLookupService, CompletedTrackerService],
+  exports: [
+    AirtableLookupService,
+    CompletedTrackerService,
+    VisaApprovalProcessorService,
+  ],
 })
 export class AirtableModule {}

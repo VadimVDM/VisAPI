@@ -13,6 +13,8 @@ import { ViziOrderWebhookService } from './services/order-webhook.service';
 import { ViziOrderRetriggerService } from './services/order-retrigger.service';
 import { ViziCbbResyncService } from './services/cbb-resync.service';
 import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.service';
+import { ViziVisaResendService } from './services/visa-resend.service';
+import { AirtableModule } from '../../airtable/airtable.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.serv
     RedisModule,
     OrdersModule,
     RepositoriesModule,
+    AirtableModule,
   ],
   controllers: [ViziWebhooksController],
   providers: [
@@ -32,6 +35,7 @@ import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.serv
     ViziOrderRetriggerService,
     ViziCbbResyncService,
     ViziWhatsAppRetriggerService,
+    ViziVisaResendService,
   ],
   exports: [
     ViziOrderWorkflowService,
@@ -39,6 +43,7 @@ import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.serv
     ViziOrderRetriggerService,
     ViziCbbResyncService,
     ViziWhatsAppRetriggerService,
+    ViziVisaResendService,
   ],
 })
 export class ViziWebhooksModule {}

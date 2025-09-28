@@ -20,12 +20,14 @@ import { ViziOrderWebhookService } from './services/order-webhook.service';
 import { ViziOrderRetriggerService } from './services/order-retrigger.service';
 import { ViziCbbResyncService } from './services/cbb-resync.service';
 import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.service';
+import { ViziVisaResendService } from './services/visa-resend.service';
 import { RetriggerOrdersDto, RetriggerResultDto } from './dto/retrigger-orders.dto';
 import { ResyncCBBContactDto, ResyncCBBResultDto } from './dto/resync-cbb-contact.dto';
 import {
   RetriggerWhatsAppDto,
   RetriggerWhatsAppResultDto,
 } from './dto/retrigger-whatsapp.dto';
+import { VisaResendDto, VisaResendResultDto } from './dto/visa-resend.dto';
 import { ViziWebhookDto } from '@visapi/visanet-types';
 
 @ApiTags('Vizi Webhooks')
@@ -36,6 +38,7 @@ export class ViziWebhooksController {
     private readonly orderRetriggerService: ViziOrderRetriggerService,
     private readonly cbbResyncService: ViziCbbResyncService,
     private readonly whatsappRetriggerService: ViziWhatsAppRetriggerService,
+    private readonly visaResendService: ViziVisaResendService,
   ) {}
 
   @Post('orders')
@@ -157,5 +160,37 @@ export class ViziWebhooksController {
       `retrigger-whatsapp-${Date.now()}`;
 
     return this.whatsappRetriggerService.retrigger(dto, correlationId);
+  }
+
+  @Post('resend-visa')
+  @UseGuards(ApiKeyGuard)
+  @Scopes('webhook:vizi', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend visa approval notifications for an order',
+    description:
+      'Manually lookup order in Airtable, fetch fresh application data, and resend visa approval WhatsApp messages. Resets visa_notification_sent flag to allow re-sending. Requires admin API key.',
+  })
+  @ApiBearerAuth('api-key')
+  @ApiBody({ type: VisaResendDto, description: 'Visa resend parameters' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Visa resend completed',
+    type: VisaResendResultDto,
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid parameters' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Order not found in Airtable' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions (admin required)' })
+  async resendVisaApproval(
+    @Body() dto: VisaResendDto,
+    @Headers() headers: Record<string, string>,
+  ): Promise<VisaResendResultDto> {
+    const correlationId =
+      headers['x-correlation-id'] ||
+      headers['x-request-id'] ||
+      `resend-visa-${Date.now()}`;
+
+    return this.visaResendService.resendVisaApproval(dto, correlationId);
   }
 }
