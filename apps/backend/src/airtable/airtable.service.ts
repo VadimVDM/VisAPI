@@ -45,11 +45,9 @@ type PythonAirtableRecord = {
 @Injectable()
 export class AirtableLookupService {
   private readonly logger = new Logger(AirtableLookupService.name);
-  private readonly scriptPath = join(
-    __dirname,
-    'scripts',
-    'airtable_lookup.py',
-  );
+  private readonly scriptPath = process.env.NODE_ENV === 'production'
+    ? join(process.cwd(), 'airtable', 'scripts', 'airtable_lookup.py')
+    : join(__dirname, 'scripts', 'airtable_lookup.py');
   private readonly executionTimeoutMs = 15000;
   private readonly cacheTtlSeconds = 300; // 5 minutes default TTL
 

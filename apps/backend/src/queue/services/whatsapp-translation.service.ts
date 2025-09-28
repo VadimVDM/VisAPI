@@ -67,10 +67,12 @@ const VISA_TYPES_HEBREW: Record<string, string> = {
   tourist: 'תיירות',
   tourism: 'תיירות',
   business: 'עסקים',
+  general: 'כללי', // Tourism + Business
   student: 'סטודנט',
   evisa: 'ויזה אלקטרונית',
   'e-visa': 'ויזה אלקטרונית',
   eta: 'אישור נסיעה',
+  voa: 'ויזה בהגעה',
   transit: 'מעבר',
   medical: 'רפואית',
   work: 'עבודה',
@@ -184,20 +186,37 @@ export class WhatsAppTranslationService {
     const normalizedIntent = intent?.toLowerCase().trim();
     const normalizedEntries = entries?.toLowerCase().trim();
 
-    // Get Hebrew intent (default to tourism if not provided)
-    const intentHebrew =
-      VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
-
     // Get Hebrew validity period
     const validityHebrew = this.getValidityHebrewString(validity, daysToUse);
 
-    // Special handling for ETA/ESTA documents
-    if (
-      normalizedDocType?.includes('eta') ||
-      normalizedDocType?.includes('esta')
-    ) {
-      const docName = normalizedDocType.toUpperCase().replace('-', ' ');
-      return `אישור נסיעה ${docName} ${validityHebrew}`;
+    // Handle special doc types
+    if (normalizedDocType === 'eta') {
+      // ETA - Electronic Travel Authorization
+      return `אישור נסיעה ${validityHebrew}`;
+    }
+
+    if (normalizedDocType === 'voa') {
+      // Visa on Arrival
+      return `ויזה בהגעה ${validityHebrew}`;
+    }
+
+    if (normalizedDocType === 'dtv' ||
+        normalizedDocType === 'stv' ||
+        normalizedDocType === 'ltv' ||
+        !VISA_TYPES_HEBREW[normalizedDocType]) {
+      // Keep unknown doc types in English with validity
+      const docTypeUpper = docType?.toUpperCase() || 'VISA';
+      return `${docTypeUpper} ${validityHebrew}`;
+    }
+
+    // Handle general intent specially for WhatsApp messages
+    let intentHebrew: string;
+    if (normalizedIntent === 'general') {
+      // General means Tourism + Business, show both for clarity in messages
+      intentHebrew = 'תיירות ועסקים';
+    } else {
+      // Get Hebrew intent (default to tourism if not provided)
+      intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
     }
 
     // Build dynamic visa type string
