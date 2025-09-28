@@ -78,8 +78,8 @@ RUN pnpm install --prod --ignore-scripts
 ########################
 FROM node:${NODE_VERSION} AS runner
 
-# tini for signal handling, libc6-compat for native deps
-RUN apk add --no-cache tini libc6-compat
+# tini for signal handling, libc6-compat for native deps, python3 and pip for Airtable script
+RUN apk add --no-cache tini libc6-compat python3 py3-pip
 
 # Non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -90,10 +90,14 @@ WORKDIR /app
 # Copy built application
 COPY --from=builder --chown=1001:1001 /app/dist/apps/backend/main.js ./
 COPY --from=builder --chown=1001:1001 /app/dist/apps/backend/assets ./assets
+COPY --from=builder --chown=1001:1001 /app/dist/apps/backend/airtable ./airtable
 COPY --from=builder --chown=1001:1001 /app/migrations ./migrations
 
 # Copy production node_modules (needed for native deps like bcrypt)
 COPY --from=prod-deps --chown=1001:1001 /app/node_modules ./node_modules
+
+# Install Python dependencies for Airtable integration
+RUN pip3 install --no-cache-dir pyairtable==3.2.0 --break-system-packages
 
 # Metadata
 ARG GIT_COMMIT=unknown
