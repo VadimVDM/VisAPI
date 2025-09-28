@@ -1,7 +1,9 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { Scopes } from '../auth/decorators/scopes.decorator';
+import { Request } from 'express';
+import { ApiKeyRecord } from '@visapi/shared-types';
 import { AirtableLookupService, AirtableLookupField } from './airtable.service';
 import { AirtableLookupDto } from './dto/airtable-lookup.dto';
 import { AirtableLookupResponseDto } from './dto/airtable-lookup-response.dto';
@@ -28,11 +30,23 @@ export class AirtableController {
   })
   async lookup(
     @Body() dto: AirtableLookupDto,
+    @Req() request: Request & { apiKey?: ApiKeyRecord; correlationId?: string },
   ): Promise<AirtableLookupResponseDto> {
     const field: AirtableLookupField =
       dto.field === 'email' ? 'email' :
       dto.field === 'phone' ? 'phone' : 'orderId';
     const value = dto.key.trim();
-    return this.airtableLookupService.lookup(field, value);
+
+    // Pass API key and request context for logging
+    return this.airtableLookupService.lookup(
+      field,
+      value,
+      {
+        apiKey: request.apiKey,
+        correlationId: request.correlationId,
+        userAgent: request.headers['user-agent'],
+        ipAddress: request.ip || request.socket?.remoteAddress,
+      },
+    );
   }
 }

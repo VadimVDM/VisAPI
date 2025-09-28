@@ -7,9 +7,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 import { CacheService } from '@visapi/backend-cache';
+import { SupabaseService } from '@visapi/core-supabase';
+import { ApiKeyRecord } from '@visapi/shared-types';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { v4 as uuidv4 } from 'uuid';
 import {
   AirtableLookupResponseDto,
   AirtableLookupStatus,
@@ -18,6 +21,13 @@ import {
 import { StatusMessageGeneratorService } from './services/status-message-generator.service';
 
 export type AirtableLookupField = 'email' | 'orderId' | 'phone';
+
+export interface LookupContext {
+  apiKey?: ApiKeyRecord;
+  correlationId?: string;
+  userAgent?: string;
+  ipAddress?: string;
+}
 
 interface PythonLookupSuccess {
   status: 'ok';
@@ -57,13 +67,17 @@ export class AirtableLookupService {
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
     private readonly statusMessageGenerator: StatusMessageGeneratorService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   async lookup(
     field: AirtableLookupField,
     value: string,
+    context?: LookupContext,
   ): Promise<AirtableLookupResponseDto> {
     const sanitizedValue = value.trim();
+    const startTime = Date.now();
+    const correlationId = context?.correlationId || uuidv4();
 
     if (!sanitizedValue) {
       throw new BadRequestException('Lookup value must not be empty');
@@ -88,6 +102,17 @@ export class AirtableLookupService {
       cacheKey,
     );
     if (cached) {
+      // Log cache hit
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        200,
+        cached,
+        Date.now() - startTime,
+        true,
+        context,
+        correlationId,
+      );
       return cached;
     }
 
@@ -111,6 +136,18 @@ export class AirtableLookupService {
       pythonResponse = response;
     } catch (error) {
       this.logger.error('Failed to execute Airtable lookup script', error as Error);
+      // Log error
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        500,
+        null,
+        Date.now() - startTime,
+        false,
+        context,
+        correlationId,
+        error as Error,
+      );
       throw new InternalServerErrorException(
         'Failed to execute Airtable lookup integration.',
       );
@@ -123,6 +160,19 @@ export class AirtableLookupService {
           : '';
       const message = pythonResponse.error || 'Airtable lookup failed.';
       this.logger.warn(`Airtable lookup script returned error: ${message}`);
+      // Log error response
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        503,
+        pythonResponse,
+        Date.now() - startTime,
+        false,
+        context,
+        correlationId,
+        new Error(message),
+        pythonResponse.code,
+      );
       throw new ServiceUnavailableException(message + hint);
     }
 
@@ -175,6 +225,21 @@ export class AirtableLookupService {
     }
 
     await this.cacheService.set(cacheKey, response, this.cacheTtlSeconds);
+
+    // Log successful request
+    await this.logApiRequest(
+      field,
+      sanitizedValue,
+      200,
+      response,
+      Date.now() - startTime,
+      false,
+      context,
+      correlationId,
+      undefined,
+      undefined,
+      response.status === AirtableLookupStatus.FOUND ? (response.record?.id || null) : null,
+    );
 
     return response;
   }
@@ -286,5 +351,68 @@ export class AirtableLookupService {
       child.stdin.write(payload);
       child.stdin.end();
     });
+  }
+
+  private async logApiRequest(
+    field: AirtableLookupField,
+    value: string,
+    status: number,
+    response: AirtableLookupResponseDto | PythonLookupResponse | null,
+    responseTimeMs: number,
+    cacheHit: boolean,
+    context?: LookupContext,
+    correlationId?: string,
+    error?: Error,
+    errorCode?: string,
+    recordId?: string | null,
+  ): Promise<void> {
+    try {
+      const logEntry = {
+        level: error ? 'error' : 'info',
+        message: `Airtable lookup: ${field}=${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`,
+        metadata: {
+          endpoint: '/api/v1/airtable/lookup',
+          method: 'POST',
+          request_params: {
+            field,
+            value: value.length > 100 ? value.substring(0, 100) + '...' : value,
+          },
+          response_status: status,
+          response_data: response ? {
+            status: 'status' in response ? response.status : undefined,
+            message: 'message' in response ? response.message : undefined,
+            hasRecord: !!(response && 'record' in response && response.record),
+            hasStatusMessage: !!(response && 'statusMessage' in response && response.statusMessage),
+          } : null,
+          response_time_ms: responseTimeMs,
+          api_key_id: context?.apiKey?.id || null,
+          api_key_prefix: context?.apiKey?.prefix || null,
+          user_agent: context?.userAgent || null,
+          ip_address: context?.ipAddress || null,
+          lookup_field: field,
+          lookup_value: value.length > 100 ? value.substring(0, 100) + '...' : value,
+          lookup_status: response && 'status' in response ? response.status : null,
+          record_id: recordId,
+          cache_hit: cacheHit,
+          error_message: error?.message || null,
+          error_code: errorCode || null,
+          correlation_id: correlationId,
+        },
+        pii_redacted: true,
+        created_at: new Date().toISOString(),
+      };
+
+      // Insert into Supabase logs table
+      const { error: insertError } = await this.supabaseService.serviceClient
+        .from('logs')
+        .insert(logEntry);
+
+      if (insertError) {
+        this.logger.error('Failed to log API request to Supabase', insertError);
+      }
+    } catch (logError) {
+      // Don't throw, just log locally
+      this.logger.error('Failed to log API request', logError);
+    }
   }
 }

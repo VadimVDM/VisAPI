@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
+import { SupabaseService } from '@visapi/core-supabase';
 import { AirtableLookupService, AirtableLookupField } from './airtable.service';
 import { StatusMessageGeneratorService } from './services/status-message-generator.service';
 import {
@@ -75,23 +76,34 @@ class StatusMessageGeneratorStub {
   }
 }
 
+class SupabaseServiceStub {
+  serviceClient = {
+    from: jest.fn(() => ({
+      insert: jest.fn(() => Promise.resolve({ error: null })),
+    })),
+  };
+}
+
 describe('AirtableLookupService', () => {
   const createService = (
     options?: {
       config?: ConfigServiceStub;
       cache?: CacheServiceStub;
       statusMessageGenerator?: StatusMessageGeneratorStub;
+      supabase?: SupabaseServiceStub;
     },
   ) => {
     const config =
       options?.config ?? new ConfigServiceStub('key', 'base', 'tbl123');
     const cache = options?.cache ?? new CacheServiceStub();
     const statusMessageGenerator = options?.statusMessageGenerator ?? new StatusMessageGeneratorStub();
+    const supabase = options?.supabase ?? new SupabaseServiceStub();
 
     const service = new AirtableLookupService(
       config as unknown as ConfigService,
       cache as unknown as CacheServiceStub,
       statusMessageGenerator as unknown as StatusMessageGeneratorService,
+      supabase as unknown as SupabaseService,
     );
 
     return { service, cache };

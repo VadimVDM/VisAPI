@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@visapi/core-config';
+import { SupabaseModule } from '@visapi/core-supabase';
 import { AuthModule } from '../auth/auth.module';
 import { QueueModule } from '../queue/queue.module';
 import { AirtableController } from './airtable.controller';
@@ -10,6 +11,7 @@ import { StatusMessageGeneratorService } from './services/status-message-generat
   imports: [
     AuthModule,
     ConfigModule,
+    SupabaseModule,
     forwardRef(() => QueueModule), // Import QueueModule for WhatsAppTranslationService
   ],
   controllers: [AirtableController],
