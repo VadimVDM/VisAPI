@@ -113,39 +113,7 @@ export class ViziVisaResendService {
         },
         createdTime: airtableResult.record.createdTime || new Date().toISOString(),
         expanded: {
-          Applications_expanded: applications.map((app: unknown) => {
-            const typedApp = app as AirtableApplication;
-
-            // Helper to safely get string value
-            const getString = (value: unknown): string | undefined => {
-              if (typeof value === 'string') return value;
-              if (value === null || value === undefined) return undefined;
-              // Handle objects by converting to JSON
-              if (typeof value === 'object') {
-                return JSON.stringify(value);
-              }
-              // Handle numbers, booleans, etc.
-              if (typeof value === 'number' || typeof value === 'boolean') {
-                return String(value);
-              }
-              // Default for any other type
-              return undefined;
-            };
-
-            return {
-              id: typedApp.id || `app-${Math.random()}`,
-              fields: {
-                'Visa ID': getString(typedApp.fields?.['Visa ID']) || getString(typedApp['Visa ID']),
-                'Visa URL': getString(typedApp.fields?.['Visa URL']) || getString(typedApp['Visa URL']),
-                'Application ID': getString(typedApp.fields?.['Application ID']) || getString(typedApp['Application ID']),
-                'Applicant Name': getString(typedApp.fields?.['Applicant Name']) || getString(typedApp['Applicant Name']),
-                'First Name': getString(typedApp.fields?.['First Name']) || getString(typedApp['First Name']),
-                'Last Name': getString(typedApp.fields?.['Last Name']) || getString(typedApp['Last Name']),
-                Status: getString(typedApp.fields?.['Status']) || getString(typedApp['Status']) || 'Approved',
-                Country: getString(typedApp.fields?.['Country']) || getString(typedApp['Country']),
-              },
-            };
-          }),
+          Applications_expanded: applications, // Just pass applications directly from Airtable!
         },
       };
 

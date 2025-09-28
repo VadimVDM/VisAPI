@@ -50,12 +50,16 @@ export class VisaApprovalProcessorService {
       return;
     }
 
+    this.logger.log(`Processing record for order ${orderId}`);
+
     // Check if we have expanded application data
     const applications = record.expanded?.Applications_expanded;
     if (!applications || applications.length === 0) {
-      this.logger.debug(`No applications found for order ${orderId}`);
+      this.logger.warn(`No applications found for order ${orderId} - expanded data: ${JSON.stringify(record.expanded)}`);
       return;
     }
+
+    this.logger.log(`Found ${applications.length} applications for order ${orderId}`);
 
     // Build visa details from applications
     const visaDetails = this.buildVisaDetails(applications);
@@ -80,11 +84,21 @@ export class VisaApprovalProcessorService {
   private buildVisaDetails(applications: ExpandedApplication[]): VisaDetails {
     const visaApplications: VisaApplication[] = [];
 
+    this.logger.debug(`Building visa details from ${applications.length} applications`);
+
     for (const app of applications) {
       const visaId = app.fields['Visa ID'];
       const visaUrl = app.fields['Visa URL'];
       // ID field contains the application ID (e.g., E250923ISR4185144524)
       const applicationId = app.fields['ID'] || app.fields['Application ID'];
+
+      this.logger.debug(`Application fields:`, {
+        hasVisaId: !!visaId,
+        hasVisaUrl: !!visaUrl,
+        hasApplicationId: !!applicationId,
+        visaId,
+        applicationId,
+      });
 
       if (visaId && visaUrl && applicationId) {
         // Extract first and last names from arrays
