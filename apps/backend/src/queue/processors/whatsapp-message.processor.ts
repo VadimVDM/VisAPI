@@ -345,18 +345,39 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
           throw new Error('Visa approval requires job data');
         }
 
-        const { templateParams, documentUrl, cbbId, phone } = job.data;
+        const {
+          templateParams,
+          documentUrl,
+          cbbId,
+          templateName,
+          applicationIndex,
+          totalApplications
+        } = job.data;
+
+        // Validate required fields
+        if (!templateName || !documentUrl) {
+          throw new Error('Template name and document URL are required for visa approval');
+        }
 
         // Send visa approval with document attachment
-        const visaResult = await this.cbbClient.sendTemplateMessage(
+        const correlationData = `visa_approval:${order.order_id}:${applicationIndex || 0}:${Date.now()}`;
+
+        const visaResult = await this.cbbService.sendWhatsAppTemplateWithDocument(
           cbbId || contactId,
-          'visa_approval_file_phone',
+          templateName,
+          'he', // Hebrew language code
           templateParams || [],
-          documentUrl, // Document attachment URL
+          documentUrl,
+          `visa_${order.order_id}_${applicationIndex ? applicationIndex + 1 : 1}.pdf`, // Filename
+          correlationData,
         );
 
-        // Update order visa notification status
-        if (visaResult.message_id) {
+        // Update order visa notification status (only on the last message)
+        const isLastMessage = !totalApplications ||
+                            applicationIndex === undefined ||
+                            applicationIndex === totalApplications - 1;
+
+        if (visaResult.message_id && isLastMessage) {
           await this.supabaseService.serviceClient
             .from('orders')
             .update({
@@ -365,6 +386,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
               visa_notification_message_id: visaResult.message_id,
             })
             .eq('order_id', order.order_id);
+
+          this.logger.log(
+            `Marked order ${order.order_id} as visa notification sent (${totalApplications || 1} applications)`,
+          );
         }
 
         return visaResult;

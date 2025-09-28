@@ -726,4 +726,92 @@ export class CbbClientService {
       correlationData, // Pass correlation data for message ID tracking
     );
   }
+
+  /**
+   * Send WhatsApp template with document attachment
+   * Supports templates that have header components with documents
+   */
+  async sendWhatsAppTemplateWithDocument(
+    contactId: string,
+    templateName: string,
+    languageCode: string,
+    bodyParameters: string[],
+    documentUrl: string,
+    documentFilename?: string,
+    correlationData?: string,
+  ): Promise<MessageResponse> {
+    this.logger.debug(
+      `Sending WhatsApp template '${templateName}' with document to contact ${contactId}`,
+    );
+    this.logger.debug(
+      `Language: ${languageCode}, Body Params: ${bodyParameters.length}, Doc: ${documentUrl}`,
+    );
+
+    // Build the WhatsApp template message with document header
+    const message: any = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: contactId,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: {
+          code: languageCode,
+        },
+        components: [
+          {
+            type: 'header',
+            parameters: [
+              {
+                type: 'document',
+                document: {
+                  link: documentUrl,
+                  filename: documentFilename || 'visa_document.pdf',
+                },
+              },
+            ],
+          },
+          {
+            type: 'body',
+            parameters: bodyParameters.map((param) => ({
+              type: 'text',
+              text: param,
+            })),
+          },
+        ],
+      },
+    };
+
+    // Add correlation data if provided
+    if (correlationData) {
+      message.biz_opaque_callback_data = correlationData;
+    }
+
+    const templatePayload = {
+      messages: [message],
+    };
+
+    try {
+      const response = await this.makeRequest<MessageResponse>(
+        'POST',
+        `/contacts/${contactId}/send_content`,
+        {
+          data: templatePayload,
+        },
+      );
+
+      this.logger.debug(
+        `WhatsApp template '${templateName}' with document sent successfully to contact ${contactId}`,
+      );
+      this.logger.debug('CBB Response:', response.data);
+
+      return response.data;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send WhatsApp template '${templateName}' with document:`,
+        error,
+      );
+      throw error;
+    }
+  }
 }

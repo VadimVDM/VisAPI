@@ -55,6 +55,8 @@ export interface WhatsAppMessageJobData {
   templateParams?: string[];              // Template parameters for visa approval
   documentUrl?: string;                   // Visa document URL for attachment
   visaDetails?: any;                      // Full visa details object
+  applicationIndex?: number;              // Which application (0-based) for multi-visa
+  totalApplications?: number;             // Total number of applications in order
 }
 
 export interface LogPruneJobData {

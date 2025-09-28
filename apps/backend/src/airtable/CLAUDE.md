@@ -193,16 +193,41 @@ Check if:
 The system automatically retries Israeli numbers (972) with/without zero after country code.
 If still not found, the number might be stored in a different format.
 
-## Completed Records Tracker
+## Completed Records Tracker & Visa Approval Notifications
 
-The module includes a sophisticated tracking system for monitoring new records entering the completed view.
+The module includes a sophisticated tracking system for monitoring new records entering the completed view and automatically sending visa approval notifications.
 
 ### Architecture
 
 - **CompletedTrackerService**: Main tracking service with Redis deduplication
+- **VisaApprovalProcessorService**: Processes completed records for visa notifications
 - **Hybrid Approach**: Timestamp-based queries + Redis Set deduplication
 - **Automatic Checks**: Every 10 minutes via `@Cron(EVERY_10_MINUTES)`
 - **Manual Operations**: Bootstrap, check, stats, reset endpoints
+
+### Visa Approval Notification Flow
+
+When new completed records are detected:
+
+1. **Extract Visa Details**: Builds visa information from expanded Applications (up to 10)
+2. **Update Order**: Stores visa details in JSONB column for tracking
+3. **Check Conditions**: Verifies:
+   - Notification not already sent (`visa_notification_sent = false`)
+   - Has CBB contact synced (`cbb_contact_uuid IS NOT NULL`)
+   - Notifications enabled (`notifications_enabled != false`)
+4. **Queue WhatsApp Messages**:
+   - First application: `visa_approval_file_phone` template
+   - Applications 2-10: `visa_approval_file_multi_he` template with number emojis
+   - 5-second delay between messages
+   - Each message includes the visa PDF as attachment
+5. **Track Status**: Updates `visa_notification_sent` flag after all messages sent
+
+### Database Fields for Visa Tracking
+
+- `visa_details` (JSONB) - Complete visa information
+- `visa_notification_sent` (boolean) - Prevents duplicate sends
+- `visa_notification_sent_at` (timestamp) - When notification was sent
+- `visa_notification_message_id` (text) - WhatsApp message ID
 
 ### How It Works
 
@@ -268,6 +293,25 @@ GET /api/v1/airtable/completed/stats
 | Use Case | General record search | Lookup in completed view | Track NEW completed records |
 | Returns | Single record | Single record | Array of new records |
 
+## Visa Approval Templates
+
+### Primary Template: `visa_approval_file_phone`
+- **Used for**: First application in order
+- **Parameters**: [name_hebrew, country]
+- **Attachment**: Visa PDF document URL
+- **Language**: Hebrew (he)
+
+### Multi Template: `visa_approval_file_multi_he`
+- **Used for**: Applications 2-10 in order
+- **Parameters**: [number_emoji, applicant_name]
+- **Format**: "{{1}} *קובץ הויזה של {{2}} מצורף* בחלקה העליון של הודעה זו 📎"
+- **Example**: "2️⃣ *קובץ הויזה של Jane Doe מצורף* בחלקה העליון של הודעה זו 📎"
+- **Attachment**: Individual visa PDF for each applicant
+- **Delay**: 5 seconds between messages
+
+### Number Emojis
+1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟
+
 ---
 
-**Version**: 1.1.0 | **Updated**: September 28, 2025
+**Version**: 1.3.0 | **Updated**: September 28, 2025

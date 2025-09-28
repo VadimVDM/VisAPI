@@ -212,6 +212,16 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 
 ## Recent Updates (September 28, 2025)
 
+### Visa Approval Notification System
+- **Multi-Application Support**: Handles up to 10 visa applications per order
+- **Smart Templates**: First visa uses `visa_approval_file_phone`, rest use `visa_approval_file_multi_he`
+- **Applicant Data**: Extracts full name, passport number, and DOB from Applications table
+- **WhatsApp Integration**: Sends visa PDFs with 5-second delays between messages
+- **Number Emojis**: Uses 1️⃣-9️⃣ and 🔟 for clear multi-visa identification
+- **Duplicate Prevention**: Database flags prevent re-sending notifications
+- **Initial Migration**: All 767 existing orders marked as already notified
+- **Conditional Logic**: Only sends if CBB synced and notifications enabled
+
 ### Airtable Integration Enhanced
 - **Linked Record Expansion**: Automatically fetches full details from Applications, Applicants, and Transactions
 - **Python Integration**: Docker support with pyairtable for reliable API access
@@ -223,6 +233,7 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
   - Redis Set deduplication prevents re-processing
   - Automatic checks every 10 minutes via cron
   - Bootstrap command loads initial ~700 records
+  - Triggers visa approval notifications for new records
 
 ### CQRS Removal & Phone Normalization
 - **Architecture Simplified**: Removed CQRS complexity, streamlined to direct service calls
@@ -259,5 +270,5 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 
 ---
 
-**Version**: v1.1.1 Production
+**Version**: v1.2.0 Production
 **Last Updated**: September 28, 2025

@@ -258,7 +258,11 @@ export type Database = {
           product_intent: string | null
           product_validity: string | null
           updated_at: string | null
+          visa_details: Json | null
           visa_entries: string | null
+          visa_notification_message_id: string | null
+          visa_notification_sent: boolean | null
+          visa_notification_sent_at: string | null
           visa_quantity: number | null
           visa_validity_days: number | null
           webhook_received_at: string
@@ -313,7 +317,11 @@ export type Database = {
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_details?: Json | null
           visa_entries?: string | null
+          visa_notification_message_id?: string | null
+          visa_notification_sent?: boolean | null
+          visa_notification_sent_at?: string | null
           visa_quantity?: number | null
           visa_validity_days?: number | null
           webhook_received_at: string
@@ -368,7 +376,11 @@ export type Database = {
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_details?: Json | null
           visa_entries?: string | null
+          visa_notification_message_id?: string | null
+          visa_notification_sent?: boolean | null
+          visa_notification_sent_at?: string | null
           visa_quantity?: number | null
           visa_validity_days?: number | null
           webhook_received_at?: string

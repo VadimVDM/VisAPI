@@ -11,6 +11,7 @@ Handles WhatsApp Business messaging via CBB API:
 - **Order Confirmations**: Uses `order_confirmation_global` template with 8 variables
 - **Status Updates**: Visa processing status changes (template-based)
 - **Document Ready**: Visa approval notifications (template-based)
+- **Visa Approval**: Sends approved visa PDFs with `visa_approval_file_phone` template
 
 Features:
 
@@ -138,5 +139,36 @@ Complete mapping of order data to CBB contact fields:
 - **Issue**: Queues remained paused in Redis after restart
 - **Fix**: Force resume all queues in `onModuleInit()`
 - **Impact**: Queues always active on startup
+
+## Visa Approval Notifications (Added September 28, 2025)
+
+### Integration with Airtable Completed Tracker
+- Automatically processes new records from completed view
+- Extracts visa details from expanded Application records
+- Supports up to 10 applications per order
+- Extracts full name (First + Last), passport number, and DOB
+- Checks multiple conditions before sending
+- Updates order with visa tracking information
+
+### WhatsApp Templates
+
+#### Primary Template: `visa_approval_file_phone`
+- **Usage**: First application in order
+- **Parameters**: `[name_hebrew, country]`
+- **Attachment**: Visa PDF URL
+
+#### Multi Template: `visa_approval_file_multi_he`
+- **Usage**: Applications 2-10 in order
+- **Parameters**: `[number_emoji, applicant_full_name]`
+- **Format**: "{{1}} *קובץ הויזה של {{2}} מצורף* בחלקה העליון של הודעה זו 📎"
+- **Attachment**: Individual visa PDF
+- **Delay**: 5 seconds between messages
+- **NOTE**: Template must be approved in WhatsApp Business to avoid rejection
+
+### Duplicate Prevention
+- Database flag: `visa_notification_sent`
+- Timestamp tracking: `visa_notification_sent_at`
+- Message ID storage: `visa_notification_message_id`
+- Initial 767 orders marked as already sent
 
 Last Updated: September 28, 2025
