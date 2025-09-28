@@ -65,11 +65,12 @@ export class ApiKeyService {
 
   /**
    * Validates an API key and returns the record if valid
+   * Throws specific errors for expired vs invalid keys
    */
   async validateApiKey(apiKey: string): Promise<ApiKeyRecord | null> {
     const { prefix, secret } = this.splitApiKey(apiKey);
     if (!prefix || !secret) {
-      return null;
+      throw new Error('INVALID_FORMAT');
     }
 
     // Find the API key record by prefix
@@ -80,18 +81,18 @@ export class ApiKeyService {
       .single<ApiKeyRecord>();
 
     if (error || !data) {
-      return null;
+      throw new Error('INVALID_KEY');
     }
 
     // Check if expired
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      return null;
+      throw new Error('EXPIRED_KEY');
     }
 
     // Use bcrypt.compare to validate the secret
     const isValid = await bcrypt.compare(secret, data.hashed_secret || '');
     if (!isValid) {
-      return null;
+      throw new Error('INVALID_KEY');
     }
 
     // Update last_used_at timestamp

@@ -103,7 +103,7 @@ describe('ApiKeyGuard', () => {
         UnauthorizedException,
       );
       await expect(guard.canActivate(context)).rejects.toThrow(
-        'API key is required',
+        'API key required',
       );
     });
 
@@ -112,13 +112,13 @@ describe('ApiKeyGuard', () => {
         'x-api-key': 'invalid-key',
       });
 
-      authService.validateApiKey.mockResolvedValue(null);
+      authService.validateApiKey.mockRejectedValue(new Error('INVALID_KEY'));
 
       await expect(guard.canActivate(context)).rejects.toThrow(
         UnauthorizedException,
       );
       await expect(guard.canActivate(context)).rejects.toThrow(
-        'Invalid or expired API key',
+        'Invalid API key',
       );
     });
 
@@ -249,7 +249,7 @@ describe('ApiKeyGuard', () => {
         'x-api-key': 'invalid-key',
       });
 
-      authService.validateApiKey.mockResolvedValue(null);
+      authService.validateApiKey.mockRejectedValue(new Error('INVALID_KEY'));
 
       await expect(guard.canActivate(context)).rejects.toThrow(
         UnauthorizedException,
@@ -258,6 +258,36 @@ describe('ApiKeyGuard', () => {
       expect(metricsService.recordApiKeyValidation).toHaveBeenCalledWith(
         expect.any(Number),
         false,
+      );
+    });
+
+    it('should throw UnauthorizedException with specific message for invalid format', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'malformed-key',
+      });
+
+      authService.validateApiKey.mockRejectedValue(new Error('INVALID_FORMAT'));
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'Invalid API key format',
+      );
+    });
+
+    it('should throw UnauthorizedException with specific message for expired key', async () => {
+      const context = createMockExecutionContext({
+        'x-api-key': 'expired-key',
+      });
+
+      authService.validateApiKey.mockRejectedValue(new Error('EXPIRED_KEY'));
+
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'API key expired',
       );
     });
 

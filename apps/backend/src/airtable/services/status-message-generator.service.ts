@@ -81,7 +81,7 @@ export class StatusMessageGeneratorService {
    * Generate a formatted WhatsApp status message based on order status
    * Returns null if no applicable template or not IL domain
    */
-  async generateStatusMessage(fields: OrderFields): Promise<string | null> {
+  generateStatusMessage(fields: OrderFields): string | null {
     // Only generate messages for IL domain
     const domainBranch = fields['Domain Branch'];
     if (domainBranch !== 'IL 🇮🇱') {
@@ -100,7 +100,7 @@ export class StatusMessageGeneratorService {
     }
 
     // Build context for message generation
-    const context = await this.buildMessageContext(fields);
+    const context = this.buildMessageContext(fields);
 
     // Generate message lines
     const messageLines = template.generate(context);
@@ -126,7 +126,7 @@ export class StatusMessageGeneratorService {
   /**
    * Build context object with all necessary translations
    */
-  private async buildMessageContext(fields: OrderFields): Promise<MessageContext> {
+  private buildMessageContext(fields: OrderFields): MessageContext {
     // Extract fields with defaults
     // Strip emoji and trim country name (e.g., "India 🇮🇳" -> "India")
     const countryRaw = fields['Country'] || 'Unknown';
@@ -134,7 +134,6 @@ export class StatusMessageGeneratorService {
     const visaType = fields['Type'] || 'Visa';
     const intent = fields['Intent'] || 'Tourism';
     const validity = fields['Validity'] || '30 Days';
-    const priority = fields['Priority']?.toLowerCase() || 'regular';
     const processingTime = fields['Processing Time'] || 3;
     const orderId = fields['ID'] || '';
 

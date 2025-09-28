@@ -107,8 +107,8 @@ async function createAdminKey() {
         ],
         created_by: userId,
         expires_at: new Date(
-          Date.now() + 365 * 24 * 60 * 60 * 1000,
-        ).toISOString(), // 1 year
+          Date.now() + 90 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // 3 months
       })
       .select()
       .single();

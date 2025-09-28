@@ -190,7 +190,7 @@ export class AirtableLookupService {
       const fullFields = matches[0].fields || {};
 
       // Generate status message for IL orders
-      const statusMessage = await this.statusMessageGenerator.generateStatusMessage(
+      const statusMessage = this.statusMessageGenerator.generateStatusMessage(
         fullFields
       );
 

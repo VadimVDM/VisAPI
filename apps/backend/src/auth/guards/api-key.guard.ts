@@ -27,7 +27,7 @@ export class ApiKeyGuard implements CanActivate {
     const apiKey = this.extractApiKey(request);
 
     if (!apiKey) {
-      throw new UnauthorizedException('API key is required');
+      throw new UnauthorizedException('API key required');
     }
 
     // Start timing API key validation
@@ -36,9 +36,12 @@ export class ApiKeyGuard implements CanActivate {
 
     try {
       const validatedKey = await this.authService.validateApiKey(apiKey);
+
+      // Check if validation returned null (should not happen in practice as validateApiKey throws)
       if (!validatedKey) {
-        throw new UnauthorizedException('Invalid or expired API key');
+        throw new UnauthorizedException('Invalid API key');
       }
+
       isValid = true;
 
       // Check scopes if specified
@@ -55,11 +58,7 @@ export class ApiKeyGuard implements CanActivate {
         );
 
         if (!hasScopes) {
-          throw new UnauthorizedException(
-            `Insufficient permissions. Required scopes: ${requiredScopes.join(
-              ', ',
-            )}`,
-          );
+          throw new UnauthorizedException('Insufficient permissions');
         }
       }
 
@@ -67,6 +66,21 @@ export class ApiKeyGuard implements CanActivate {
       request.apiKey = validatedKey;
 
       return true;
+    } catch (error) {
+      // Handle specific API key validation errors
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'INVALID_FORMAT':
+            throw new UnauthorizedException('Invalid API key format');
+          case 'EXPIRED_KEY':
+            throw new UnauthorizedException('API key expired');
+          case 'INVALID_KEY':
+          default:
+            throw new UnauthorizedException('Invalid API key');
+        }
+      }
+      // Re-throw unexpected errors
+      throw error;
     } finally {
       // Record the validation duration regardless of success or failure
       const duration = Date.now() - startTime;
