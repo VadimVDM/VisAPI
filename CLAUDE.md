@@ -1,6 +1,6 @@
 # VisAPI Project Guide
 
-Essential reference for AI assistants. Updated: September 3, 2025
+Essential reference for AI assistants. Updated: September 28, 2025
 
 ## Overview
 
@@ -18,52 +18,12 @@ Essential reference for AI assistants. Updated: September 3, 2025
 
 - ✅ **Production stable** with Vizi webhook integration
 - ✅ **WhatsApp messaging** via CBB API with idempotency protection
-- ✅ **Queue architecture** - Separate backend/worker apps with distinct responsibilities
+- ✅ **Queue architecture** - Streamlined without CQRS complexity
 - ✅ **PDF generation** - HTML/URL to PDF with Puppeteer and templates
-- ✅ **CQRS architecture** with repository pattern
-- ✅ **16 test suites passing** (100% success rate)
+- ✅ **Phone normalization** - Removes leading zeros from all countries
+- ✅ **12 test suites passing** (100% success rate)
 
-## Documentation Map
 
-```
-VisAPI/
-├── 📄 CLAUDE.md                                   # Main project guide (you are here)
-├── apps/
-│   └── backend/
-│       ├── 📄 CLAUDE.md                          # Backend architecture & optimization
-│       └── src/
-│           ├── orders/
-│           │   ├── 📄 CLAUDE.md                  # Orders module overview
-│           │   ├── commands/📄 CLAUDE.md         # CQRS commands documentation
-│           │   └── sagas/📄 CLAUDE.md            # Order sync saga patterns
-│           ├── queue/📄 CLAUDE.md                # Queue processing system
-│           ├── pdf/📄 CLAUDE.md                  # PDF generation module
-│           └── webhooks/vizi/📄 CLAUDE.md        # Vizi webhook integration
-├── libs/
-│   └── backend/
-│       ├── cache/📄 CLAUDE.md                    # Redis caching decorators
-│       ├── core-cbb/📄 CLAUDE.md                 # CBB WhatsApp integration
-│       ├── repositories/📄 CLAUDE.md             # Repository pattern implementation
-│       └── whatsapp-business/📄 CLAUDE.md        # Meta WhatsApp API & ID correlation
-└── worker/📄 CLAUDE.md                           # Background job processor
-```
-
-## Project Structure
-
-```
-VisAPI/
-├── apps/
-│   ├── frontend/          # Next.js 15 dashboard (Vercel)
-│   └── backend/           # NestJS 11.1 API (Railway)
-├── worker/                # Background job processor (Railway)
-├── libs/
-│   ├── frontend/          # React components and hooks
-│   ├── backend/           # NestJS modules and services
-│   └── shared/            # Cross-platform types and utils
-├── docs/                  # Technical documentation
-├── tasks/                 # Sprint planning
-└── infrastructure/        # Terraform and deployment
-```
 
 ## Technology Stack
 
@@ -75,7 +35,7 @@ VisAPI/
 
 **Backend**
 
-- NestJS 11.1 with CQRS pattern
+- NestJS 11.1 with repository pattern
 - BullMQ + Redis for queue processing
 - PostgreSQL 16 (Supabase)
 
@@ -226,82 +186,9 @@ GET  /api/v1/queue/metrics           # Queue status
 
 ## Environment Variables
 
-See `.env.example` for complete template. Key variables:
+See `.env.example` for complete template. Configure via Railway dashboard or local `.env` file.
 
-```bash
-# Database (all access through Supabase - no direct DATABASE_URL needed)
-SUPABASE_URL=https://...
-SUPABASE_SERVICE_KEY=...
 
-# Redis
-REDIS_URL=redis://...
-REDIS_PUBLIC_URL=redis://... (optional for Railway)
-
-# Email
-RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=VisAPI <noreply@visanet.app>
-
-# WhatsApp CBB
-CBB_API_BASE_URL=https://...
-CBB_ACCESS_TOKEN=...
-
-# WhatsApp Meta Business API
-WABA_PHONE_NUMBER_ID=1182477616994327
-WABA_ACCESS_TOKEN=...
-WABA_WEBHOOK_SECRET=<Meta App Secret from developers.facebook.com>
-WABA_VERIFY_TOKEN=Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U
-
-# Zapier Webhook
-ZAPIER_WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/...
-
-# Airtable Lookup
-AIRTABLE_API_KEY=pat_...
-AIRTABLE_BASE_ID=app...
-AIRTABLE_TABLE_ID=tbl...
-AIRTABLE_VIEW_ID=viw...
-```
-
-## Troubleshooting
-
-### Build Issues
-
-```bash
-pnpm clean                 # Clear NX cache
-rm -rf node_modules
-pnpm install
-```
-
-### Database Connection
-
-```bash
-docker-compose logs postgres
-curl -I https://pangdzwamawwgmvxnwkk.supabase.co/health
-```
-
-### Redis Connection
-
-```bash
-redis-cli -h localhost -p 6379 ping
-docker-compose logs redis
-```
-
-### Debug Commands
-
-```bash
-pnpm nx graph              # View dependency graph
-pnpm ps                    # Running processes
-lsof -i :3000             # Check port usage
-```
-
-## Documentation
-
-- **[Environment Variables](./docs/environment-variables.md)** - Complete config guide
-- **[Coding Standards](./docs/coding-standards.md)** - Code style and patterns
-- **[Database Schema](./docs/database-schema.md)** - Table structure and RLS
-- **[Testing Guide](./docs/testing-guide.md)** - Test strategies and commands
-- **[CBB API Reference](./docs/cbb-api-reference.md)** - WhatsApp integration
-- **[Vizi Webhook Setup](./docs/vizi-webhook-setup.md)** - Webhook configuration
-- **[Project Roadmap](./tasks/roadmap.md)** - Sprint history and planning
 
 ## Quick Fixes
 
@@ -314,16 +201,21 @@ lsof -i :3000             # Check port usage
 7. **WhatsApp**: Use template messaging only
 8. **Dates**: Use ISO strings in queries
 9. **Build scripts**: Exclude `src/scripts/**` from tsconfig.app.json
-10. **CBB sync**: Orders auto-trigger sync via OrderSyncSaga
+10. **CBB sync**: Orders auto-trigger sync via OrderSyncService
+11. **Phone numbers**: Leading zeros removed after country codes
 
-## Recent Updates (September 3, 2025)
+## Recent Updates (September 28, 2025)
 
-### PDF Generation System Added
+### CQRS Removal & Phone Normalization
+- **Architecture Simplified**: Removed CQRS complexity, streamlined to direct service calls
+- **CBB Sync Fixed**: OrdersService now directly triggers CBB sync after order creation
+- **Phone Normalization**: Strips leading zeros from phone numbers after country codes
+- **Duplicate Prevention**: Fixes CBB contact duplication (e.g., 9720507247157 vs 972507247157)
+
+### PDF Generation System (September 3, 2025)
 - **Puppeteer Integration**: Chromium-based PDF generation in Worker
 - **Template Engine**: Handlebars templates with examples
 - **Storage**: Supabase bucket integration with signed URLs
-- **Queue Processing**: BullMQ with job tracking and webhooks
-- **API Endpoints**: Generate, batch, preview, and status tracking
 
 ## Critical Fixes (August 25, 2025)
 
@@ -349,5 +241,5 @@ lsof -i :3000             # Check port usage
 
 ---
 
-**Version**: v1.1.0 Production
-**Last Updated**: September 3, 2025
+**Version**: v1.1.1 Production
+**Last Updated**: September 28, 2025

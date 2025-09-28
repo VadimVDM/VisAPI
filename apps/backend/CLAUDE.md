@@ -20,11 +20,11 @@ Modern layered architecture with enterprise design patterns:
 
 ## Architecture Patterns
 
-### CQRS Pattern
+### Service Pattern
 
-- **Commands**: CreateOrder, SyncOrderToCBB, UpdateOrderProcessing, ResyncCBBContact
-- **Queries**: GetOrderById, GetOrders, GetOrderStats
-- CommandBus/QueryBus for clean separation
+- Direct service calls for streamlined architecture
+- OrdersService handles order creation and sync triggering
+- Event-driven updates via domain events
 
 ### Repository Pattern
 
@@ -57,10 +57,10 @@ Modern layered architecture with enterprise design patterns:
 
 ### Orders Module
 
-- Vizi webhook processing
+- Vizi webhook processing with phone normalization
 - Order validation and transformation
 - Translation service for Hebrew localization
-- CBB synchronization via OrderSyncSaga
+- Direct CBB synchronization via OrderSyncService
 - WhatsApp notifications
 
 ### Queue Module
@@ -207,16 +207,13 @@ Modern layered architecture with enterprise design patterns:
 
 ### Recent Changes (September 28, 2025)
 
-**Architecture Refactoring**
-
-✅ **Backend Versioning**: Application metadata from package.json exposed via ConfigService
-✅ **API Constants**: Centralized API prefix/version constants in `api.constants.ts`
-✅ **Vizi Webhooks Split**: Refactored into 5 focused services with clear responsibilities
-✅ **CBB Queue Services**: Separated orchestration, contact sync, and WhatsApp services
-✅ **Type Safety**: Fixed PDF services type issues and improved error handling
+**Architecture Simplification**
+✅ **CQRS Removed**: Streamlined to direct service calls without command/query pattern
+✅ **Phone Normalization**: Strips leading zeros from phone numbers after country codes
+✅ **CBB Sync Fixed**: OrdersService directly triggers sync after order creation
+✅ **Duplicate Prevention**: Prevents duplicate CBB contacts from phone format issues
 
 **Service Architecture**
-- **Vizi**: `order-webhook`, `order-workflow`, `order-retrigger`, `cbb-resync`, `whatsapp-retrigger`
-- **CBB**: `cbb-sync-orchestrator`, `cbb-contact-sync`, `cbb-whatsapp`, with shared types
-
-**Impact**: Improved maintainability, separation of concerns, and easier testing/debugging.
+- **Vizi**: Split into focused services for webhooks, workflows, and admin operations
+- **CBB**: Orchestrator delegates to specialized contact sync and WhatsApp services
+- **Phone Processing**: Universal normalization at webhook transformation layer
