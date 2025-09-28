@@ -345,11 +345,10 @@ export class CompletedTrackerService implements OnModuleInit {
       throw new Error('Airtable credentials not configured');
     }
 
-    // For now, use the existing lookup script
-    // We'll create a dedicated script next
+    // Use the dedicated completed tracker script
     const scriptPath = process.env.NODE_ENV === 'production'
-      ? join(process.cwd(), 'airtable', 'scripts', 'airtable_lookup.py')
-      : join(__dirname, '..', 'scripts', 'airtable_lookup.py');
+      ? join(process.cwd(), 'airtable', 'scripts', 'airtable_completed_tracker.py')
+      : join(__dirname, '..', 'scripts', 'airtable_completed_tracker.py');
 
     if (!existsSync(scriptPath)) {
       throw new Error(`Script not found at ${scriptPath}`);
