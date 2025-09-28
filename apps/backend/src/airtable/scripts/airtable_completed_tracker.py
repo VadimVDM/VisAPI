@@ -286,8 +286,10 @@ def main() -> None:
             api_key, base_id, table_id, view_id, after_timestamp
         )
 
-    # Expand Application records for all fetched records
-    records = expand_application_records(records, api_key, base_id)
+    # Skip expansion for bootstrap mode (too slow for 763+ records)
+    # Only expand for incremental mode where we have fewer records
+    if mode == "incremental":
+        records = expand_application_records(records, api_key, base_id)
 
     # Prepare response
     meta = {
