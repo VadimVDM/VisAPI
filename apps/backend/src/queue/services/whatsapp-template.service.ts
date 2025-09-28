@@ -150,6 +150,7 @@ export class WhatsAppTemplateService {
   getTemplateName(messageType: string): string | null {
     const templateMap: Record<string, string> = {
       order_confirmation: 'order_confirmation_global',
+      visa_approval: 'visa_approval_file_phone', // Primary visa approval template
       status_update: 'status_update', // To be created
       document_ready: 'document_ready', // To be created
     };
@@ -161,7 +162,7 @@ export class WhatsAppTemplateService {
    * Check if a message type has a template available
    */
   hasTemplate(messageType: string): boolean {
-    // Currently only order_confirmation has a template
-    return messageType === 'order_confirmation';
+    // Templates that are currently implemented
+    return messageType === 'order_confirmation' || messageType === 'visa_approval';
   }
 }
