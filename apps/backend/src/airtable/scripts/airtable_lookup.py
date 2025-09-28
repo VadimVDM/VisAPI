@@ -170,7 +170,8 @@ def main() -> None:
 
   payload = load_payload()
   field = str(payload.get("field", ""))
-  value = str(payload.get("value", "")).strip()
+  # Support both "value" and "key" for the lookup value
+  value = str(payload.get("value") or payload.get("key", "")).strip()
 
   if not value:
     emit_error("Lookup value must not be empty", "INPUT_ERROR")
@@ -207,14 +208,12 @@ def main() -> None:
         matches = table.all(
           view=view_id or None,
           formula=formula,
-          max_records=3,
-          return_fields_by_field_id=False
+          max_records=3
         )
       except TypeError:
         matches = table.all(
           view=view_id or None,
-          formula=formula,
-          return_fields_by_field_id=False
+          formula=formula
         )
     else:
       # Use REST API directly
