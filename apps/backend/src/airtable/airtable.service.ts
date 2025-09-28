@@ -194,10 +194,11 @@ export class AirtableLookupService {
         fullFields
       );
 
-      // Extract applications if status is Issue
+      // Extract applications if status is Issue OR Completed (for visa resends)
       let applications: Record<string, unknown>[] | undefined;
       const statusField = fullFields['Status'];
-      if (typeof statusField === 'string' && statusField.includes('Issue')) {
+      if (typeof statusField === 'string' &&
+          (statusField.includes('Issue') || statusField.includes('Completed'))) {
         // Check if we have expanded data with Applications
         interface ExpandedData {
           expanded?: {
