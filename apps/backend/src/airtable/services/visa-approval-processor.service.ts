@@ -3,7 +3,7 @@ import { SupabaseService } from '@visapi/core-supabase';
 import { ConfigService } from '@visapi/core-config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { QUEUE_NAMES, Json } from '@visapi/shared-types';
+import { QUEUE_NAMES, JOB_NAMES, Json } from '@visapi/shared-types';
 import {
   CompletedRecord,
   ExpandedApplication,
@@ -241,7 +241,7 @@ export class VisaApprovalProcessorService {
       const delayMs = isFirstMessage ? 0 : i * 5000; // 5 seconds between messages
 
       await this.whatsappQueue.add(
-        'send-visa-approval',
+        JOB_NAMES.SEND_WHATSAPP_VISA_APPROVAL,
         {
           orderId,
           contactId: cbbContact?.cbb_id,
