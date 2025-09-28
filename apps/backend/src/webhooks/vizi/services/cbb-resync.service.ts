@@ -68,7 +68,7 @@ export class ViziCbbResyncService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`CBB resync operation failed: ${errorMessage}`, { error });
+      this.logger.error(`CBB resync operation failed: ${errorMessage}`, error instanceof Error ? error : undefined);
 
       await this.logService.createLog({
         level: 'error',

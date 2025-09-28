@@ -23,6 +23,7 @@ import {
   TemplateManagerService,
   WebhookVerifyDto,
   MessageIdUpdaterService,
+  EnhancedMessageStatus as LibraryEnhancedMessageStatus,
 } from '@visapi/backend-whatsapp-business';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -362,7 +363,7 @@ export class WhatsAppWebhookController {
         messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
-      this.deliveryTracker.updateMessageStatus(messageStatus as EnhancedMessageStatus);
+      this.deliveryTracker.updateMessageStatus(messageStatus as LibraryEnhancedMessageStatus);
 
       await this.updateMessageInDatabase(messageStatus);
 
@@ -562,16 +563,16 @@ export class WhatsAppWebhookController {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
         .insert({
-          method: (data.method as string) || 'POST',
-          status: (data.status as string) || 'received',
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details ? (data.details as unknown) : null,
-          payload: data.payload ? (data.payload as unknown) : (data as unknown),
+          details: data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
+          payload: (data.payload || data) as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['payload'],
           challenge: data.challenge as string | null,
           signature_verified: data.signature_verified as boolean | null,
           processing_status: data.processing_status as string | null,
+          method: (data.method as string) || 'POST',
+          status: (data.status as string) || 'received',
           created_at: new Date().toISOString(),
         });
     } catch (error: unknown) {
@@ -585,12 +586,12 @@ export class WhatsAppWebhookController {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
         .insert({
-          method: 'POST',
-          status: 'received',
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details ? (data.details as unknown) : null,
+          details: data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
+          method: 'POST',
+          status: 'received',
           created_at: new Date().toISOString(),
         });
     } catch (error: unknown) {

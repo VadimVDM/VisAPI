@@ -46,7 +46,7 @@ export class ViziOrderWebhookService {
     if (typeof value === 'object') {
       return JSON.stringify(value);
     }
-    return String(value);
+    return String(value ?? 'unknown');
   }
 
   async handleInboundWebhook(

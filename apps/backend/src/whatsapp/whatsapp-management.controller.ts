@@ -69,7 +69,14 @@ export class WhatsAppManagementController {
   @Get('templates')
   @ApiOperation({ summary: 'Get all approved WhatsApp templates' })
   @ApiResponse({ status: 200, description: 'Templates retrieved successfully' })
-  async getTemplates(): Promise<any[]> {
+  async getTemplates(): Promise<Array<{
+    name: string;
+    language: string;
+    status: string;
+    category: string;
+    quality_score: unknown;
+    components: unknown;
+  }>> {
     try {
       const templates = await this.templateManager.getApprovedTemplates();
 

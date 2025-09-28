@@ -316,7 +316,7 @@ export class ViziOrderRetriggerService {
       };
     }
 
-    const errorMessage = typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error);
+    const errorMessage = typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error ?? 'unknown');
     return {
       message: errorMessage,
       details: {
