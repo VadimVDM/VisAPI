@@ -249,8 +249,8 @@ export class WhatsAppTranslationService {
       return `${daysToUse} ימים`;
     }
 
-    // Handle validity strings
-    const normalizedValidity = validity?.toLowerCase().trim();
+    // Handle validity strings (normalize underscores to no-underscores)
+    const normalizedValidity = validity?.toLowerCase().trim().replace('_', '');
     switch (normalizedValidity) {
       case 'month':
       case '1month':
@@ -258,12 +258,16 @@ export class WhatsAppTranslationService {
       case 'year':
       case '1year':
         return 'לשנה';
+      case '2months':
+        return 'לחודשיים';
       case '3months':
         return 'ל-3 חודשים';
       case '6months':
         return 'לחצי שנה';
       case '2years':
         return 'לשנתיים';
+      case '3years':
+        return 'ל-3 שנים';
       case '5years':
         return 'ל-5 שנים';
       case '10years':
