@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 import { AirtableLookupService, AirtableLookupField } from './airtable.service';
+import { StatusMessageGeneratorService } from './services/status-message-generator.service';
 import {
   AirtableLookupResponseDto,
   AirtableLookupStatus,
@@ -56,15 +57,15 @@ class CacheServiceStub {
 }
 
 class StatusMessageGeneratorStub {
-  async generateStatusMessage(fields: Record<string, unknown>): Promise<string | null> {
+  generateStatusMessage(fields: Record<string, unknown>): Promise<string | null> {
     const status = fields['Status'] as string;
     const domainBranch = fields['Domain Branch'] as string;
 
     // Only generate for IL domain with Active status
     if (domainBranch === 'IL 🇮🇱' && status?.includes('Active')) {
-      return '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳\n\nבקשתכם עבור תיירות לחצי שנה לבריטניה הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות בבריטניה 🇬🇧\n\nבדרך כלל התהליך נמשך עד 3 ימי עסקים.\n\nנעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.';
+      return Promise.resolve('*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳. בקשתכם עבור תיירות לחצי שנה לבריטניה הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות בבריטניה 🇬🇧. בדרך כלל התהליך נמשך עד 3 ימי עסקים. נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור');
     }
-    return null;
+    return Promise.resolve(null);
   }
 }
 
@@ -84,7 +85,7 @@ describe('AirtableLookupService', () => {
     const service = new AirtableLookupService(
       config as unknown as ConfigService,
       cache as unknown as CacheServiceStub,
-      statusMessageGenerator as any,
+      statusMessageGenerator as unknown as StatusMessageGeneratorService,
     );
 
     return { service, cache };
@@ -203,7 +204,7 @@ describe('AirtableLookupService', () => {
   });
 
   it('retries phone search with Israeli number variant when no results', async () => {
-    const { service, cache } = createService();
+    const { service } = createService();
     const pythonRecord = {
       id: 'rec789',
       fields: {
@@ -256,7 +257,7 @@ describe('AirtableLookupService', () => {
   });
 
   it('generates status message for IL orders with Active status', async () => {
-    const { service, cache } = createService();
+    const { service } = createService();
     const pythonRecord = {
       id: 'recIL123',
       fields: {
@@ -349,10 +350,10 @@ describe('AirtableLookupService', () => {
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
     expect(result.applications).toBeDefined();
     expect(result.applications).toHaveLength(2);
-    expect(result.applications![0]).toHaveProperty('id', 'recApp1');
-    expect(result.applications![0].fields).toHaveProperty('Status', 'Issue - Missing Document');
-    expect(result.applications![1]).toHaveProperty('id', 'recApp2');
-    expect(result.applications![1].fields).toHaveProperty('Status', 'Issue - Incorrect Info');
+    expect(result.applications?.[0]).toHaveProperty('id', 'recApp1');
+    expect(result.applications?.[0].fields).toHaveProperty('Status', 'Issue - Missing Document');
+    expect(result.applications?.[1]).toHaveProperty('id', 'recApp2');
+    expect(result.applications?.[1].fields).toHaveProperty('Status', 'Issue - Incorrect Info');
   });
 
   it('returns multiple status when more than one record is returned', async () => {

@@ -146,11 +146,17 @@ export class AirtableLookupService {
 
       // Extract applications if status is Issue
       let applications: Record<string, unknown>[] | undefined;
-      if (fullFields['Status']?.toString().includes('Issue')) {
+      const statusField = fullFields['Status'];
+      if (typeof statusField === 'string' && statusField.includes('Issue')) {
         // Check if we have expanded data with Applications
-        const expanded = (matches[0] as any).expanded;
-        if (expanded?.Applications_expanded) {
-          applications = expanded.Applications_expanded;
+        interface ExpandedData {
+          expanded?: {
+            Applications_expanded?: Record<string, unknown>[];
+          };
+        }
+        const expandedData = matches[0] as unknown as ExpandedData;
+        if (expandedData.expanded?.Applications_expanded) {
+          applications = expandedData.expanded.Applications_expanded;
         }
       }
 
@@ -178,8 +184,8 @@ export class AirtableLookupService {
     const fields = record.fields ?? {};
     const filteredFields: Record<string, unknown> = {};
 
-    // Include Status, ID, Email, Phone, and Domain Branch fields
-    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone', 'Domain Branch'];
+    // Include Status, ID, Email, Phone, Domain Branch, and Country fields for status message generation
+    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone', 'Domain Branch', 'Country', 'Type', 'Intent', 'Entry Count', 'Validity', 'Priority', 'Processing Time'];
     for (const fieldName of fieldsToInclude) {
       if (fieldName in fields) {
         filteredFields[fieldName] = fields[fieldName];

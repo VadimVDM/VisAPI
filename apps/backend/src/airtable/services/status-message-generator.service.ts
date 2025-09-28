@@ -45,12 +45,9 @@ export class StatusMessageGeneratorService {
         check: (status: string) => status?.toLowerCase().includes('active'),
         generate: (ctx: MessageContext) => [
           '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳',
-          '',
           `בקשתכם עבור ${ctx.visaTypeHebrew} ל${ctx.countryHebrew} הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות ב${ctx.countryHebrew} ${ctx.countryFlag}`,
-          '',
-          `בדרך כלל התהליך נמשך עד ${ctx.processingDays} ימי עסקים.`,
-          '',
-          'נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.',
+          `בדרך כלל התהליך נמשך עד ${ctx.processingDays} ימי עסקים`,
+          'נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור',
         ],
       }],
       // Add more status templates here in the future
@@ -58,20 +55,16 @@ export class StatusMessageGeneratorService {
         check: (status: string) => status?.toLowerCase().includes('processing'),
         generate: (ctx: MessageContext) => [
           '*סטטוס עדכני: בקשתכם בטיפול* 🔄',
-          '',
           `הבקשה שלכם ל${ctx.visaTypeHebrew} ל${ctx.countryHebrew} נמצאת כעת בטיפול פעיל ${ctx.countryFlag}`,
-          '',
-          'נעדכן אתכם ברגע שיהיה עדכון נוסף.',
+          'נעדכן אתכם ברגע שיהיה עדכון נוסף',
         ],
       }],
       ['completed', {
         check: (status: string) => status?.toLowerCase().includes('completed'),
         generate: (ctx: MessageContext) => [
           '*סטטוס עדכני: הבקשה אושרה!* ✅',
-          '',
           `ה${ctx.visaTypeHebrew} שלכם ל${ctx.countryHebrew} ${ctx.countryFlag} אושרה בהצלחה!`,
-          '',
-          'המסמכים נשלחו אליכם במייל.',
+          'המסמכים נשלחו אליכם במייל',
         ],
       }],
     ]);
@@ -105,7 +98,13 @@ export class StatusMessageGeneratorService {
     // Generate message lines
     const messageLines = template.generate(context);
 
-    return messageLines.join('\n');
+    // Join lines with periods and spaces instead of newlines
+    // Filter out empty lines and join with '. '
+    const formattedMessage = messageLines
+      .filter(line => line.trim() !== '')
+      .join('. ');
+
+    return formattedMessage;
   }
 
   /**
