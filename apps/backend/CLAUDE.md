@@ -121,6 +121,7 @@ Modern layered architecture with enterprise design patterns:
 - Creates system user and API key with full permissions for:
   - `/api/v1/webhooks/vizi/retrigger` - Retrigger order creation
   - `/api/v1/webhooks/vizi/resync-cbb` - Resync CBB contacts
+  - `/api/v1/webhooks/vizi/resend-visa` - Resend visa approval notifications
 - Generates key in format: `vizi_admin_[uuid].[secret]`
 
 ## Testing

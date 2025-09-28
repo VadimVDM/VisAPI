@@ -78,6 +78,7 @@ POST /api/v1/webhooks/vizi/orders     # Vizi webhook
 POST /api/v1/webhooks/vizi/retrigger  # Admin: Retrigger order creation
 POST /api/v1/webhooks/vizi/resync-cbb # Admin: Resync CBB contact
 POST /api/v1/webhooks/vizi/retrigger-whatsapp # Admin: Retrigger WhatsApp notification
+POST /api/v1/webhooks/vizi/resend-visa # Admin: Resend visa approval notifications
 GET  /api/v1/webhooks/whatsapp        # WhatsApp webhook verification
 POST /api/v1/webhooks/whatsapp        # WhatsApp events from Meta
 POST /api/v1/whatsapp/templates/sync  # Manual template sync

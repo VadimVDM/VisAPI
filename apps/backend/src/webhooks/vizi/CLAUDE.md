@@ -36,6 +36,16 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
   - Force flag to override already-sent checks
   - Uses exact same message flow as automatic processing
 
+#### Visa Approval Resend
+
+- `POST /api/v1/webhooks/vizi/resend-visa` - Manually resend visa approval notifications
+  - Fetches fresh order data from Airtable with application expansion
+  - Resets visa_notification_sent flag to allow unlimited resends
+  - Processes up to 10 visa applications per order
+  - Uses existing VisaApprovalProcessorService for WhatsApp notifications
+  - Sends first visa with visa_approval_file_phone template
+  - Sends visas 2-10 with visa_approval_file_multi_he template
+
 ## Security
 
 All endpoints require API key authentication with appropriate scopes:
@@ -53,6 +63,7 @@ All endpoints require API key authentication with appropriate scopes:
   - `ViziOrderRetriggerService` — historical webhook replay
   - `ViziCbbResyncService` — targeted CBB contact sync
   - `ViziWhatsAppRetriggerService` — WhatsApp queue orchestration
+  - `ViziVisaResendService` — visa approval notification resending
 - Full audit logging with correlation IDs
 - Idempotency support via headers
 
