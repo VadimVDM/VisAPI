@@ -64,6 +64,9 @@ export class OrderTransformerService {
       product_validity: form.product?.validity || 'month',
       product_days_to_use: form.product?.days_to_use || 30,
 
+      // Processing days from webhook (product.wait field)
+      processing_days: form.product?.wait || 3,
+
       // Translation fields (stored for optimization)
       product_country_flag: translations.countryFlag,
 

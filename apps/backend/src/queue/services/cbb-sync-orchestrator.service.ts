@@ -106,12 +106,8 @@ export class CBBSyncOrchestratorService {
     } = {},
   ): Promise<CBBContact | null> {
     const language = this.mapBranchToLanguage(order.branch);
-    const processingDays =
-      order.processing_days ||
-      this.calculateDefaultProcessingDays(
-        order.product_country,
-        order.is_urgent === true,
-      );
+    // Use processing_days from order (from product.wait in webhook), default to 3
+    const processingDays = order.processing_days || 3;
 
     const contactData: Omit<
       CBBContact,
@@ -261,29 +257,15 @@ export class CBBSyncOrchestratorService {
             order.product_days_to_use || undefined,
           );
 
-        // Generate Hebrew processing days message using database-driven calculation
-        const processingDays = await this.calculateProcessingDays(
-          orderId,
-          order.product_country,
-          order.is_urgent === true,
-        );
+        // Use processing_days directly from order (from product.wait in webhook)
+        const processingDays = order.processing_days || 3;
 
-        // Special formatting for urgent orders and Thailand/Schengen
-        const countryNormalized = order.product_country?.toLowerCase().trim();
-        const isThailandOrSchengen =
-          countryNormalized === 'thailand' ||
-          countryNormalized === 'schengen' ||
-          countryNormalized === 'schengen area';
-
-        if (order.is_urgent === true && !isThailandOrSchengen) {
-          // Urgent (non-Thailand/Schengen): "תוך יום אחד ⚡️"
-          translations.processingDaysTranslated = 'תוך יום אחד ⚡️';
-        } else if (isThailandOrSchengen) {
-          // Thailand/Schengen: 30 days base, 15 if urgent
-          const days = order.is_urgent === true ? '15' : '30';
-          translations.processingDaysTranslated = `תוך ${days} ימים`;
+        // Format Hebrew processing days message
+        if (processingDays === 1) {
+          // Special formatting for 1 day: "תוך יום עסקים אחד"
+          translations.processingDaysTranslated = 'תוך יום עסקים אחד';
         } else {
-          // Regular processing days
+          // For 2+ days: "תוך X ימי עסקים"
           translations.processingDaysTranslated = `תוך ${processingDays} ימי עסקים`;
         }
       }
@@ -694,76 +676,6 @@ export class CBBSyncOrchestratorService {
     }
   }
 
-  /**
-   * Calculate processing days using database-driven business rules with fallback
-   */
-  private async calculateProcessingDays(
-    orderId: string,
-    country: string,
-    isUrgent: boolean,
-  ): Promise<number> {
-    try {
-      // Try to get processing days from database function
-      const { data, error } = await this.supabaseService.serviceClient.rpc(
-        'calculate_processing_days',
-        {
-          p_country: country,
-          p_urgency: isUrgent ? 'urgent' : undefined,
-        },
-      );
-
-      if (error) {
-        this.logger.warn(
-          `Database processing days calculation failed for order ${orderId}: ${error.message}. Using fallback.`,
-        );
-        return this.calculateDefaultProcessingDays(country, isUrgent);
-      }
-
-      if (data && typeof data === 'number' && data > 0) {
-        this.logger.debug(
-          `Database calculated ${data} processing days for order ${orderId} (country: ${country}, urgent: ${isUrgent})`,
-        );
-        return data;
-      }
-
-      // Fallback if database returns invalid data
-      this.logger.warn(
-        `Database returned invalid processing days (${data}) for order ${orderId}. Using fallback.`,
-      );
-      return this.calculateDefaultProcessingDays(country, isUrgent);
-    } catch (error) {
-      // Fallback on any error
-      this.logger.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        `Error calling database processing days function for order ${orderId}`,
-      );
-      return this.calculateDefaultProcessingDays(country, isUrgent);
-    }
-  }
-
-  /**
-   * Calculate default processing days based on business rules (fallback)
-   */
-  private calculateDefaultProcessingDays(
-    country: string,
-    isUrgent: boolean,
-  ): number {
-    // If urgent, always 1 business day
-    if (isUrgent) {
-      return 1;
-    }
-
-    // Country-specific processing times (based on requirements)
-    const countryNormalized = country?.toLowerCase().trim();
-    switch (countryNormalized) {
-      case 'morocco':
-        return 5;
-      case 'vietnam':
-        return 7;
-      default:
-        return 3; // Default for all other countries
-    }
-  }
 
   private mapOrderToContact(order: OrderData): CBBContactData {
     // Use the direct is_urgent boolean field from orders table
@@ -787,9 +699,8 @@ export class CBBSyncOrchestratorService {
 
     // Use processing_days from database (calculated by business rules engine)
     // If not available, calculate based on urgency
-    const processingDays =
-      order.processing_days ||
-      this.calculateDefaultProcessingDays(order.product_country, isUrgent);
+    // Use processing_days from order (from product.wait in webhook), default to 3
+    const processingDays = order.processing_days || 3;
 
     // Use actual product data from the order
     const visaIntent = order.product_intent || 'tourism';
