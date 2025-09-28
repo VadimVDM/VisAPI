@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '@visapi/core-supabase';
 import { firstValueFrom } from 'rxjs';
 import {
   Template,
@@ -24,6 +25,7 @@ export class TemplateManagerService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly supabaseService: SupabaseService,
   ) {
     const apiVersion = this.configService.get('WABA_API_VERSION', 'v23.0');
     this.baseUrl = `https://graph.facebook.com/${apiVersion}`;
@@ -68,8 +70,12 @@ export class TemplateManagerService {
       const templates: Template[] = response.data.data || [];
 
       this.templateCache.clear();
+
+      // Save templates to database
       for (const template of templates) {
         const cacheKey = `${template.name}_${template.language}`;
+
+        // Save to cache
         this.templateCache.set(cacheKey, {
           ...template,
           usage_count: 0,
@@ -82,10 +88,34 @@ export class TemplateManagerService {
           compliance_status: this.determineComplianceStatus(template),
           optimization_suggestions: [],
         });
+
+        // Upsert to database
+        try {
+          const { error } = await this.supabaseService.serviceClient
+            .from('whatsapp_templates')
+            .upsert({
+              template_name: template.name,
+              language: template.language,
+              status: template.status,
+              category: template.category || 'UTILITY',
+              components: JSON.parse(JSON.stringify(template.components || [])),
+              variables_count: this.countTemplateVariables(template),
+              last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }, {
+              onConflict: 'template_name,language',
+            });
+
+          if (error) {
+            this.logger.error(`Failed to save template ${template.name}: ${error.message}`);
+          }
+        } catch (dbError) {
+          this.logger.error(`Database error for template ${template.name}:`, dbError);
+        }
       }
 
       this.lastSyncTime = new Date();
-      this.logger.log(`Synced ${templates.length} templates from Meta`);
+      this.logger.log(`Synced ${templates.length} templates from Meta and saved to database`);
 
       return templates;
     } catch (error: any) {
@@ -101,6 +131,53 @@ export class TemplateManagerService {
     language?: string,
     category?: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY',
   ): Promise<Template[]> {
+    // If cache is empty, load from database
+    if (this.templateCache.size === 0) {
+      try {
+        const query = this.supabaseService.serviceClient
+          .from('whatsapp_templates')
+          .select('*')
+          .eq('status', 'APPROVED');
+
+        if (language) query.eq('language', language);
+        if (category) query.eq('category', category);
+
+        const { data: dbTemplates } = await query;
+
+        if (dbTemplates && dbTemplates.length > 0) {
+          // Populate cache from database
+          for (const dbTemplate of dbTemplates) {
+            const template: Template = {
+              id: dbTemplate.id,
+              name: dbTemplate.template_name,
+              language: dbTemplate.language,
+              status: dbTemplate.status as 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED' | 'DISABLED',
+              category: (dbTemplate.category || 'UTILITY') as 'AUTHENTICATION' | 'MARKETING' | 'UTILITY',
+              components: (dbTemplate.components as any) || [],
+              quality_score: dbTemplate.quality_score || undefined,
+              rejected_reason: undefined,
+            };
+
+            const cacheKey = `${template.name}_${template.language}`;
+            this.templateCache.set(cacheKey, {
+              ...template,
+              usage_count: 0,
+              last_used: undefined,
+              performance_metrics: {
+                delivery_rate: 0,
+                read_rate: 0,
+                response_rate: 0,
+              },
+              compliance_status: this.determineComplianceStatus(template),
+              optimization_suggestions: [],
+            });
+          }
+        }
+      } catch (error) {
+        this.logger.error('Failed to load templates from database:', error);
+      }
+    }
+
     const templates = Array.from(this.templateCache.values());
 
     return templates.filter((template) => {
@@ -464,5 +541,20 @@ export class TemplateManagerService {
       return 'warning';
     }
     return 'compliant';
+  }
+
+  private countTemplateVariables(template: Template): number {
+    let count = 0;
+    for (const component of template.components || []) {
+      if (component.type === 'body') {
+        // Check for text in component or as a property
+        const text = (component as any).text || '';
+        const matches = text.match(/\{\{\d+\}\}/g);
+        if (matches) {
+          count = Math.max(count, matches.length);
+        }
+      }
+    }
+    return count;
   }
 }
