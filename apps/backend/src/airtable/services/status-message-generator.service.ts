@@ -128,7 +128,9 @@ export class StatusMessageGeneratorService {
    */
   private async buildMessageContext(fields: OrderFields): Promise<MessageContext> {
     // Extract fields with defaults
-    const country = fields['Country'] || 'Unknown';
+    // Strip emoji and trim country name (e.g., "India 🇮🇳" -> "India")
+    const countryRaw = fields['Country'] || 'Unknown';
+    const country = countryRaw.toString().replace(/\s*[\u{1F1E6}-\u{1F1FF}]+\s*$/gu, '').trim();
     const visaType = fields['Type'] || 'Visa';
     const intent = fields['Intent'] || 'Tourism';
     const validity = fields['Validity'] || '30 Days';
@@ -138,7 +140,8 @@ export class StatusMessageGeneratorService {
 
     // Get Hebrew translations
     const countryHebrew = this.translationService.getCountryNameHebrew(country);
-    const countryFlag = this.translationService.getCountryFlag(country);
+    // Try to extract flag from original string, or get from translation service
+    const countryFlag = countryRaw.toString().match(/[\u{1F1E6}-\u{1F1FF}]+/gu)?.[0] || this.translationService.getCountryFlag(country);
 
     // Get Hebrew visa type
     const visaTypeHebrew = this.translationService.getVisaTypeHebrew(
