@@ -152,16 +152,16 @@ export class AirtableLookupService {
   }
 
   private mapRecord(record: PythonAirtableRecord): AirtableRecordDto {
+    // Extract only the Status field
+    const statusField = record.fields?.['Status'] ?? null;
+
     const mapped: AirtableRecordDto = {
       id: record.id,
-      fields: record.fields ?? {},
+      fields: statusField !== null ? { Status: statusField } : {},
       createdTime: record.createdTime,
     };
 
-    // Include expanded data if present
-    if (record.expanded) {
-      (mapped as any).expanded = record.expanded;
-    }
+    // Do not include expanded data since we only want the Status
 
     return mapped;
   }

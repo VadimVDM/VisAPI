@@ -90,9 +90,14 @@ describe('AirtableLookupService', () => {
 
   it('maps a single record to found status', async () => {
     const { service, cache } = createService();
-    const record: AirtableRecordDto = {
+    const pythonRecord = {
       id: 'rec123',
-      fields: { Email: 'test@example.com' },
+      fields: {
+        Email: 'test@example.com',
+        Status: 'Active 🔵',
+        Name: 'Test User',
+        Phone: '1234567890'
+      },
       createdTime: '2024-01-01T00:00:00.000Z',
     };
 
@@ -102,14 +107,19 @@ describe('AirtableLookupService', () => {
       .mockResolvedValue({
         response: {
           status: 'ok',
-          matches: [record],
+          matches: [pythonRecord],
         },
       });
 
     const result = await service.lookup('email', 'test@example.com');
 
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
-    expect(result.record).toEqual(record);
+    // Should only contain the Status field
+    expect(result.record).toEqual({
+      id: 'rec123',
+      fields: { Status: 'Active 🔵' },
+      createdTime: '2024-01-01T00:00:00.000Z',
+    });
 
     // Ensure result was cached
     const cacheKey = cache.generateKey('airtable:lookup', [
