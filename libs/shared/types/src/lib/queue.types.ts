@@ -20,6 +20,7 @@ export const JOB_NAMES = {
   SEND_SLACK: 'slack.send',
   SEND_WHATSAPP: 'whatsapp.send',
   SEND_WHATSAPP_ORDER_CONFIRMATION: 'whatsapp.send-order-confirmation',
+  SEND_WHATSAPP_VISA_APPROVAL: 'whatsapp.send-visa-approval',
   GENERATE_PDF: 'pdf.generate',
   SYNC_CBB_CONTACT: 'cbb.sync-contact',
   PROCESS_IMAGE: 'image.process',

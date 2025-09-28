@@ -216,7 +216,7 @@ export class ViziWhatsAppRetriggerService {
 
           const job = await this.queueService.addJob(
             QUEUE_NAMES.WHATSAPP_MESSAGES,
-            'send-visa-approval',
+            JOB_NAMES.SEND_WHATSAPP_VISA_APPROVAL,
             {
               orderId: order.order_id,
               contactId: cbbContact.cbb_contact_id,
