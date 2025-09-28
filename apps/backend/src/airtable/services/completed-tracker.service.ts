@@ -8,15 +8,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Redis } from 'ioredis';
 import { VisaApprovalProcessorService } from './visa-approval-processor.service';
-
-interface CompletedRecord {
-  id: string;
-  fields: Record<string, unknown>;
-  createdTime: string;
-  expanded?: {
-    Applications_expanded?: Record<string, unknown>[];
-  };
-}
+import { CompletedRecord } from '../types/airtable.types';
 
 interface TrackingResult {
   newRecords: CompletedRecord[];

@@ -4,53 +4,12 @@ import { ConfigService } from '@visapi/core-config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
-
-interface VisaApplication {
-  applicationId: string;
-  visaId: string;
-  visaUrl: string;
-  applicantName?: string;
-  status: string;
-  country?: string;
-}
-
-interface VisaDetails {
-  applications: VisaApplication[];
-  processedAt: string;
-  sourceView: string;
-  [key: string]: unknown; // Allow indexing for JSONB compatibility
-}
-
-interface ApplicationFields {
-  'Visa ID'?: string;
-  'Visa URL'?: string;
-  'Application ID'?: string;
-  'Applicant Name'?: string;
-  'First Name'?: string;
-  'Last Name'?: string;
-  Status?: string;
-  Country?: string;
-}
-
-interface ExpandedApplication {
-  id: string;
-  fields: ApplicationFields;
-}
-
-interface CompletedRecord {
-  id: string;
-  fields: {
-    ID?: string;
-    'Applications ↗'?: string[];
-    Email?: string;
-    Phone?: string;
-    Status?: string;
-    'פרט נוסף לשליחה'?: string;
-  };
-  expanded?: {
-    Applications_expanded?: ExpandedApplication[];
-  };
-}
+import {
+  CompletedRecord,
+  ExpandedApplication,
+  VisaApplication,
+  VisaDetails,
+} from '../types/airtable.types';
 
 @Injectable()
 export class VisaApprovalProcessorService {
@@ -162,7 +121,7 @@ export class VisaApprovalProcessorService {
       .client
       .from('orders')
       .update({
-        visa_details: visaDetails,
+        visa_details: visaDetails as any,
         updated_at: new Date().toISOString(),
       })
       .eq('order_id', orderId)
