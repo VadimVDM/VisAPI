@@ -46,12 +46,20 @@ Processes incoming webhooks with retry logic.
 
 **CRITICAL**: All processors must use `@Processor(QUEUE_NAMES.QUEUE_NAME)` - never hardcode queue names!
 
-### Supporting Services
+### Service Architecture (Refactored September 28, 2025)
 
-- `WhatsAppTranslationService` (323 lines): Hebrew translations with database-driven processing times
-- `WhatsAppTemplateService` (141 lines): Template building with 'x' prefix for quantities
-- `CBBFieldMapperService` (478 lines): Enhanced field mapping with units and timestamps
-- `CBBSyncOrchestratorService` (428 lines): Handles sync workflow with improved logging
+**Orchestration Layer**
+- `CBBSyncOrchestratorService`: Main coordinator, delegates to specialized services
+
+**Core Services**
+- `CbbContactSyncService`: CBB contact creation/update with error recovery
+- `CbbWhatsAppService`: WhatsApp message queueing with duplicate prevention
+- `CBBFieldMapperService`: Order-to-CBB field mapping with translations
+
+**Supporting Services**
+- `WhatsAppTranslationService`: Hebrew translations with database-driven processing times
+- `WhatsAppTemplateService`: Template building with 'x' prefix for quantities
+- `CBBSyncMetricsService`: Prometheus metrics tracking
 
 ## Configuration
 
@@ -131,4 +139,4 @@ Complete mapping of order data to CBB contact fields:
 - **Fix**: Force resume all queues in `onModuleInit()`
 - **Impact**: Queues always active on startup
 
-Last Updated: August 25, 2025
+Last Updated: September 28, 2025

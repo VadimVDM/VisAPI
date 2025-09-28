@@ -88,8 +88,8 @@ export class WhatsAppManagementController {
       const report =
         await this.templateManager.checkTemplateCategoryCompliance();
       return report;
-    } catch (error: any) {
-      this.logger.error(`Failed to check compliance: ${error.message}`, error);
+    } catch (error) {
+      this.logger.error(`Failed to check compliance: ${error instanceof Error ? error.message : String(error)}`, error);
       throw error;
     }
   }

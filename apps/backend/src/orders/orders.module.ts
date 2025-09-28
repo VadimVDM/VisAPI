@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
 import { OrdersService } from './orders.service';
 import { OrderTransformerService } from './services/order-transformer.service';
 import { OrderValidatorService } from './services/order-validator.service';
@@ -11,13 +10,9 @@ import { ConfigModule } from '@visapi/core-config';
 import { RepositoriesModule } from '@visapi/backend-repositories';
 import { EventsModule } from '@visapi/backend-events';
 import { LoggingModule } from '@visapi/backend-logging';
-import { CommandHandlers } from './commands';
-import { QueryHandlers } from './queries';
-import { OrderSyncSaga } from './sagas/order-sync.saga';
 
 @Module({
   imports: [
-    CqrsModule,
     SupabaseModule,
     QueueModule,
     ConfigModule,
@@ -31,10 +26,7 @@ import { OrderSyncSaga } from './sagas/order-sync.saga';
     OrderValidatorService,
     OrderSyncService,
     TranslationService,
-    ...CommandHandlers,
-    ...QueryHandlers,
-    OrderSyncSaga,
   ],
-  exports: [OrdersService, CqrsModule],
+  exports: [OrdersService],
 })
 export class OrdersModule {}

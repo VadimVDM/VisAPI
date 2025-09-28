@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Queue, Job } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
-import { PdfJobService } from './pdf-job.service';
-import { PdfJobStatusDto, JobStatus } from '../dto/pdf-job-status.dto';
+import { PdfJobService, JobCacheData } from './pdf-job.service';
+import { PdfJobStatusDto, JobStatus, PdfResultDto } from '../dto/pdf-job-status.dto';
+import { JobMetadata } from '../dto/generate-pdf.dto';
 
 @Injectable()
 export class PdfStatusService {
@@ -28,7 +29,7 @@ export class PdfStatusService {
     return this.mapJobToDto(job);
   }
 
-  private mapCachedToDto(data: any): PdfJobStatusDto {
+  private mapCachedToDto(data: JobCacheData): PdfJobStatusDto {
     return {
       jobId: data.jobId,
       status: this.mapStatus(data.status),
@@ -40,26 +41,30 @@ export class PdfStatusService {
       result: data.result,
       error: data.error,
       attempts: data.attempts,
-      metadata: data.dto?.metadata,
+      metadata: data.metadata,
     };
   }
 
-  private async mapJobToDto(job: any): Promise<PdfJobStatusDto> {
+  private async mapJobToDto(job: Job): Promise<PdfJobStatusDto> {
     const state = await job.getState();
     const progress = job.progress || 0;
 
     return {
       jobId: job.id,
       status: this.mapQueueStatus(state),
-      progress: typeof progress === 'object' ? progress.percentage || 0 : progress,
+      progress: typeof progress === 'object' && progress !== null && 'percentage' in progress
+        ? ((progress as Record<string, unknown>).percentage as number) || 0
+        : Number(progress) || 0,
       createdAt: new Date(job.timestamp).toISOString(),
       startedAt: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
       completedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
       duration: job.finishedOn && job.processedOn ? job.finishedOn - job.processedOn : undefined,
-      result: job.returnvalue,
+      result: job.returnvalue as PdfResultDto | undefined,
       error: job.failedReason,
       attempts: job.attemptsMade,
-      metadata: job.data?.metadata,
+      metadata: job.data && typeof job.data === 'object' && 'metadata' in job.data
+        ? (job.data as { metadata: JobMetadata }).metadata
+        : undefined,
     };
   }
 

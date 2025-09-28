@@ -83,18 +83,7 @@ const VISA_TYPES_HEBREW: Record<string, string> = {
   single: 'כניסה יחידה',
 };
 
-const VALIDITY_HEBREW: Record<string, string> = {
-  month: 'חודש',
-  '1month': 'חודש',
-  year: 'שנה',
-  '1year': 'שנה',
-  '3months': '3 חודשים',
-  '6months': '6 חודשים',
-  '2years': 'שנתיים',
-  '3years': '3 שנים',
-  '5years': '5 שנים',
-  '10years': '10 שנים',
-};
+
 
 const COUNTRY_FLAGS: Record<string, string> = {
   india: '🇮🇳',
@@ -359,14 +348,19 @@ export class WhatsAppTranslationService {
     }
 
     try {
+      interface RpcResponse {
+        data: number | null;
+        error: unknown;
+      }
+
       // Call the database function for calculation
       const { data, error } = (await this.supabaseService.serviceClient.rpc(
-        'calculate_processing_days' as any,
+        'calculate_processing_days',
         {
           p_country: country?.toLowerCase().trim() || null,
           p_urgency: urgency?.toLowerCase().trim() || null,
         },
-      )) as { data: number | null; error: any };
+      )) as RpcResponse;
 
       if (error) {
         this.logger.error('Error calculating processing days:', error);

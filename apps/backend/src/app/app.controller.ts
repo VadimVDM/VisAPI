@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ConfigService } from '@visapi/core-config';
+import { API_VERSION } from '../common/constants/api.constants';
 
 @Controller()
 export class AppController {
@@ -14,7 +15,7 @@ export class AppController {
     return this.appService.getData();
   }
 
-  @Get('v1/healthz')
+  @Get(`${API_VERSION}/healthz`)
   async healthCheck() {
     // Basic health check for load balancers - always returns 200 if app is running
     // For detailed component health, use /api/health endpoint
@@ -47,17 +48,19 @@ export class AppController {
     }
   }
 
-  @Get('v1/livez')
+  @Get(`${API_VERSION}/livez`)
   liveness() {
     return { status: 'alive' };
   }
 
-  @Get('v1/version')
+  @Get(`${API_VERSION}/version`)
   version() {
+    const config = this.configService.getConfig();
     return {
-      version: '0.5.0',
-      commit: this.configService.get<string>('git.sha') || 'local',
-      build: this.configService.get<string>('build.number') || 'local',
+      name: this.configService.appName,
+      version: this.configService.appVersion,
+      commit: config.git?.sha ?? 'local',
+      build: config.build?.number ?? 'local',
     };
   }
 }

@@ -8,7 +8,7 @@ import { AuthModule } from '../auth/auth.module';
 import { QueueModule } from '../queue/queue.module';
 import { HealthModule } from '../health/health.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
-import { ViziWebhooksModule } from '../vizi-webhooks/vizi-webhooks.module';
+import { ViziWebhooksModule } from '../webhooks/vizi/vizi-webhooks.module';
 import { AdminModule } from '../admin/admin.module';
 import { CronModule } from '../cron/cron.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -26,7 +26,6 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { CacheModule } from '@visapi/backend-cache';
-import { CacheManagementModule } from '../cache/cache.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
 import { PdfModule } from '../pdf/pdf.module';
@@ -94,7 +93,6 @@ if (sentryConfig.dsn) {
     // TracingModule, // TODO: Fix OpenTelemetry Resource import
     ConfigModule,
     CacheModule.forRoot({ isGlobal: true }),
-    CacheManagementModule,
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

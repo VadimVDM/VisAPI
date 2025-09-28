@@ -17,6 +17,7 @@ import { PdfStatusService } from './services/pdf-status.service';
 import { GeneratePdfDto } from './dto/generate-pdf.dto';
 import { PdfJobResponseDto } from './dto/pdf-job-response.dto';
 import { PdfJobStatusDto } from './dto/pdf-job-status.dto';
+import { PdfPreviewResponseDto } from './dto/pdf-preview-response.dto';
 
 @ApiTags('PDF Generation')
 @Controller('v1/pdf')
@@ -111,7 +112,7 @@ export class PdfController {
   async previewPdf(
     @Body(ValidationPipe) dto: GeneratePdfDto,
     @Query('format') format: 'base64' | 'url' = 'url',
-  ): Promise<{ data: string; format: string }> {
+  ): Promise<PdfPreviewResponseDto> {
     return this.pdfService.previewPdf(dto, format);
   }
 

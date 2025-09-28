@@ -71,7 +71,7 @@ describe('WorkflowValidationService', () => {
     };
 
     const mockValidationEngine = {
-      validateStepConfig: jest.fn((stepType, config) => {
+      validateStepConfig: jest.fn((stepType: string, config: unknown) => {
         // Validate unknown step types
         const validStepTypes = [
           'slack.send',
@@ -95,7 +95,8 @@ describe('WorkflowValidationService', () => {
         };
 
         const required = requiredFields[stepType] || [];
-        const missing = required.filter((field) => !config[field]);
+        const configObj = config as Record<string, unknown>;
+        const missing = required.filter((field) => !configObj[field]);
         if (missing.length > 0) {
           return {
             valid: false,
@@ -104,9 +105,10 @@ describe('WorkflowValidationService', () => {
         }
 
         // Validate phone format for whatsapp
-        if (stepType === 'whatsapp.send' && config.contact) {
+        const configWithContact = config as { contact?: unknown };
+        if (stepType === 'whatsapp.send' && configWithContact.contact) {
           const phoneRegex = /^\+[1-9]\d{1,14}$/;
-          if (!phoneRegex.test(config.contact as string)) {
+          if (!phoneRegex.test(configWithContact.contact as string)) {
             return {
               valid: false,
               errors: [
@@ -117,9 +119,10 @@ describe('WorkflowValidationService', () => {
         }
 
         // Validate email format for email.send
-        if (stepType === 'email.send' && config.recipient) {
+        const configWithRecipient = config as { recipient?: unknown };
+        if (stepType === 'email.send' && configWithRecipient.recipient) {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(config.recipient as string)) {
+          if (!emailRegex.test(configWithRecipient.recipient as string)) {
             return {
               valid: false,
               errors: ['Invalid email format'],
@@ -129,7 +132,7 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateCronExpression: jest.fn((expression) => {
+      validateCronExpression: jest.fn((expression: unknown) => {
         // Basic validation for cron expressions
         if (!expression || typeof expression !== 'string') {
           return {
@@ -164,13 +167,14 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateUniqueStepIds: jest.fn((steps) => {
-        const ids = steps.map((step: { id: string }) => step.id);
+      validateUniqueStepIds: jest.fn((steps: unknown) => {
+        const stepsArray = steps as Array<{ id: string }>;
+        const ids = stepsArray.map((step) => step.id);
         const uniqueIds = new Set(ids);
 
         if (ids.length !== uniqueIds.size) {
           const duplicates = ids.filter(
-            (id: string, index: number) => ids.indexOf(id) !== index,
+            (id, index) => ids.indexOf(id) !== index,
           );
           return {
             valid: false,
@@ -195,17 +199,18 @@ describe('WorkflowValidationService', () => {
         }
         return { valid: true };
       }),
-      validateWorkflowSteps: jest.fn(function (workflow) {
+      validateWorkflowSteps: jest.fn(function (workflow: unknown) {
         // Use the arrow function to access the mocked validateUniqueStepIds
+        const wf = workflow as { steps: Array<{ id: string; type: string; config: unknown }> };
         const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(
-          workflow.steps,
+          wf.steps,
         );
         if (!uniqueIdResult.valid) {
           return uniqueIdResult;
         }
 
         // Validate each step configuration
-        for (const step of workflow.steps) {
+        for (const step of wf.steps) {
           const stepResult = mockValidationEngine.validateStepConfig(
             step.type,
             step.config,
@@ -222,8 +227,9 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateWorkflowTriggers: jest.fn((workflow) => {
-        for (const trigger of workflow.triggers) {
+      validateWorkflowTriggers: jest.fn((workflow: unknown) => {
+        const wf = workflow as { triggers: Array<{ type: string; config: { schedule?: string } }> };
+        for (const trigger of wf.triggers) {
           if (trigger.type === 'cron' && trigger.config.schedule) {
             const cronResult = mockValidationEngine.validateCronExpression(
               trigger.config.schedule,

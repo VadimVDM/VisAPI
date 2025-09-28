@@ -620,7 +620,7 @@ export class CbbClientService {
     languageCode: string,
     parameters: string[],
     correlationData?: string, // Optional correlation data for biz_opaque_callback_data
-  ): Promise<any> {
+  ): Promise<MessageResponse> {
     this.logger.debug(
       `Sending WhatsApp template '${templateName}' to contact ${contactId}`,
     );
@@ -661,7 +661,7 @@ export class CbbClientService {
     };
 
     try {
-      const response = await this.makeRequest(
+      const response = await this.makeRequest<MessageResponse>(
         'POST',
         `/contacts/${contactId}/send_content`,
         {
@@ -674,12 +674,7 @@ export class CbbClientService {
       );
       this.logger.debug('CBB Response:', response.data);
 
-      return {
-        success: true,
-        template: templateName,
-        contact_id: contactId,
-        response: response.data,
-      };
+      return response.data;
     } catch (error) {
       this.logger.error(
         `Failed to send WhatsApp template '${templateName}':`,
@@ -706,7 +701,7 @@ export class CbbClientService {
       processingDays: string;
     },
     correlationData?: string, // Optional correlation data for message ID tracking
-  ): Promise<any> {
+  ): Promise<MessageResponse> {
     this.logger.debug(
       `Sending order confirmation to ${contactId} for order ${orderData.orderNumber}`,
     );

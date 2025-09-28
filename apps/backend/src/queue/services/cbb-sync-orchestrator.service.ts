@@ -1,46 +1,64 @@
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { CbbClientService } from '@visapi/backend-core-cbb';
-import {
-  CBBContactSyncResult,
-  QUEUE_NAMES,
-  JOB_NAMES,
-} from '@visapi/shared-types';
+import { CBBContactSyncResult, CBBContactData } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
-import { QueueService } from '../queue.service';
-import { CBBFieldMapperService } from './cbb-field-mapper.service';
 import { CBBSyncMetricsService } from './cbb-sync-metrics.service';
 import { WhatsAppTranslationService } from './whatsapp-translation.service';
+import { CbbContactSyncService } from './cbb-contact-sync.service';
+import { CbbWhatsAppService } from './cbb-whatsapp.service';
+import { OrderData, ApplicantData } from './cbb-order.types';
+import { CBBContactRecord } from '@visapi/backend-queue';
 
-interface OrderData {
+// Define a proper type for the CBB contact record from Supabase
+interface CBBContact extends CBBContactRecord {
   order_id: string;
   client_phone: string;
-  client_name: string;
   client_email: string;
+  client_name: string;
   product_country: string;
-  product_doc_type: string | null;
-  product_intent?: string | null;
-  product_entries?: string | null;
-  product_validity?: string | null;
-  product_days_to_use?: number | null;
-  visa_quantity: number | null;
-  amount: number;
-  currency: string;
-  entry_date: string | null;
+  product_doc_type?: string;
+  product_intent?: string;
+  product_entries?: string;
+  product_validity?: string;
+  is_urgent: boolean;
+  processing_days: number;
+  language_code: string;
+  country_name_translated?: string;
+  visa_type_translated?: string;
+  processing_days_translated?: string;
   branch: string;
-  form_id: string;
-  webhook_received_at: string;
-  whatsapp_alerts_enabled: boolean | null;
-  applicants_data?: any;
-  cbb_synced?: boolean | null;
-  cbb_contact_id?: string | null;
-  whatsapp_confirmation_sent?: boolean | null;
-  whatsapp_confirmation_sent_at?: string | null;
-  whatsapp_message_id?: string | null;
-  is_urgent?: boolean | null; // Direct boolean field from orders table
-  product_data?: any; // JSON field containing product details
+  order_days: number;
+  alerts_enabled: boolean;
+  cbb_synced: boolean;
+  cbb_sync_attempts: number;
+  cbb_sync_error_count: number;
+  cbb_contact_id?: string;
+  cbb_sync_last_attempt_at?: string;
+  cbb_sync_last_error?: string;
+  new_order_notification_sent?: boolean;
+  new_order_notification_sent_at?: string;
+  created_at: string;
+  updated_at: string;
 }
+
+type CbbContactUpdate = Partial<
+  Pick<
+    CBBContact,
+    | 'cbb_contact_id'
+    | 'cbb_synced'
+    | 'cbb_sync_attempts'
+    | 'cbb_sync_error_count'
+    | 'cbb_sync_last_error'
+    | 'alerts_enabled'
+    | 'new_order_notification_sent'
+  > & {
+    cbb_sync_last_attempt_at?: Date;
+    new_order_notification_sent_at?: Date;
+    updated_at?: string;
+  }
+>;
 
 /**
  * Service responsible for orchestrating CBB contact synchronization
@@ -54,11 +72,121 @@ export class CBBSyncOrchestratorService {
     private readonly cbbService: CbbClientService,
     private readonly supabaseService: SupabaseService,
     private readonly logService: LogService,
-    private readonly queueService: QueueService,
-    private readonly fieldMapper: CBBFieldMapperService,
     private readonly metricsService: CBBSyncMetricsService,
     private readonly translationService: WhatsAppTranslationService,
+    private readonly contactSyncService: CbbContactSyncService,
+    private readonly whatsappService: CbbWhatsAppService,
   ) {}
+
+  private async getCBBContact(orderId: string): Promise<CBBContact | null> {
+    const { data, error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows found
+      this.logger.error(
+        { error },
+        `Failed to get CBB contact for order ${orderId}`,
+      );
+    }
+
+    return data as CBBContact | null;
+  }
+
+  private async saveCBBContact(
+    order: OrderData,
+    translations: {
+      countryNameTranslated?: string;
+      visaTypeTranslated?: string;
+      processingDaysTranslated?: string;
+    } = {},
+  ): Promise<CBBContact | null> {
+    const language = this.mapBranchToLanguage(order.branch);
+    const processingDays =
+      order.processing_days ||
+      this.calculateDefaultProcessingDays(
+        order.product_country,
+        order.is_urgent === true,
+      );
+
+    const contactData: Omit<
+      CBBContact,
+      'id' | 'created_at' | 'updated_at' | 'cbb_contact_uuid'
+    > = {
+      order_id: order.order_id,
+      client_phone: order.client_phone,
+      client_email: order.client_email,
+      client_name: order.client_name,
+      product_country: order.product_country,
+      product_doc_type: order.product_doc_type,
+      product_intent: order.product_intent,
+      product_entries: order.product_entries,
+      product_validity: order.product_validity,
+      is_urgent: order.is_urgent === true, // Store boolean directly
+      processing_days: processingDays,
+      language_code:
+        language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
+      country_name_translated: translations.countryNameTranslated,
+      visa_type_translated: translations.visaTypeTranslated,
+      processing_days_translated: translations.processingDaysTranslated,
+      branch: order.branch,
+      order_days: processingDays,
+      alerts_enabled: order.whatsapp_alerts_enabled ?? true, // Internal tracking for WhatsApp notifications
+      cbb_synced: false,
+      cbb_sync_attempts: 0,
+      cbb_sync_error_count: 0,
+    };
+
+    const { data, error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .upsert(contactData, { onConflict: 'order_id' })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(
+        { error },
+        `Failed to save CBB contact for order ${order.order_id}`,
+      );
+      return null;
+    }
+
+    return data as CBBContact;
+  }
+
+  private async updateCBBSyncStatus(
+    orderId: string,
+    updates: CbbContactUpdate,
+  ): Promise<void> {
+    const updateData: Record<string, unknown> = { ...updates };
+
+    if (updates.cbb_sync_last_attempt_at) {
+      updateData.cbb_sync_last_attempt_at =
+        updates.cbb_sync_last_attempt_at.toISOString();
+    }
+    if (updates.new_order_notification_sent_at) {
+      updateData.new_order_notification_sent_at =
+        updates.new_order_notification_sent_at.toISOString();
+    }
+
+    // Always update the updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
+
+    const { error } = await this.supabaseService.serviceClient
+      .from('cbb_contacts')
+      .update(updateData)
+      .eq('order_id', orderId);
+
+    if (error) {
+      this.logger.error(
+        { error },
+        `Failed to update CBB sync status for order ${orderId}`,
+      );
+    }
+  }
 
   /**
    * Main sync orchestration method with enhanced error handling
@@ -105,7 +233,7 @@ export class CBBSyncOrchestratorService {
     }
 
     // 3. Check or create CBB contact record (cached for reuse)
-    let cbbContact = await this.fieldMapper.getCBBContact(orderId);
+    let cbbContact = await this.getCBBContact(orderId);
 
     // If no CBB contact record exists, create it first
     if (!cbbContact) {
@@ -159,7 +287,7 @@ export class CBBSyncOrchestratorService {
         }
       }
 
-      cbbContact = await this.fieldMapper.saveCBBContact(order, translations);
+      cbbContact = await this.saveCBBContact(order, translations);
       if (!cbbContact) {
         const duration = endTimer();
         this.metricsService.recordSyncComplete(
@@ -176,14 +304,14 @@ export class CBBSyncOrchestratorService {
     }
 
     // 4. Update sync attempt tracking
-    await this.fieldMapper.updateCBBSyncStatus(orderId, {
-      cbb_sync_attempts: (cbbContact?.cbb_sync_attempts || 0) + 1,
+    await this.updateCBBSyncStatus(orderId, {
+      cbb_sync_attempts: (cbbContact.cbb_sync_attempts || 0) + 1,
       cbb_sync_last_attempt_at: new Date(),
     });
     this.metricsService.recordSyncAttempt(branch);
 
     // 5. Check if already synced
-    if (cbbContact?.cbb_synced === true && cbbContact.cbb_contact_id) {
+    if (cbbContact.cbb_synced === true && cbbContact.cbb_contact_id) {
       this.logger.info(
         `Order ${orderId} already synced with contact ${cbbContact.cbb_contact_id}`,
       );
@@ -203,11 +331,11 @@ export class CBBSyncOrchestratorService {
 
     try {
       // 6. Prepare contact data
-      const contactData = this.fieldMapper.mapOrderToContact(order);
+      const contactData = this.mapOrderToContact(order);
 
       // 7. Create or update contact with error handling
       const { contact, isNewContact, error } =
-        await this.createOrUpdateContactSafe(
+        await this.contactSyncService.createOrUpdateContact(
           order.client_phone,
           contactData,
           orderId,
@@ -244,7 +372,7 @@ export class CBBSyncOrchestratorService {
       }
 
       // 9. Update CBB contact record with results
-      await this.fieldMapper.updateCBBSyncStatus(orderId, {
+      await this.updateCBBSyncStatus(orderId, {
         cbb_contact_id: contact?.id,
         cbb_synced: true,
         cbb_sync_last_error: error || undefined,
@@ -267,7 +395,7 @@ export class CBBSyncOrchestratorService {
       );
       
       if (contact && !error) {
-        await this.queueWhatsAppConfirmation(
+        await this.whatsappService.queueOrderConfirmation(
           order,
           contact.id,
           hasWhatsApp,
@@ -316,284 +444,18 @@ export class CBBSyncOrchestratorService {
     }
   }
 
-  /**
-   * Create or update CBB contact with safe error handling
-   */
-  private async createOrUpdateContactSafe(
-    phoneNumber: string,
-    contactData: any,
-    orderId: string,
-  ): Promise<{ contact: any; isNewContact: boolean; error?: string }> {
-    try {
-      const result = await this.createOrUpdateContact(
-        phoneNumber,
-        contactData,
-        orderId,
-      );
-      return { ...result, error: undefined };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Failed to create/update contact for order ${orderId}: ${errorMessage}`,
-        error,
-      );
-
-      // Try to at least get the contact if it exists
-      try {
-        const existingContact =
-          await this.cbbService.getContactById(phoneNumber);
-        if (existingContact) {
-          return {
-            contact: existingContact,
-            isNewContact: false,
-            error: `Found existing contact but update failed: ${errorMessage}`,
-          };
-        }
-      } catch (fetchError) {
-        // Even fetching failed
-        this.logger.error(
-          `Could not even fetch contact ${phoneNumber}:`,
-          fetchError,
-        );
-      }
-
-      return {
-        contact: null,
-        isNewContact: false,
-        error: errorMessage,
-      };
-    }
-  }
-
-  /**
-   * Create or update CBB contact
-   */
-  private async createOrUpdateContact(
-    phoneNumber: string,
-    contactData: any,
-    orderId: string,
-  ): Promise<{ contact: any; isNewContact: boolean }> {
-    // Check if contact exists
-    let contact = await this.cbbService.getContactById(phoneNumber);
-    this.metricsService.recordContactOperation(
-      'fetch',
-      contact ? 'success' : 'failed',
-    );
-
-    if (contact) {
-      // CBB API limitation: Can only update custom fields, not basic fields
-      this.logger.warn(
-        `Contact ${phoneNumber} exists. CBB API only allows updating custom fields.`,
-      );
-
-      // Check if basic fields differ
-      if (
-        contact.name !== contactData.name ||
-        contact.email !== contactData.email
-      ) {
-        this.logger.warn(
-          `Cannot update basic fields for existing contact ${phoneNumber}. ` +
-            `Current: name="${contact.name}", email="${contact.email}". ` +
-            `New: name="${contactData.name}", email="${contactData.email}"`,
-        );
-      }
-
-      // Update custom fields only
-      try {
-        contact = await this.cbbService.updateContactComplete(contactData);
-        this.metricsService.recordContactOperation('update', 'success');
-        this.logger.info(
-          `Updated CBB contact custom fields for order ${orderId}`,
-        );
-      } catch (updateError) {
-        this.metricsService.recordContactOperation('update', 'failed');
-        throw updateError;
-      }
-
-      return { contact, isNewContact: false };
-    } else {
-      // Create new contact
-      try {
-        contact = await this.cbbService.createContactWithFields(contactData);
-        this.metricsService.recordContactOperation('create', 'success');
-        this.logger.info(`Created new CBB contact for order ${orderId}`);
-      } catch (createError) {
-        this.metricsService.recordContactOperation('create', 'failed');
-        throw createError;
-      }
-
-      return { contact, isNewContact: true };
-    }
-  }
-
-  /**
-   * Queue WhatsApp order confirmation if conditions are met
-   * Uses comprehensive duplicate prevention checking both CBB contact and WhatsApp messages table
-   */
   private async queueWhatsAppConfirmation(
     order: OrderData,
     contactId: string,
     hasWhatsApp: boolean,
-    cbbContact: any, // Passed from caller to avoid re-fetching
+    cbbContact: CBBContactRecord,
   ): Promise<void> {
-    // Check WhatsApp messages table for existing successful messages
-    const isAlreadySent = await this.isOrderConfirmationAlreadySent(
-      order.order_id,
+    await this.whatsappService.queueOrderConfirmation(
+      order,
+      contactId,
+      hasWhatsApp,
+      cbbContact,
     );
-
-    // Always log the conditions for debugging
-    this.logger.info(
-      `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
-      {
-        hasWhatsApp,
-        whatsapp_alerts_enabled: order.whatsapp_alerts_enabled,
-        cbb_alerts_enabled: cbbContact?.alerts_enabled,
-        new_order_notification_sent: cbbContact?.new_order_notification_sent,
-        whatsapp_message_already_sent: isAlreadySent,
-        branch: order.branch,
-        branch_lowercase: order.branch?.toLowerCase(),
-        is_il_branch: order.branch?.toLowerCase() === 'il',
-      },
-    );
-
-    // Check all conditions for sending WhatsApp confirmation
-    if (
-      !hasWhatsApp ||
-      !order.whatsapp_alerts_enabled ||
-      order.branch?.toLowerCase() !== 'il' ||
-      cbbContact?.alerts_enabled === false || // Check if alerts are enabled for this contact
-      cbbContact?.new_order_notification_sent === true || // Check CBB contact flag
-      isAlreadySent // Check WhatsApp messages table
-    ) {
-      // Always log skip reasons for debugging
-      let skipReason = 'Unknown';
-      if (!hasWhatsApp) {
-        skipReason = `Contact doesn't have WhatsApp`;
-      } else if (!order.whatsapp_alerts_enabled) {
-        skipReason = `WhatsApp alerts disabled on order`;
-      } else if (order.branch?.toLowerCase() !== 'il') {
-        skipReason = `Non-IL branch (${order.branch})`;
-      } else if (cbbContact?.alerts_enabled === false) {
-        skipReason = `WhatsApp alerts disabled for CBB contact`;
-      } else if (cbbContact?.new_order_notification_sent === true) {
-        skipReason = `New order notification already sent (CBB flag)`;
-      } else if (isAlreadySent) {
-        skipReason = `New order notification already sent (WhatsApp messages table)`;
-      }
-
-      this.logger.info(
-        `WhatsApp notification skipped for order ${order.order_id}: ${skipReason}`,
-      );
-      return;
-    }
-
-    try {
-      // Create a WhatsApp message record to track that we've queued this message
-      // This prevents duplicate queueing if CBB sync runs again before the message is processed
-      const { error: trackingError } = await this.supabaseService.serviceClient
-        .from('whatsapp_messages')
-        .insert({
-          id: crypto.randomUUID(),
-          order_id: order.order_id,
-          phone_number: order.client_phone,
-          template_name: 'order_confirmation_global',
-          status: 'queued',
-          confirmation_sent: false,
-          alerts_enabled: order.whatsapp_alerts_enabled,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (trackingError && !trackingError.message?.includes('duplicate')) {
-        this.logger.warn(
-          `Failed to create WhatsApp tracking record for order ${order.order_id}: ${trackingError.message}`,
-        );
-        
-        // Also log to database
-        await this.logService.createLog({
-          level: 'warn',
-          message: `Failed to create WhatsApp tracking record for order ${order.order_id}`,
-          metadata: {
-            order_id: order.order_id,
-            error: trackingError.message,
-            source: 'cbb_sync',
-          },
-        });
-      }
-
-      this.logger.info(
-        `Attempting to queue WhatsApp job for order ${order.order_id}`,
-        {
-          queue_name: QUEUE_NAMES.WHATSAPP_MESSAGES,
-          job_name: JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
-          contact_id: contactId,
-        },
-      );
-      
-      const job = await this.queueService.addJob(
-        QUEUE_NAMES.WHATSAPP_MESSAGES,
-        JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
-        {
-          orderId: order.order_id,
-          contactId: contactId,
-          messageType: 'order_confirmation',
-        },
-        {
-          delay: 1000, // 1 second delay after sync
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        },
-      );
-      
-      if (!job) {
-        throw new Error('Failed to create WhatsApp job - addJob returned null');
-      }
-
-      this.logger.info(
-        `Successfully queued WhatsApp order confirmation for ${order.order_id} to contact ${contactId} (job ID: ${job.id}, job name: ${JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION})`,
-      );
-      
-      // Also log to database for production visibility
-      await this.logService.createLog({
-        level: 'info',
-        message: `Successfully queued WhatsApp order confirmation`,
-        metadata: {
-          order_id: order.order_id,
-          contact_id: contactId,
-          job_id: job.id,
-          job_name: JOB_NAMES.SEND_WHATSAPP_ORDER_CONFIRMATION,
-          source: 'cbb_sync',
-        },
-      });
-
-      // NOTE: The actual sent status will be updated by the WhatsApp processor after successful sending
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      // Don't fail the sync if we can't queue the message
-      this.logger.error(
-        `Failed to queue WhatsApp message for order ${order.order_id}:`,
-        error,
-      );
-      
-      // CRITICAL: Log to database since logger might not work in production
-      await this.logService.createLog({
-        level: 'error',
-        message: `Failed to queue WhatsApp message for order ${order.order_id}`,
-        metadata: {
-          order_id: order.order_id,
-          error: errorMessage,
-          stack: error instanceof Error ? error.stack : undefined,
-          source: 'cbb_sync',
-        },
-      });
-    }
   }
 
   /**
@@ -604,7 +466,7 @@ export class CBBSyncOrchestratorService {
     contactId: string,
     isNewContact: boolean,
     hasWhatsApp: boolean,
-    cbbContact: any, // Passed from caller to avoid re-fetching
+    cbbContact: CBBContact, // Passed from caller to avoid re-fetching
   ): Promise<void> {
     const action = isNewContact ? 'created' : 'updated';
     const whatsappQueued =
@@ -678,21 +540,20 @@ export class CBBSyncOrchestratorService {
       .single();
 
     if (error) {
-      this.logger.error(`Failed to fetch order ${orderId}:`, error);
+      this.logger.error({ error }, `Failed to fetch order ${orderId}`);
       return null;
     }
 
-    return data;
+    return data as OrderData;
   }
 
   /**
    * Update sync attempt tracking - now handled by fieldMapper
-   * @deprecated Use fieldMapper.updateCBBSyncStatus instead
+   * @deprecated This method is no longer used and will be removed.
    */
-  private async updateSyncAttempt(orderId: string): Promise<void> {
-    // This is now handled in the main sync method via fieldMapper
+  private updateSyncAttempt(orderId: string): void {
     this.logger.debug(
-      `Sync attempt update handled by fieldMapper for order ${orderId}`,
+      `Sync attempt update is now handled by the orchestrator for order ${orderId}. This method is deprecated.`,
     );
   }
 
@@ -703,15 +564,20 @@ export class CBBSyncOrchestratorService {
     orderId: string,
     errorMessage: string,
   ): Promise<void> {
-    // Get current error count from CBB contact record
-    const cbbContact = await this.fieldMapper.getCBBContact(orderId);
-    const currentErrorCount = cbbContact?.cbb_sync_error_count || 0;
+    try {
+      const cbbContact = await this.getCBBContact(orderId);
+      const currentErrorCount = cbbContact?.cbb_sync_error_count || 0;
 
-    // Update error info in cbb_contacts table
-    await this.fieldMapper.updateCBBSyncStatus(orderId, {
-      cbb_sync_error_count: currentErrorCount + 1,
-      cbb_sync_last_error: errorMessage.substring(0, 500), // Limit error message length
-    });
+      await this.updateCBBSyncStatus(orderId, {
+        cbb_sync_error_count: currentErrorCount + 1,
+        cbb_sync_last_error: errorMessage.substring(0, 500),
+      });
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        `Failed to record sync error for order ${orderId}`,
+      );
+    }
   }
 
   /**
@@ -746,7 +612,7 @@ export class CBBSyncOrchestratorService {
     synced: boolean,
     errorMessage?: string,
   ): Promise<void> {
-    const updateData: any = {
+    const updateData: Partial<OrderData> = {
       cbb_contact_id: contactId,
       cbb_synced: synced,
       updated_at: new Date().toISOString(),
@@ -766,8 +632,8 @@ export class CBBSyncOrchestratorService {
 
     if (error) {
       this.logger.error(
-        `Failed to update CBB status for order ${orderId}:`,
-        error,
+        { error },
+        `Failed to update CBB status for order ${orderId}`,
       );
       throw error;
     } else {
@@ -794,8 +660,8 @@ export class CBBSyncOrchestratorService {
 
     if (error) {
       this.logger.error(
-        `Failed to link order ${orderId} to CBB contact ${cbbContactUuid}:`,
-        error,
+        { error },
+        `Failed to link order ${orderId} to CBB contact ${cbbContactUuid}`,
       );
       // Don't throw error - this is not critical enough to fail the entire sync
     } else {
@@ -862,8 +728,8 @@ export class CBBSyncOrchestratorService {
     } catch (error) {
       // Fallback on any error
       this.logger.error(
-        `Error calling database processing days function for order ${orderId}:`,
-        error,
+        { error: error instanceof Error ? error.message : String(error) },
+        `Error calling database processing days function for order ${orderId}`,
       );
       return this.calculateDefaultProcessingDays(country, isUrgent);
     }
@@ -893,36 +759,236 @@ export class CBBSyncOrchestratorService {
     }
   }
 
-  /**
-   * Check if order confirmation has already been sent via WhatsApp
-   * Uses same logic as WhatsApp processor for consistency
-   */
-  private async isOrderConfirmationAlreadySent(
+  private mapOrderToContact(order: OrderData): CBBContactData {
+    // Use the direct is_urgent boolean field from orders table
+    const isUrgent = order.is_urgent === true;
+    const orderDateUnix = this.convertDateToUnix(
+      order.entry_date ?? '',
+      order.order_id,
+    );
+    // Use webhook_received_at for the actual order creation time
+    const orderCreationDateUnix = this.convertDateToUnix(
+      order.webhook_received_at,
+      order.order_id,
+    );
+    const gender = this.extractGender(order.applicants_data, order.order_id);
+    const language = this.mapBranchToLanguage(order.branch);
+    const countryFlag = this.getCountryFlag(order.product_country);
+    const visaValidityWithUnits = this.getVisaValidityWithUnits(
+      order.product_validity ?? undefined,
+      order.product_days_to_use ?? undefined,
+    );
+
+    // Use processing_days from database (calculated by business rules engine)
+    // If not available, calculate based on urgency
+    const processingDays =
+      order.processing_days ||
+      this.calculateDefaultProcessingDays(order.product_country, isUrgent);
+
+    // Use actual product data from the order
+    const visaIntent = order.product_intent || 'tourism';
+    const visaEntries = order.product_entries || 'single';
+
+    this.logger.debug(
+      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityWithUnits}, processing=${processingDays} days`,
+    );
+
+    return {
+      id: order.client_phone,
+      phone: order.client_phone,
+      name: order.client_name,
+      email: order.client_email,
+      gender: gender,
+      language: language,
+      cufs: this.buildCustomFields(order, {
+        isUrgent,
+        orderDateUnix,
+        orderCreationDateUnix,
+        visaIntent,
+        visaEntries,
+        visaValidityWithUnits,
+        countryFlag,
+        processingDays,
+      }),
+    };
+  }
+
+  private buildCustomFields(
+    order: OrderData,
+    computed: {
+      isUrgent: boolean;
+      orderDateUnix?: number;
+      orderCreationDateUnix?: number;
+      visaIntent: string;
+      visaEntries: string;
+      visaValidityWithUnits: string;
+      countryFlag: string;
+      processingDays: number;
+    },
+  ): Record<string, string | number | boolean | undefined> {
+    return {
+      // Text fields (type 0)
+      customer_name: order.client_name,
+      visa_country: order.product_country,
+      visa_type: order.product_doc_type || 'tourist',
+      OrderNumber: order.order_id,
+
+      // Number fields (type 1)
+      visa_quantity: order.visa_quantity || 1,
+      order_days: computed.processingDays, // Processing days for WhatsApp template
+      order_sum_ils: order.amount || 0, // Total amount paid (CUF ID: 358366)
+
+      // Boolean fields (type 4) - CBB expects 1 for true, 0 for false
+      order_urgent: computed.isUrgent ? 1 : 0,
+      wa_alerts: order.whatsapp_alerts_enabled ? 1 : 0, // WhatsApp alerts enabled (CUF ID: 662459)
+
+      // Date field (type 2) expects Unix timestamp in seconds
+      order_date: computed.orderDateUnix, // Travel/entry date
+      order_date_time: computed.orderCreationDateUnix, // Order creation timestamp (CUF ID: 100644)
+
+      // Visa fields using actual product data
+      visa_intent: computed.visaIntent,
+      visa_entries: computed.visaEntries,
+      visa_validity: computed.visaValidityWithUnits, // Now includes units like "30 days", "6 months", "1 year"
+      visa_flag: computed.countryFlag,
+
+      // System fields
+      Email: order.client_email, // System field ID -12
+    };
+  }
+
+  private convertDateToUnix(
+    dateString: string,
     orderId: string,
-  ): Promise<boolean> {
+  ): number | undefined {
+    if (!dateString) {
+      return undefined;
+    }
+
     try {
-      const { data, error } = await this.supabaseService.serviceClient
-        .from('whatsapp_messages')
-        .select('id, confirmation_sent, status')
-        .eq('order_id', orderId)
-        .eq('template_name', 'order_confirmation_global')
-        .maybeSingle();
-
-      if (error) {
-        this.logger.warn(
-          `Failed to check WhatsApp message status for order ${orderId}: ${error.message}`,
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        const unixTimestamp = Math.floor(date.getTime() / 1000);
+        this.logger.debug(
+          `Converted entry_date ${dateString} to Unix timestamp: ${unixTimestamp} for order ${orderId}`,
         );
-        return false; // Allow retry if we can't check
+        return unixTimestamp;
       }
-
-      // Message exists and was successfully sent
-      return data?.confirmation_sent === true || data?.status === 'delivered';
     } catch (error) {
-      this.logger.error(
-        `Error checking WhatsApp message status for order ${orderId}:`,
-        error,
+      this.logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        `Failed to convert entry_date to Unix timestamp: ${dateString} for order ${orderId}`,
       );
-      return false; // Allow retry on error
+    }
+
+    return undefined;
+  }
+
+  private extractGender(
+    applicantsData: ApplicantData[],
+    orderId: string,
+  ): string | undefined {
+    if (
+      !applicantsData ||
+      !Array.isArray(applicantsData) ||
+      !applicantsData[0]
+    ) {
+      return undefined;
+    }
+
+    const firstApplicant = applicantsData[0];
+    if (firstApplicant.passport?.sex) {
+      // Convert passport sex (m/f) to CBB gender format
+      const gender =
+        firstApplicant.passport.sex === 'm'
+          ? 'male'
+          : firstApplicant.passport.sex === 'f'
+            ? 'female'
+            : undefined;
+
+      this.logger.debug(
+        `Extracted gender for ${orderId}: ${gender} from passport sex: ${firstApplicant.passport.sex}`,
+      );
+
+      return gender;
+    }
+
+    return undefined;
+  }
+
+  private getCountryFlag(country: string): string {
+    const normalizedCountry = country?.toLowerCase().trim();
+    const countryFlags: Record<string, string> = {
+      india: '🇮🇳',
+      usa: '🇺🇸',
+      us: '🇺🇸',
+      'united states': '🇺🇸',
+      'u.s.': '🇺🇸',
+      uk: '🇬🇧',
+      'united kingdom': '🇬🇧',
+      britain: '🇬🇧',
+      canada: '🇨🇦',
+      israel: '🇮🇱',
+      thailand: '🇹🇭',
+      'south korea': '🇰🇷',
+      korea: '🇰🇷',
+      vietnam: '🇻🇳',
+      'saudi arabia': '🇸🇦',
+      saudi: '🇸🇦',
+      indonesia: '🇮🇩',
+      bahrain: '🇧🇭',
+      'new zealand': '🇳🇿',
+      cambodia: '🇰🇭',
+      schengen: '🇪🇺',
+      'schengen area': '🇪🇺',
+      morocco: '🇲🇦',
+      'sri lanka': '🇱🇰',
+      togo: '🇹🇬',
+    };
+    return countryFlags[normalizedCountry] || '';
+  }
+
+  private getVisaValidityWithUnits(
+    validity?: string,
+    daysToUse?: number,
+  ): string {
+    // If specific days are provided, format with "days" unit
+    if (daysToUse) {
+      if (daysToUse === 30) {
+        return '1 month';
+      } else if (daysToUse === 60) {
+        return '2 months';
+      } else if (daysToUse === 90) {
+        return '3 months';
+      } else if (daysToUse === 180) {
+        return '6 months';
+      } else if (daysToUse === 365) {
+        return '1 year';
+      } else if (daysToUse === 730) {
+        return '2 years';
+      } else {
+        return `${daysToUse} days`;
+      }
+    }
+
+    // Map validity period to formatted string with units
+    switch (validity) {
+      case 'month':
+        return '1 month';
+      case 'year':
+        return '1 year';
+      case '3months':
+        return '3 months';
+      case '6months':
+        return '6 months';
+      case '2years':
+        return '2 years';
+      case '5years':
+        return '5 years';
+      case '10years':
+        return '10 years';
+      default:
+        return '30 days'; // Default to 30 days
     }
   }
 }

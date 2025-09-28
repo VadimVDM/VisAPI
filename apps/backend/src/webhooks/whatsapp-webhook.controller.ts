@@ -21,13 +21,24 @@ import {
   WebhookVerifierService,
   DeliveryTrackerService,
   TemplateManagerService,
-  WebhookEvent,
   WebhookVerifyDto,
   MessageIdUpdaterService,
 } from '@visapi/backend-whatsapp-business';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { SlackRateLimiterService } from './slack-rate-limiter.service';
+import {
+  AccountUpdate,
+  BusinessCapabilityUpdate,
+  EnhancedMessageStatus,
+  TemplateStatusUpdate,
+  WhatsAppChange,
+  WhatsAppWebhookPayload,
+  WhatsAppValue,
+} from './whatsapp.types';
+import { Database } from '@visapi/shared-types';
+
+type DbWhatsappMessages = Database['public']['Tables']['whatsapp_messages']['Row'];
 
 @ApiTags('WhatsApp Webhooks')
 @Controller('v1/webhooks/whatsapp')
@@ -64,36 +75,23 @@ export class WhatsAppWebhookController {
   @ApiOperation({ summary: 'Verify WhatsApp webhook' })
   @ApiResponse({ status: 200, description: 'Webhook verified' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async verifyWebhook(@Query() query: any): Promise<string> {
+  async verifyWebhook(@Query() query: WebhookVerifyDto): Promise<string> {
     // Only log in development to reduce production logs
     if (!this.configService.isProduction) {
       this.logger.log('WhatsApp webhook verification request received');
       this.logger.debug(`Query parameters: ${JSON.stringify(query)}`);
     }
 
-    // Handle both direct query params and nested object structures
-    const normalizedQuery: WebhookVerifyDto = {
-      'hub.mode': query['hub.mode'] || query.hub?.mode || query['hub[mode]'],
-      'hub.verify_token':
-        query['hub.verify_token'] ||
-        query.hub?.verify_token ||
-        query['hub[verify_token]'],
-      'hub.challenge':
-        query['hub.challenge'] ||
-        query.hub?.challenge ||
-        query['hub[challenge]'],
-    };
-
     try {
       const challenge =
-        this.webhookVerifier.verifyWebhookChallenge(normalizedQuery);
+        this.webhookVerifier.verifyWebhookChallenge(query);
 
       await this.trackWebhookEvent({
         method: 'GET',
         status: 'verified',
         challenge,
         details: {
-          mode: normalizedQuery['hub.mode'],
+          mode: query['hub.mode'],
           verified: true,
         },
       });
@@ -108,7 +106,7 @@ export class WhatsAppWebhookController {
         method: 'GET',
         status: 'failed',
         details: {
-          mode: normalizedQuery['hub.mode'],
+          mode: query['hub.mode'],
           error: errorMessage,
           rawQuery: query,
         },
@@ -124,8 +122,8 @@ export class WhatsAppWebhookController {
   @ApiResponse({ status: 200, description: 'Webhook processed' })
   @ApiResponse({ status: 401, description: 'Invalid signature' })
   async receiveWebhook(
-    @Body() body: WebhookEvent,
-    @Headers() headers: any,
+    @Body() body: WhatsAppWebhookPayload,
+    @Headers() headers: Record<string, string>,
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     const eventId = uuidv4();
@@ -201,28 +199,29 @@ export class WhatsAppWebhookController {
       await this.updateWebhookEventStatus(eventId, 'processed');
 
       return { status: 'success' };
-    } catch (error: any) {
-      this.logger.error(`Error processing webhook: ${error.message}`, error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error processing webhook: ${errorMessage}`, error);
 
-      await this.updateWebhookEventStatus(eventId, 'failed', error.message);
+      await this.updateWebhookEventStatus(eventId, 'failed', errorMessage);
 
       // Check rate limit before sending Slack notification
       if (this.slackWebhookUrl) {
         const shouldSend = await this.slackRateLimiter.shouldSendNotification(
           'webhook_failure',
-          error.message, // Use error message as key for granular rate limiting
+          errorMessage, // Use error message as key for granular rate limiting
         );
 
         if (shouldSend) {
           const rateLimitStatus =
             await this.slackRateLimiter.getRateLimitStatus(
               'webhook_failure',
-              error.message,
+              errorMessage,
             );
 
           await this.sendSlackAlert('Webhook Processing Failed', {
             eventId,
-            error: error.message,
+            error: errorMessage,
             eventType: this.webhookVerifier.extractEventType(body),
             rateLimitInfo: {
               message: 'This notification is rate limited to 1 per hour',
@@ -232,11 +231,11 @@ export class WhatsAppWebhookController {
 
           await this.slackRateLimiter.recordNotificationSent(
             'webhook_failure',
-            error.message,
+            errorMessage,
           );
         } else {
           this.logger.debug(
-            `Slack notification suppressed due to rate limiting for webhook failure: ${error.message}`,
+            `Slack notification suppressed due to rate limiting for webhook failure: ${errorMessage}`,
           );
         }
       }
@@ -246,36 +245,36 @@ export class WhatsAppWebhookController {
   }
 
   private async processWebhookChange(
-    change: any,
-    eventId: string,
+    change: WhatsAppChange,
+    _eventId: string,
   ): Promise<void> {
     const { field, value } = change;
 
     switch (field) {
       case 'messages':
-        await this.processMessageWebhook(value, eventId);
+        await this.processMessageWebhook(value, _eventId);
         break;
 
       case 'message_template_status_update':
-        await this.processTemplateStatusWebhook(value, eventId);
+        await this.processTemplateStatusWebhook(value as TemplateStatusUpdate, _eventId);
         break;
 
       case 'account_update':
-        await this.processAccountUpdateWebhook(value, eventId);
+        await this.processAccountUpdateWebhook(value as AccountUpdate, _eventId);
         break;
 
       case 'business_capability_update':
-        await this.processBusinessCapabilityWebhook(value, eventId);
+        this.processBusinessCapabilityWebhook(value as BusinessCapabilityUpdate, _eventId);
         break;
 
       default:
-        this.logger.warn(`Unknown webhook field: ${field}`);
+        this.logger.warn(`Unknown webhook field: ${field as string}`);
     }
   }
 
   private async processMessageWebhook(
-    value: any,
-    eventId: string,
+    value: WhatsAppValue,
+    _eventId: string,
   ): Promise<void> {
     const statuses = value.statuses || [];
 
@@ -286,8 +285,7 @@ export class WhatsAppWebhookController {
           `Processing message status: ${status.id} - ${status.status}`,
         );
       }
-
-      let finalMessageId = status.id;
+      const finalMessageId = status.id;
       let messageIdUpdated = false;
 
       // Update message ID if this is the first status update with real Meta message ID
@@ -351,20 +349,20 @@ export class WhatsAppWebhookController {
         }
       }
 
-      const messageStatus = {
+      const messageStatus: EnhancedMessageStatus = {
         id: finalMessageId,
         status: status.status,
-        timestamp: new Date(status.timestamp * 1000),
+        timestamp: new Date(Number(status.timestamp) * 1000),
         recipient: status.recipient_id,
         conversationId: status.conversation?.id,
-        conversationCategory: status.conversation?.category,
+        conversationCategory: status.conversation?.origin.type,
         pricingModel: status.pricing?.pricing_model,
         isBillable: status.pricing?.billable,
         error: status.errors?.[0],
         messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
-      this.deliveryTracker.updateMessageStatus(messageStatus as any);
+      this.deliveryTracker.updateMessageStatus(messageStatus);
 
       await this.updateMessageInDatabase(messageStatus);
 
@@ -400,8 +398,8 @@ export class WhatsAppWebhookController {
   }
 
   private async processTemplateStatusWebhook(
-    value: any,
-    eventId: string,
+    value: TemplateStatusUpdate,
+    _eventId: string,
   ): Promise<void> {
     this.logger.log(
       `Template status update: ${value.message_template_name} - ${value.event}`,
@@ -450,8 +448,8 @@ export class WhatsAppWebhookController {
   }
 
   private async processAccountUpdateWebhook(
-    value: any,
-    eventId: string,
+    value: AccountUpdate,
+    _eventId: string,
   ): Promise<void> {
     this.logger.log(`Account update received: ${JSON.stringify(value)}`);
 
@@ -467,10 +465,10 @@ export class WhatsAppWebhookController {
     }
   }
 
-  private async processBusinessCapabilityWebhook(
-    value: any,
-    eventId: string,
-  ): Promise<void> {
+  private processBusinessCapabilityWebhook(
+    value: BusinessCapabilityUpdate,
+    _eventId: string,
+  ): void {
     this.logger.log(`Business capability update: ${JSON.stringify(value)}`);
 
     if (value.max_daily_conversation_per_phone) {
@@ -486,19 +484,19 @@ export class WhatsAppWebhookController {
     }
   }
 
-  private async updateMessageInDatabase(status: any): Promise<void> {
+  private async updateMessageInDatabase(status: EnhancedMessageStatus): Promise<void> {
     try {
-      const updates: any = {
+      const updates: Partial<DbWhatsappMessages> = {
         status: status.status,
         updated_at: new Date().toISOString(),
       };
 
       if (status.status === 'delivered') {
-        updates.delivered_at = status.timestamp;
+        updates.delivered_at = status.timestamp.toISOString();
       } else if (status.status === 'read') {
-        updates.read_at = status.timestamp;
+        updates.read_at = status.timestamp.toISOString();
       } else if (status.status === 'failed') {
-        updates.failed_at = status.timestamp;
+        updates.failed_at = status.timestamp.toISOString();
         updates.failure_reason = status.error?.message || 'Unknown error';
       }
 
@@ -551,38 +549,41 @@ export class WhatsAppWebhookController {
         //   .update(orderUpdate)
         //   .eq('order_id', orderId);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
-        `Failed to update message in database: ${error.message}`,
+        `Failed to update message in database: ${errorMessage}`,
       );
     }
   }
 
-  private async trackWebhookEvent(data: any): Promise<void> {
+  private async trackWebhookEvent(data: Record<string, unknown>): Promise<void> {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
-        .insert(data);
-    } catch (error: any) {
-      this.logger.error(`Failed to track webhook event: ${error.message}`);
+        .insert([data]);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to track webhook event: ${errorMessage}`);
     }
   }
 
-  private async trackIncomingMessage(data: any): Promise<void> {
+  private async trackIncomingMessage(data: Record<string, unknown>): Promise<void> {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
-        .insert({
+        .insert([{
           method: 'POST',
           status: 'received',
-          event_type: data.event_type,
-          message_id: data.message_id,
-          phone_number: data.phone_number,
-          details: data.details,
+          event_type: data.event_type as string,
+          message_id: data.message_id as string,
+          phone_number: data.phone_number as string,
+          details: data.details as object,
           created_at: new Date().toISOString(),
-        });
-    } catch (error: any) {
-      this.logger.error(`Failed to track incoming message: ${error.message}`);
+        }]);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to track incoming message: ${errorMessage}`);
     }
   }
 
@@ -592,7 +593,7 @@ export class WhatsAppWebhookController {
     error?: string,
   ): Promise<void> {
     try {
-      const update: any = {
+      const update: Partial<Database['public']['Tables']['whatsapp_webhook_events']['Row']> = {
         processing_status: status,
       };
 
@@ -604,14 +605,15 @@ export class WhatsAppWebhookController {
         .from('whatsapp_webhook_events')
         .update(update)
         .eq('id', eventId);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
-        `Failed to update webhook event status: ${error.message}`,
+        `Failed to update webhook event status: ${errorMessage}`,
       );
     }
   }
 
-  private async forwardToZapier(body: any, eventId: string): Promise<void> {
+  private async forwardToZapier(body: WhatsAppWebhookPayload, eventId: string): Promise<void> {
     try {
       // Forward the exact raw webhook body to Zapier (same as WebhookVerifier)
       // DO NOT add extra fields - Zapier expects the raw Meta webhook format
@@ -640,8 +642,9 @@ export class WhatsAppWebhookController {
           `Webhook forwarded to Zapier for event ${eventId} - Status: ${response.status}`,
         );
       }
-    } catch (error: any) {
-      this.logger.error(`Failed to forward to Zapier: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to forward to Zapier: ${errorMessage}`);
 
       // Still mark the attempt in the database
       await this.supabaseService.serviceClient
@@ -649,7 +652,7 @@ export class WhatsAppWebhookController {
         .update({
           forwarded_to_zapier: false,
           details: {
-            zapier_error: error.message,
+            zapier_error: errorMessage,
             attempted_at: new Date().toISOString(),
           },
         })
@@ -657,7 +660,7 @@ export class WhatsAppWebhookController {
     }
   }
 
-  private async sendSlackAlert(title: string, data: any): Promise<void> {
+  private async sendSlackAlert(title: string, data: Record<string, unknown>): Promise<void> {
     try {
       await firstValueFrom(
         this.httpService.post(this.slackWebhookUrl, {
@@ -689,8 +692,9 @@ export class WhatsAppWebhookController {
           ],
         }),
       );
-    } catch (error: any) {
-      this.logger.error(`Failed to send Slack alert: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to send Slack alert: ${errorMessage}`);
     }
   }
 }

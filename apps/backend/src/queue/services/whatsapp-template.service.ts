@@ -65,7 +65,7 @@ export class WhatsAppTemplateService {
           order.product_days_to_use || undefined,
         );
       }
-    } catch (error) {
+    } catch {
       // Fallback to direct translation if there's an error
       visaTypeHebrew = this.translationService.getVisaTypeHebrew(
         order.product_doc_type ?? 'tourist',

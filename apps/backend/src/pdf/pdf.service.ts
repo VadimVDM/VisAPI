@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, QueueEvents } from 'bullmq';
 import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
 import { GeneratePdfDto, PdfSource, PdfPriority } from './dto/generate-pdf.dto';
+import { PdfPreviewResponseDto } from './dto/pdf-preview-response.dto';
 import { PdfJobService } from './services/pdf-job.service';
 import { nanoid } from 'nanoid';
 
@@ -49,7 +50,10 @@ export class PdfService {
     return jobs;
   }
 
-  async previewPdf(dto: GeneratePdfDto, format: 'base64' | 'url') {
+  async previewPdf(
+    dto: GeneratePdfDto,
+    format: 'base64' | 'url',
+  ): Promise<PdfPreviewResponseDto> {
     this.validateDto(dto);
 
     // For preview, we generate synchronously with a timeout
@@ -74,13 +78,19 @@ export class PdfService {
     const queueEvents = new QueueEvents(QUEUE_NAMES.PDF, {
       connection: this.pdfQueue.opts.connection,
     });
-    
-    const result = await job.waitUntilFinished(
-      queueEvents,
-      30000
-    );
 
-    return result;
+    try {
+      const result = (await job.waitUntilFinished(
+        queueEvents,
+        30000
+      )) as PdfPreviewResponseDto;
+      return result;
+    } catch (error) {
+      this.logger.error(`PDF preview job failed for job ${job.id}:`, error);
+      throw new BadRequestException('PDF preview failed');
+    } finally {
+      await queueEvents.close();
+    }
   }
 
   getAvailableTemplates() {

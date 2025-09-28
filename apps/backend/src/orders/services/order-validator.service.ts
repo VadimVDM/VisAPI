@@ -10,36 +10,48 @@ export interface ValidationResult {
 @Injectable()
 export class OrderValidatorService {
   private readonly logger = new Logger(OrderValidatorService.name);
+  private static readonly VALID_BRANCHES = new Set(['se', 'co', 'il', 'ru', 'kz']);
+  private static readonly VALID_CURRENCIES = new Set([
+    'USD',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'INR',
+    'ILS',
+    'VND',
+    'KRW',
+    'MAD',
+    'SAR',
+  ]);
 
-  /**
-   * Validate order data before creation
-   */
   validateOrderData(orderData: CreateOrderData): ValidationResult {
     const missingFields: string[] = [];
     const warnings: string[] = [];
 
-    // Required fields validation
-    if (!orderData.order_id) missingFields.push('order_id');
-    if (!orderData.form_id) missingFields.push('form_id');
-    if (!orderData.branch) missingFields.push('branch');
-    if (!orderData.domain) missingFields.push('domain');
-    if (!orderData.payment_processor) missingFields.push('payment_processor');
-    if (!orderData.payment_id) missingFields.push('payment_id');
-    if (orderData.amount === null || orderData.amount === undefined) {
-      missingFields.push('amount');
-    }
-    if (!orderData.currency) missingFields.push('currency');
-    if (!orderData.order_status) missingFields.push('order_status');
-    if (!orderData.client_name) missingFields.push('client_name');
-    if (!orderData.client_email) missingFields.push('client_email');
-    if (!orderData.client_phone) missingFields.push('client_phone');
-    // product_name is now stored in product_data JSON column
-    if (!orderData.product_country) missingFields.push('product_country');
-    if (!orderData.webhook_received_at) {
-      missingFields.push('webhook_received_at');
-    }
+    const requiredFields: (keyof CreateOrderData)[] = [
+      'order_id',
+      'form_id',
+      'branch',
+      'domain',
+      'payment_processor',
+      'payment_id',
+      'amount',
+      'currency',
+      'order_status',
+      'client_name',
+      'client_email',
+      'client_phone',
+      'product_country',
+      'webhook_received_at',
+    ];
 
-    // Business logic validation
+    requiredFields.forEach((field) => {
+      if (orderData[field] === null || orderData[field] === undefined) {
+        missingFields.push(field);
+      }
+    });
+
     if (orderData.amount < 0) {
       warnings.push('Order amount is negative');
     }
@@ -56,11 +68,11 @@ export class OrderValidatorService {
       warnings.push(`Invalid phone format: ${orderData.client_phone}`);
     }
 
-    if (!this.isValidBranch(orderData.branch)) {
+    if (!OrderValidatorService.VALID_BRANCHES.has(orderData.branch.toLowerCase())) {
       warnings.push(`Unknown branch code: ${orderData.branch}`);
     }
 
-    if (!this.isValidCurrency(orderData.currency)) {
+    if (!OrderValidatorService.VALID_CURRENCIES.has(orderData.currency.toUpperCase())) {
       warnings.push(`Unknown currency code: ${orderData.currency}`);
     }
 
@@ -71,54 +83,19 @@ export class OrderValidatorService {
     };
   }
 
-  /**
-   * Validate email format
-   */
   private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) return false;
+    // A more robust email regex
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   }
 
-  /**
-   * Validate phone number format
-   */
   private isValidPhoneNumber(phone: string): boolean {
-    // Should be at least 7 digits
+    if (!phone) return false;
     const cleanPhone = phone.replace(/\D/g, '');
     return cleanPhone.length >= 7 && cleanPhone !== '0000000000';
   }
 
-  /**
-   * Validate branch code
-   */
-  private isValidBranch(branch: string): boolean {
-    const validBranches = ['se', 'co', 'il', 'ru', 'kz'];
-    return validBranches.includes(branch.toLowerCase());
-  }
-
-  /**
-   * Validate currency code
-   */
-  private isValidCurrency(currency: string): boolean {
-    const validCurrencies = [
-      'USD',
-      'EUR',
-      'GBP',
-      'CAD',
-      'AUD',
-      'INR',
-      'ILS',
-      'VND',
-      'KRW',
-      'MAD',
-      'SAR',
-    ];
-    return validCurrencies.includes(currency.toUpperCase());
-  }
-
-  /**
-   * Check if order is eligible for WhatsApp
-   */
   isEligibleForWhatsApp(orderData: CreateOrderData): boolean {
     return (
       orderData.branch?.toLowerCase() === 'il' &&
@@ -127,46 +104,35 @@ export class OrderValidatorService {
     );
   }
 
-  /**
-   * Check if order is eligible for CBB sync
-   */
   isEligibleForCBBSync(orderData: CreateOrderData): boolean {
     return orderData.branch?.toLowerCase() === 'il';
   }
 
-  /**
-   * Sanitize order data
-   */
   sanitizeOrderData(orderData: CreateOrderData): CreateOrderData {
-    // Remove any potential XSS or injection attempts
     const sanitized = { ...orderData };
 
-    // Sanitize string fields
-    if (sanitized.client_name) {
-      sanitized.client_name = this.sanitizeString(sanitized.client_name);
+    for (const key in sanitized) {
+      if (typeof sanitized[key] === 'string') {
+        sanitized[key] = this.sanitizeString(sanitized[key]);
+      }
     }
-    if (sanitized.client_email) {
-      sanitized.client_email = this.sanitizeString(
-        sanitized.client_email,
-      ).toLowerCase();
-    }
-    // product_name is now in product_data JSON, no need to sanitize here
 
-    // Ensure numeric fields are numbers
+    if (sanitized.client_email) {
+      sanitized.client_email = sanitized.client_email.toLowerCase();
+    }
+
     sanitized.amount = Number(sanitized.amount) || 0;
     sanitized.visa_quantity = Number(sanitized.visa_quantity) || 1;
 
     return sanitized;
   }
 
-  /**
-   * Sanitize string to prevent XSS
-   */
   private sanitizeString(str: string): string {
+    if (typeof str !== 'string') return '';
     return str
-      .replace(/[<>]/g, '') // Remove HTML tags
-      .replace(/javascript:/gi, '') // Remove javascript: protocol
-      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/[<>]/g, '') // Basic HTML tag removal
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
       .trim();
   }
 }

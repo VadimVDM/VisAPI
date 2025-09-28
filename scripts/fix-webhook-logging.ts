@@ -12,7 +12,7 @@
  */
 
 const REQUIRED_CHANGES = `
-CRITICAL FIX NEEDED IN: apps/backend/src/vizi-webhooks/vizi-webhooks.controller.ts
+CRITICAL FIX NEEDED IN: apps/backend/src/webhooks/vizi/vizi-webhooks.controller.ts
 
 Current problematic code (lines 217-233):
 ----------------------------------------

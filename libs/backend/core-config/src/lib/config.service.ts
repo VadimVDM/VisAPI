@@ -19,6 +19,14 @@ export class ConfigService {
     return this.cachedConfig;
   }
 
+  get appName(): string {
+    return this.getConfig().application.name;
+  }
+
+  get appVersion(): string {
+    return this.getConfig().application.version;
+  }
+
   // Generic get method for accessing any config value
   get<T = any>(propertyPath: string): T {
     if (!this.configService) {

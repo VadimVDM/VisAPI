@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import packageInfo from '../../../../../package.json';
+
+const APPLICATION_NAME = packageInfo?.name ?? 'VisAPI';
+const APPLICATION_VERSION = packageInfo?.version ?? '0.0.0';
 
 /**
  * Environment enumeration
@@ -342,6 +346,10 @@ export function getValidatedConfig() {
 
   // Transform to nested configuration object
   return {
+    application: {
+      name: APPLICATION_NAME,
+      version: APPLICATION_VERSION,
+    },
     node: {
       env: env.NODE_ENV,
     },

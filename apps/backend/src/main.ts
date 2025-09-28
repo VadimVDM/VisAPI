@@ -9,15 +9,7 @@ import { AppModule } from './app/app.module';
 import { ConfigService } from '@visapi/core-config';
 import fastifyHelmet from '@fastify/helmet';
 import { createSwaggerAuthMiddleware } from './common/guards/swagger-auth.guard';
-// Read version from package.json at build time
-const packageInfo = { version: '1.0.0' }; // Default version, will be replaced by actual at build time
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pkg = require('../../../package.json') as { version: string };
-  packageInfo.version = pkg.version;
-} catch {
-  // Use default version if package.json is not available
-}
+import { API_GLOBAL_PREFIX } from './common/constants/api.constants';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -31,7 +23,7 @@ async function bootstrap() {
     },
   );
   const configService = app.get(ConfigService);
-  const globalPrefix = 'api';
+  const globalPrefix = API_GLOBAL_PREFIX;
   app.setGlobalPrefix(globalPrefix);
 
   // Security - Fastify helmet
@@ -88,7 +80,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('VisAPI')
     .setDescription('Workflow automation API for Visanet')
-    .setVersion(packageInfo.version)
+    .setVersion(configService.appVersion)
     .addApiKey(
       {
         type: 'apiKey',
@@ -111,12 +103,12 @@ async function bootstrap() {
   // Apply authentication middleware to Swagger routes in production
   if (configService.nodeEnv === 'production') {
     const swaggerAuth = createSwaggerAuthMiddleware(configService);
-    app.use('/api/docs', swaggerAuth);
-    app.use('/api/docs-json', swaggerAuth);
+    app.use(`/${API_GLOBAL_PREFIX}/docs`, swaggerAuth);
+    app.use(`/${API_GLOBAL_PREFIX}/docs-json`, swaggerAuth);
     Logger.log('Swagger documentation protected with authentication');
   }
 
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup(`${API_GLOBAL_PREFIX}/docs`, app, document);
 
   // Enable graceful shutdown hooks
   // Note: Disabled due to Fastify closeIdleConnections compatibility issue with Node.js 22

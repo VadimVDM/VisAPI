@@ -143,6 +143,16 @@ export class CBBSyncMetricsService {
   }> {
     const metrics = await register.getMetricsAsJSON();
 
+    interface Metric {
+      name: string;
+      values?: {
+        value: number;
+        labels?: Record<string, string>;
+      }[];
+      aggregator?: string;
+      value?: number;
+    }
+
     // Parse metrics to calculate summary
     let totalSyncs = 0;
     let successfulSyncs = 0;
@@ -152,7 +162,7 @@ export class CBBSyncMetricsService {
     let whatsappAvailable = 0;
     let whatsappTotal = 0;
 
-    for (const metric of metrics) {
+    for (const metric of metrics as Metric[]) {
       if (metric.name === 'cbb_sync_total') {
         const values = metric.values || [];
         for (const value of values) {
@@ -165,11 +175,10 @@ export class CBBSyncMetricsService {
 
       if (metric.name === 'cbb_sync_duration_seconds') {
         // For histograms, we need to look for specific aggregations
-        const histogram = metric as any;
-        if (histogram.aggregator === 'sum') {
-          totalDuration += histogram.value || 0;
-        } else if (histogram.aggregator === 'count') {
-          durationCount += histogram.value || 0;
+        if (metric.aggregator === 'sum') {
+          totalDuration += metric.value || 0;
+        } else if (metric.aggregator === 'count') {
+          durationCount += metric.value || 0;
         }
       }
 

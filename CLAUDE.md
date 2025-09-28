@@ -38,7 +38,7 @@ VisAPI/
 │           │   └── sagas/📄 CLAUDE.md            # Order sync saga patterns
 │           ├── queue/📄 CLAUDE.md                # Queue processing system
 │           ├── pdf/📄 CLAUDE.md                  # PDF generation module
-│           └── vizi-webhooks/📄 CLAUDE.md        # Vizi webhook integration
+│           └── webhooks/vizi/📄 CLAUDE.md        # Vizi webhook integration
 ├── libs/
 │   └── backend/
 │       ├── cache/📄 CLAUDE.md                    # Redis caching decorators

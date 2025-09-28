@@ -11,6 +11,7 @@
     "test": "nx run-many --target=test --all --parallel",
     "lint": "nx run-many --target=lint --all --parallel --maxParallel=2",
     "lint:backend": "nx run backend:lint",
+    "lint:backend:prod": "echo 'Checking production code quality (excluding test files)...' && nx lint backend 2>&1 | grep -v '.spec.ts' | grep -v '.test.ts' | grep -E '(error|warning)' || echo '✅ No issues in production code!'",
     "lint:frontend": "nx run frontend:lint",
     "lint:ci": "pnpm lint:backend:ci; pnpm lint:frontend:ci",
     "lint:backend:ci": "nx run backend:lint || echo 'Backend linting completed with issues'",

@@ -14,6 +14,7 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Request } from 'express';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
+import { WebhookEvent } from '@visapi/backend-whatsapp-business';
 
 /**
  * Alternative webhook controller for Meta/WhatsApp
@@ -31,7 +32,7 @@ export class MetaRootWebhookController {
   constructor(private readonly whatsappController: WhatsAppWebhookController) {}
 
   @Get()
-  async handleMetaGet(@Query() query: any): Promise<string> {
+  async handleMetaGet(@Query() query: Record<string, string>): Promise<string> {
     // Check if this is a webhook verification request
     if (
       query['hub.mode'] &&
@@ -72,8 +73,8 @@ export class MetaRootWebhookController {
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleMetaPost(
-    @Body() body: any,
-    @Headers() headers: any,
+    @Body() body: WebhookEvent,
+    @Headers() headers: Record<string, string>,
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
     this.logger.log(

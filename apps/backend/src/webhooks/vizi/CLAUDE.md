@@ -47,7 +47,13 @@ All endpoints require API key authentication with appropriate scopes:
 
 - CQRS pattern with commands for sync operations
 - Repository pattern for database access
+- Services split by responsibility:
+  - `ViziOrderWebhookService` — request validation + idempotency handling
+  - `ViziOrderWorkflowService` — workflow dispatch & logging
+  - `ViziOrderRetriggerService` — historical webhook replay
+  - `ViziCbbResyncService` — targeted CBB contact sync
+  - `ViziWhatsAppRetriggerService` — WhatsApp queue orchestration
 - Full audit logging with correlation IDs
 - Idempotency support via headers
 
-Last Updated: August 24, 2025
+**Last Updated**: September 28, 2025

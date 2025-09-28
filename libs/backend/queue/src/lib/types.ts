@@ -1,0 +1,29 @@
+export interface CBBContactRecord {
+  id: string;
+  order_id: string;
+  cbb_contact_id?: string;
+  cbb_synced: boolean;
+  cbb_sync_attempts: number;
+  cbb_sync_error_count: number;
+  cbb_sync_last_attempt_at?: Date;
+  cbb_sync_last_error?: string;
+  client_phone: string;
+  client_email?: string;
+  client_name?: string;
+  product_country?: string;
+  product_doc_type?: string;
+  product_intent?: string;
+  product_entries?: string;
+  product_validity?: string;
+  is_urgent?: boolean;
+  processing_days?: number;
+  language_code: string;
+  country_name_translated?: string;
+  visa_type_translated?: string;
+  processing_days_translated?: string;
+  branch?: string;
+  order_days?: number;
+  alerts_enabled?: boolean;
+  new_order_notification_sent?: boolean;
+  new_order_notification_sent_at?: Date;
+}

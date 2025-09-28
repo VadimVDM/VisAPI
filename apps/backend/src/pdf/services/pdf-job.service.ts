@@ -4,16 +4,21 @@ import { Queue, Job } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { CacheService } from '@visapi/backend-cache';
 import { GeneratePdfDto, JobMetadata } from '../dto/generate-pdf.dto';
+import { PdfResultDto } from '../dto/pdf-job-status.dto';
 
-interface JobCacheData {
+export interface JobCacheData {
   jobId: string;
   status: string;
   progress?: number;
   createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  duration?: number;
   updatedAt?: string;
   dto?: GeneratePdfDto;
-  result?: unknown;
+  result?: PdfResultDto;
   error?: string;
+  attempts?: number;
   metadata?: JobMetadata;
 }
 
@@ -63,7 +68,7 @@ export class PdfJobService {
     }
   }
 
-  async completeJob(jobId: string, result: unknown) {
+  async completeJob(jobId: string, result: PdfResultDto) {
     const cacheKey = `${this.JOB_CACHE_PREFIX}${jobId}`;
     const jobData = await this.cacheService.get<JobCacheData>(cacheKey);
 
@@ -105,9 +110,9 @@ export class PdfJobService {
     }
   }
 
-  async getJobData(jobId: string) {
+  async getJobData(jobId: string): Promise<JobCacheData | null> {
     const cacheKey = `${this.JOB_CACHE_PREFIX}${jobId}`;
-    return await this.cacheService.get<any>(cacheKey);
+    return await this.cacheService.get<JobCacheData>(cacheKey);
   }
 
   async getJob(jobId: string): Promise<Job | undefined> {

@@ -26,7 +26,7 @@
       "@visapi/backend-repositories": [
         "libs/backend/repositories/src/index.ts"
       ],
-      "@visapi/backend-util-redis": ["libs/backend/util-redis/src/index.ts"],
+      "@visapi/backend-queue": ["libs/backend/queue/src/index.ts"],
       "@visapi/backend-whatsapp-business": ["libs/backend/src/index.ts"],
       "@visapi/core-config": ["libs/backend/core-config/src/index.ts"],
       "@visapi/core-supabase": ["libs/backend/core-supabase/src/index.ts"],

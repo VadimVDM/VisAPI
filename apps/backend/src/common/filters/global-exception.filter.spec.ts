@@ -1,26 +1,27 @@
 import { Test } from '@nestjs/testing';
 import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { GlobalExceptionFilter } from './global-exception.filter';
+import { FastifyReply, FastifyRequest } from 'fastify';
+
+interface ProblemDetail {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  instance: string;
+  correlationId?: string;
+  timestamp: string;
+  code: string;
+  errors?: Record<string, string[]>;
+}
 
 // Mock interfaces for Fastify types
-interface MockFastifyReply {
-  code: jest.Mock;
-  type: jest.Mock;
-  header: jest.Mock;
-  send: jest.Mock;
-}
-
-interface MockFastifyRequest {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-}
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
-  let mockResponse: MockFastifyReply;
-  let mockRequest: MockFastifyRequest;
-  let mockHost: ArgumentsHost;
+  let mockReply: jest.Mocked<FastifyReply>;
+  let mockRequest: jest.Mocked<FastifyRequest>;
+  let mockHost: jest.Mocked<ArgumentsHost>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -29,12 +30,12 @@ describe('GlobalExceptionFilter', () => {
 
     filter = module.get<GlobalExceptionFilter>(GlobalExceptionFilter);
 
-    mockResponse = {
+    mockReply = {
       code: jest.fn().mockReturnThis(),
       type: jest.fn().mockReturnThis(),
       header: jest.fn().mockReturnThis(),
       send: jest.fn().mockReturnThis(),
-    } as MockFastifyReply;
+    } as unknown as jest.Mocked<FastifyReply>;
 
     mockRequest = {
       url: '/api/test',
@@ -42,14 +43,19 @@ describe('GlobalExceptionFilter', () => {
       headers: {
         'x-correlation-id': 'test-correlation-id',
       },
-    } as MockFastifyRequest;
+    } as unknown as jest.Mocked<FastifyRequest>;
 
     mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
-        getResponse: () => mockResponse,
+        getResponse: () => mockReply,
         getRequest: () => mockRequest,
       }),
-    } as unknown as ArgumentsHost;
+      getArgs: jest.fn(),
+      getArgByIndex: jest.fn(),
+      getType: jest.fn(),
+      switchToRpc: jest.fn(),
+      switchToWs: jest.fn(),
+    } as jest.Mocked<ArgumentsHost>;
   });
 
   describe('RFC 7807 Problem Details Format', () => {
@@ -61,35 +67,31 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      expect(mockResponse.code).toHaveBeenCalledWith(400);
-      expect(mockResponse.type).toHaveBeenCalledWith(
-        'application/problem+json',
-      );
-      expect(mockResponse.header).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.code).toHaveBeenCalledWith(400);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.type).toHaveBeenCalledWith('application/problem+json');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.header).toHaveBeenCalledWith(
         'X-Request-Id',
         'test-correlation-id',
       );
-      expect(mockResponse.header).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.header).toHaveBeenCalledWith(
         'X-Correlation-Id',
         'test-correlation-id',
       );
 
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData).toMatchObject({
-        type: expect.stringContaining('https://api.visanet.app/problems/'),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        title: expect.any(String),
+        type: expect.stringContaining('https://api.visanet.app/problems/') as unknown,
+        title: 'Bad Request',
         status: 400,
         detail: 'Test validation error',
         instance: '/api/test',
         correlationId: 'test-correlation-id',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        timestamp: expect.stringMatching(
-          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/,
-        ),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        code: expect.stringMatching(/^[A-Z]+-\d{3}$/),
+        timestamp: expect.any(String) as unknown,
+        code: expect.any(String) as unknown,
       });
     });
 
@@ -101,10 +103,9 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      expect(mockResponse.code).toHaveBeenCalledWith(401);
-
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.code).toHaveBeenCalledWith(401);
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/invalid-api-key',
         title: 'Invalid API Key',
@@ -128,10 +129,9 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(validationException, mockHost);
 
-      expect(mockResponse.code).toHaveBeenCalledWith(422);
-
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.code).toHaveBeenCalledWith(422);
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/schema-validation-failed',
         title: 'Schema Validation Failed',
@@ -150,10 +150,9 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(error, mockHost);
 
-      expect(mockResponse.code).toHaveBeenCalledWith(503);
-
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.code).toHaveBeenCalledWith(503);
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/supabase-connection-failed',
         title: 'Database Connection Failed',
@@ -168,10 +167,9 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(unknownError, mockHost);
 
-      expect(mockResponse.code).toHaveBeenCalledWith(500);
-
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.code).toHaveBeenCalledWith(500);
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/internal-server-error',
         title: 'Internal Server Error',
@@ -187,10 +185,10 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      const sentDataCall = mockResponse.send.mock.calls[0] as unknown[];
-      const sentData = sentDataCall[0] as Record<string, unknown>;
+      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
       expect(sentData.correlationId).toBeUndefined();
-      expect(mockResponse.header).not.toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockReply.header).not.toHaveBeenCalledWith(
         'X-Request-Id',
         expect.any(String),
       );

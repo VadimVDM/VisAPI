@@ -1,17 +1,17 @@
 import { Module, Logger } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { ConfigModule, ConfigService } from '@visapi/core-config';
-import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
+import { QueueService } from './queue.service';
 import { QUEUE_NAMES } from '@visapi/shared-types';
-import { AuthModule } from '../auth/auth.module';
 import { CBBSyncProcessor } from './processors/cbb-sync.processor';
 import { WhatsAppMessageProcessor } from './processors/whatsapp-message.processor';
-import { WhatsAppTranslationService } from './services/whatsapp-translation.service';
+import { AuthModule } from '../auth/auth.module';
 import { WhatsAppTemplateService } from './services/whatsapp-template.service';
-import { CBBFieldMapperService } from './services/cbb-field-mapper.service';
 import { CBBSyncOrchestratorService } from './services/cbb-sync-orchestrator.service';
 import { CBBSyncMetricsService } from './services/cbb-sync-metrics.service';
+import { CbbContactSyncService } from './services/cbb-contact-sync.service';
+import { CbbWhatsAppService } from './services/cbb-whatsapp.service';
 import { CbbModule } from '@visapi/backend-core-cbb';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -21,127 +21,98 @@ import {
   makeCounterProvider,
   makeHistogramProvider,
 } from '@willsoto/nestjs-prometheus';
+import { WhatsAppTranslationService } from './services/whatsapp-translation.service';
+
+// BullMQ configuration for root module
+const bullModuleForRoot = () => BullModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => {
+    const logger = new Logger('QueueModule');
+    const redisUrl = configService.get<string>('redis.url');
+
+    if (!redisUrl) {
+      logger.warn('Redis URL not configured - queue functionality disabled');
+      return {
+        connection: {
+          host: 'localhost',
+          port: 6379,
+          maxRetriesPerRequest: 0,
+          retryStrategy: () => null,
+          enableOfflineQueue: false,
+          lazyConnect: true,
+          enableReadyCheck: false,
+        },
+      };
+    }
+
+    const publicRedisUrl = configService.get<string>('redis.publicUrl');
+    const effectiveRedisUrl = publicRedisUrl || redisUrl;
+
+    logger.log(`Using ${publicRedisUrl ? 'public' : 'standard'} Redis URL`);
+
+    // Parse Redis URL to get connection options
+    const url = new URL(effectiveRedisUrl);
+
+    return {
+      connection: {
+        host: url.hostname,
+        port: parseInt(url.port || '6379'),
+        password: url.password || undefined,
+        username: url.username || undefined,
+        keepAlive: 30000,
+        connectTimeout: 30000,
+        commandTimeout: 10000,
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+        enableOfflineQueue: true,
+        lazyConnect: true,
+        retryStrategy: (times: number) => {
+          if (times > 10) {
+            logger.error('Redis connection failed after 10 retries');
+            return null;
+          }
+          const delay = Math.min(times * 200, 3000);
+          logger.log(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
+          return delay;
+        },
+        reconnectOnError: (err: Error) => {
+          const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND'];
+          if (targetErrors.some((e) => err.message.includes(e))) {
+            return 1; // Reconnect immediately
+          }
+          return false;
+        },
+      },
+      defaultJobOptions: {
+        removeOnComplete: { age: 3600, count: 100 },
+        removeOnFail: { age: 86400 },
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+      },
+    };
+  },
+  inject: [ConfigService],
+});
+
+// Register all queues
+const registeredQueues = () => BullModule.registerQueue(
+  { name: QUEUE_NAMES.CRITICAL },
+  { name: QUEUE_NAMES.DEFAULT },
+  { name: QUEUE_NAMES.BULK },
+  { name: QUEUE_NAMES.SLACK },
+  { name: QUEUE_NAMES.WHATSAPP },
+  { name: QUEUE_NAMES.WHATSAPP_MESSAGES },
+  { name: QUEUE_NAMES.PDF },
+  { name: QUEUE_NAMES.CBB_SYNC },
+  { name: QUEUE_NAMES.DLQ },
+);
 
 @Module({
   imports: [
     ConfigModule,
     AuthModule,
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const logger = new Logger('QueueModule');
-        const redisUrl = configService.redisUrl;
-
-        if (!redisUrl) {
-          // Return a config that will fail gracefully
-          logger.warn(
-            'Redis URL not configured - queue functionality disabled',
-          );
-          return {
-            connection: {
-              host: 'localhost',
-              port: 6379,
-              maxRetriesPerRequest: 0,
-              retryStrategy: () => null,
-              enableOfflineQueue: false,
-              lazyConnect: true,
-              enableReadyCheck: false,
-            },
-          };
-        }
-
-        // Railway Redis URL handling - ALWAYS use public URL if available
-        // The internal .railway.internal URLs don't work reliably
-        let publicRedisUrl: string | undefined;
-        try {
-          publicRedisUrl = configService.get<string>('redis.publicUrl');
-        } catch {
-          // Public URL is optional
-          publicRedisUrl = undefined;
-        }
-        const effectiveRedisUrl = publicRedisUrl || redisUrl;
-
-        // Log which URL we're using (without exposing sensitive data)
-        const isInternalUrl = redisUrl.includes('.railway.internal');
-        const isUsingPublic =
-          !!publicRedisUrl && effectiveRedisUrl === publicRedisUrl;
-        logger.log(
-          `Using ${isUsingPublic ? 'public' : isInternalUrl ? 'internal' : 'standard'} Redis URL`,
-        );
-
-        // Additional logging for debugging
-        if (isInternalUrl && !publicRedisUrl) {
-          logger.warn(
-            'Using internal Railway URL without public URL fallback - this may fail!',
-          );
-        }
-
-        return {
-          connection: {
-            url: effectiveRedisUrl,
-            // Optimized for Railway Redis with increased timeouts
-            keepAlive: 30000,
-            connectTimeout: 30000, // Increased from 10s to 30s for Railway
-            commandTimeout: 10000, // Increased from 5s to 10s for Railway
-            maxRetriesPerRequest: null, // Required by BullMQ
-            enableReadyCheck: true,
-            enableOfflineQueue: true,
-            lazyConnect: true, // Don't connect immediately
-            retryStrategy: (times: number) => {
-              if (times > 10) {
-                logger.error('Redis connection failed after 10 retries');
-                return null;
-              }
-              const delay = Math.min(times * 200, 3000); // Start with 200ms, max 3s
-              logger.log(
-                `Retrying Redis connection in ${delay}ms (attempt ${times})`,
-              );
-              return delay;
-            },
-            reconnectOnError: (err: Error) => {
-              const targetErrors = [
-                'READONLY',
-                'ECONNRESET',
-                'ETIMEDOUT',
-                'ECONNREFUSED',
-                'ENOTFOUND', // Add DNS resolution errors
-              ];
-              if (targetErrors.some((e) => err.message.includes(e))) {
-                return 1; // Reconnect after 1ms
-              }
-              return false;
-            },
-          },
-          // Queue-specific optimizations
-          defaultJobOptions: {
-            removeOnComplete: {
-              age: 3600, // Keep completed jobs for 1 hour
-              count: 100, // Keep max 100 completed jobs
-            },
-            removeOnFail: {
-              age: 86400, // Keep failed jobs for 24 hours
-            },
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 2000,
-            },
-          },
-        };
-      },
-      inject: [ConfigService],
-    }),
-    BullModule.registerQueue(
-      { name: QUEUE_NAMES.CRITICAL },
-      { name: QUEUE_NAMES.DEFAULT },
-      { name: QUEUE_NAMES.BULK },
-      { name: QUEUE_NAMES.SLACK },
-      { name: QUEUE_NAMES.WHATSAPP },
-      { name: QUEUE_NAMES.WHATSAPP_MESSAGES },
-      { name: QUEUE_NAMES.PDF },
-      { name: QUEUE_NAMES.CBB_SYNC },
-      { name: QUEUE_NAMES.DLQ },
-    ),
+    bullModuleForRoot(),
+    registeredQueues(),
     CbbModule,
     SupabaseModule,
     MetricsModule,
@@ -155,10 +126,10 @@ import {
     WhatsAppMessageProcessor,
     WhatsAppTranslationService,
     WhatsAppTemplateService,
-    CBBFieldMapperService,
     CBBSyncOrchestratorService,
     CBBSyncMetricsService,
-    // CBB Sync Metrics
+    CbbContactSyncService,
+    CbbWhatsAppService,
     makeCounterProvider({
       name: 'cbb_sync_total',
       help: 'Total number of CBB sync attempts',
@@ -192,7 +163,6 @@ import {
       name: 'cbb_whatsapp_unavailable',
       help: 'Total number of contacts without WhatsApp',
     }),
-    // WhatsApp Message Metrics
     makeCounterProvider({
       name: 'visapi_whatsapp_messages_sent_total',
       help: 'Total number of WhatsApp messages sent',
