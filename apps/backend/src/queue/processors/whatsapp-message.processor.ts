@@ -355,20 +355,27 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         } = job.data;
 
         // Validate required fields
-        if (!templateName || !documentUrl) {
-          throw new Error('Template name and document URL are required for visa approval');
+        if (!templateName || !documentUrl || !templateParams) {
+          throw new Error('Template name, parameters, and document URL are required for visa approval');
         }
 
-        // Send visa approval with document attachment
+        // Only log individual sends in development
+        if (!this.configService.isProduction) {
+          this.logger.log(
+            `Sending WhatsApp visa approval template to contact ${cbbId || contactId} for order ${order.order_id}`,
+          );
+        }
+
+        // Send visa approval with document attachment - exactly like order confirmation but with document
         const correlationData = `visa_approval:${order.order_id}:${applicationIndex || 0}:${Date.now()}`;
 
         const visaResult = await this.cbbService.sendWhatsAppTemplateWithDocument(
           cbbId || contactId,
           templateName,
-          'he', // Hebrew language code
-          templateParams || [],
+          'he', // Hebrew
+          templateParams,
           documentUrl,
-          `visa_${order.order_id}_${applicationIndex ? applicationIndex + 1 : 1}.pdf`, // Filename
+          `visa_${order.order_id}_${applicationIndex ? applicationIndex + 1 : 1}.pdf`,
           correlationData,
         );
 
