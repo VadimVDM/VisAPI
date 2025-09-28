@@ -14,8 +14,8 @@ interface OrderData {
   visa_quantity?: number | null;
   amount?: number;
   urgency?: string | null;
-  product_days_to_use?: number | null;
-  processing_days?: number | null; // Calculated by business rules at order creation
+  visa_validity_days?: number | null;
+  processing_days?: number | null; // Processing time from Vizi API
 }
 
 export interface OrderConfirmationData {
@@ -62,7 +62,7 @@ export class WhatsAppTemplateService {
           order.product_country,
           order.product_entries || undefined,
           order.product_validity || undefined,
-          order.product_days_to_use || undefined,
+          order.visa_validity_days || undefined,
         );
       }
     } catch {
@@ -73,7 +73,7 @@ export class WhatsAppTemplateService {
         order.product_country,
         order.product_entries || undefined,
         order.product_validity || undefined,
-        order.product_days_to_use || undefined,
+        order.visa_validity_days || undefined,
       );
     }
 
@@ -85,18 +85,10 @@ export class WhatsAppTemplateService {
       order.product_country,
     );
 
-    // Use processing_days from order if available (calculated at order creation)
-    // Otherwise calculate it dynamically
-    let processingDays: string;
-    if (order.processing_days) {
-      processingDays = String(order.processing_days);
-    } else {
-      processingDays = await this.translationService.calculateProcessingDays(
-        order.product_country,
-        order.urgency ?? undefined,
-        order.product_days_to_use ?? undefined,
-      );
-    }
+    // Use processing_days directly from order (from Vizi API)
+    const processingDays = this.translationService.getProcessingDays(
+      order.processing_days ?? undefined,
+    );
 
     // Return the data object for the template
     return {

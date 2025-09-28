@@ -337,72 +337,16 @@ export class WhatsAppTranslationService {
   }
 
   /**
-   * Calculate processing days based on country and urgency
-   * Uses database function for business rules calculation
-   * Returns a string number of days
+   * Get processing days directly from the order data (no complex rules)
+   * Returns the processing time as provided by Vizi API
    */
-  async calculateProcessingDays(
-    country: string,
-    urgency?: string,
-    productDaysToUse?: number,
-  ): Promise<string> {
-    // If productDaysToUse is provided and valid, use it directly
-    if (productDaysToUse && productDaysToUse > 0 && productDaysToUse <= 30) {
-      return String(productDaysToUse);
+  getProcessingDays(processingDays?: number): string {
+    // Use the processing days directly from the order (from Vizi API)
+    if (processingDays && processingDays > 0) {
+      return String(processingDays);
     }
 
-    try {
-      interface RpcResponse {
-        data: number | null;
-        error: unknown;
-      }
-
-      // Call the database function for calculation
-      const { data, error } = (await this.supabaseService.serviceClient.rpc(
-        'calculate_processing_days',
-        {
-          p_country: country?.toLowerCase().trim() || '',
-          p_urgency: urgency?.toLowerCase().trim() || undefined,
-        },
-      )) as RpcResponse;
-
-      if (error) {
-        this.logger.error('Error calculating processing days:', error);
-        // Fallback to hardcoded logic
-        return this.calculateProcessingDaysFallback(country, urgency);
-      }
-
-      return String(data ?? 3);
-    } catch (error) {
-      this.logger.error('Failed to calculate processing days:', error);
-      // Fallback to hardcoded logic
-      return this.calculateProcessingDaysFallback(country, urgency);
-    }
-  }
-
-  /**
-   * Fallback calculation when database function is unavailable
-   */
-  private calculateProcessingDaysFallback(
-    country: string,
-    urgency?: string,
-  ): string {
-    const isUrgent = urgency === 'urgent' || urgency === 'express';
-
-    // If urgent, always 1 business day
-    if (isUrgent) {
-      return '1';
-    }
-
-    // Country-specific processing times
-    const countryNormalized = country?.toLowerCase().trim();
-    switch (countryNormalized) {
-      case 'morocco':
-        return '5';
-      case 'vietnam':
-        return '7';
-      default:
-        return '3'; // Default for all other countries
-    }
+    // Fallback to 3 days if not provided
+    return '3';
   }
 }

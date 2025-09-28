@@ -22,7 +22,7 @@ interface OrderData {
   visa_quantity?: number | null;
   amount?: number;
   urgency?: string | null;
-  product_days_to_use?: number | null;
+  visa_validity_days?: number | null;
   whatsapp_alerts_enabled?: boolean | null;
 }
 

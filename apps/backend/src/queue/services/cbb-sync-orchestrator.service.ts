@@ -254,7 +254,7 @@ export class CBBSyncOrchestratorService {
             order.product_country,
             order.product_entries || undefined,
             order.product_validity || undefined,
-            order.product_days_to_use || undefined,
+            order.visa_validity_days || undefined,
           );
 
         // Use processing_days directly from order (from product.wait in webhook)
@@ -694,7 +694,7 @@ export class CBBSyncOrchestratorService {
     const countryFlag = this.getCountryFlag(order.product_country);
     const visaValidityWithUnits = this.getVisaValidityWithUnits(
       order.product_validity ?? undefined,
-      order.product_days_to_use ?? undefined,
+      order.visa_validity_days ?? undefined,
     );
 
     // Use processing_days from database (calculated by business rules engine)

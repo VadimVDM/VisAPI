@@ -47,7 +47,7 @@ export interface OrderData {
   product_intent?: string | null;
   product_entries?: string | null;
   product_validity?: string | null;
-  product_days_to_use?: number | null;
+  visa_validity_days?: number | null;
   visa_quantity: number | null;
   amount: number;
   currency: string;

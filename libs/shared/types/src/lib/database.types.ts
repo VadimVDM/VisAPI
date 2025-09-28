@@ -249,12 +249,9 @@ export type Database = {
           payment_processor: string
           processed_at: string | null
           processing_days: number | null
-          processing_days_calculated_at: string | null
-          processing_rule_id: string | null
           product_country: string
           product_country_flag: string | null
           product_data: Json | null
-          product_days_to_use: number | null
           product_doc_name: string | null
           product_doc_type: string | null
           product_entries: string | null
@@ -263,6 +260,7 @@ export type Database = {
           updated_at: string | null
           visa_entries: string | null
           visa_quantity: number | null
+          visa_validity_days: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
           workflow_id: string | null
@@ -306,12 +304,9 @@ export type Database = {
           payment_processor: string
           processed_at?: string | null
           processing_days?: number | null
-          processing_days_calculated_at?: string | null
-          processing_rule_id?: string | null
           product_country: string
           product_country_flag?: string | null
           product_data?: Json | null
-          product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
           product_entries?: string | null
@@ -320,6 +315,7 @@ export type Database = {
           updated_at?: string | null
           visa_entries?: string | null
           visa_quantity?: number | null
+          visa_validity_days?: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
           workflow_id?: string | null
@@ -363,12 +359,9 @@ export type Database = {
           payment_processor?: string
           processed_at?: string | null
           processing_days?: number | null
-          processing_days_calculated_at?: string | null
-          processing_rule_id?: string | null
           product_country?: string
           product_country_flag?: string | null
           product_data?: Json | null
-          product_days_to_use?: number | null
           product_doc_name?: string | null
           product_doc_type?: string | null
           product_entries?: string | null
@@ -377,6 +370,7 @@ export type Database = {
           updated_at?: string | null
           visa_entries?: string | null
           visa_quantity?: number | null
+          visa_validity_days?: number | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
           workflow_id?: string | null
@@ -387,93 +381,6 @@ export type Database = {
             columns: ["cbb_contact_uuid"]
             isOneToOne: false
             referencedRelation: "cbb_contacts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_processing_rule_id_fkey"
-            columns: ["processing_rule_id"]
-            isOneToOne: false
-            referencedRelation: "processing_rules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      processing_rules: {
-        Row: {
-          actions: Json
-          conditions: Json
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          priority: number | null
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          actions: Json
-          conditions?: Json
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          priority?: number | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          actions?: Json
-          conditions?: Json
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          priority?: number | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      processing_rules_audit: {
-        Row: {
-          action: string
-          changed_at: string | null
-          changed_by: string | null
-          id: string
-          new_values: Json | null
-          old_values: Json | null
-          rule_id: string | null
-        }
-        Insert: {
-          action: string
-          changed_at?: string | null
-          changed_by?: string | null
-          id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          rule_id?: string | null
-        }
-        Update: {
-          action?: string
-          changed_at?: string | null
-          changed_by?: string | null
-          id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          rule_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "processing_rules_audit_rule_id_fkey"
-            columns: ["rule_id"]
-            isOneToOne: false
-            referencedRelation: "processing_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -924,15 +831,6 @@ export type Database = {
           inserted_count: number
           skipped_count: number
         }[]
-      }
-      calculate_processing_days: {
-        Args: {
-          p_country: string
-          p_order_amount?: number
-          p_urgency?: string
-          p_visa_type?: string
-        }
-        Returns: number
       }
       calculate_processing_days_with_rule: {
         Args: {

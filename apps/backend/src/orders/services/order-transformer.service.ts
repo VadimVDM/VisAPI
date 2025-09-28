@@ -62,7 +62,7 @@ export class OrderTransformerService {
       product_intent: form.product?.intent || 'tourism',
       product_entries: form.product?.entries || 'single',
       product_validity: form.product?.validity || 'month',
-      product_days_to_use: form.product?.days_to_use || 30,
+      visa_validity_days: form.product?.days_to_use || 30,
 
       // Processing days from webhook (product.wait field)
       processing_days: form.product?.wait || 3,

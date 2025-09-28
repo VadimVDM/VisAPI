@@ -152,10 +152,8 @@ export class StatusMessageGeneratorService {
       validity,
     );
 
-    // Calculate processing days
-    const processingDays = await this.translationService.calculateProcessingDays(
-      country,
-      priority,
+    // Get processing days directly (simplified)
+    const processingDays = this.translationService.getProcessingDays(
       processingTime,
     );
 

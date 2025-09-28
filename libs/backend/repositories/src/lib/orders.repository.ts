@@ -29,7 +29,7 @@ export interface OrderRecord {
   product_intent?: string;
   product_entries?: string;
   product_validity?: string;
-  product_days_to_use?: number;
+  visa_validity_days?: number;
   product_data?: Json;
 
   // Visa details

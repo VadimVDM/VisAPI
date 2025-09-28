@@ -7,6 +7,7 @@
     "migrate:up": "echo 'Running database migrations...' && for f in migrations/*.sql; do echo \"Applying $f\"; done",
     "migrate:status": "echo 'Checking migration status...'",
     "migrate:create": "echo 'Creating new migration...'",
+    "regenerate:types": "node scripts/regenerate-types.js",
     "build": "nx run-many --target=build --projects=frontend,backend,worker --parallel",
     "test": "nx run-many --target=test --all --parallel",
     "lint": "nx run-many --target=lint --all --parallel --maxParallel=2",
