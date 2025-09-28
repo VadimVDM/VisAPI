@@ -219,7 +219,7 @@ export class VisaApprovalProcessorService {
       .from('orders')
       .select(`
         *,
-        cbb_contacts (
+        cbb_contacts!cbb_contact_uuid (
           cbb_contact_id,
           client_phone,
           client_name,
