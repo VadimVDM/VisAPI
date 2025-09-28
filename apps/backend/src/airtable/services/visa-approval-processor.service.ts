@@ -73,8 +73,17 @@ export class VisaApprovalProcessorService {
 
     // Check if we should send notification
     const shouldNotify = await this.shouldSendNotification(orderId);
+    this.logger.log(`Should send notification for ${orderId}: ${shouldNotify}`);
+
     if (shouldNotify) {
-      await this.queueVisaNotification(orderId, visaDetails);
+      this.logger.log(`Queueing visa notifications for ${orderId}`);
+      try {
+        await this.queueVisaNotification(orderId, visaDetails);
+        this.logger.log(`Successfully queued visa notifications for ${orderId}`);
+      } catch (error) {
+        this.logger.error(`Failed to queue visa notifications for ${orderId}:`, error);
+        throw error;
+      }
     }
   }
 
@@ -202,6 +211,8 @@ export class VisaApprovalProcessorService {
     orderId: string,
     visaDetails: VisaDetails,
   ): Promise<void> {
+    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications`);
+
     // Get order and CBB contact details
     const { data: order, error } = await this.supabase
       .serviceClient
