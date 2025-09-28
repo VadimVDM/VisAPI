@@ -88,19 +88,26 @@ export class VisaApprovalProcessorService {
 
       if (visaId && visaUrl && applicationId) {
         // Extract first and last names from arrays
-        const firstName = Array.isArray(app.fields['First name'])
-          ? app.fields['First name'][0]?.trim()
-          : app.fields['First name'] || app.fields['First Name'];
+        const firstNameField = app.fields['First name'];
+        const firstName = Array.isArray(firstNameField)
+          ? firstNameField[0]?.trim()
+          : typeof firstNameField === 'string'
+            ? firstNameField
+            : app.fields['First Name'];
 
-        const lastName = Array.isArray(app.fields['Surname'])
-          ? app.fields['Surname'][0]?.trim()
-          : app.fields['Surname'] || app.fields['Last Name'];
+        const surnameField = app.fields['Surname'];
+        const lastName = Array.isArray(surnameField)
+          ? surnameField[0]?.trim()
+          : typeof surnameField === 'string'
+            ? surnameField
+            : app.fields['Last Name'];
 
         // Build full applicant name
+        const orderNameField = app.fields['Order Name'];
         const applicantName = (firstName && lastName)
           ? `${firstName} ${lastName}`
           : app.fields['Applicant Name'] ||
-            app.fields['Order Name']?.[0] ||
+            (Array.isArray(orderNameField) ? orderNameField[0] : undefined) ||
             `Applicant ${visaApplications.length + 1}`;
 
         visaApplications.push({
