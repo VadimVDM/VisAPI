@@ -160,8 +160,9 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         throw new Error(`Order ${orderId} not found`);
       }
 
-      // Check for duplicate messages
-      if (await this.isMessageAlreadySent(order, messageType)) {
+      // Check for duplicate messages (pass template name if available)
+      const templateName = job?.data?.templateName;
+      if (await this.isMessageAlreadySent(order, messageType, templateName)) {
         this.logger.log(
           `${messageType} already sent for order ${orderId}, skipping`,
         );
@@ -175,7 +176,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       }
 
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
-      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone);
+      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone, templateName);
       
       // If null returned, another job is handling this message
       if (!messageId) {
@@ -206,10 +207,11 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
           orderId,
           messageType,
           tempMessageId,
+          templateName,
         );
       } catch (error) {
         // If sending fails, remove idempotency record to allow retry
-        await this.removeIdempotencyRecord(orderId, messageType);
+        await this.removeIdempotencyRecord(orderId, messageType, templateName);
         throw error;
       }
 
@@ -412,6 +414,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   private async isMessageAlreadySent(
     order: OrderData,
     messageType: string,
+    templateName?: string,
   ): Promise<boolean> {
     // Special check for visa approvals - they're tracked in the orders table
     if (messageType === 'visa_approval') {
@@ -430,7 +433,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       .from('whatsapp_messages')
       .select('id, confirmation_sent, status, updated_at')
       .eq('order_id', order.order_id)
-      .eq('template_name', this.getTemplateNameForMessageType(messageType))
+      .eq('template_name', this.getTemplateNameForMessageType(messageType, templateName))
       .maybeSingle();
 
     if (error) {
@@ -482,8 +485,9 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     orderId: string,
     messageType: string,
     phoneNumber?: string,
+    templateName?: string,
   ): Promise<string | null> {
-    const templateName = this.getTemplateNameForMessageType(messageType);
+    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
     const now = new Date().toISOString();
     const tempMessageId = `temp_${orderId}_${messageType}_${Date.now()}`;
 
@@ -492,7 +496,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       .from('whatsapp_messages')
       .select('id, status, message_id')
       .eq('order_id', orderId)
-      .eq('template_name', templateName)
+      .eq('template_name', actualTemplateName)
       .maybeSingle();
 
     if (existing) {
@@ -535,7 +539,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       .insert({
         order_id: orderId,
         phone_number: phoneNumber || '',
-        template_name: templateName,
+        template_name: actualTemplateName,
         message_id: tempMessageId,
         status: 'pending',
         confirmation_sent: false,
@@ -571,14 +575,15 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   private async removeIdempotencyRecord(
     orderId: string,
     messageType: string,
+    templateName?: string,
   ): Promise<void> {
-    const templateName = this.getTemplateNameForMessageType(messageType);
+    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
 
     const { error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
       .delete()
       .eq('order_id', orderId)
-      .eq('template_name', templateName)
+      .eq('template_name', actualTemplateName)
       .eq('status', 'pending');
 
     if (error) {
@@ -602,7 +607,8 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       case 'order_confirmation':
         return 'order_confirmation_global';
       case 'visa_approval':
-        return 'visa_approval_file_phone';
+        // Don't hardcode - allow different visa templates
+        return 'visa_approval_file_phone'; // Default only
       case 'status_update':
         return 'status_update'; // When implemented
       case 'document_ready':
@@ -637,6 +643,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     orderId: string,
     messageType: string,
     messageId: string,
+    templateName?: string,
   ): Promise<void> {
     // Get order details for phone number
     const order = await this.getOrderByOrderId(orderId);
@@ -647,13 +654,13 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     }
 
     const now = new Date().toISOString();
-    const templateName = this.getTemplateNameForMessageType(messageType);
+    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
 
     // Insert or update WhatsApp message record
     const messageData = {
       order_id: orderId,
       phone_number: order.client_phone || '',
-      template_name: templateName,
+      template_name: actualTemplateName,
       message_id: messageId,
       status: 'sent',
       confirmation_sent: true,
