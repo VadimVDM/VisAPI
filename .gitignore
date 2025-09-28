@@ -93,6 +93,7 @@ jspm_packages/
 
 # Optional stylelint cache
 .stylelintcache
+.venv/
 
 # Microbundle cache
 .rpt2_cache/

@@ -60,6 +60,7 @@ const availableScopes = [
   'api-keys:read',
   'api-keys:create',
   'api-keys:delete',
+  'integrations:airtable:read',
 ];
 
 export default function ApiKeysPage() {

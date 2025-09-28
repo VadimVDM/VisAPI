@@ -231,4 +231,24 @@ export class ConfigService {
   get workflowBatchProcessingSize(): number {
     return this.get<number>('workflow.batchProcessingSize');
   }
+
+  get airtableConfig() {
+    return this.getConfig().airtable;
+  }
+
+  get airtableApiKey(): string | undefined {
+    return this.airtableConfig?.apiKey;
+  }
+
+  get airtableBaseId(): string | undefined {
+    return this.airtableConfig?.baseId;
+  }
+
+  get airtableTableName(): string | undefined {
+    return this.airtableConfig?.tableName;
+  }
+
+  get airtableView(): string | undefined {
+    return this.airtableConfig?.view;
+  }
 }

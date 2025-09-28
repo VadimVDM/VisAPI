@@ -223,6 +223,12 @@ export const EnvSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().min(1).max(1000)),
 
+  // Airtable integration
+  AIRTABLE_API_KEY: z.string().optional(),
+  AIRTABLE_BASE_ID: z.string().optional(),
+  AIRTABLE_TABLE_NAME: z.string().optional(),
+  AIRTABLE_VIEW: z.string().optional(),
+
   // Grafana monitoring
   GRAFANA_REMOTE_WRITE_ENABLED: z
     .string()
@@ -444,6 +450,12 @@ export function getValidatedConfig() {
     workflow: {
       processingDelayMs: env.WORKFLOW_PROCESSING_DELAY_MS,
       batchProcessingSize: env.WORKFLOW_BATCH_PROCESSING_SIZE,
+    },
+    airtable: {
+      apiKey: env.AIRTABLE_API_KEY,
+      baseId: env.AIRTABLE_BASE_ID,
+      tableName: env.AIRTABLE_TABLE_NAME,
+      view: env.AIRTABLE_VIEW,
     },
     monitoring: {
       grafana: {

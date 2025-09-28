@@ -90,6 +90,7 @@ VisAPI/
 ```bash
 # Setup
 pnpm setup                 # Install deps + Docker services
+make python-setup         # Create/update Python virtualenv with pyairtable
 
 # Development
 pnpm dev                   # Start all services
@@ -125,6 +126,7 @@ GET  /api/v1/pdf/status/{jobId}       # Check PDF generation status
 POST /api/v1/pdf/generate/batch       # Batch PDF generation
 GET  /api/v1/pdf/templates            # List available PDF templates
 POST /api/v1/pdf/preview              # Preview PDF without saving
+POST /api/v1/airtable/lookup          # Lookup record in Airtable by email or order ID
 GET  /api/v1/healthz                  # Health check
 POST /api/v1/triggers/{key}           # Workflow trigger
 GET  /api/v1/queue/metrics           # Queue status
@@ -251,6 +253,12 @@ WABA_VERIFY_TOKEN=Np2YWkYAmLA6UjQ2reZcD7TRP3scWdKdeALugqmc9U
 
 # Zapier Webhook
 ZAPIER_WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/...
+
+# Airtable Lookup
+AIRTABLE_API_KEY=pat_...
+AIRTABLE_BASE_ID=app...
+AIRTABLE_TABLE_NAME=Orders
+AIRTABLE_VIEW=ViewName
 ```
 
 ## Troubleshooting

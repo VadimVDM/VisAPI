@@ -11,7 +11,14 @@ module.exports = {
       compiler: 'tsc',
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
-      assets: ['./src/assets'],
+      assets: [
+        './src/assets',
+        {
+          input: './src/airtable/scripts',
+          glob: '**/*.py',
+          output: './airtable/scripts',
+        },
+      ],
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,

@@ -30,6 +30,7 @@ import { GlobalExceptionFilter } from '../common/filters/global-exception.filter
 import { WhatsAppWebhooksModule } from '../webhooks/whatsapp-webhooks.module';
 import { PdfModule } from '../pdf/pdf.module';
 import Redis from 'ioredis';
+import { AirtableModule } from '../airtable/airtable.module';
 
 // Initialize Sentry if DSN is configured
 const configService = new ConfigService();
@@ -160,6 +161,7 @@ if (sentryConfig.dsn) {
     EmailModule,
     WhatsAppWebhooksModule,
     PdfModule,
+    AirtableModule,
   ],
   controllers: [AppController],
   providers: [

@@ -86,6 +86,14 @@ Modern layered architecture with enterprise design patterns:
 - Preview mode support
 - Webhook callbacks on completion
 
+### Airtable Module
+
+- `/api/v1/airtable/lookup` endpoint secured by API keys (`integrations:airtable:read` scope)
+- Invokes a Python helper (`src/airtable/scripts/airtable_lookup.py`) using the `pyairtable` client
+- Supports lookups by `Email` or `ID` field with graceful handling of multiple matches
+- Configured via `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE_NAME`, and optional `AIRTABLE_VIEW`
+- Use `make python-setup` to create or refresh the local virtualenv with required Python packages
+
 ### Health Module
 
 - Database connectivity checks
