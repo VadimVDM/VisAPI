@@ -33,7 +33,13 @@ export class WhatsAppManagementController {
   async syncTemplates(): Promise<{
     success: boolean;
     count: number;
-    templates: any[];
+    templates: Array<{
+      name: string;
+      language: string;
+      status: string;
+      category: string;
+      quality_score: unknown;
+    }>;
   }> {
     try {
       this.logger.log('Manual template sync triggered');
@@ -53,8 +59,9 @@ export class WhatsAppManagementController {
           quality_score: t.quality_score,
         })),
       };
-    } catch (error: any) {
-      this.logger.error(`Template sync failed: ${error.message}`, error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Template sync failed: ${errorMessage}`, error);
       throw error;
     }
   }
@@ -74,8 +81,9 @@ export class WhatsAppManagementController {
         quality_score: t.quality_score,
         components: t.components,
       }));
-    } catch (error: any) {
-      this.logger.error(`Failed to get templates: ${error.message}`, error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to get templates: ${errorMessage}`, error);
       throw error;
     }
   }
@@ -83,7 +91,7 @@ export class WhatsAppManagementController {
   @Get('templates/compliance')
   @ApiOperation({ summary: 'Check template compliance status' })
   @ApiResponse({ status: 200, description: 'Compliance report generated' })
-  async checkCompliance(): Promise<any> {
+  async checkCompliance(): Promise<unknown> {
     try {
       const report =
         await this.templateManager.checkTemplateCategoryCompliance();

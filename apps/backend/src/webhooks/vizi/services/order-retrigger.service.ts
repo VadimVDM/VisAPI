@@ -316,12 +316,13 @@ export class ViziOrderRetriggerService {
       };
     }
 
+    const errorMessage = typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error);
     return {
-      message: typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error),
+      message: errorMessage,
       details: {
         type: typeof error,
         value: JSON.stringify(error),
-        stringified: typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error),
+        stringified: errorMessage,
       },
     };
   }

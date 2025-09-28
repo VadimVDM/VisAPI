@@ -400,7 +400,7 @@ export class CBBSyncOrchestratorService {
           order,
           contact.id,
           hasWhatsApp,
-          cbbContact as any,
+          cbbContact as CBBContactRecord,
         );
       } else {
         this.logger.warn(
@@ -449,13 +449,13 @@ export class CBBSyncOrchestratorService {
     order: OrderData,
     contactId: string,
     hasWhatsApp: boolean,
-    cbbContact: CBBContactRecord,
+    cbbContact: CBBContact,
   ): Promise<void> {
     await this.whatsappService.queueOrderConfirmation(
       order,
       contactId,
       hasWhatsApp,
-      cbbContact,
+      cbbContact as CBBContactRecord,
     );
   }
 
@@ -613,7 +613,12 @@ export class CBBSyncOrchestratorService {
     synced: boolean,
     errorMessage?: string,
   ): Promise<void> {
-    const updateData: Partial<OrderData> = {
+    const updateData: {
+      cbb_contact_id: string | null;
+      cbb_synced: boolean;
+      updated_at: string;
+      cbb_sync_last_error?: string | null;
+    } = {
       cbb_contact_id: contactId,
       cbb_synced: synced,
       updated_at: new Date().toISOString(),
@@ -628,7 +633,7 @@ export class CBBSyncOrchestratorService {
 
     const { error } = await this.supabaseService.serviceClient
       .from('orders')
-      .update(updateData as any)
+      .update(updateData)
       .eq('order_id', orderId);
 
     if (error) {

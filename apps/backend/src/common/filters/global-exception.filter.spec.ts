@@ -82,10 +82,10 @@ describe('GlobalExceptionFilter', () => {
         'test-correlation-id',
       );
 
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
         type: expect.stringContaining('https://api.visanet.app/problems/') as unknown,
-        title: 'Bad Request',
+        title: 'Invalid Request Body',
         status: 400,
         detail: 'Test validation error',
         instance: '/api/test',
@@ -105,7 +105,7 @@ describe('GlobalExceptionFilter', () => {
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockReply.code).toHaveBeenCalledWith(401);
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/invalid-api-key',
         title: 'Invalid API Key',
@@ -131,7 +131,7 @@ describe('GlobalExceptionFilter', () => {
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockReply.code).toHaveBeenCalledWith(422);
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/schema-validation-failed',
         title: 'Schema Validation Failed',
@@ -152,7 +152,7 @@ describe('GlobalExceptionFilter', () => {
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockReply.code).toHaveBeenCalledWith(503);
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/supabase-connection-failed',
         title: 'Database Connection Failed',
@@ -169,7 +169,7 @@ describe('GlobalExceptionFilter', () => {
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockReply.code).toHaveBeenCalledWith(500);
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
         type: 'https://api.visanet.app/problems/internal-server-error',
         title: 'Internal Server Error',
@@ -185,7 +185,7 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockHost);
 
-      const sentData = JSON.parse(mockReply.send.mock.calls[0][0] as string) as ProblemDetail;
+      const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData.correlationId).toBeUndefined();
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockReply.header).not.toHaveBeenCalledWith(

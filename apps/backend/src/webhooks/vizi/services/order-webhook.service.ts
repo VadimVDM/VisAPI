@@ -33,6 +33,22 @@ export class ViziOrderWebhookService {
     private readonly orderWorkflowService: ViziOrderWorkflowService,
   ) {}
 
+  /**
+   * Helper to safely convert unknown values to strings for logging
+   */
+  private safeStringify(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'unknown';
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  }
+
   async handleInboundWebhook(
     payload: unknown,
     headers: Record<string, string>,
@@ -61,8 +77,8 @@ export class ViziOrderWebhookService {
     });
 
     if (idempotencyKey) {
-      const cached = await this.idempotencyService.get(idempotencyKey);
-      if (cached) {
+      const cached: unknown = await this.idempotencyService.get(idempotencyKey);
+      if (cached && typeof cached === 'object' && cached !== null) {
         this.logger.log(
           `Returning cached response for idempotency key: ${idempotencyKey}`,
         );
@@ -82,7 +98,7 @@ export class ViziOrderWebhookService {
     try {
       dbOrderId = await this.ordersService.createOrder(webhookData);
       this.logger.log(
-        `Order saved to database: ${typeof order.id === 'object' && order.id !== null ? JSON.stringify(order.id) : String(order.id ?? 'unknown')} (DB ID: ${dbOrderId})`,
+        `Order saved to database: ${this.safeStringify(order.id)} (DB ID: ${dbOrderId})`,
       );
     } catch (error) {
       await this.handleDatabaseFailure({
@@ -109,7 +125,7 @@ export class ViziOrderWebhookService {
 
       await this.logService.createLog({
         level: 'info',
-        message: `Order ${typeof order.id === 'object' && order.id !== null ? JSON.stringify(order.id) : String(order.id ?? 'unknown')} created successfully from Vizi webhook`,
+        message: `Order ${this.safeStringify(order.id)} created successfully from Vizi webhook`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order.id,
@@ -128,7 +144,7 @@ export class ViziOrderWebhookService {
     } catch (error) {
       await this.logService.createLog({
         level: 'error',
-        message: `Failed to process Vizi webhook for order ${typeof order.id === 'object' && order.id !== null ? JSON.stringify(order.id) : String(order.id ?? 'unknown')}`,
+        message: `Failed to process Vizi webhook for order ${this.safeStringify(order.id)}`,
         metadata: {
           webhook_type: 'vizi_order',
           order_id: order.id,
@@ -173,8 +189,7 @@ export class ViziOrderWebhookService {
       return undefined;
     }
     const value = order.id;
-    return typeof value === 'string' ? value : value ?
-      (typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)) : undefined;
+    return typeof value === 'string' ? value : value ? this.safeStringify(value) : undefined;
   }
 
   private async logTestOrderSkip({
@@ -217,8 +232,8 @@ export class ViziOrderWebhookService {
       hasOrder: Boolean(order),
       hasForm: Boolean(form),
       orderId: this.extractOrderId(order),
-      formId: form?.id ? (typeof form.id === 'object' && form.id !== null ? JSON.stringify(form.id) : String(form.id)) : undefined,
-      country: form?.country ? (typeof form.country === 'object' && form.country !== null ? JSON.stringify(form.country) : String(form.country)) : undefined,
+      formId: form?.id ? this.safeStringify(form.id) : undefined,
+      country: form?.country ? this.safeStringify(form.country) : undefined,
       clientData: this.extractClientData(form?.client),
       productData: this.extractProductData(form?.product),
       applicantCount: Array.isArray(form?.applicants)
@@ -249,11 +264,11 @@ export class ViziOrderWebhookService {
     const record = client as Record<string, unknown>;
     const phone = record.phone as Record<string, unknown> | undefined;
     return {
-      name: record.name ? (typeof record.name === 'object' && record.name !== null ? JSON.stringify(record.name) : String(record.name)) : undefined,
-      email: record.email ? (typeof record.email === 'object' && record.email !== null ? JSON.stringify(record.email) : String(record.email)) : undefined,
+      name: record.name ? this.safeStringify(record.name) : undefined,
+      email: record.email ? this.safeStringify(record.email) : undefined,
       hasPhone: Boolean(phone),
-      phoneCode: phone?.code ? (typeof phone.code === 'object' && phone.code !== null ? JSON.stringify(phone.code) : String(phone.code)) : undefined,
-      phoneNumber: phone?.number ? (typeof phone.number === 'object' && phone.number !== null ? JSON.stringify(phone.number) : String(phone.number)) : undefined,
+      phoneCode: phone?.code ? this.safeStringify(phone.code) : undefined,
+      phoneNumber: phone?.number ? this.safeStringify(phone.number) : undefined,
       whatsappEnabled: Boolean(record.whatsappAlertsEnabled),
     };
   }
@@ -264,8 +279,8 @@ export class ViziOrderWebhookService {
     }
     const record = product as Record<string, unknown>;
     return {
-      name: record.name ? (typeof record.name === 'object' && record.name !== null ? JSON.stringify(record.name) : String(record.name)) : undefined,
-      country: record.country ? (typeof record.country === 'object' && record.country !== null ? JSON.stringify(record.country) : String(record.country)) : undefined,
+      name: record.name ? this.safeStringify(record.name) : undefined,
+      country: record.country ? this.safeStringify(record.country) : undefined,
     };
   }
 
@@ -324,7 +339,7 @@ export class ViziOrderWebhookService {
       stack: err.stack,
     };
 
-    const orderId = order?.id ? (typeof order.id === 'object' && order.id !== null ? JSON.stringify(order.id) : String(order.id)) : 'unknown';
+    const orderId = order?.id ? this.safeStringify(order.id) : 'unknown';
     this.logger.error(
       `Failed to save order ${orderId} to database: ${JSON.stringify(errorDetails)}`,
       typeof err.stack === 'string' ? err.stack : undefined,
@@ -336,7 +351,7 @@ export class ViziOrderWebhookService {
       metadata: {
         webhook_type: 'vizi_order',
         order_id: orderId === 'unknown' ? undefined : orderId,
-        form_id: form?.id ? (typeof form.id === 'object' && form.id !== null ? JSON.stringify(form.id) : String(form.id)) : undefined,
+        form_id: form?.id ? this.safeStringify(form.id) : undefined,
         error: errorDetails,
         webhook_data: body,
         correlationId,

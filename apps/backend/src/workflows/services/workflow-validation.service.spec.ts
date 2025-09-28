@@ -4,6 +4,11 @@ import { WorkflowSchemaLoaderService } from './workflow-schema-loader.service';
 import { WorkflowValidationEngineService } from './workflow-validation-engine.service';
 import { WorkflowSchema } from '@visapi/shared-types';
 
+interface ValidationResult {
+  valid: boolean;
+  errors?: string[];
+}
+
 describe('WorkflowValidationService', () => {
   let service: WorkflowValidationService;
 
@@ -70,8 +75,8 @@ describe('WorkflowValidationService', () => {
       }),
     };
 
-    const mockValidationEngine = {
-      validateStepConfig: jest.fn((stepType: string, config: unknown) => {
+    const mockValidationEngine: jest.Mocked<Pick<WorkflowValidationEngineService, 'validateStepConfig' | 'validateCronExpression' | 'validateUniqueStepIds' | 'validateBusinessRules' | 'validateWorkflowSteps' | 'validateWorkflowTriggers'>> = {
+      validateStepConfig: jest.fn((stepType: string, config: unknown): ValidationResult => {
         // Validate unknown step types
         const validStepTypes = [
           'slack.send',
@@ -132,7 +137,7 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateCronExpression: jest.fn((expression: unknown) => {
+      validateCronExpression: jest.fn((expression: unknown): ValidationResult => {
         // Basic validation for cron expressions
         if (!expression || typeof expression !== 'string') {
           return {
@@ -167,7 +172,7 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateUniqueStepIds: jest.fn((steps: unknown) => {
+      validateUniqueStepIds: jest.fn((steps: unknown): ValidationResult => {
         const stepsArray = steps as Array<{ id: string }>;
         const ids = stepsArray.map((step) => step.id);
         const uniqueIds = new Set(ids);
@@ -184,7 +189,7 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateBusinessRules: jest.fn((workflow) => {
+      validateBusinessRules: jest.fn((workflow: { triggers?: unknown[]; steps?: unknown[] }): ValidationResult => {
         if (!workflow.triggers || workflow.triggers.length === 0) {
           return {
             valid: false,
@@ -199,7 +204,7 @@ describe('WorkflowValidationService', () => {
         }
         return { valid: true };
       }),
-      validateWorkflowSteps: jest.fn(function (workflow: unknown) {
+      validateWorkflowSteps: jest.fn(function (workflow: unknown): ValidationResult {
         // Use the arrow function to access the mocked validateUniqueStepIds
         const wf = workflow as { steps: Array<{ id: string; type: string; config: unknown }> };
         const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(
@@ -227,7 +232,7 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateWorkflowTriggers: jest.fn((workflow: unknown) => {
+      validateWorkflowTriggers: jest.fn((workflow: unknown): ValidationResult => {
         const wf = workflow as { triggers: Array<{ type: string; config: { schedule?: string } }> };
         for (const trigger of wf.triggers) {
           if (trigger.type === 'cron' && trigger.config.schedule) {

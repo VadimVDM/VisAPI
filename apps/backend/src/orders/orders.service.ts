@@ -35,19 +35,17 @@ export class OrdersService {
     return newOrder.id;
   }
 
-  async syncOrderToCBB(
+  syncOrderToCBB(
     orderId: string,
     branch: string,
     whatsappAlertsEnabled: boolean,
     _correlationId?: string,
-  ): Promise<void> {
+  ): void {
     // This is a simplified implementation.
     // You might want to move the logic from the SyncOrderToCBBCommandHandler here.
     this.logger.log(
       `Syncing order ${orderId} to CBB for branch ${branch}. WhatsApp alerts: ${whatsappAlertsEnabled}`,
     );
-    // Return to satisfy async function requirement
-    return;
   }
 
   async getOrderById(

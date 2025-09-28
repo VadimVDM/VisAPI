@@ -362,7 +362,7 @@ export class WhatsAppWebhookController {
         messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
-      this.deliveryTracker.updateMessageStatus(messageStatus as any);
+      this.deliveryTracker.updateMessageStatus(messageStatus as EnhancedMessageStatus);
 
       await this.updateMessageInDatabase(messageStatus);
 
@@ -567,8 +567,8 @@ export class WhatsAppWebhookController {
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details ? (data.details as any) : null,
-          payload: data.payload ? (data.payload as any) : (data as any),
+          details: data.details ? (data.details as unknown) : null,
+          payload: data.payload ? (data.payload as unknown) : (data as unknown),
           challenge: data.challenge as string | null,
           signature_verified: data.signature_verified as boolean | null,
           processing_status: data.processing_status as string | null,
@@ -590,7 +590,7 @@ export class WhatsAppWebhookController {
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details ? (data.details as any) : null,
+          details: data.details ? (data.details as unknown) : null,
           created_at: new Date().toISOString(),
         });
     } catch (error: unknown) {

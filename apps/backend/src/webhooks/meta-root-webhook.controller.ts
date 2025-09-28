@@ -42,7 +42,7 @@ export class MetaRootWebhookController {
       this.logger.log(
         'Meta webhook verification request received, forwarding to WhatsApp controller',
       );
-      return this.whatsappController.verifyWebhook(query as any);
+      return this.whatsappController.verifyWebhook(query as WebhookVerifyDto);
     }
 
     // Not a webhook request, return a simple status page
@@ -80,6 +80,6 @@ export class MetaRootWebhookController {
     this.logger.log(
       'Meta webhook POST received, forwarding to WhatsApp controller',
     );
-    return this.whatsappController.receiveWebhook(body as any, headers, req);
+    return this.whatsappController.receiveWebhook(body as WhatsAppWebhookPayload, headers, req);
   }
 }
