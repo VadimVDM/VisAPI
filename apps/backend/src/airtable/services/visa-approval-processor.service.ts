@@ -83,14 +83,25 @@ export class VisaApprovalProcessorService {
     for (const app of applications) {
       const visaId = app.fields['Visa ID'];
       const visaUrl = app.fields['Visa URL'];
-      const applicationId = app.fields['Application ID'];
+      // ID field contains the application ID (e.g., E250923ISR4185144524)
+      const applicationId = app.fields['ID'] || app.fields['Application ID'];
 
       if (visaId && visaUrl && applicationId) {
-        // Try to get applicant name from various fields
-        const applicantName = app.fields['Applicant Name'] ||
-                             app.fields['First Name'] ||
-                             app.fields['Last Name'] ||
-                             `Applicant ${visaApplications.length + 1}`;
+        // Extract first and last names from arrays
+        const firstName = Array.isArray(app.fields['First name'])
+          ? app.fields['First name'][0]?.trim()
+          : app.fields['First name'] || app.fields['First Name'];
+
+        const lastName = Array.isArray(app.fields['Surname'])
+          ? app.fields['Surname'][0]?.trim()
+          : app.fields['Surname'] || app.fields['Last Name'];
+
+        // Build full applicant name
+        const applicantName = (firstName && lastName)
+          ? `${firstName} ${lastName}`
+          : app.fields['Applicant Name'] ||
+            app.fields['Order Name']?.[0] ||
+            `Applicant ${visaApplications.length + 1}`;
 
         visaApplications.push({
           applicationId,
