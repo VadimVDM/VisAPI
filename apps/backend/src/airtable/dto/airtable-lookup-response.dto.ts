@@ -10,7 +10,7 @@ export class AirtableRecordDto {
   @ApiProperty({ description: 'Airtable record identifier.' })
   id!: string;
 
-  @ApiProperty({ description: 'Status field from Airtable record.', type: Object })
+  @ApiProperty({ description: 'Key fields from Airtable record (Status, ID, Email, Phone).', type: Object })
   fields!: Record<string, unknown>;
 
   @ApiProperty({ description: 'Record creation timestamp in Airtable.' })

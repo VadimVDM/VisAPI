@@ -17,7 +17,7 @@ export class AirtableController {
   @Post('lookup')
   @Scopes('integrations:airtable:read')
   @ApiOperation({
-    summary: 'Lookup Airtable record by Email or Order ID',
+    summary: 'Lookup Airtable record by Email, Order ID, or Phone',
     description:
       'Searches the configured Airtable base and table for a record matching the provided field and value.',
   })
@@ -30,7 +30,8 @@ export class AirtableController {
     @Body() dto: AirtableLookupDto,
   ): Promise<AirtableLookupResponseDto> {
     const field: AirtableLookupField =
-      dto.field === 'email' ? 'email' : 'orderId';
+      dto.field === 'email' ? 'email' :
+      dto.field === 'phone' ? 'phone' : 'orderId';
     const value = dto.key.trim();
     return this.airtableLookupService.lookup(field, value);
   }

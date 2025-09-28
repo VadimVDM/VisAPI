@@ -1,10 +1,10 @@
 # Airtable Integration Module
 
-Real-time order data lookup with automatic linked record expansion.
+Real-time order data lookup with intelligent phone number retry logic.
 
 ## Overview
 
-Searches Visanet's Airtable base by email or order ID, returning complete order details with expanded linked records (Applications, Applicants, Transactions).
+Searches Visanet's Airtable base by email, order ID, or phone number, returning key order details for verification (ID, Status, Email, Phone).
 
 ## API Endpoint
 
@@ -15,7 +15,7 @@ POST /api/v1/airtable/lookup
 ### Request
 ```json
 {
-  "field": "orderid" | "email",
+  "field": "orderid" | "email" | "phone",
   "key": "IL250928IN7"
 }
 ```
@@ -27,11 +27,11 @@ POST /api/v1/airtable/lookup
   "message": "found",
   "record": {
     "id": "recXXX",
-    "fields": { /* All order fields */ },
-    "expanded": {
-      "Applications_expanded": [ /* Full application records */ ],
-      "Applicants_expanded": [ /* Full applicant records */ ],
-      "Transactions_expanded": [ /* Full transaction records */ ]
+    "fields": {
+      "ID": "IL250928IN7",
+      "Status": "Active 🔵",
+      "Email": "customer@example.com",
+      "Phone": "972507921512"
     }
   }
 }
@@ -47,18 +47,9 @@ POST /api/v1/airtable/lookup
 
 ### Python Script (`scripts/airtable_lookup.py`)
 - pyairtable library integration
-- Automatic linked record expansion
 - Case-insensitive search
 - Supports both `value` and `key` fields
-
-### Linked Tables
-```typescript
-const LINKED_TABLES = {
-  "Applications ↗": "tbl5llU1H1vvOJV34",
-  "Applicants ↗": "tblG55wVI8OPM9nr6",
-  "Transactions ↗": "tblremNCbcR0kUIDF"
-}
-```
+- Intelligent phone retry for Israeli numbers (972/9720)
 
 ## Configuration
 
@@ -91,12 +82,28 @@ COPY airtable/scripts ./airtable/scripts
 |-----------|---------------|-------------|
 | `orderid` | `ID` | Order identifier (IL250928IN7) |
 | `email` | `Email` | Customer email address |
+| `phone` | `Phone` | Phone number without + prefix (972507921512) |
+
+## Phone Search Retry Logic
+
+For phone searches, the system implements intelligent retry for Israeli numbers (starting with 972):
+
+1. **First attempt**: Search with the provided phone number
+2. **If no results and starts with "972"**:
+   - If phone is `9720XXX...` (has zero after 972), retry with `972XXX...` (remove zero)
+   - If phone is `972XXX...` (no zero after 972), retry with `9720XXX...` (add zero)
+
+This handles common variations in Israeli phone number storage:
+- Some systems store: `972507921512` (without zero)
+- Others store: `9720507921512` (with zero)
+
+The retry happens automatically within the same request for seamless user experience.
 
 ## Response Statuses
 
-- **found**: Single record match with expanded data
+- **found**: Single record match with key fields (ID, Status, Email, Phone)
 - **none**: No matching records
-- **multiple**: Multiple matches (no expansion)
+- **multiple**: Multiple matches (returns status only)
 
 ## Caching
 
@@ -133,31 +140,11 @@ curl -X POST https://api.visanet.app/api/v1/airtable/lookup \
   -d '{"field":"orderid","key":"IL250928IN7"}'
 ```
 
-## Linked Record Expansion
-
-When a single record is found, automatically fetches:
-
-### Applications
-- Full visa application details including all applicant data
-- Assigned agent information
-- Processing status and dates
-- Personal info (names, birth date, nationality)
-- Passport details (number, issue/expiry dates)
-- Photo URLs (passport & face)
-- Fix URL for admin corrections
-
-### Transactions
-- Payment amount and currency
-- Transaction status
-- Stripe payment ID
-- Net amount after fees
-
-**Note**: Applicants table is not separately expanded as Applications contains all relevant applicant data.
 
 ## Performance
 
 - **Lookup**: ~100-200ms (cached) / ~500-1000ms (uncached)
-- **Expansion**: +2-3 seconds for linked records
+- **Phone retry**: +100-200ms for variant search
 - **Cache Hit Rate**: ~85% in production
 - **Max Records**: 3 per query
 
@@ -172,11 +159,14 @@ When a single record is found, automatically fetches:
 ### Empty Results
 Check if:
 - Order ID format is correct (e.g., IL250928IN7)
+- Email is spelled correctly
+- Phone number format (try with/without 972 zero)
 - Record exists in Airtable base
 - View filter isn't excluding records
 
-### No Expansion
-Expansion only occurs when exactly 1 record matches
+### Phone Search Not Finding Records
+The system automatically retries Israeli numbers (972) with/without zero after country code.
+If still not found, the number might be stored in a different format.
 
 ---
 

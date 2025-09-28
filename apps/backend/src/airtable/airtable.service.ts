@@ -16,7 +16,7 @@ import {
   AirtableRecordDto,
 } from './dto/airtable-lookup-response.dto';
 
-export type AirtableLookupField = 'email' | 'orderId';
+export type AirtableLookupField = 'email' | 'orderId' | 'phone';
 
 interface PythonLookupSuccess {
   status: 'ok';
@@ -152,16 +152,25 @@ export class AirtableLookupService {
   }
 
   private mapRecord(record: PythonAirtableRecord): AirtableRecordDto {
-    // Extract only the Status field
-    const statusField = record.fields?.['Status'] ?? null;
+    // Extract key fields for verification
+    const fields = record.fields ?? {};
+    const filteredFields: Record<string, unknown> = {};
+
+    // Include Status, ID, Email, and Phone fields
+    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone'];
+    for (const fieldName of fieldsToInclude) {
+      if (fieldName in fields) {
+        filteredFields[fieldName] = fields[fieldName];
+      }
+    }
 
     const mapped: AirtableRecordDto = {
       id: record.id,
-      fields: statusField !== null ? { Status: statusField } : {},
+      fields: filteredFields,
       createdTime: record.createdTime,
     };
 
-    // Do not include expanded data since we only want the Status
+    // Do not include expanded data to keep response clean
 
     return mapped;
   }

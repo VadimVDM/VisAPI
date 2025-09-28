@@ -3,7 +3,7 @@
 
 The script reads a JSON payload from STDIN with the following structure:
 {
-  "field": "email" | "orderId",
+  "field": "email" | "orderId" | "phone",
   "value": "lookup value"
 }
 
@@ -70,8 +70,10 @@ def normalise_field(field: str) -> str:
     return "Email"
   if key in {"orderid", "order_id"}:
     return "ID"
+  if key in {"phone"}:
+    return "Phone"
   emit_error(
-    "Unsupported lookup field. Expected 'email' or 'orderId'.",
+    "Unsupported lookup field. Expected 'email', 'orderId', or 'phone'.",
     "INPUT_ERROR",
   )
   return ""
@@ -165,6 +167,25 @@ def fetch_linked_records(
     return []
 
 
+def get_israeli_phone_variant(phone: str) -> Optional[str]:
+  """
+  For Israeli phone numbers starting with 972, return the variant with/without zero.
+  If phone is 9720XXX, returns 972XXX (without the zero)
+  If phone is 972XXX (where X is not 0), returns 9720XXX (with the zero)
+  Returns None if not an Israeli number or no variant needed.
+  """
+  if not phone.startswith("972") or len(phone) < 4:
+    return None
+
+  # Check if there's a 0 after 972
+  if phone[3] == "0":
+    # Has zero, return without it (9720507... -> 972507...)
+    return phone[:3] + phone[4:]
+  else:
+    # No zero, add it (972507... -> 9720507...)
+    return phone[:3] + "0" + phone[3:]
+
+
 def main() -> None:
   start_time = time.time()
 
@@ -189,44 +210,61 @@ def main() -> None:
 
   field_name = normalise_field(field)
 
-  try:
-    # Check if we have pyairtable available
-    use_pyairtable = True
+  # Helper function to perform the actual search
+  def perform_search(search_value: str):
     try:
-      from pyairtable import Table  # type: ignore
-    except ImportError:
-      # Fall back to REST API
-      use_pyairtable = False
-
-    if use_pyairtable:
-      # Use pyairtable for the query
-      table = Table(api_key, base_id, table_id)
-      lowered_value = value.lower()
-      formula = f"LOWER({{{field_name}}}) = '{sanitize_formula_value(lowered_value)}'"
-
+      # Check if we have pyairtable available
+      use_pyairtable = True
       try:
-        matches = table.all(
-          view=view_id or None,
-          formula=formula,
-          max_records=3
-        )
-      except TypeError:
-        matches = table.all(
-          view=view_id or None,
-          formula=formula
-        )
-    else:
-      # Use REST API directly
-      matches = query_airtable_with_expansion(
-        api_key, base_id, table_id, field_name, value, view_id
-      )
+        from pyairtable import Table  # type: ignore
+      except ImportError:
+        # Fall back to REST API
+        use_pyairtable = False
 
-  except Exception as exc:
-    emit_error(
-      "Airtable query failed",
-      "QUERY_ERROR",
-      {"reason": str(exc)},
-    )
+      if use_pyairtable:
+        # Use pyairtable for the query
+        table = Table(api_key, base_id, table_id)
+        lowered_value = search_value.lower()
+        formula = f"LOWER({{{field_name}}}) = '{sanitize_formula_value(lowered_value)}'"
+
+        try:
+          return table.all(
+            view=view_id or None,
+            formula=formula,
+            max_records=3
+          )
+        except TypeError:
+          return table.all(
+            view=view_id or None,
+            formula=formula
+          )
+      else:
+        # Use REST API directly
+        return query_airtable_with_expansion(
+          api_key, base_id, table_id, field_name, search_value, view_id
+        )
+    except Exception as exc:
+      emit_error(
+        "Airtable query failed",
+        "QUERY_ERROR",
+        {"reason": str(exc)},
+      )
+      return []
+
+  # Perform initial search
+  matches = perform_search(value)
+  used_phone_variant = False
+  variant_used = None
+
+  # If phone search with no results and starts with 972, try the variant
+  if len(matches) == 0 and field == "phone":
+    variant = get_israeli_phone_variant(value)
+    if variant:
+      # Try search with the phone variant
+      matches = perform_search(variant)
+      if len(matches) > 0:
+        used_phone_variant = True
+        variant_used = variant
 
   # Table IDs for linked record expansion
   # Note: Applicants data is already included in Applications, so we skip it
@@ -266,15 +304,22 @@ def main() -> None:
 
       simplified_matches.append(simplified)
 
+  meta = {
+    "execution_ms": int((time.time() - start_time) * 1000),
+    "total_matches": len(simplified_matches),
+    "expanded": len(matches) == 1
+  }
+
+  # Include phone variant info if used
+  if used_phone_variant:
+    meta["used_phone_variant"] = True
+    meta["variant_used"] = variant_used
+
   emit(
     {
       "status": "ok",
       "matches": simplified_matches,
-      "meta": {
-        "execution_ms": int((time.time() - start_time) * 1000),
-        "total_matches": len(simplified_matches),
-        "expanded": len(matches) == 1
-      },
+      "meta": meta,
     }
   )
 

@@ -93,6 +93,7 @@ describe('AirtableLookupService', () => {
     const pythonRecord = {
       id: 'rec123',
       fields: {
+        ID: 'IL250928IN7',
         Email: 'test@example.com',
         Status: 'Active 🔵',
         Name: 'Test User',
@@ -114,10 +115,15 @@ describe('AirtableLookupService', () => {
     const result = await service.lookup('email', 'test@example.com');
 
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
-    // Should only contain the Status field
+    // Should contain Status, Email, and any other verification fields
     expect(result.record).toEqual({
       id: 'rec123',
-      fields: { Status: 'Active 🔵' },
+      fields: {
+        ID: 'IL250928IN7',
+        Status: 'Active 🔵',
+        Email: 'test@example.com',
+        Phone: '1234567890'
+      },
       createdTime: '2024-01-01T00:00:00.000Z',
     });
 
@@ -127,6 +133,104 @@ describe('AirtableLookupService', () => {
       'test@example.com',
     ]);
     await expect(cache.get(cacheKey)).resolves.toEqual(result);
+  });
+
+  it('maps a single record by phone to found status', async () => {
+    const { service, cache } = createService();
+    const pythonRecord = {
+      id: 'rec456',
+      fields: {
+        ID: 'IL250928LK1',
+        Phone: '972507921512',
+        Status: 'Processing 🟡',
+        Name: 'Phone User',
+        Email: 'phoneuser@example.com'
+      },
+      createdTime: '2024-01-01T00:00:00.000Z',
+    };
+
+    jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
+      .mockResolvedValue({
+        response: {
+          status: 'ok',
+          matches: [pythonRecord],
+        },
+      });
+
+    const result = await service.lookup('phone' as AirtableLookupField, '972507921512');
+
+    expect(result.status).toBe(AirtableLookupStatus.FOUND);
+    // Should contain Status, Phone, Email, and any other verification fields
+    expect(result.record).toEqual({
+      id: 'rec456',
+      fields: {
+        ID: 'IL250928LK1',
+        Status: 'Processing 🟡',
+        Phone: '972507921512',
+        Email: 'phoneuser@example.com'
+      },
+      createdTime: '2024-01-01T00:00:00.000Z',
+    });
+
+    // Ensure result was cached
+    const cacheKey = cache.generateKey('airtable:lookup', [
+      'phone',
+      '972507921512',
+    ]);
+    await expect(cache.get(cacheKey)).resolves.toEqual(result);
+  });
+
+  it('retries phone search with Israeli number variant when no results', async () => {
+    const { service, cache } = createService();
+    const pythonRecord = {
+      id: 'rec789',
+      fields: {
+        ID: 'IL250928MA3',
+        Phone: '9720507921512',  // Stored with zero
+        Status: 'Completed ✅',
+        Name: 'Israeli User',
+        Email: 'israeli@example.com'
+      },
+      createdTime: '2024-01-02T00:00:00.000Z',
+    };
+
+    const executeSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(AirtableLookupService.prototype as any, 'executePythonScript')
+      .mockResolvedValue({
+        response: {
+          status: 'ok',
+          matches: [pythonRecord],
+          meta: {
+            used_phone_variant: true,
+            variant_used: '9720507921512'
+          }
+        },
+      });
+
+    // Search with number without zero, but it finds the one with zero
+    const result = await service.lookup('phone' as AirtableLookupField, '972507921512');
+
+    expect(result.status).toBe(AirtableLookupStatus.FOUND);
+    // Should contain Status, Phone, Email, and any other verification fields
+    expect(result.record).toEqual({
+      id: 'rec789',
+      fields: {
+        ID: 'IL250928MA3',
+        Status: 'Completed ✅',
+        Phone: '9720507921512',
+        Email: 'israeli@example.com'
+      },
+      createdTime: '2024-01-02T00:00:00.000Z',
+    });
+
+    // Verify the script was called with the correct value
+    expect(executeSpy).toHaveBeenCalledWith(
+      JSON.stringify({ field: 'phone', value: '972507921512' }),
+      expect.any(Object)
+    );
   });
 
   it('returns multiple status when more than one record is returned', async () => {
