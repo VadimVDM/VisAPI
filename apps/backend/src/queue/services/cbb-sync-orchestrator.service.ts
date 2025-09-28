@@ -705,9 +705,10 @@ export class CBBSyncOrchestratorService {
     // Use actual product data from the order
     const visaIntent = order.product_intent || 'tourism';
     const visaEntries = order.product_entries || 'single';
+    const stayLimit = order.product_data?.stay_limit || 30; // Default to 30 days if not specified
 
     this.logger.debug(
-      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityWithUnits}, processing=${processingDays} days`,
+      `Mapped order ${order.order_id}: intent=${visaIntent}, entries=${visaEntries}, validity=${visaValidityWithUnits}, processing=${processingDays} days, stay_limit=${stayLimit} days`,
     );
 
     return {
@@ -726,6 +727,7 @@ export class CBBSyncOrchestratorService {
         visaValidityWithUnits,
         countryFlag,
         processingDays,
+        stayLimit,
       }),
     };
   }
@@ -741,6 +743,7 @@ export class CBBSyncOrchestratorService {
       visaValidityWithUnits: string;
       countryFlag: string;
       processingDays: number;
+      stayLimit: number;
     },
   ): Record<string, string | number | boolean | undefined> {
     return {
@@ -754,6 +757,7 @@ export class CBBSyncOrchestratorService {
       visa_quantity: order.visa_quantity || 1,
       order_days: computed.processingDays, // Processing days for WhatsApp template
       order_sum_ils: order.amount || 0, // Total amount paid (CUF ID: 358366)
+      stay_limit: computed.stayLimit, // Maximum stay days (CUF ID: 189039)
 
       // Boolean fields (type 4) - CBB expects 1 for true, 0 for false
       order_urgent: computed.isUrgent ? 1 : 0,
