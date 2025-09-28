@@ -40,6 +40,7 @@ type PythonAirtableRecord = {
   id: string;
   fields: Record<string, unknown>;
   createdTime: string;
+  expanded?: Record<string, unknown>;
 };
 
 @Injectable()
@@ -151,11 +152,18 @@ export class AirtableLookupService {
   }
 
   private mapRecord(record: PythonAirtableRecord): AirtableRecordDto {
-    return {
+    const mapped: AirtableRecordDto = {
       id: record.id,
       fields: record.fields ?? {},
       createdTime: record.createdTime,
     };
+
+    // Include expanded data if present
+    if (record.expanded) {
+      (mapped as any).expanded = record.expanded;
+    }
+
+    return mapped;
   }
 
   private async executePythonScript(

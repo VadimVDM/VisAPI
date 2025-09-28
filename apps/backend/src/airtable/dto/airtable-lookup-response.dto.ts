@@ -15,6 +15,12 @@ export class AirtableRecordDto {
 
   @ApiProperty({ description: 'Record creation timestamp in Airtable.' })
   createdTime!: string;
+
+  @ApiPropertyOptional({
+    description: 'Expanded linked records from Applications, Applicants, and Transactions tables.',
+    type: Object
+  })
+  expanded?: Record<string, unknown>;
 }
 
 export class AirtableLookupResponseDto {
