@@ -244,6 +244,188 @@ export class AirtableLookupService {
     return response;
   }
 
+  async completed(
+    field: AirtableLookupField,
+    value: string,
+    context?: LookupContext,
+  ): Promise<AirtableLookupResponseDto> {
+    const sanitizedValue = value.trim();
+    const startTime = Date.now();
+    const correlationId = context?.correlationId || uuidv4();
+
+    if (!sanitizedValue) {
+      throw new BadRequestException('Lookup value must not be empty');
+    }
+
+    const apiKey = this.configService.airtableApiKey;
+    const baseId = this.configService.airtableBaseId;
+    const tableId = this.configService.airtableTableId;
+    // Use the specific view for completed records
+    const viewId = 'viwgYjpU6K6nXq8ii';
+
+    if (!apiKey || !baseId || !tableId) {
+      throw new ServiceUnavailableException(
+        'Airtable integration is not configured. Please set AIRTABLE_API_KEY, AIRTABLE_BASE_ID, and AIRTABLE_TABLE_ID.',
+      );
+    }
+
+    const cacheKey = this.cacheService.generateKey('airtable:completed', [
+      field,
+      sanitizedValue,
+    ]);
+    const cached = await this.cacheService.get<AirtableLookupResponseDto>(
+      cacheKey,
+    );
+    if (cached) {
+      // Log cache hit
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        200,
+        cached,
+        Date.now() - startTime,
+        true,
+        context,
+        correlationId,
+        undefined,
+        undefined,
+        undefined,
+        '/api/v1/airtable/completed',
+      );
+      return cached;
+    }
+
+    if (!existsSync(this.scriptPath)) {
+      this.logger.error(`Airtable lookup script missing at ${this.scriptPath}`);
+      throw new InternalServerErrorException(
+        'Airtable lookup script is missing from deployment bundle.',
+      );
+    }
+
+    const payload = JSON.stringify({ field, value: sanitizedValue });
+
+    let pythonResponse: PythonLookupResponse;
+    try {
+      const { response } = await this.executePythonScript(payload, {
+        AIRTABLE_API_KEY: apiKey,
+        AIRTABLE_BASE_ID: baseId,
+        AIRTABLE_TABLE_ID: tableId,
+        AIRTABLE_VIEW_ID: viewId, // Always pass the completed view ID
+      });
+      pythonResponse = response;
+    } catch (error) {
+      this.logger.error('Failed to execute Airtable completed script', error as Error);
+      // Log error
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        500,
+        null,
+        Date.now() - startTime,
+        false,
+        context,
+        correlationId,
+        error as Error,
+        undefined,
+        undefined,
+        '/api/v1/airtable/completed',
+      );
+      throw new InternalServerErrorException(
+        'Failed to execute Airtable completed integration.',
+      );
+    }
+
+    if (pythonResponse.status === 'error') {
+      const hint =
+        pythonResponse.code === 'AIRTABLE_IMPORT_ERROR'
+          ? ' Install the pyairtable package in the backend runtime environment.'
+          : '';
+      const message = pythonResponse.error || 'Airtable completed lookup failed.';
+      this.logger.warn(`Airtable completed script returned error: ${message}`);
+      // Log error response
+      await this.logApiRequest(
+        field,
+        sanitizedValue,
+        503,
+        pythonResponse,
+        Date.now() - startTime,
+        false,
+        context,
+        correlationId,
+        new Error(message),
+        pythonResponse.code,
+        undefined,
+        '/api/v1/airtable/completed',
+      );
+      throw new ServiceUnavailableException(message + hint);
+    }
+
+    const matches = pythonResponse.matches ?? [];
+
+    let response: AirtableLookupResponseDto;
+
+    if (matches.length === 0) {
+      response = {
+        status: AirtableLookupStatus.NONE,
+        message: 'none',
+      };
+    } else if (matches.length === 1) {
+      const mappedRecord = this.mapRecord(matches[0]);
+      const fullFields = matches[0].fields || {};
+
+      // Generate status message for IL orders
+      const statusMessage = this.statusMessageGenerator.generateStatusMessage(
+        fullFields
+      );
+
+      // Always extract applications for completed records since we want to track them
+      let applications: Record<string, unknown>[] | undefined;
+      // Check if we have expanded data with Applications
+      interface ExpandedData {
+        expanded?: {
+          Applications_expanded?: Record<string, unknown>[];
+        };
+      }
+      const expandedData = matches[0] as unknown as ExpandedData;
+      if (expandedData.expanded?.Applications_expanded) {
+        applications = expandedData.expanded.Applications_expanded;
+      }
+
+      response = {
+        status: AirtableLookupStatus.FOUND,
+        message: 'found',
+        record: mappedRecord,
+        ...(statusMessage && { statusMessage }),
+        ...(applications && { applications }),
+      };
+    } else {
+      response = {
+        status: AirtableLookupStatus.MULTIPLE,
+        message: 'multiple found',
+      };
+    }
+
+    await this.cacheService.set(cacheKey, response, this.cacheTtlSeconds);
+
+    // Log successful request
+    await this.logApiRequest(
+      field,
+      sanitizedValue,
+      200,
+      response,
+      Date.now() - startTime,
+      false,
+      context,
+      correlationId,
+      undefined,
+      undefined,
+      response.status === AirtableLookupStatus.FOUND ? (response.record?.id || null) : null,
+      '/api/v1/airtable/completed',
+    );
+
+    return response;
+  }
+
   private mapRecord(record: PythonAirtableRecord): AirtableRecordDto {
     // Extract key fields for verification
     const fields = record.fields ?? {};
@@ -365,13 +547,14 @@ export class AirtableLookupService {
     error?: Error,
     errorCode?: string,
     recordId?: string | null,
+    endpoint: string = '/api/v1/airtable/lookup',
   ): Promise<void> {
     try {
       const logEntry = {
         level: error ? 'error' : 'info',
         message: `Airtable lookup: ${field}=${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`,
         metadata: {
-          endpoint: '/api/v1/airtable/lookup',
+          endpoint,
           method: 'POST',
           request_params: {
             field,
