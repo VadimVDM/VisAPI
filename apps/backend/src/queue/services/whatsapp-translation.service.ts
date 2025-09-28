@@ -22,11 +22,13 @@ const COUNTRY_NAMES_HEBREW: Record<string, string> = {
   indonesia: 'אינדונזיה',
   bahrain: 'בחריין',
   'new zealand': 'ניו זילנד',
+  'new_zealand': 'ניו זילנד',  // Also handle underscore version
   cambodia: 'קמבודיה',
   schengen: 'אזור שנגן',
   'schengen area': 'אזור שנגן',
   morocco: 'מרוקו',
   'sri lanka': 'סרי לנקה',
+  'sri_lanka': 'סרי לנקה',  // Also handle underscore version
   togo: 'טוגו',
   china: 'סין',
   japan: 'יפן',
@@ -107,11 +109,13 @@ const COUNTRY_FLAGS: Record<string, string> = {
   indonesia: '🇮🇩',
   bahrain: '🇧🇭',
   'new zealand': '🇳🇿',
-  cambodia: '🇰🇭',
+  'new_zealand': '🇳🇿',  // Also handle underscore version
+  cambodia: '🇰🇿',
   schengen: '🇪🇺',
   'schengen area': '🇪🇺',
   morocco: '🇲🇦',
   'sri lanka': '🇱🇰',
+  'sri_lanka': '🇱🇰',  // Also handle underscore version
   togo: '🇹🇬',
   china: '🇨🇳',
   japan: '🇯🇵',
