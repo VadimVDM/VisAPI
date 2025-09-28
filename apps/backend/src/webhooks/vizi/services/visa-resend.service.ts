@@ -4,20 +4,7 @@ import { AirtableLookupService } from '../../../airtable/airtable.service';
 import { VisaApprovalProcessorService } from '../../../airtable/services/visa-approval-processor.service';
 import { AirtableLookupStatus } from '../../../airtable/dto/airtable-lookup-response.dto';
 import { VisaResendDto, VisaResendResultDto } from '../dto/visa-resend.dto';
-import { CompletedRecord } from '../../../airtable/types/airtable.types';
-
-interface AirtableApplication {
-  id?: string;
-  fields?: Record<string, unknown>;
-  'Visa ID'?: string;
-  'Visa URL'?: string;
-  'Application ID'?: string;
-  'Applicant Name'?: string;
-  'First Name'?: string;
-  'Last Name'?: string;
-  Status?: string;
-  Country?: string;
-}
+import { CompletedRecord, ExpandedApplication } from '../../../airtable/types/airtable.types';
 
 @Injectable()
 export class ViziVisaResendService {
@@ -105,6 +92,7 @@ export class ViziVisaResendService {
       );
 
       // Step 3: Build the completed record format that the processor expects
+      // Applications from Airtable already have the correct structure: { id, fields }
       const completedRecord: CompletedRecord = {
         id: airtableResult.record.id,
         fields: {
@@ -113,7 +101,7 @@ export class ViziVisaResendService {
         },
         createdTime: airtableResult.record.createdTime || new Date().toISOString(),
         expanded: {
-          Applications_expanded: applications, // Just pass applications directly from Airtable!
+          Applications_expanded: applications as unknown as ExpandedApplication[], // Applications from Airtable have correct structure
         },
       };
 
