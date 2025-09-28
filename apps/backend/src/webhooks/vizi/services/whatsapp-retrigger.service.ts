@@ -201,13 +201,13 @@ export class ViziWhatsAppRetriggerService {
           let templateParams: string[];
 
           if (isFirstMessage) {
-            // First message uses the original template
+            // First message uses the phone template with name and country
             templateName = 'visa_approval_file_phone';
             const nameHebrew = cbbContact.client_name || order.client_name || 'לקוח יקר';
             const country = application.country || order.product_country || 'המדינה המבוקשת';
             templateParams = [nameHebrew, country];
           } else {
-            // Subsequent messages use the multi template
+            // Subsequent messages use the multi template with just the applicant name
             templateName = 'visa_approval_file_multi_he';
             templateParams = [
               application.applicantName || `Applicant ${i + 1}`,
