@@ -118,7 +118,7 @@ export class VisaApprovalProcessorService {
     visaDetails: VisaDetails,
   ): Promise<void> {
     const { error } = await this.supabase
-      .client
+      .serviceClient
       .from('orders')
       .update({
         visa_details: visaDetails as unknown as Json,
@@ -140,7 +140,7 @@ export class VisaApprovalProcessorService {
    */
   private async shouldSendNotification(orderId: string): Promise<boolean> {
     const { data: order, error } = await this.supabase
-      .client
+      .serviceClient
       .from('orders')
       .select('visa_notification_sent, cbb_contact_uuid')
       .eq('order_id', orderId)
@@ -172,7 +172,7 @@ export class VisaApprovalProcessorService {
   ): Promise<void> {
     // Get order and CBB contact details
     const { data: order, error } = await this.supabase
-      .client
+      .serviceClient
       .from('orders')
       .select(`
         *,
