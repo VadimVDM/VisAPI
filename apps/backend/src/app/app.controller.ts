@@ -1,10 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Logger } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ConfigService } from '@visapi/core-config';
 import { API_VERSION } from '../common/constants/api.constants';
 
 @Controller()
 export class AppController {
+  private readonly logger = new Logger(AppController.name);
+
   constructor(
     private readonly appService: AppService,
     private readonly configService: ConfigService,
@@ -35,7 +37,7 @@ export class AppController {
     } catch (error) {
       // Even if checks fail, return 200 to keep service in rotation
       // Log the error for monitoring
-      console.error('Health check warning:', error);
+      this.logger.warn('Health check warning:', error);
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),

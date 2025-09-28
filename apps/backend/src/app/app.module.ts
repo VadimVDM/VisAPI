@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -84,7 +84,8 @@ if (sentryConfig.dsn) {
       });
     })
     .catch((error) => {
-      console.error('Failed to initialize Sentry:', error);
+      const logger = new Logger('SentryInitialization');
+      logger.error('Failed to initialize Sentry:', error);
     });
 }
 

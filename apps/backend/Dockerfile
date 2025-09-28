@@ -97,7 +97,7 @@ COPY --from=builder --chown=1001:1001 /app/migrations ./migrations
 COPY --from=prod-deps --chown=1001:1001 /app/node_modules ./node_modules
 
 # Install Python dependencies for Airtable integration
-RUN pip3 install --no-cache-dir pyairtable==3.2.0 --break-system-packages
+RUN pip3 install --no-cache-dir pyairtable==3.2.0 requests --break-system-packages
 
 # Metadata
 ARG GIT_COMMIT=unknown
