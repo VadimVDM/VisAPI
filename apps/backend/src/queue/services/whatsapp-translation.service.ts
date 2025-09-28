@@ -224,13 +224,15 @@ export class WhatsAppTranslationService {
     }
 
     // Build dynamic visa type string
-    // Format: "[Intent] [Validity]" or "[Intent], [Entries], [Validity]" for countries that need entries
+    // Format: "[Intent] [Validity]" or "[Intent], [Entries], [Validity]" for multiple entries
+    // Note: "double" entries are treated same as "single" - no entries mention
     if (normalizedEntries === 'multiple') {
       // For multiple entries, include it in the description
       const entriesHebrew = 'רב פעמית';
       return `${intentHebrew}, ${entriesHebrew}, ${validityHebrew}`;
     } else {
-      // For single entry or when not specified, just use intent + validity
+      // For single, double, or when not specified, just use intent + validity
+      // (double entries treated same as single - no entries text)
       return `${intentHebrew} ${validityHebrew}`;
     }
   }
