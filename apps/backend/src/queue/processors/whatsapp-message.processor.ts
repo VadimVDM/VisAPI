@@ -353,7 +353,6 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
           cbbId,
           templateName,
           applicationIndex,
-          totalApplications
         } = job.data;
 
         // Validate required fields
@@ -381,25 +380,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
           correlationData,
         );
 
-        // Update order visa notification status (only on the last message)
-        const isLastMessage = !totalApplications ||
-                            applicationIndex === undefined ||
-                            applicationIndex === totalApplications - 1;
-
-        if (visaResult.message_id && isLastMessage) {
-          await this.supabaseService.serviceClient
-            .from('orders')
-            .update({
-              visa_notification_sent: true,
-              visa_notification_sent_at: new Date().toISOString(),
-              visa_notification_message_id: visaResult.message_id,
-            })
-            .eq('order_id', order.order_id);
-
-          this.logger.log(
-            `Marked order ${order.order_id} as visa notification sent (${totalApplications || 1} applications)`,
-          );
-        }
+        // NOTE: Do NOT update visa_notification_sent here!
+        // The VisaApprovalProcessorService handles this flag in queueVisaNotification()
+        // after all messages are queued successfully. Updating it here causes a race condition
+        // where subsequent jobs see the flag as true and skip sending.
 
         return visaResult;
 

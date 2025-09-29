@@ -38,7 +38,7 @@ export class ViziVisaResendService {
       // Step 1: Lookup order in Airtable with expansion
       this.logger.debug(`[${correlationId}] Looking up order ${orderId} in Airtable`);
       const airtableResult = await this.airtableLookup.lookup(
-        'orderId',
+        'orderId',  // This gets normalized to 'ID' field in Airtable
         orderId,
         { correlationId },
       );
