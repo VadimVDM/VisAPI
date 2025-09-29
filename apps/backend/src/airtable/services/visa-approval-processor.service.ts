@@ -325,26 +325,10 @@ export class VisaApprovalProcessorService {
       `Queued ${maxApplications} visa approval notifications for order ${orderId}`,
     );
 
-    // Mark order as notified
-    const { error: updateError } = await this.supabase
-      .serviceClient
-      .from('orders')
-      .update({
-        visa_notification_sent: true,
-        visa_notification_sent_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('order_id', orderId);
-
-    if (updateError) {
-      this.logger.error(
-        `Failed to update visa notification status for ${orderId}:`,
-        updateError,
-      );
-      // Don't throw - messages are already queued
-    } else {
-      this.logger.log(`Updated visa_notification_sent flag for order ${orderId}`);
-    }
+    // NOTE: Do NOT mark order as notified here!
+    // The WhatsAppMessageProcessor will update visa_notification_sent flag
+    // in updateOrderWhatsAppStatus() after the message is actually sent to CBB.
+    // Setting it here causes a race condition where the flag is true before sending completes.
   }
 
   /**

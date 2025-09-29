@@ -220,6 +220,11 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         await this.updateCBBNotificationFlag(orderId);
       }
 
+      // Update visa notification flag for visa approval messages
+      if (messageType === 'visa_approval') {
+        await this.updateVisaNotificationFlag(orderId, result.message_id);
+      }
+
       // Only log success in development
       if (!this.configService.isProduction) {
         this.logger.log(
@@ -702,6 +707,38 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       // Log but don't fail the message processing
       this.logger.error(
         `Error updating CBB notification flag for order ${orderId}:`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Update visa notification flag after successful message sending
+   */
+  private async updateVisaNotificationFlag(orderId: string, messageId?: string): Promise<void> {
+    try {
+      const { error } = await this.supabaseService.serviceClient
+        .from('orders')
+        .update({
+          visa_notification_sent: true,
+          visa_notification_sent_at: new Date().toISOString(),
+          visa_notification_message_id: messageId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_id', orderId);
+
+      if (error) {
+        // Don't throw error - this is not critical enough to fail the message processing
+        this.logger.warn(
+          `Failed to update visa notification flag for order ${orderId}: ${error.message}`,
+        );
+      } else {
+        this.logger.log(`Updated visa_notification_sent flag for order ${orderId}`);
+      }
+    } catch (error) {
+      // Log but don't fail the message processing
+      this.logger.error(
+        `Error updating visa notification flag for order ${orderId}:`,
         error,
       );
     }
