@@ -24,13 +24,15 @@ export class VisaApprovalProcessorService {
 
   /**
    * Process new completed records and handle visa approvals
+   * @param records Array of completed records from Airtable
+   * @param force If true, bypasses idempotency checks (for manual resends)
    */
-  async processCompletedRecords(records: CompletedRecord[]): Promise<void> {
-    this.logger.log(`Processing ${records.length} completed records for visa approvals`);
+  async processCompletedRecords(records: CompletedRecord[], force = false): Promise<void> {
+    this.logger.log(`Processing ${records.length} completed records for visa approvals (force=${force})`);
 
     for (const record of records) {
       try {
-        await this.processRecord(record);
+        await this.processRecord(record, force);
       } catch (error) {
         this.logger.error(
           `Failed to process record ${record.id}:`,
@@ -42,8 +44,9 @@ export class VisaApprovalProcessorService {
 
   /**
    * Process a single completed record
+   * @param force If true, bypasses automated checks and forces resend
    */
-  private async processRecord(record: CompletedRecord): Promise<void> {
+  private async processRecord(record: CompletedRecord, force = false): Promise<void> {
     const orderId = record.fields.ID;
     if (!orderId) {
       this.logger.debug(`Skipping record ${record.id} - no order ID`);
@@ -71,14 +74,14 @@ export class VisaApprovalProcessorService {
     // Update order with visa details
     await this.updateOrderWithVisaDetails(orderId, visaDetails);
 
-    // Check if we should send notification
-    const shouldNotify = await this.shouldSendNotification(orderId);
-    this.logger.log(`Should send notification for ${orderId}: ${shouldNotify}`);
+    // Check if we should send notification (skip check if forced)
+    const shouldNotify = force || await this.shouldSendNotification(orderId);
+    this.logger.log(`Should send notification for ${orderId}: ${shouldNotify} (force=${force})`);
 
     if (shouldNotify) {
-      this.logger.log(`Queueing visa notifications for ${orderId}`);
+      this.logger.log(`Queueing visa notifications for ${orderId} (force=${force})`);
       try {
-        await this.queueVisaNotification(orderId, visaDetails);
+        await this.queueVisaNotification(orderId, visaDetails, force);
         this.logger.log(`Successfully queued visa notifications for ${orderId}`);
       } catch (error) {
         this.logger.error(`Failed to queue visa notifications for ${orderId}:`, error);
@@ -206,12 +209,14 @@ export class VisaApprovalProcessorService {
 
   /**
    * Queue visa approval notification for WhatsApp
+   * @param force If true, bypasses idempotency checks in processor (for manual resends)
    */
   private async queueVisaNotification(
     orderId: string,
     visaDetails: VisaDetails,
+    force = false,
   ): Promise<void> {
-    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications`);
+    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications (force=${force})`);
 
     // Get order and CBB contact details
     const { data: order, error } = await this.supabase
@@ -303,6 +308,7 @@ export class VisaApprovalProcessorService {
           visaDetails,
           applicationIndex: i, // Track which application this is
           totalApplications: maxApplications,
+          force, // Flag to bypass idempotency checks for manual resends
         },
         {
           attempts: 3,

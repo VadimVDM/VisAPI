@@ -58,6 +58,7 @@ export interface WhatsAppMessageJobData {
   visaDetails?: any;                      // Full visa details object
   applicationIndex?: number;              // Which application (0-based) for multi-visa
   totalApplications?: number;             // Total number of applications in order
+  force?: boolean;                        // Bypass idempotency checks for manual resends
 }
 
 export interface LogPruneJobData {

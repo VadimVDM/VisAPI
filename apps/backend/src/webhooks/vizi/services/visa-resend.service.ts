@@ -106,11 +106,12 @@ export class ViziVisaResendService {
       };
 
       // Step 4: Process the record using the existing visa processor
+      // Pass force=true to bypass idempotency checks (this is a manual resend)
       this.logger.log(
-        `[${correlationId}] Processing visa approvals for order ${orderId}`,
+        `[${correlationId}] Processing visa approvals for order ${orderId} (force=true for manual resend)`,
       );
 
-      await this.visaProcessor.processCompletedRecords([completedRecord]);
+      await this.visaProcessor.processCompletedRecords([completedRecord], true);
 
       this.logger.log(
         `[${correlationId}] Successfully triggered visa resend for order ${orderId}`,

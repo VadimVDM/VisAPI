@@ -160,9 +160,12 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         throw new Error(`Order ${orderId} not found`);
       }
 
-      // Check for duplicate messages (pass template name if available)
+      // Extract force flag from job data
+      const force = job?.data?.force === true;
       const templateName = job?.data?.templateName;
-      if (await this.isMessageAlreadySent(order, messageType, templateName)) {
+
+      // Check for duplicate messages (skip if forced resend)
+      if (!force && await this.isMessageAlreadySent(order, messageType, templateName)) {
         this.logger.log(
           `${messageType} already sent for order ${orderId}, skipping`,
         );
@@ -175,10 +178,18 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         };
       }
 
+      // Log when bypassing idempotency for manual resends
+      if (force) {
+        this.logger.log(
+          `Force resend enabled for ${messageType} to order ${orderId}, bypassing idempotency checks`,
+        );
+      }
+
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
-      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone, templateName);
-      
-      // If null returned, another job is handling this message
+      // Pass force flag to allow overwriting existing sent records for manual resends
+      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone, templateName, force);
+
+      // If null returned, another job is handling this message (only possible when force=false)
       if (!messageId) {
         this.logger.log(
           `Message for order ${orderId} is being handled by another job, skipping`,
@@ -469,12 +480,14 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
 
   /**
    * Create or update idempotency record BEFORE sending message
+   * @param force If true, overwrites existing 'sent' records for manual resends
    */
   private async createIdempotencyRecord(
     orderId: string,
     messageType: string,
     phoneNumber?: string,
     templateName?: string,
+    force = false,
   ): Promise<string | null> {
     const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
     const now = new Date().toISOString();
@@ -489,14 +502,21 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       .maybeSingle();
 
     if (existing) {
-      // If record exists and is in 'pending' or 'sent' status, skip
-      if (existing.status === 'sent' || existing.status === 'pending') {
+      // If force=true, always update the record even if sent
+      if (force) {
         this.logger.log(
-          `Message for order ${orderId} already ${existing.status}, skipping`,
+          `Force resend: Overwriting existing ${existing.status} record for order ${orderId}`,
         );
-        return null;
+      } else {
+        // If record exists and is in 'pending' or 'sent' status, skip (normal idempotency)
+        if (existing.status === 'sent' || existing.status === 'pending') {
+          this.logger.log(
+            `Message for order ${orderId} already ${existing.status}, skipping`,
+          );
+          return null;
+        }
       }
-      
+
       // Update existing record to pending with new message_id
       const { error } = await this.supabaseService.serviceClient
         .from('whatsapp_messages')
