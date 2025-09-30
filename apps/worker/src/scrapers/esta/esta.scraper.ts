@@ -88,6 +88,10 @@ export class EstaScraper extends BaseScraper {
       // Step 8: Fill in the form
       await this.fillLookupForm(jobData.credentials);
 
+      // Wait for reCAPTCHA to load and validate (invisible reCAPTCHA needs time)
+      this.logger.log('[ESTA] Waiting for reCAPTCHA validation...');
+      await this.page.waitForTimeout(3000);
+
       // Step 9: Submit the form and wait for navigation
       this.logger.log('[ESTA] Submitting form...');
 

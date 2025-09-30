@@ -41,6 +41,14 @@ export class BrowserManagerService implements OnModuleDestroy {
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1920,1080',
+        // Anti-detection: Make headless browser appear more like a real browser
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-web-security',
+        '--allow-running-insecure-content',
+        '--disable-notifications',
+        '--disable-popup-blocking',
+        '--lang=en-US,en',
       ],
       // Use system Chrome/Chromium in production (Railway)
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined,
@@ -75,15 +83,38 @@ export class BrowserManagerService implements OnModuleDestroy {
           width: mergedConfig.viewportWidth,
           height: mergedConfig.viewportHeight,
         },
-        userAgent: mergedConfig.userAgent,
+        userAgent: mergedConfig.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         javaScriptEnabled: mergedConfig.javascript,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
+        locale: 'en-US',
+        timezoneId: 'America/New_York',
         ...mergedConfig.launchOptions,
       });
 
       // Set default timeout
       context.setDefaultTimeout(mergedConfig.timeout);
+
+      // Override navigator.webdriver to hide automation
+      await context.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => false,
+        });
+
+        // Add common browser properties
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => [1, 2, 3, 4, 5],
+        });
+
+        Object.defineProperty(navigator, 'languages', {
+          get: () => ['en-US', 'en'],
+        });
+
+        // Override Chrome property
+        (window as any).chrome = {
+          runtime: {},
+        };
+      });
 
       // Optionally disable images for faster loading
       if (!mergedConfig.images) {
