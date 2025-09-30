@@ -90,15 +90,30 @@ export class EstaScraper extends BaseScraper {
 
       // Wait for reCAPTCHA to load and validate (invisible reCAPTCHA needs time)
       this.logger.log('[ESTA] Waiting for reCAPTCHA validation...');
-      await this.page.waitForTimeout(3000);
+
+      // Add human-like mouse movements to help reCAPTCHA validation
+      const submitButton = this.page.locator('button:has-text("RETRIEVE APPLICATION")');
+      const boundingBox = await submitButton.boundingBox();
+      if (boundingBox) {
+        // Move mouse to button slowly
+        await this.page.mouse.move(
+          boundingBox.x + boundingBox.width / 2,
+          boundingBox.y + boundingBox.height / 2,
+          { steps: 10 }
+        );
+        await this.page.waitForTimeout(500);
+      }
+
+      // Wait longer for reCAPTCHA (some sites need 5-10 seconds)
+      await this.page.waitForTimeout(5000);
 
       // Step 9: Submit the form and wait for navigation
       this.logger.log('[ESTA] Submitting form...');
 
       // Click submit button and wait for navigation to status page
       await Promise.all([
-        this.page.waitForURL('**/estaStatus**', { timeout: 15000 }),
-        this.clickElement('button:has-text("RETRIEVE APPLICATION")'),
+        this.page.waitForURL('**/estaStatus**', { timeout: 20000 }),
+        submitButton.click(),
       ]);
 
       this.logger.log('[ESTA] Successfully navigated to status page');
