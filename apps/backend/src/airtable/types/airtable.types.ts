@@ -41,7 +41,7 @@ export interface CompletedRecord {
 
 export interface VisaApplication {
   applicationId: string;
-  visaId: string;
+  visaId?: string; // Optional - not always filled in Airtable
   visaUrl: string;
   applicantName?: string;
   status: string;

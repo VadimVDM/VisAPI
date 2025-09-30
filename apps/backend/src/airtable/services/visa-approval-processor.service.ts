@@ -108,10 +108,9 @@ export class VisaApprovalProcessorService {
     this.logger.debug(`Building visa details from ${applications.length} applications`);
 
     for (const app of applications) {
-      // ID field contains the application/visa ID (e.g., 27H8Q49T88908986)
-      const visaId = app.fields['ID'];
+      const visaId = app.fields['Visa ID']; // Optional - grab if available
       const visaUrl = app.fields['Visa URL'];
-      // Use the same ID for both visa ID and application ID
+      // ID field contains the application ID (e.g., 27H8Q49T88908986)
       const applicationId = app.fields['ID'] || app.fields['Application ID'];
 
       this.logger.debug(`Application fields:`, {
@@ -122,7 +121,8 @@ export class VisaApprovalProcessorService {
         applicationId,
       });
 
-      if (visaId && visaUrl && applicationId) {
+      // Only require visaUrl and applicationId (visaId is optional)
+      if (visaUrl && applicationId) {
         // Extract first and last names from arrays
         const firstNameField = app.fields['First name'];
         const firstName = Array.isArray(firstNameField)
