@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class VisaResendDto {
   @ApiProperty({
@@ -9,6 +9,15 @@ export class VisaResendDto {
   @IsString()
   @IsNotEmpty()
   orderId: string;
+
+  @ApiProperty({
+    description: 'Optional phone number to override recipient (e.g., 972507758758). If provided, messages will be sent to this number instead of the order\'s phone.',
+    example: '972507758758',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }
 
 export class VisaResendResultDto {

@@ -26,13 +26,16 @@ export class ViziVisaResendService {
     dto: VisaResendDto,
     correlationId: string,
   ): Promise<VisaResendResultDto> {
-    const { orderId } = dto;
+    const { orderId, phone: rawPhone } = dto;
 
     if (!orderId) {
       throw new BadRequestException('Order ID is required');
     }
 
-    this.logger.log(`[${correlationId}] Starting visa approval resend for order ${orderId}`);
+    // Normalize phone: remove + prefix if present (CBB uses phone without + as contact ID)
+    const phone = rawPhone?.replace(/^\+/, '');
+
+    this.logger.log(`[${correlationId}] Starting visa approval resend for order ${orderId}${phone ? ` with override phone ${phone}` : ''}`);
 
     try {
       // Step 1: Lookup order in Airtable with expansion
@@ -107,11 +110,12 @@ export class ViziVisaResendService {
 
       // Step 4: Process the record using the existing visa processor
       // Pass force=true to bypass idempotency checks (this is a manual resend)
+      // Pass phone to override recipient if provided
       this.logger.log(
         `[${correlationId}] Processing visa approvals for order ${orderId} (force=true for manual resend)`,
       );
 
-      await this.visaProcessor.processCompletedRecords([completedRecord], true);
+      await this.visaProcessor.processCompletedRecords([completedRecord], true, phone);
 
       this.logger.log(
         `[${correlationId}] Successfully triggered visa resend for order ${orderId}`,

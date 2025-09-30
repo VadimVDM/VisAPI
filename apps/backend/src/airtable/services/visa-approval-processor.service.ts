@@ -4,6 +4,7 @@ import { ConfigService } from '@visapi/core-config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES, JOB_NAMES, Json } from '@visapi/shared-types';
+import { ContactResolverService } from '@visapi/backend-core-cbb';
 import {
   CompletedRecord,
   ExpandedApplication,
@@ -18,6 +19,7 @@ export class VisaApprovalProcessorService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly contactResolver: ContactResolverService,
     @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES)
     private readonly whatsappQueue: Queue,
   ) {}
@@ -26,15 +28,16 @@ export class VisaApprovalProcessorService {
    * Process new completed records and handle visa approvals
    * @param records Array of completed records from Airtable
    * @param force If true, bypasses idempotency checks (for manual resends)
+   * @param phoneOverride Optional phone number to send messages to (overrides order's phone)
    */
-  async processCompletedRecords(records: CompletedRecord[], force = false): Promise<void> {
-    this.logger.log(`Processing ${records.length} completed records for visa approvals (force=${force})`);
+  async processCompletedRecords(records: CompletedRecord[], force = false, phoneOverride?: string): Promise<void> {
+    this.logger.log(`Processing ${records.length} completed records for visa approvals (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
 
     const errors: Array<{ recordId: string; error: string }> = [];
 
     for (const record of records) {
       try {
-        await this.processRecord(record, force);
+        await this.processRecord(record, force, phoneOverride);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         this.logger.error(
@@ -54,8 +57,9 @@ export class VisaApprovalProcessorService {
   /**
    * Process a single completed record
    * @param force If true, bypasses automated checks and forces resend
+   * @param phoneOverride Optional phone number to send messages to (overrides order's phone)
    */
-  private async processRecord(record: CompletedRecord, force = false): Promise<void> {
+  private async processRecord(record: CompletedRecord, force = false, phoneOverride?: string): Promise<void> {
     const orderId = record.fields.ID;
     if (!orderId) {
       this.logger.debug(`Skipping record ${record.id} - no order ID`);
@@ -88,9 +92,9 @@ export class VisaApprovalProcessorService {
     this.logger.log(`Should send notification for ${orderId}: ${shouldNotify} (force=${force})`);
 
     if (shouldNotify) {
-      this.logger.log(`Queueing visa notifications for ${orderId} (force=${force})`);
+      this.logger.log(`Queueing visa notifications for ${orderId} (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
       try {
-        await this.queueVisaNotification(orderId, visaDetails, force);
+        await this.queueVisaNotification(orderId, visaDetails, force, phoneOverride);
         this.logger.log(`Successfully queued visa notifications for ${orderId}`);
       } catch (error) {
         this.logger.error(`Failed to queue visa notifications for ${orderId}:`, error);
@@ -220,13 +224,15 @@ export class VisaApprovalProcessorService {
   /**
    * Queue visa approval notification for WhatsApp
    * @param force If true, bypasses idempotency checks in processor (for manual resends)
+   * @param phoneOverride Optional phone number to send messages to (overrides order's phone)
    */
   private async queueVisaNotification(
     orderId: string,
     visaDetails: VisaDetails,
     force = false,
+    phoneOverride?: string,
   ): Promise<void> {
-    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications (force=${force})`);
+    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
 
     // Get order and CBB contact details
     const { data: order, error } = await this.supabase
@@ -279,6 +285,25 @@ export class VisaApprovalProcessorService {
       return;
     }
 
+    // Handle phone override: resolve/create CBB contact for the override phone
+    let finalContact = cbbContact;
+    if (phoneOverride) {
+      this.logger.log(`Resolving CBB contact for override phone: ${phoneOverride}`);
+      try {
+        const resolvedContact = await this.contactResolver.resolveContact(phoneOverride);
+        finalContact = {
+          cbb_contact_id: String(resolvedContact.id), // Convert number to string
+          client_phone: phoneOverride,
+          client_name: resolvedContact.first_name || cbbContact.client_name,
+          alerts_enabled: true, // Override always has alerts enabled
+        };
+        this.logger.log(`Using override contact ${resolvedContact.id} for phone ${phoneOverride}`);
+      } catch (error) {
+        this.logger.error(`Failed to resolve override contact for ${phoneOverride}:`, error);
+        throw new Error(`Failed to resolve CBB contact for override phone ${phoneOverride}`);
+      }
+    }
+
     // Support up to 10 applications
     const maxApplications = Math.min(visaDetails.applications.length, 10);
 
@@ -300,7 +325,7 @@ export class VisaApprovalProcessorService {
         // First message uses the original template
         templateName = 'visa_approval_file_phone';
         templateParams = [
-          cbbContact?.client_name || (order as Record<string, unknown>)?.first_name as string || 'לקוח יקר',
+          finalContact?.client_name || (order as Record<string, unknown>)?.first_name as string || 'לקוח יקר',
           country || 'המדינה המבוקשת',
         ] as string[];
       } else {
@@ -321,10 +346,10 @@ export class VisaApprovalProcessorService {
         JOB_NAMES.SEND_WHATSAPP_VISA_APPROVAL,
         {
           orderId,
-          contactId: cbbContact?.cbb_contact_id,
+          contactId: finalContact?.cbb_contact_id,
           messageType: 'visa_approval' as const,
-          cbbId: cbbContact?.cbb_contact_id || '',
-          phone: cbbContact?.client_phone || '',
+          cbbId: finalContact?.cbb_contact_id || '',
+          phone: finalContact?.client_phone || '',
           templateName,
           templateParams,
           documentUrl: application.visaUrl,

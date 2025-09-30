@@ -4,6 +4,7 @@ import { SupabaseModule } from '@visapi/core-supabase';
 import { RedisModule } from '@visapi/util-redis';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
+import { CbbModule } from '@visapi/backend-core-cbb';
 import { AuthModule } from '../auth/auth.module';
 import { QueueModule } from '../queue/queue.module';
 import { AirtableController } from './airtable.controller';
@@ -19,6 +20,7 @@ import { QUEUE_NAMES } from '@visapi/shared-types';
     ConfigModule,
     SupabaseModule,
     RedisModule,
+    CbbModule, // Import CbbModule for ContactResolverService
     ScheduleModule.forRoot(),
     forwardRef(() => QueueModule), // Import QueueModule for WhatsAppTranslationService
     BullModule.registerQueue({
