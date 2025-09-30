@@ -4,7 +4,6 @@ import { ConfigService } from '@visapi/core-config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES, JOB_NAMES, Json } from '@visapi/shared-types';
-import { ContactResolverService } from '@visapi/backend-core-cbb';
 import {
   CompletedRecord,
   ExpandedApplication,
@@ -19,7 +18,6 @@ export class VisaApprovalProcessorService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly configService: ConfigService,
-    private readonly contactResolver: ContactResolverService,
     @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES)
     private readonly whatsappQueue: Queue,
   ) {}
@@ -285,23 +283,19 @@ export class VisaApprovalProcessorService {
       return;
     }
 
-    // Handle phone override: resolve/create CBB contact for the override phone
+    // Handle phone override: use the override phone directly
     let finalContact = cbbContact;
     if (phoneOverride) {
-      this.logger.log(`Resolving CBB contact for override phone: ${phoneOverride}`);
-      try {
-        const resolvedContact = await this.contactResolver.resolveContact(phoneOverride);
-        finalContact = {
-          cbb_contact_id: String(resolvedContact.id), // Convert number to string
-          client_phone: phoneOverride,
-          client_name: resolvedContact.first_name || cbbContact.client_name,
-          alerts_enabled: true, // Override always has alerts enabled
-        };
-        this.logger.log(`Using override contact ${resolvedContact.id} for phone ${phoneOverride}`);
-      } catch (error) {
-        this.logger.error(`Failed to resolve override contact for ${phoneOverride}:`, error);
-        throw new Error(`Failed to resolve CBB contact for override phone ${phoneOverride}`);
-      }
+      this.logger.log(`Using phone override: ${phoneOverride} (bypassing order's contact)`);
+      // Override the contact data with the new phone
+      // CBB will resolve/create the contact automatically when sending
+      finalContact = {
+        cbb_contact_id: phoneOverride, // Use phone as ID for CBB
+        client_phone: phoneOverride,
+        client_name: cbbContact.client_name, // Keep original name
+        alerts_enabled: true, // Override always has alerts enabled
+      };
+      this.logger.log(`Overriding recipient to phone ${phoneOverride}`);
     }
 
     // Support up to 10 applications
