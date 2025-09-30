@@ -88,13 +88,19 @@ export class EstaScraper extends BaseScraper {
       // Step 8: Fill in the form
       await this.fillLookupForm(jobData.credentials);
 
-      // Step 9: Submit the form
+      // Step 9: Submit the form and wait for navigation
       this.logger.log('[ESTA] Submitting form...');
-      await this.clickElement('button:has-text("RETRIEVE APPLICATION")');
-      await this.page.waitForTimeout(2000);
-      await this.captureScreenshot('esta-05-after-submit');
 
-      // Step 10: Check if we got to the status page
+      // Click submit button and wait for navigation to status page
+      await Promise.all([
+        this.page.waitForURL('**/estaStatus**', { timeout: 15000 }),
+        this.clickElement('button:has-text("RETRIEVE APPLICATION")'),
+      ]);
+
+      this.logger.log('[ESTA] Successfully navigated to status page');
+      await this.captureScreenshot('esta-05-status-page');
+
+      // Step 10: Verify we're on the status page
       const statusPageUrl = this.page.url();
       if (!statusPageUrl.includes('estaStatus')) {
         this.logger.error('[ESTA] Form submission failed - not on status page');

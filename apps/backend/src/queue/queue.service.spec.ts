@@ -13,6 +13,7 @@ describe('QueueService', () => {
   let bulkQueue: jest.Mocked<Queue>;
   let cbbSyncQueue: jest.Mocked<Queue>;
   let whatsappMessagesQueue: jest.Mocked<Queue>;
+  let scraperQueue: jest.Mocked<Queue>;
 
   const createMockQueue = (): jest.Mocked<Queue> =>
     ({
@@ -35,6 +36,7 @@ describe('QueueService', () => {
     const mockBulkQueue = createMockQueue();
     const mockCbbSyncQueue = createMockQueue();
     const mockWhatsappMessagesQueue = createMockQueue();
+    const mockScraperQueue = createMockQueue();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +62,10 @@ describe('QueueService', () => {
           useValue: mockWhatsappMessagesQueue,
         },
         {
+          provide: getQueueToken(QUEUE_NAMES.SCRAPER),
+          useValue: mockScraperQueue,
+        },
+        {
           provide: ConfigService,
           useValue: {
             queueMaxRetries: 3,
@@ -77,6 +83,7 @@ describe('QueueService', () => {
     whatsappMessagesQueue = module.get(
       getQueueToken(QUEUE_NAMES.WHATSAPP_MESSAGES),
     );
+    scraperQueue = module.get(getQueueToken(QUEUE_NAMES.SCRAPER));
   });
 
   it('should be defined', () => {
@@ -173,16 +180,18 @@ describe('QueueService', () => {
       bulkQueue.getJobCounts.mockResolvedValue(mockCounts);
       cbbSyncQueue.getJobCounts.mockResolvedValue(mockCounts);
       whatsappMessagesQueue.getJobCounts.mockResolvedValue(mockCounts);
+      scraperQueue.getJobCounts.mockResolvedValue(mockCounts);
 
       criticalQueue.isPaused.mockResolvedValue(false);
       defaultQueue.isPaused.mockResolvedValue(false);
       bulkQueue.isPaused.mockResolvedValue(false);
       cbbSyncQueue.isPaused.mockResolvedValue(false);
       whatsappMessagesQueue.isPaused.mockResolvedValue(false);
+      scraperQueue.isPaused.mockResolvedValue(false);
 
       const result = await service.getQueueMetrics();
 
-      expect(result).toHaveLength(5);
+      expect(result).toHaveLength(6);
       expect(result[0]).toEqual<QueueMetrics>({
         name: QUEUE_NAMES.CRITICAL,
         counts: {
