@@ -37,36 +37,43 @@ COPY apps/worker/package.json dist/apps/worker/
 # Install production dependencies (no lockfile in dist, so can't use frozen-lockfile)
 RUN cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
 
-# Stage 3: Runner
-FROM node:22-alpine AS runner
+# Stage 3: Runner (Debian-based for Playwright compatibility)
+FROM node:22-slim AS runner
 
-# Install Chromium for PDF generation and Playwright browsers
-RUN apk update && apk add --no-cache \
+# Install dependencies for Puppeteer and Playwright
+RUN apt-get update && apt-get install -y \
   chromium \
-  nss \
-  freetype \
-  freetype-dev \
-  harfbuzz \
+  fonts-liberation \
+  libasound2 \
+  libatk-bridge2.0-0 \
+  libatk1.0-0 \
+  libcups2 \
+  libdbus-1-3 \
+  libdrm2 \
+  libgbm1 \
+  libgtk-3-0 \
+  libnspr4 \
+  libnss3 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxkbcommon0 \
+  libxrandr2 \
+  xdg-utils \
+  wget \
   ca-certificates \
-  ttf-freefont \
-  font-noto-emoji \
-  # Playwright dependencies
-  glib \
-  gcompat \
-  libstdc++ \
-  libgcc \
-  && rm -rf /var/cache/apk/*
+  && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=false \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     NODE_ENV=production \
     SERVICE_NAME=worker \
     NODE_OPTIONS="--max-old-space-size=2048"
 
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nodejs
 
 WORKDIR /app
 
