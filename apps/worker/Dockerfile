@@ -40,7 +40,7 @@ RUN cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
 # Stage 3: Runner
 FROM node:22-alpine AS runner
 
-# Install Chromium for PDF generation
+# Install Chromium for PDF generation and Playwright browsers
 RUN apk update && apk add --no-cache \
   chromium \
   nss \
@@ -50,10 +50,17 @@ RUN apk update && apk add --no-cache \
   ca-certificates \
   ttf-freefont \
   font-noto-emoji \
+  # Playwright dependencies
+  glib \
+  gcompat \
+  libstdc++ \
+  libgcc \
   && rm -rf /var/cache/apk/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=false \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     NODE_ENV=production \
     SERVICE_NAME=worker \
     NODE_OPTIONS="--max-old-space-size=2048"
@@ -65,8 +72,11 @@ WORKDIR /app
 
 COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./
 
-RUN mkdir -p /tmp/pdf-generator /app/templates/pdf/examples && \
-    chown -R nodejs:nodejs /tmp/pdf-generator /app/templates
+# Install Playwright browsers before switching to nodejs user
+RUN npx playwright install chromium
+
+RUN mkdir -p /tmp/pdf-generator /app/templates/pdf/examples /ms-playwright && \
+    chown -R nodejs:nodejs /tmp/pdf-generator /app/templates /ms-playwright
 
 USER nodejs
 
