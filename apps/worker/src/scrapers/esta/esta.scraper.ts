@@ -85,8 +85,8 @@ export class EstaScraper extends BaseScraper {
       await this.captureScreenshot('esta-05-after-submit');
 
       // Step 10: Check if we got to the status page
-      const currentUrl = this.page.url();
-      if (!currentUrl.includes('estaStatus')) {
+      const statusPageUrl = this.page.url();
+      if (!statusPageUrl.includes('estaStatus')) {
         this.logger.error('[ESTA] Form submission failed - not on status page');
         return this.createErrorResult(jobData, new Error('Form submission failed'), options);
       }

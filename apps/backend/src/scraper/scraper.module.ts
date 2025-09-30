@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { SupabaseModule } from '@visapi/core-supabase';
+import { AuthModule } from '../auth/auth.module';
 import { ScraperController } from './scraper.controller';
 import { ScraperService } from './scraper.service';
 
@@ -11,6 +12,7 @@ import { ScraperService } from './scraper.service';
  */
 @Module({
   imports: [
+    AuthModule,
     SupabaseModule,
     BullModule.registerQueue({
       name: QUEUE_NAMES.SCRAPER,

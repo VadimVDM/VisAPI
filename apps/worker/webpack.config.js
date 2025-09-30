@@ -5,6 +5,9 @@ module.exports = {
   output: {
     path: join(__dirname, '../../dist/apps/worker'),
   },
+  externals: {
+    playwright: 'commonjs playwright',
+  },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
