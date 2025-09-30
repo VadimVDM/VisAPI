@@ -23,6 +23,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     @InjectQueue(QUEUE_NAMES.CBB_SYNC) private cbbSyncQueue: Queue,
     @InjectQueue(QUEUE_NAMES.WHATSAPP_MESSAGES)
     private whatsappMessagesQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.SCRAPER) private scraperQueue: Queue,
     private readonly config: ConfigService,
   ) {}
 
@@ -36,6 +37,8 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         return this.cbbSyncQueue;
       case QUEUE_NAMES.WHATSAPP_MESSAGES:
         return this.whatsappMessagesQueue;
+      case QUEUE_NAMES.SCRAPER:
+        return this.scraperQueue;
       case QUEUE_NAMES.DEFAULT:
       default:
         return this.defaultQueue;
@@ -58,11 +61,10 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       };
     },
   ): Promise<Job<T>> {
-    this.logger.log(
-      `Adding job to queue: ${queueName}, job: ${jobName}`,
-      { data },
-    );
-    
+    this.logger.log(`Adding job to queue: ${queueName}, job: ${jobName}`, {
+      data,
+    });
+
     const queue = this.getQueue(queueName);
     if (!queue) {
       this.logger.error(`Queue ${queueName} not found!`);
@@ -80,16 +82,16 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     };
 
     try {
-      const job = await queue.add(jobName, data, {
+      const job = (await queue.add(jobName, data, {
         ...defaultOptions,
         ...options,
         priority: options?.priority || this.getDefaultPriority(queueName),
-      }) as Job<T>;
-      
+      })) as Job<T>;
+
       this.logger.log(
         `Job added successfully: ${queueName}/${jobName}, job ID: ${job.id}`,
       );
-      
+
       return job;
     } catch (error) {
       this.logger.error(
@@ -120,6 +122,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
             name: QUEUE_NAMES.WHATSAPP_MESSAGES,
             queue: this.whatsappMessagesQueue,
           },
+          { name: QUEUE_NAMES.SCRAPER, queue: this.scraperQueue },
         ];
 
     const metrics: QueueMetrics[] = [];
@@ -262,7 +265,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         // Force resume regardless of current state
         await queue.resume();
         const isPaused = await queue.isPaused();
-        
+
         if (isPaused) {
           // If still paused, log error
           this.logger.error(

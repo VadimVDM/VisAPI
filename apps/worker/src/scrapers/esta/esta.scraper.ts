@@ -24,10 +24,12 @@ export class EstaScraper extends BaseScraper {
 
   protected async executeScrape(
     jobData: ScraperJobData,
-    options: ScraperOptions
+    options: ScraperOptions,
   ): Promise<ScraperJobResult> {
     this.logger.log(`[ESTA] Starting scrape for job ${jobData.jobId}`);
-    this.logger.log(`[ESTA] Credentials: ${JSON.stringify(jobData.credentials)}`);
+    this.logger.log(
+      `[ESTA] Credentials: ${JSON.stringify(jobData.credentials)}`,
+    );
 
     try {
       // Step 1: Navigate to ESTA homepage
@@ -40,12 +42,14 @@ export class EstaScraper extends BaseScraper {
 
       // Step 3: Open "Check ESTA Status" menu
       this.logger.log('[ESTA] Opening Check ESTA Status menu...');
-      await this.clickElement('button:has-text("Check ESTA Status")');
+      await this.page
+        .getByRole('button', { name: /Check ESTA Status/i })
+        .click();
       await this.page.waitForTimeout(500);
 
       // Step 4: Click "Check Individual Status"
       this.logger.log('[ESTA] Clicking Check Individual Status...');
-      await this.clickElement('text=Check Individual Status');
+      await this.page.getByText('Check Individual Status').click();
       await this.page.waitForTimeout(1000);
 
       // Step 5: Handle security notification popup (first time only)
@@ -64,15 +68,21 @@ export class EstaScraper extends BaseScraper {
         await this.closeMobileAppPopup();
 
         // Navigate to status lookup again
-        await this.clickElement('button:has-text("Check ESTA Status")');
+        await this.page
+          .getByRole('button', { name: /Check ESTA Status/i })
+          .click();
         await this.page.waitForTimeout(500);
-        await this.clickElement('text=Check Individual Status');
+        await this.page.getByText('Check Individual Status').click();
         await this.page.waitForTimeout(1000);
       }
 
       // Step 7: Verify we're on the lookup page
-      await this.page.waitForURL('**/individualStatusLookup', { timeout: 10000 });
-      this.logger.log('[ESTA] Successfully reached Individual Status Lookup page');
+      await this.page.waitForURL('**/individualStatusLookup', {
+        timeout: 10000,
+      });
+      this.logger.log(
+        '[ESTA] Successfully reached Individual Status Lookup page',
+      );
       await this.captureScreenshot('esta-03-lookup-page');
 
       // Step 8: Fill in the form
@@ -88,17 +98,24 @@ export class EstaScraper extends BaseScraper {
       const statusPageUrl = this.page.url();
       if (!statusPageUrl.includes('estaStatus')) {
         this.logger.error('[ESTA] Form submission failed - not on status page');
-        return this.createErrorResult(jobData, new Error('Form submission failed'), options);
+        return this.createErrorResult(
+          jobData,
+          new Error('Form submission failed'),
+          options,
+        );
       }
 
       // Step 11: Check for authorization status
-      const authApproved = await this.page.locator('text=AUTHORIZATION APPROVED').isVisible().catch(() => false);
+      const authApproved = await this.page
+        .locator('text=AUTHORIZATION APPROVED')
+        .isVisible()
+        .catch(() => false);
       if (!authApproved) {
         this.logger.warn('[ESTA] Authorization not approved or not found');
         return this.createNotFoundResult(
           jobData,
           'ESTA application not approved or not found',
-          new Date(Date.now() + 3600000).toISOString()
+          new Date(Date.now() + 3600000).toISOString(),
         );
       }
 
@@ -125,7 +142,9 @@ export class EstaScraper extends BaseScraper {
       // Use a custom evaluate to find the "Personal Information" heading
       await this.page.evaluate(() => {
         const allH2 = Array.from(document.querySelectorAll('h2'));
-        const personalInfoHeading = allH2.find(h => h.textContent?.includes('Personal Information'));
+        const personalInfoHeading = allH2.find((h) =>
+          h.textContent?.includes('Personal Information'),
+        );
 
         if (personalInfoHeading) {
           // Hide the heading and everything after it
@@ -161,7 +180,7 @@ export class EstaScraper extends BaseScraper {
 
       const { url, signedUrl, path } = await uploadDocumentToSupabase(
         pdfBuffer,
-        filename
+        filename,
       );
 
       this.logger.log(`[ESTA] PDF uploaded successfully: ${path}`);
@@ -172,11 +191,13 @@ export class EstaScraper extends BaseScraper {
         url,
         signedUrl,
         filename,
-        pdfBuffer.length
+        pdfBuffer.length,
       );
-
     } catch (error) {
-      this.logger.error(`[ESTA] Scrape failed for job ${jobData.jobId}:`, error);
+      this.logger.error(
+        `[ESTA] Scrape failed for job ${jobData.jobId}:`,
+        error,
+      );
       return this.createErrorResult(jobData, error, options);
     }
   }
@@ -197,7 +218,9 @@ export class EstaScraper extends BaseScraper {
         this.logger.log('[ESTA] Closing mobile app popup...');
 
         // Click the bottom CLOSE button (more reliable than X)
-        const closeButton = popup.getByRole('button', { name: /^CLOSE$/i }).last();
+        const closeButton = popup
+          .getByRole('button', { name: /^CLOSE$/i })
+          .last();
         await closeButton.click();
 
         this.logger.log('[ESTA] Mobile app popup closed');
@@ -206,7 +229,10 @@ export class EstaScraper extends BaseScraper {
         this.logger.log('[ESTA] No mobile app popup present');
       }
     } catch (error) {
-      this.logger.warn('[ESTA] Failed to close mobile app popup (may not exist):', error.message);
+      this.logger.warn(
+        '[ESTA] Failed to close mobile app popup (may not exist):',
+        error.message,
+      );
       // Non-critical, continue execution
     }
   }
@@ -220,23 +246,34 @@ export class EstaScraper extends BaseScraper {
       await this.page.waitForTimeout(1000);
 
       // Check if security notification exists using getByLabel
-      const securityDialog = this.page.getByLabel('SECURITY NOTIFICATION').first();
+      const securityDialog = this.page
+        .getByLabel('SECURITY NOTIFICATION')
+        .first();
       const isVisible = await securityDialog.isVisible().catch(() => false);
 
       if (isVisible) {
-        this.logger.log('[ESTA] Security notification detected, clicking CONFIRM & CONTINUE...');
+        this.logger.log(
+          '[ESTA] Security notification detected, clicking CONFIRM & CONTINUE...',
+        );
 
         // Click "CONFIRM & CONTINUE" button
-        const confirmButton = securityDialog.getByRole('button', { name: /CONFIRM.*CONTINUE/i }).first();
+        const confirmButton = securityDialog
+          .getByRole('button', { name: /CONFIRM.*CONTINUE/i })
+          .first();
         await confirmButton.click();
 
         this.logger.log('[ESTA] Security notification accepted');
         await this.page.waitForTimeout(1000);
       } else {
-        this.logger.log('[ESTA] No security notification present (already accepted)');
+        this.logger.log(
+          '[ESTA] No security notification present (already accepted)',
+        );
       }
     } catch (error) {
-      this.logger.warn('[ESTA] Failed to handle security notification (may not exist):', error.message);
+      this.logger.warn(
+        '[ESTA] Failed to handle security notification (may not exist):',
+        error.message,
+      );
       // Non-critical, continue execution
     }
   }
@@ -244,13 +281,18 @@ export class EstaScraper extends BaseScraper {
   /**
    * Fill in the Individual Status Lookup form
    */
-  private async fillLookupForm(credentials: ScraperJobData['credentials']): Promise<void> {
+  private async fillLookupForm(
+    credentials: ScraperJobData['credentials'],
+  ): Promise<void> {
     this.logger.log('[ESTA] Filling lookup form...');
 
     // Parse date of birth (expecting ISO format: YYYY-MM-DD or Date object)
     const dob = new Date(credentials.dateOfBirth);
     const dobDay = dob.getUTCDate().toString(); // Use UTC to avoid timezone issues
-    const dobMonth = dob.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }); // e.g., "January"
+    const dobMonth = dob.toLocaleString('en-US', {
+      month: 'long',
+      timeZone: 'UTC',
+    }); // e.g., "January"
     const dobYear = dob.getUTCFullYear().toString();
 
     this.logger.log(`[ESTA] DOB parsed: ${dobDay} ${dobMonth} ${dobYear}`);
@@ -264,7 +306,9 @@ export class EstaScraper extends BaseScraper {
     this.logger.log('[ESTA] Filling date of birth...');
 
     // Find DOB section - there are multiple date sections on the page
-    const dobSection = this.page.locator('div:has(> div:has-text("Date of Birth"))').first();
+    const dobSection = this.page
+      .locator('div:has(> div:has-text("Date of Birth"))')
+      .first();
 
     // Select day within DOB section
     const dayDropdown = dobSection.getByRole('combobox', { name: /Day/i });
