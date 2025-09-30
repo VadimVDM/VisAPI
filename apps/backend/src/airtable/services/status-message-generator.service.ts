@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { WhatsAppTranslationService } from '../../queue/services/whatsapp-translation.service';
+import { SupabaseService } from '@visapi/core-supabase';
 
 interface OrderFields {
   Status?: string;
@@ -34,10 +35,12 @@ interface MessageContext {
 
 @Injectable()
 export class StatusMessageGeneratorService {
+  private readonly logger = new Logger(StatusMessageGeneratorService.name);
   private readonly statusTemplates: Map<StatusType, StatusMessageTemplate>;
 
   constructor(
     private readonly translationService: WhatsAppTranslationService,
+    private readonly supabaseService: SupabaseService,
   ) {
     // Initialize message templates for different statuses
     this.statusTemplates = new Map([
@@ -81,7 +84,7 @@ export class StatusMessageGeneratorService {
    * Generate a formatted WhatsApp status message based on order status
    * Returns null if no applicable template or not IL domain
    */
-  generateStatusMessage(fields: OrderFields): string | null {
+  async generateStatusMessage(fields: OrderFields): Promise<string | null> {
     // Only generate messages for IL domain
     const domainBranch = fields['Domain Branch'];
     if (domainBranch !== 'IL 🇮🇱') {
@@ -100,7 +103,7 @@ export class StatusMessageGeneratorService {
     }
 
     // Build context for message generation
-    const context = this.buildMessageContext(fields);
+    const context = await this.buildMessageContext(fields);
 
     // Generate message lines
     const messageLines = template.generate(context);
@@ -125,8 +128,9 @@ export class StatusMessageGeneratorService {
 
   /**
    * Build context object with all necessary translations
+   * Implements fallback chain: Airtable → Supabase → 3 days default
    */
-  private buildMessageContext(fields: OrderFields): MessageContext {
+  private async buildMessageContext(fields: OrderFields): Promise<MessageContext> {
     // Extract fields with defaults
     // Strip emoji and trim country name (e.g., "India 🇮🇳" -> "India")
     const countryRaw = fields['Country'] || 'Unknown';
@@ -134,8 +138,34 @@ export class StatusMessageGeneratorService {
     const visaType = fields['Type'] || 'Visa';
     const intent = fields['Intent'] || 'Tourism';
     const validity = fields['Validity'] || '30 Days';
-    const processingTime = fields['Processing Time'] || 3;
     const orderId = fields['ID'] || '';
+
+    // Fallback chain for processing time: Airtable → Supabase → 3 days
+    let processingTime = fields['Processing Time'];
+
+    if (!processingTime && orderId) {
+      // Try to fetch from Supabase if not in Airtable
+      try {
+        const { data, error } = await this.supabaseService.serviceClient
+          .from('orders')
+          .select('processing_days')
+          .eq('order_id', orderId)
+          .single();
+
+        if (!error && data?.processing_days) {
+          processingTime = data.processing_days;
+          this.logger.debug(`Using processing_days from Supabase for ${orderId}: ${processingTime}`);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to fetch processing_days from Supabase for ${orderId}`, error);
+      }
+    }
+
+    // Final fallback to 3 days
+    if (!processingTime) {
+      processingTime = 3;
+      this.logger.debug(`Using default processing time (3 days) for ${orderId}`);
+    }
 
     // Get Hebrew translations
     const countryHebrew = this.translationService.getCountryNameHebrew(country);
