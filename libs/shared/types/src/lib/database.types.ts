@@ -427,6 +427,104 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          credentials: Json
+          document_url: string | null
+          downloaded_at: string | null
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          file_size: number | null
+          filename: string | null
+          id: string
+          job_id: string
+          max_retries: number | null
+          metadata: Json | null
+          mime_type: string | null
+          order_id: string | null
+          retry_after: string | null
+          retry_count: number | null
+          scraper_type: string
+          screenshots: Json | null
+          should_retry: boolean | null
+          signed_url: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          webhook_sent: boolean | null
+          webhook_url: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          credentials: Json
+          document_url?: string | null
+          downloaded_at?: string | null
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          job_id: string
+          max_retries?: number | null
+          metadata?: Json | null
+          mime_type?: string | null
+          order_id?: string | null
+          retry_after?: string | null
+          retry_count?: number | null
+          scraper_type: string
+          screenshots?: Json | null
+          should_retry?: boolean | null
+          signed_url?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          webhook_sent?: boolean | null
+          webhook_url?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          credentials?: Json
+          document_url?: string | null
+          downloaded_at?: string | null
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          job_id?: string
+          max_retries?: number | null
+          metadata?: Json | null
+          mime_type?: string | null
+          order_id?: string | null
+          retry_after?: string | null
+          retry_count?: number | null
+          scraper_type?: string
+          screenshots?: Json | null
+          should_retry?: boolean | null
+          signed_url?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          webhook_sent?: boolean | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           assigned_at: string

@@ -7,6 +7,7 @@ export const QUEUE_NAMES = {
   WHATSAPP_MESSAGES: 'whatsapp-messages',
   PDF: 'pdf',
   CBB_SYNC: 'cbb-sync',
+  SCRAPER: 'scraper',
   DLQ: 'dlq',
 } as const;
 
@@ -26,6 +27,10 @@ export const JOB_NAMES = {
   PROCESS_IMAGE: 'image.process',
   PROCESS_WORKFLOW: 'workflow.process',
   PRUNE_LOGS: 'logs.prune',
+  SCRAPE_VISA_DOCUMENT: 'scraper.scrape-visa-document',
+  SCRAPE_ESTA: 'scraper.scrape-esta',
+  SCRAPE_VIETNAM_EVISA: 'scraper.scrape-vietnam-evisa',
+  SCRAPE_KOREA_KETA: 'scraper.scrape-korea-keta',
 } as const;
 
 export interface WhatsAppJobData {
@@ -70,6 +75,45 @@ export interface LogPruneJobResult {
   deleted: number;
   timestamp: string;
   error?: string;
+}
+
+export interface ScraperJobData {
+  jobId: string;
+  scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta';
+  credentials: {
+    email?: string;
+    applicationNumber?: string;
+    passportNumber?: string;
+    dateOfBirth?: string;
+    [key: string]: any;
+  };
+  orderId?: string;
+  applicationId?: string;
+  maxRetries?: number;
+  retryCount?: number;
+  createdAt: string;
+  webhookUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ScraperJobResult {
+  success: boolean;
+  jobId: string;
+  scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'not_found' | 'retry';
+  documentUrl?: string;
+  signedUrl?: string;
+  filename?: string;
+  size?: number;
+  mimeType?: string;
+  downloadedAt?: string;
+  duration: number;
+  error?: string;
+  errorCode?: string;
+  shouldRetry?: boolean;
+  retryAfter?: string;
+  screenshots?: string[];
+  metadata?: Record<string, any>;
 }
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

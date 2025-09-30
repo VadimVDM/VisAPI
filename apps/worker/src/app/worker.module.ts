@@ -11,8 +11,13 @@ import { PdfProcessor } from './processors/pdf.processor';
 import { DlqProcessor } from './processors/dlq.processor';
 import { WorkflowProcessor } from './processors/workflow.processor';
 import { LogPruneProcessor } from './processors/log-prune.processor';
+import { ScraperProcessor } from './processors/scraper.processor';
 import { PdfTemplateService } from './services/pdf-template.service';
 import { PdfGeneratorService } from './services/pdf-generator.service';
+import { BrowserManagerService } from '../scrapers/base/browser-manager.service';
+import { EstaScraper } from '../scrapers/esta/esta.scraper';
+import { VietnamEvisaScraper } from '../scrapers/vietnam-evisa/vietnam-evisa.scraper';
+import { KoreaKetaScraper } from '../scrapers/korea-keta/korea-keta.scraper';
 import { LoggingModule } from '@visapi/backend-logging';
 
 @Module({
@@ -33,7 +38,8 @@ import { LoggingModule } from '@visapi/backend-logging';
     BullModule.registerQueue(
       { name: QUEUE_NAMES.CRITICAL },
       { name: QUEUE_NAMES.DEFAULT },
-      { name: QUEUE_NAMES.BULK }
+      { name: QUEUE_NAMES.BULK },
+      { name: QUEUE_NAMES.SCRAPER }
     ),
   ],
   providers: [
@@ -44,8 +50,13 @@ import { LoggingModule } from '@visapi/backend-logging';
     DlqProcessor,
     WorkflowProcessor,
     LogPruneProcessor,
+    ScraperProcessor,
     PdfTemplateService,
     PdfGeneratorService,
+    BrowserManagerService,
+    EstaScraper,
+    VietnamEvisaScraper,
+    KoreaKetaScraper,
   ],
 })
 export class WorkerModule {}
