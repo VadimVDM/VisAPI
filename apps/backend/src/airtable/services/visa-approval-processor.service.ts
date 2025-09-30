@@ -30,15 +30,24 @@ export class VisaApprovalProcessorService {
   async processCompletedRecords(records: CompletedRecord[], force = false): Promise<void> {
     this.logger.log(`Processing ${records.length} completed records for visa approvals (force=${force})`);
 
+    const errors: Array<{ recordId: string; error: string }> = [];
+
     for (const record of records) {
       try {
         await this.processRecord(record, force);
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         this.logger.error(
           `Failed to process record ${record.id}:`,
-          error instanceof Error ? error.message : String(error),
+          errorMsg,
         );
+        errors.push({ recordId: record.id, error: errorMsg });
       }
+    }
+
+    // If any errors occurred, throw them so the caller knows
+    if (errors.length > 0) {
+      throw new Error(`Failed to process ${errors.length} record(s): ${JSON.stringify(errors)}`);
     }
   }
 
