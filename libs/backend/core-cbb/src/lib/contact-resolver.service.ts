@@ -76,8 +76,16 @@ export class ContactResolverService {
    * Normalize phone number to international format
    */
   private normalizePhoneNumber(phone: string): string {
+    if (!phone || typeof phone !== 'string') {
+      throw new Error(`Invalid phone number: ${phone}`);
+    }
+
     // Remove all non-digit characters
     let normalized = phone.replace(/\D/g, '');
+
+    if (!normalized) {
+      throw new Error(`Phone number contains no digits: ${phone}`);
+    }
 
     // Add + prefix if not present
     if (!normalized.startsWith('+')) {

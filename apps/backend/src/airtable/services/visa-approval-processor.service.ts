@@ -224,7 +224,7 @@ export class VisaApprovalProcessorService {
       .from('orders')
       .select(`
         *,
-        cbb_contacts!cbb_contact_uuid (
+        cbb_contacts:cbb_contact_uuid (
           cbb_contact_id,
           client_phone,
           client_name,
@@ -247,11 +247,24 @@ export class VisaApprovalProcessorService {
 
     // Handle both single object and array response from Supabase
     const cbbContactsData = (order as Record<string, unknown>)?.cbb_contacts;
+
+    this.logger.debug(`CBB contacts data for ${orderId}:`, JSON.stringify(cbbContactsData));
+
     const cbbContact = Array.isArray(cbbContactsData)
       ? cbbContactsData[0] as CbbContactType
       : cbbContactsData as CbbContactType | undefined;
 
-    if (!cbbContact || cbbContact.alerts_enabled === false) {
+    if (!cbbContact) {
+      this.logger.warn(`No CBB contact found for order ${orderId}`);
+      return;
+    }
+
+    if (!cbbContact.client_phone) {
+      this.logger.error(`CBB contact for ${orderId} has no phone number:`, JSON.stringify(cbbContact));
+      throw new Error(`CBB contact missing phone number for order ${orderId}`);
+    }
+
+    if (cbbContact.alerts_enabled === false) {
       this.logger.debug(`Skipping notification for ${orderId} - CBB notifications disabled`);
       return;
     }
