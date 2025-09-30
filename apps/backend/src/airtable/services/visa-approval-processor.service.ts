@@ -108,9 +108,10 @@ export class VisaApprovalProcessorService {
     this.logger.debug(`Building visa details from ${applications.length} applications`);
 
     for (const app of applications) {
-      const visaId = app.fields['Visa ID'];
+      // ID field contains the application/visa ID (e.g., 27H8Q49T88908986)
+      const visaId = app.fields['ID'];
       const visaUrl = app.fields['Visa URL'];
-      // ID field contains the application ID (e.g., E250923ISR4185144524)
+      // Use the same ID for both visa ID and application ID
       const applicationId = app.fields['ID'] || app.fields['Application ID'];
 
       this.logger.debug(`Application fields:`, {
