@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
@@ -6,31 +11,41 @@ import type { ScraperJobData } from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { nanoid } from 'nanoid';
 import { TriggerScraperDto } from './dto/scraper-request.dto';
-import { ScraperJobResponseDto, ScraperJobStatusDto } from './dto/scraper-response.dto';
-import type { OrderData, ScraperCredentials, ScraperJobRecord } from './types/scraper.types';
+import {
+  ScraperJobResponseDto,
+  ScraperJobStatusDto,
+} from './dto/scraper-response.dto';
+import type {
+  OrderData,
+  ScraperCredentials,
+  ScraperJobRecord,
+} from './types/scraper.types';
 
 /**
  * Maps countries to scraper types
  */
-const COUNTRY_TO_SCRAPER_MAP: Record<string, 'esta' | 'vietnam-evisa' | 'korea-keta'> = {
+const COUNTRY_TO_SCRAPER_MAP: Record<
+  string,
+  'esta' | 'vietnam-evisa' | 'korea-keta'
+> = {
   // USA - ESTA
-  'usa': 'esta',
+  usa: 'esta',
   'united states': 'esta',
-  'united_states': 'esta',
-  'us': 'esta',
+  united_states: 'esta',
+  us: 'esta',
 
   // Vietnam - eVisa
-  'vietnam': 'vietnam-evisa',
+  vietnam: 'vietnam-evisa',
   'viet nam': 'vietnam-evisa',
-  'vietnamese': 'vietnam-evisa',
+  vietnamese: 'vietnam-evisa',
 
   // Korea - K-ETA
-  'korea': 'korea-keta',
+  korea: 'korea-keta',
   'south korea': 'korea-keta',
-  'south_korea': 'korea-keta',
+  south_korea: 'korea-keta',
   'republic of korea': 'korea-keta',
-  'kor': 'korea-keta',
-  'kr': 'korea-keta',
+  kor: 'korea-keta',
+  kr: 'korea-keta',
 };
 
 /**
@@ -54,7 +69,9 @@ export class ScraperService {
 
     // Validate that we have either orderId or credentials
     if (!dto.orderId && !dto.credentials) {
-      throw new BadRequestException('Either orderId or credentials must be provided');
+      throw new BadRequestException(
+        'Either orderId or credentials must be provided',
+      );
     }
 
     // If orderId is provided, fetch order data
@@ -71,7 +88,9 @@ export class ScraperService {
       } else {
         const productCountry = orderData.product_country?.toLowerCase();
         if (!productCountry) {
-          throw new BadRequestException('Order does not have product_country field');
+          throw new BadRequestException(
+            'Order does not have product_country field',
+          );
         }
         scraperType = this.mapCountryToScraper(productCountry);
       }
@@ -80,7 +99,7 @@ export class ScraperService {
       credentials = this.extractCredentialsFromOrder(
         orderData,
         scraperType,
-        dto.applicationId
+        dto.applicationId,
       );
 
       // Merge with any provided credentials
@@ -90,7 +109,9 @@ export class ScraperService {
     } else {
       // Use provided credentials and country
       if (!dto.country) {
-        throw new BadRequestException('Country must be provided when not using orderId');
+        throw new BadRequestException(
+          'Country must be provided when not using orderId',
+        );
       }
       scraperType = this.mapCountryToScraper(dto.country);
       credentials = dto.credentials || {};
@@ -120,19 +141,15 @@ export class ScraperService {
     await this.createScraperJob(jobData);
 
     // Queue job
-    await this.scraperQueue.add(
-      JOB_NAMES.SCRAPE_VISA_DOCUMENT,
-      jobData,
-      {
-        jobId,
-        priority: 5,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 60000, // 1 minute
-        },
-      }
-    );
+    await this.scraperQueue.add(JOB_NAMES.SCRAPE_VISA_DOCUMENT, jobData, {
+      jobId,
+      priority: 5,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 60000, // 1 minute
+      },
+    });
 
     this.logger.log(`Scraper job queued: ${jobId} (${scraperType})`);
 
@@ -151,7 +168,7 @@ export class ScraperService {
    * Get scraper job status
    */
   async getJobStatus(jobId: string): Promise<ScraperJobStatusDto> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.serviceClient
       .from('scraper_jobs')
       .select('*')
       .eq('job_id', jobId)
@@ -168,7 +185,7 @@ export class ScraperService {
    * List scraper jobs for an order
    */
   async listJobsForOrder(orderId: string): Promise<ScraperJobStatusDto[]> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.serviceClient
       .from('scraper_jobs')
       .select('*')
       .eq('order_id', orderId)
@@ -179,21 +196,23 @@ export class ScraperService {
       throw error;
     }
 
-    return (data || []).map(job => this.mapJobToStatusDto(job as ScraperJobRecord));
+    return (data || []).map((job) =>
+      this.mapJobToStatusDto(job as ScraperJobRecord),
+    );
   }
 
   /**
    * Map country string to scraper type
    */
   private mapCountryToScraper(
-    country: string
+    country: string,
   ): 'esta' | 'vietnam-evisa' | 'korea-keta' {
     const normalized = country.toLowerCase().trim();
     const scraperType = COUNTRY_TO_SCRAPER_MAP[normalized];
 
     if (!scraperType) {
       throw new BadRequestException(
-        `Unsupported country for scraping: ${country}. Supported: USA, Vietnam, South Korea`
+        `Unsupported country for scraping: ${country}. Supported: USA, Vietnam, South Korea`,
       );
     }
 
@@ -204,7 +223,7 @@ export class ScraperService {
    * Fetch order data from database
    */
   private async fetchOrderData(orderId: string): Promise<OrderData> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.serviceClient
       .from('orders')
       .select('*')
       .eq('order_id', orderId)
@@ -223,7 +242,7 @@ export class ScraperService {
   private extractCredentialsFromOrder(
     orderData: OrderData,
     scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta',
-    applicationId?: string
+    applicationId?: string,
   ): ScraperCredentials {
     const applicantsData = orderData.applicants_data || [];
 
@@ -252,9 +271,10 @@ export class ScraperService {
       case 'esta':
         // ESTA needs application number (from visa_details if exists)
         if (orderData.visa_details?.applications) {
-          const visaApp = orderData.visa_details.applications.find(
-            (app) => app.applicationId === applicationId
-          ) || orderData.visa_details.applications[0];
+          const visaApp =
+            orderData.visa_details.applications.find(
+              (app) => app.applicationId === applicationId,
+            ) || orderData.visa_details.applications[0];
           credentials.applicationNumber = visaApp?.applicationId;
         }
         break;
@@ -262,9 +282,10 @@ export class ScraperService {
       case 'vietnam-evisa':
         // Vietnam eVisa needs application code
         if (orderData.visa_details?.applications) {
-          const visaApp = orderData.visa_details.applications.find(
-            (app) => app.applicationId === applicationId
-          ) || orderData.visa_details.applications[0];
+          const visaApp =
+            orderData.visa_details.applications.find(
+              (app) => app.applicationId === applicationId,
+            ) || orderData.visa_details.applications[0];
           credentials.applicationNumber = visaApp?.applicationId;
         }
         break;
@@ -272,9 +293,10 @@ export class ScraperService {
       case 'korea-keta':
         // Korea K-ETA needs application number
         if (orderData.visa_details?.applications) {
-          const visaApp = orderData.visa_details.applications.find(
-            (app) => app.applicationId === applicationId
-          ) || orderData.visa_details.applications[0];
+          const visaApp =
+            orderData.visa_details.applications.find(
+              (app) => app.applicationId === applicationId,
+            ) || orderData.visa_details.applications[0];
           credentials.applicationNumber = visaApp?.applicationId;
         }
         break;
@@ -288,7 +310,7 @@ export class ScraperService {
    */
   private validateCredentials(
     scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta',
-    credentials: ScraperCredentials
+    credentials: ScraperCredentials,
   ): void {
     const required: string[] = [];
 
@@ -304,10 +326,10 @@ export class ScraperService {
         break;
     }
 
-    const missing = required.filter(field => !credentials[field]);
+    const missing = required.filter((field) => !credentials[field]);
     if (missing.length > 0) {
       throw new BadRequestException(
-        `Missing required credentials for ${scraperType}: ${missing.join(', ')}`
+        `Missing required credentials for ${scraperType}: ${missing.join(', ')}`,
       );
     }
   }
@@ -316,7 +338,7 @@ export class ScraperService {
    * Create scraper job record in database
    */
   private async createScraperJob(jobData: ScraperJobData): Promise<void> {
-    const { error } = await this.supabase.client
+    const { error } = await this.supabase.serviceClient
       .from('scraper_jobs')
       .insert({
         job_id: jobData.jobId,

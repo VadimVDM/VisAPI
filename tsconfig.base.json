@@ -23,10 +23,10 @@
       "@visapi/backend-events": ["libs/backend/events/src/index.ts"],
       "@visapi/backend-http-types": ["libs/backend/http-types/src/index.ts"],
       "@visapi/backend-logging": ["libs/backend/logging/src/index.ts"],
+      "@visapi/backend-queue": ["libs/backend/queue/src/index.ts"],
       "@visapi/backend-repositories": [
         "libs/backend/repositories/src/index.ts"
       ],
-      "@visapi/backend-queue": ["libs/backend/queue/src/index.ts"],
       "@visapi/backend-whatsapp-business": ["libs/backend/src/index.ts"],
       "@visapi/core-config": ["libs/backend/core-config/src/index.ts"],
       "@visapi/core-supabase": ["libs/backend/core-supabase/src/index.ts"],

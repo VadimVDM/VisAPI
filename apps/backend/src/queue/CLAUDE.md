@@ -50,14 +50,17 @@ Processes incoming webhooks with retry logic.
 ### Service Architecture (Refactored September 28, 2025)
 
 **Orchestration Layer**
+
 - `CBBSyncOrchestratorService`: Main coordinator, delegates to specialized services
 
 **Core Services**
+
 - `CbbContactSyncService`: CBB contact creation/update with error recovery
 - `CbbWhatsAppService`: WhatsApp message queueing with duplicate prevention
 - `CBBFieldMapperService`: Order-to-CBB field mapping with translations
 
 **Supporting Services**
+
 - `WhatsAppTranslationService`: Hebrew translations with database-driven processing times
 - `WhatsAppTemplateService`: Template building with 'x' prefix for quantities
 - `CBBSyncMetricsService`: Prometheus metrics tracking
@@ -121,21 +124,25 @@ Complete mapping of order data to CBB contact fields:
 ## Critical Fixes Applied (August 25, 2025)
 
 ### Queue Name Constants
+
 - **Issue**: CBB processor used hardcoded `'cbb-sync'` string
 - **Fix**: Changed to `QUEUE_NAMES.CBB_SYNC` constant
 - **Impact**: Workers now connect to correct queue names
 
 ### Idempotency Protection
+
 - **Issue**: Messages sent multiple times on job retry
 - **Fix**: Atomic INSERT ON CONFLICT for idempotency records
 - **Impact**: Only one job can claim message sending
 
 ### Message ID Correlation
+
 - **Issue**: CBB doesn't return Meta's message ID immediately
 - **Fix**: Correlation data in `biz_opaque_callback_data`
 - **Impact**: Automatic update from temp to real WAMIDs
 
 ### Queue Auto-Resume
+
 - **Issue**: Queues remained paused in Redis after restart
 - **Fix**: Force resume all queues in `onModuleInit()`
 - **Impact**: Queues always active on startup
@@ -143,6 +150,7 @@ Complete mapping of order data to CBB contact fields:
 ## Visa Approval Notifications (Added September 28, 2025)
 
 ### Integration with Airtable Completed Tracker
+
 - Automatically processes new records from completed view
 - Extracts visa details from expanded Application records
 - Supports up to 10 applications per order
@@ -150,25 +158,38 @@ Complete mapping of order data to CBB contact fields:
 - Checks multiple conditions before sending
 - Updates order with visa tracking information
 
+### Manual Resend Capability
+
+- **Admin Endpoint**: `POST /api/v1/webhooks/vizi/resend-visa`
+- **Phone Override**: Optional phone field to send to alternate recipient
+  - Removes `+` prefix automatically (e.g., `+13473726179` → `13473726179`)
+  - CBB resolves/creates contact automatically
+  - Useful for testing or emergency situations
+- **Force Flag**: Bypasses idempotency checks for manual resends
+- **Application ID**: Uses `app.fields['ID']` as primary identifier (Visa ID is optional)
+
 ### WhatsApp Templates
 
 #### Primary Template: `visa_approval_file_phone`
+
 - **Usage**: First application in order
 - **Parameters**: `[name_hebrew, country]`
 - **Attachment**: Visa PDF URL
 
 #### Multi Template: `visa_approval_file_multi_he`
+
 - **Usage**: Applications 2-10 in order
 - **Parameters**: `[number_emoji, applicant_full_name]`
-- **Format**: "{{1}} *קובץ הויזה של {{2}} מצורף* בחלקה העליון של הודעה זו 📎"
+- **Format**: "{{1}} _קובץ הויזה של {{2}} מצורף_ בחלקה העליון של הודעה זו 📎"
 - **Attachment**: Individual visa PDF
 - **Delay**: 5 seconds between messages
 - **NOTE**: Template must be approved in WhatsApp Business to avoid rejection
 
 ### Duplicate Prevention
+
 - Database flag: `visa_notification_sent`
 - Timestamp tracking: `visa_notification_sent_at`
 - Message ID storage: `visa_notification_message_id`
 - Initial 767 orders marked as already sent
 
-Last Updated: September 28, 2025
+Last Updated: September 30, 2025

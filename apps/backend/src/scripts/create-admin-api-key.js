@@ -105,6 +105,8 @@ async function createAdminKey() {
           'queues:read',
           'integrations:airtable:read',
           'integrations:airtable:write',
+          'integrations:scraper:trigger',
+          'integrations:scraper:read',
         ],
         created_by: userId,
         expires_at: new Date(

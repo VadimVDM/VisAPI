@@ -23,8 +23,6 @@ Essential reference for AI assistants. Updated: September 28, 2025
 - ✅ **Phone normalization** - Removes leading zeros from all countries
 - ✅ **12 test suites passing** (100% success rate)
 
-
-
 ## Technology Stack
 
 **Frontend**
@@ -61,6 +59,7 @@ pnpm dev:backend           # Backend only (localhost:3000/api)
 pnpm test:backend:serial   # Fast serial tests (2.1s)
 pnpm lint:backend          # Backend linting
 pnpm build                 # Build all apps
+pnpm precommit             # Manual pre-commit checks
 
 # Docker
 pnpm docker:up             # Start PostgreSQL & Redis
@@ -111,10 +110,12 @@ GET  /api/v1/queue/metrics           # Queue status
 ## Queue Architecture
 
 ### Backend App Queues
+
 - **whatsapp-messages**: Order confirmation messages via CBB API
 - **cbb-sync**: Synchronize orders with CBB contacts
 
-### Worker App Queues  
+### Worker App Queues
+
 - **pdf**: PDF generation jobs (concurrency: 3)
 - **critical**: High-priority generic jobs
 - **default**: Standard priority jobs
@@ -143,6 +144,20 @@ GET  /api/v1/queue/metrics           # Queue status
 - ESLint + Prettier formatting
 - Conventional commits
 - Atomic changes with descriptive messages
+
+### Pre-Commit Quality Checks
+
+- **Automatic**: Git pre-commit hook runs on every commit
+- **Smart Detection**: Only runs when backend/lib files are staged
+- **5-Step Process**:
+  1. **Code Formatting**: Auto-formats with Prettier/NX (auto-stages changes)
+  2. **Security Scanning**: Bandit scans Python files (shows all, blocks only HIGH severity)
+  3. **Backend Linting**: ESLint checks (`pnpm lint:backend`)
+  4. **Type Checking**: TypeScript validation (`pnpm typecheck:backend`)
+  5. **DB Types**: Regenerates Supabase types (auto-stages if changed)
+- **Manual Run**: `pnpm precommit` to test before committing
+- **Skip**: Use `git commit --no-verify` to bypass (not recommended)
+- **Setup**: Run `make python-setup` to install bandit for security scanning
 
 ### Testing
 
@@ -195,8 +210,6 @@ GET  /api/v1/queue/metrics           # Queue status
 
 See `.env.example` for complete template. Configure via Railway dashboard or local `.env` file.
 
-
-
 ## Quick Fixes
 
 1. **NestJS paths**: Use `'v1/resource'` not `'api/v1/resource'`
@@ -214,6 +227,7 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 ## Recent Updates (September 28, 2025)
 
 ### Visa Approval Notification System
+
 - **Multi-Application Support**: Handles up to 10 visa applications per order
 - **Smart Templates**: First visa uses `visa_approval_file_phone`, rest use `visa_approval_file_multi_he`
 - **Applicant Data**: Extracts full name, passport number, and DOB from Applications table
@@ -222,8 +236,15 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 - **Duplicate Prevention**: Database flags prevent re-sending notifications
 - **Initial Migration**: All 767 existing orders marked as already notified
 - **Conditional Logic**: Only sends if CBB synced and notifications enabled
+- **Manual Resend**: Admin endpoint with phone override capability
+  - `POST /api/v1/webhooks/vizi/resend-visa` - Force resend visa notifications
+  - Optional `phone` parameter to send to alternate recipient (removes `+` prefix)
+  - Resets notification flag and fetches fresh data from Airtable
+  - Application ID (`app.fields['ID']`) is primary identifier, Visa ID is optional
+  - Proper error propagation for debugging failed resends
 
 ### Airtable Integration Enhanced
+
 - **Linked Record Expansion**: Automatically fetches full details from Applications, Applicants, and Transactions
 - **Python Integration**: Docker support with pyairtable for reliable API access
 - **Field Support**: Searches by order ID, email, or phone with case-insensitive matching
@@ -237,12 +258,14 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
   - Triggers visa approval notifications for new records
 
 ### CQRS Removal & Phone Normalization
+
 - **Architecture Simplified**: Removed CQRS complexity, streamlined to direct service calls
 - **CBB Sync Fixed**: OrdersService now directly triggers CBB sync after order creation
 - **Phone Normalization**: Strips leading zeros from phone numbers after country codes
 - **Duplicate Prevention**: Fixes CBB contact duplication (e.g., 9720507247157 vs 972507247157)
 
 ### PDF Generation System (September 3, 2025)
+
 - **Puppeteer Integration**: Chromium-based PDF generation in Worker
 - **Template Engine**: Handlebars templates with examples
 - **Storage**: Supabase bucket integration with signed URLs
@@ -250,12 +273,14 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 ## Critical Fixes (August 25, 2025)
 
 ### Queue Architecture Fixed
+
 - **Issue**: Hardcoded queue names causing worker mismatch
 - **Solution**: All processors use `QUEUE_NAMES` constants
 - **Idempotency**: Atomic INSERT ON CONFLICT prevents duplicates
 - **Auto-resume**: Queues resume automatically on startup
 
 ### WhatsApp Message ID Correlation Enhanced
+
 - **Issue**: Race condition between MessageIdUpdaterService and delivery status updates
 - **Root Cause**: updateMessageInDatabase tried to update by real WAMID before correlation completed
 - **Solution**: Enhanced correlation with fallback logic and proper sequencing
@@ -272,4 +297,4 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 ---
 
 **Version**: v1.2.0 Production
-**Last Updated**: September 28, 2025
+**Last Updated**: September 30, 2025
