@@ -8,6 +8,11 @@ module.exports = {
   externals: {
     playwright: 'commonjs playwright',
   },
+  resolve: {
+    alias: {
+      playwright: false,
+    },
+  },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
@@ -18,6 +23,7 @@ module.exports = {
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: false, // We're using our own package.json
+      typeCheck: false, // Skip type checking during webpack build
     }),
   ],
 };
