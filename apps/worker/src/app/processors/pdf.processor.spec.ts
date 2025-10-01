@@ -5,10 +5,28 @@ import { PdfGeneratorService } from '../services/pdf-generator.service';
 import { PdfTemplateService } from '../services/pdf-template.service';
 import type { PdfJobData, PdfJobResult } from './pdf.processor';
 
+type GenerateFromHtml = PdfGeneratorService['generateFromHtml'];
+type GenerateFromUrl = PdfGeneratorService['generateFromUrl'];
+type CleanupTempFiles = PdfGeneratorService['cleanupTempFiles'];
+type CompileTemplate = PdfTemplateService['compileTemplate'];
+type ProcessHtml = PdfTemplateService['processHtml'];
+type PdfGenerationResult = Awaited<ReturnType<GenerateFromHtml>>;
+
+interface PdfGeneratorServiceMock {
+  generateFromHtml: jest.MockedFunction<GenerateFromHtml>;
+  generateFromUrl: jest.MockedFunction<GenerateFromUrl>;
+  cleanupTempFiles: jest.MockedFunction<CleanupTempFiles>;
+}
+
+interface PdfTemplateServiceMock {
+  compileTemplate: jest.MockedFunction<CompileTemplate>;
+  processHtml: jest.MockedFunction<ProcessHtml>;
+}
+
 describe('PdfProcessor', () => {
   let processor: PdfProcessor;
-  let mockPdfGenerator: any;
-  let mockPdfTemplate: any;
+  let mockPdfGenerator: PdfGeneratorServiceMock;
+  let mockPdfTemplate: PdfTemplateServiceMock;
 
   const createJob = (data: PdfJobData): Job<PdfJobData> =>
     ({
@@ -19,14 +37,14 @@ describe('PdfProcessor', () => {
 
   beforeEach(async () => {
     mockPdfGenerator = {
-      generateFromHtml: jest.fn(),
-      generateFromUrl: jest.fn(),
-      cleanupTempFiles: jest.fn(),
+      generateFromHtml: jest.fn<ReturnType<GenerateFromHtml>, Parameters<GenerateFromHtml>>() as jest.MockedFunction<GenerateFromHtml>,
+      generateFromUrl: jest.fn<ReturnType<GenerateFromUrl>, Parameters<GenerateFromUrl>>() as jest.MockedFunction<GenerateFromUrl>,
+      cleanupTempFiles: jest.fn<ReturnType<CleanupTempFiles>, Parameters<CleanupTempFiles>>() as jest.MockedFunction<CleanupTempFiles>,
     };
 
     mockPdfTemplate = {
-      compileTemplate: jest.fn(),
-      processHtml: jest.fn(),
+      compileTemplate: jest.fn<ReturnType<CompileTemplate>, Parameters<CompileTemplate>>() as jest.MockedFunction<CompileTemplate>,
+      processHtml: jest.fn<ReturnType<ProcessHtml>, Parameters<ProcessHtml>>() as jest.MockedFunction<ProcessHtml>,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,7 +86,7 @@ describe('PdfProcessor', () => {
         timestamp: new Date().toISOString(),
       };
 
-      const mockResult = {
+      const mockResult: PdfGenerationResult = {
         filename: 'visa_approved-123456.pdf',
         url: 'https://example.com/public/visa.pdf',
         signedUrl: 'https://example.com/signed/visa.pdf',
@@ -83,17 +101,15 @@ describe('PdfProcessor', () => {
       const job = createJob(pdfJob);
       const result = await processor.process(job);
 
-      expect(result).toEqual<PdfJobResult>(
-        expect.objectContaining({
-          success: true,
-          jobId: 'pdf-789',
-          filename: 'visa_approved-123456.pdf',
-          url: 'https://example.com/public/visa.pdf',
-          signedUrl: 'https://example.com/signed/visa.pdf',
-          size: 50000,
-          metadata: { workflowId: 'workflow-456' },
-        }),
-      );
+      expect(result).toMatchObject({
+        success: true,
+        jobId: 'pdf-789',
+        filename: 'visa_approved-123456.pdf',
+        url: 'https://example.com/public/visa.pdf',
+        signedUrl: 'https://example.com/signed/visa.pdf',
+        size: 50000,
+        metadata: { workflowId: 'workflow-456' },
+      } satisfies Partial<PdfJobResult>);
 
       expect(mockPdfTemplate.compileTemplate).toHaveBeenCalledWith(
         'visa_approved',
@@ -127,7 +143,7 @@ describe('PdfProcessor', () => {
         timestamp: new Date().toISOString(),
       };
 
-      const mockResult = {
+      const mockResult: PdfGenerationResult = {
         filename: 'web-123456.pdf',
         url: 'https://example.com/public/web.pdf',
         signedUrl: 'https://example.com/signed/web.pdf',
@@ -139,16 +155,14 @@ describe('PdfProcessor', () => {
       const job = createJob(pdfJob);
       const result = await processor.process(job);
 
-      expect(result).toEqual<PdfJobResult>(
-        expect.objectContaining({
-          success: true,
-          jobId: 'pdf-web-1',
-          filename: 'web-123456.pdf',
-          url: 'https://example.com/public/web.pdf',
-          signedUrl: 'https://example.com/signed/web.pdf',
-          size: 75000,
-        }),
-      );
+      expect(result).toMatchObject({
+        success: true,
+        jobId: 'pdf-web-1',
+        filename: 'web-123456.pdf',
+        url: 'https://example.com/public/web.pdf',
+        signedUrl: 'https://example.com/signed/web.pdf',
+        size: 75000,
+      } satisfies Partial<PdfJobResult>);
 
       expect(mockPdfGenerator.generateFromUrl).toHaveBeenCalledWith(
         'https://example.com/page-to-pdf',

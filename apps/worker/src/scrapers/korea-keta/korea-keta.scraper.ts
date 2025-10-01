@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { BaseScraper } from '../base/base-scraper';
 import { BrowserManagerService } from '../base/browser-manager.service';
 import { ScraperJobData, ScraperJobResult, ScraperOptions } from '../types';
-import { uploadDocumentToSupabase } from '../utils';
 
 /**
  * Korea K-ETA (Korea Electronic Travel Authorization) Scraper

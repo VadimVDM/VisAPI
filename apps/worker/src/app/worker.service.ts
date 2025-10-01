@@ -13,6 +13,7 @@ import { PdfProcessor } from './processors/pdf.processor';
 import { DlqProcessor } from './processors/dlq.processor';
 import { WorkflowProcessor } from './processors/workflow.processor';
 import { LogPruneProcessor } from './processors/log-prune.processor';
+import type { Job } from 'bullmq';
 
 @Injectable()
 export class WorkerService implements OnModuleInit, OnModuleDestroy {
@@ -29,7 +30,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly logPruneProcessor: LogPruneProcessor
   ) {}
 
-  async onModuleInit() {
+  onModuleInit(): void {
     const redisUrl = this.configService.redisUrl;
     const connection = {
       url: redisUrl,
@@ -94,11 +95,15 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       });
 
       worker.on('failed', (job, err) => {
-        this.logger.error(`Job ${job?.id} failed:`, err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        this.logger.error(`Job ${job?.id} failed: ${errorMessage}`, stack);
       });
 
       worker.on('error', (err) => {
-        this.logger.error('Worker error:', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        this.logger.error(`Worker error: ${errorMessage}`, stack);
       });
     });
 
@@ -112,25 +117,60 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('All workers closed');
   }
 
-  private async processJob(job: any) {
-    const jobType = job.name;
-
-    switch (jobType) {
+  private async processJob(job: Job<unknown>): Promise<unknown> {
+    switch (job.name) {
       case JOB_NAMES.SEND_SLACK:
       case 'slack.send':
-        return this.slackProcessor.process(job);
+        if (this.isSlackJob(job)) {
+          return this.slackProcessor.process(job);
+        }
+        break;
       case JOB_NAMES.SEND_WHATSAPP:
       case 'whatsapp.send':
-        return this.whatsAppProcessor.process(job);
+        if (this.isWhatsAppJob(job)) {
+          return this.whatsAppProcessor.process(job);
+        }
+        break;
       case JOB_NAMES.GENERATE_PDF:
       case 'pdf.generate':
-        return this.pdfProcessor.process(job);
+        if (this.isPdfJob(job)) {
+          return this.pdfProcessor.process(job);
+        }
+        break;
       case JOB_NAMES.PROCESS_WORKFLOW:
-        return this.workflowProcessor.process(job.data);
+        if (this.isWorkflowJob(job)) {
+          return this.workflowProcessor.process(job.data);
+        }
+        break;
       case JOB_NAMES.PRUNE_LOGS:
-        return this.logPruneProcessor.process(job);
+        if (this.isLogPruneJob(job)) {
+          return this.logPruneProcessor.process(job);
+        }
+        break;
       default:
-        throw new Error(`Unknown job type: ${jobType}`);
+        break;
     }
+
+    throw new Error(`Unknown job type: ${job.name}`);
+  }
+
+  private isSlackJob(job: Job<unknown>): job is Parameters<SlackProcessor['process']>[0] {
+    return job.name === JOB_NAMES.SEND_SLACK || job.name === 'slack.send';
+  }
+
+  private isWhatsAppJob(job: Job<unknown>): job is Parameters<WhatsAppProcessor['process']>[0] {
+    return job.name === JOB_NAMES.SEND_WHATSAPP || job.name === 'whatsapp.send';
+  }
+
+  private isPdfJob(job: Job<unknown>): job is Parameters<PdfProcessor['process']>[0] {
+    return job.name === JOB_NAMES.GENERATE_PDF || job.name === 'pdf.generate';
+  }
+
+  private isWorkflowJob(job: Job<unknown>): job is Job<Parameters<WorkflowProcessor['process']>[0]> {
+    return job.name === JOB_NAMES.PROCESS_WORKFLOW;
+  }
+
+  private isLogPruneJob(job: Job<unknown>): job is Parameters<LogPruneProcessor['process']>[0] {
+    return job.name === JOB_NAMES.PRUNE_LOGS;
   }
 }

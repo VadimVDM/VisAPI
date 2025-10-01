@@ -20,6 +20,26 @@ export interface RecaptchaSolveOptions {
   minScore?: number;
 }
 
+interface CapsolverTaskPayload {
+  type: string;
+  websiteURL: string;
+  websiteKey: string;
+  invisible?: boolean;
+  pageAction?: string;
+  enterprisePayload?: { s: string };
+  userAgent?: string;
+  minScore?: number;
+}
+
+interface TwoCaptchaRecaptchaOptions {
+  pageurl: string;
+  googlekey: string;
+  enterprise?: number;
+  invisible?: number;
+  action?: string;
+  data_s?: string;
+}
+
 interface CapsolverCreateResponse {
   errorId: number;
   errorCode?: string;
@@ -35,6 +55,18 @@ interface CapsolverResultResponse {
   solution?: {
     gRecaptchaResponse?: string;
   };
+}
+
+interface TwoCaptchaResult {
+  data?: string;
+}
+
+interface TwoCaptchaSolver {
+  recaptcha(options: TwoCaptchaRecaptchaOptions): Promise<TwoCaptchaResult>;
+}
+
+interface TwoCaptchaModule {
+  Solver: new (apiKey: string, pollIntervalMs?: number) => TwoCaptchaSolver;
 }
 
 @Injectable()
@@ -82,7 +114,7 @@ export class CaptchaSolverService {
         return this.solveWithTwoCaptcha(options);
       default:
         throw new ScraperError(
-          `Unsupported captcha solver provider: ${this.provider}`,
+          `Unsupported captcha solver provider: ${String(this.provider)}`,
           {
             code: 'CAPTCHA_SOLVER_UNSUPPORTED',
             retryable: false,
@@ -94,7 +126,7 @@ export class CaptchaSolverService {
   private async solveWithCapsolver(
     options: RecaptchaSolveOptions,
   ): Promise<string> {
-    const payload: Record<string, any> = {
+    const payload: CapsolverTaskPayload = {
       type: options.enterprise
         ? 'ReCaptchaV2EnterpriseTaskProxyLess'
         : 'ReCaptchaV2TaskProxyLess',
@@ -130,8 +162,9 @@ export class CaptchaSolverService {
         },
       )
       .then((res) => res.data)
-      .catch((error) => {
-        this.logger.error('Failed to create CapSolver task', error);
+      .catch((error: unknown) => {
+        const message = this.formatError(error);
+        this.logger.error(`Failed to create CapSolver task: ${message}`);
         throw new ScraperError('CapSolver task creation failed', {
           code: 'CAPTCHA_SOLVER_CREATE_FAILED',
           retryable: false,
@@ -175,8 +208,9 @@ export class CaptchaSolverService {
           },
         )
         .then((res) => res.data)
-        .catch((error) => {
-          this.logger.error('CapSolver getTaskResult failed', error);
+        .catch((error: unknown) => {
+          const message = this.formatError(error);
+          this.logger.error(`CapSolver getTaskResult failed: ${message}`);
           throw new ScraperError('CapSolver polling failed', {
             code: 'CAPTCHA_SOLVER_POLL_FAILED',
             retryable: true,
@@ -218,16 +252,21 @@ export class CaptchaSolverService {
     options: RecaptchaSolveOptions,
   ): Promise<string> {
     try {
-      // Initialize 2Captcha solver with polling interval (in milliseconds)
-      const solver = new TwoCaptcha.Solver(
-        this.apiKey as string,
-        this.pollIntervalMs,
-      );
+      const apiKey = this.apiKey;
+      if (!apiKey) {
+        throw new ScraperError('2Captcha API key is not configured', {
+          code: 'CAPTCHA_SOLVER_NOT_CONFIGURED',
+          retryable: false,
+        });
+      }
+
+      const module = TwoCaptcha as unknown as TwoCaptchaModule;
+      const solver = new module.Solver(apiKey, this.pollIntervalMs);
 
       this.logger.log('[2Captcha] Submitting reCAPTCHA task...');
 
       // Build recaptcha options
-      const recaptchaOptions: any = {
+      const recaptchaOptions: TwoCaptchaRecaptchaOptions = {
         pageurl: options.url,
         googlekey: options.siteKey,
       };
@@ -255,7 +294,7 @@ export class CaptchaSolverService {
       // Submit and wait for solution
       const result = await solver.recaptcha(recaptchaOptions);
 
-      if (!result || !result.data) {
+      if (!result?.data) {
         throw new ScraperError('2Captcha returned empty response', {
           code: 'CAPTCHA_SOLVER_EMPTY_TOKEN',
           retryable: true,
@@ -264,14 +303,15 @@ export class CaptchaSolverService {
 
       this.logger.log('[2Captcha] Successfully received token');
       return result.data;
-    } catch (error: any) {
-      this.logger.error('[2Captcha] Solve failed:', error);
+    } catch (error: unknown) {
+      const message = this.formatError(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`[2Captcha] Solve failed: ${message}`, stack);
 
       // Check for specific 2Captcha error codes
-      const errorMessage = error.message || String(error);
-      const isRetryable = this.isTwoCaptchaErrorRetryable(errorMessage);
+      const isRetryable = this.isTwoCaptchaErrorRetryable(message);
 
-      throw new ScraperError(`2Captcha error: ${errorMessage}`, {
+      throw new ScraperError(`2Captcha error: ${message}`, {
         code: 'CAPTCHA_SOLVER_FAILED',
         retryable: isRetryable,
       });
@@ -292,7 +332,7 @@ export class CaptchaSolverService {
     return !nonRetryableErrors.some((err) => normalized.includes(err));
   }
 
-  private isRetryableProviderError(providerCode?: string): boolean {
+  private isRetryableProviderError(providerCode?: string | null): boolean {
     if (!providerCode) {
       return true;
     }
@@ -312,5 +352,21 @@ export class CaptchaSolverService {
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
   }
 }

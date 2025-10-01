@@ -28,6 +28,41 @@ type RecaptchaInfo = {
   clientKey: string | null;
 };
 
+type GrecaptchaParams = {
+  action?: string;
+  s?: string;
+  [key: string]: unknown;
+};
+
+type GrecaptchaClient = {
+  sitekey?: string;
+  S?: string;
+  H?: GrecaptchaClient;
+  R?: GrecaptchaClient;
+  aa?: GrecaptchaClient;
+  widget?: { data?: GrecaptchaClient };
+  client?: GrecaptchaClient;
+  data?: GrecaptchaClient;
+  config?: { sitekey?: string; params?: GrecaptchaParams };
+  params?: GrecaptchaParams;
+  callback?: (token: string) => void;
+  [key: string]: unknown;
+};
+
+type GrecaptchaConfig = {
+  clients?: Record<string, GrecaptchaClient>;
+};
+
+type GrecaptchaAPI = {
+  getResponse?: () => string;
+  execute?: () => Promise<string>;
+  [key: string]: unknown;
+};
+
+type GrecaptchaGlobal = GrecaptchaAPI & {
+  enterprise?: GrecaptchaAPI;
+};
+
 @Injectable()
 export class EstaScraper extends BaseScraper {
   constructor(
@@ -160,7 +195,7 @@ export class EstaScraper extends BaseScraper {
       await this.page.waitForTimeout(2000);
 
       // Step 14: Switch to the new tab/page
-      const pages = this.context!.pages();
+      const pages = this.context.pages();
       const detailPage = pages[pages.length - 1];
       if (detailPage !== this.page) {
         this.page = detailPage;
@@ -209,7 +244,14 @@ export class EstaScraper extends BaseScraper {
       });
 
       // Step 16: Upload to Supabase
-      const filename = `${jobData.credentials.applicationNumber || 'esta'}.pdf`;
+      const applicationNumber = this.getOptionalCredentialString(
+        jobData.credentials,
+        'applicationNumber',
+      );
+      const baseFilename = this.sanitizeFilenameSegment(
+        applicationNumber ?? 'esta',
+      );
+      const filename = `${baseFilename}.pdf`;
       this.logger.log(`[ESTA] Uploading PDF: ${filename}`);
 
       const { url, signedUrl, path } = await uploadDocumentToSupabase(
@@ -227,11 +269,9 @@ export class EstaScraper extends BaseScraper {
         filename,
         pdfBuffer.length,
       );
-    } catch (error) {
-      this.logger.error(
-        `[ESTA] Scrape failed for job ${jobData.jobId}:`,
-        error,
-      );
+    } catch (error: unknown) {
+      const { message, stack } = this.describeError(error);
+      this.logger.error(`[ESTA] Scrape failed for job ${jobData.jobId}: ${message}`, stack);
       return this.createErrorResult(jobData, error, options);
     }
   }
@@ -257,10 +297,10 @@ export class EstaScraper extends BaseScraper {
       }
 
       await this.page.waitForTimeout(clampedPause);
-    } catch (error) {
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
       this.logger.warn(
-        '[ESTA] Unable to perform pre-submit humanisation gesture:',
-        (error as Error).message,
+        `[ESTA] Unable to perform pre-submit humanisation gesture: ${message}`,
       );
     }
   }
@@ -295,14 +335,15 @@ export class EstaScraper extends BaseScraper {
       await this.injectRecaptchaToken(token, recaptchaInfo);
       this.logger.log('[ESTA] reCAPTCHA token injected successfully');
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ScraperError) {
         throw error;
       }
 
+      const { message, stack } = this.describeError(error);
       this.logger.error(
-        '[ESTA] Unexpected failure while solving reCAPTCHA',
-        error,
+        `[ESTA] Unexpected failure while solving reCAPTCHA: ${message}`,
+        stack,
       );
       throw new ScraperError('Failed to solve reCAPTCHA challenge', {
         code: 'CAPTCHA_SOLVER_FAILED',
@@ -329,7 +370,7 @@ export class EstaScraper extends BaseScraper {
 
         const widget = document.querySelector(
           '[data-sitekey]',
-        ) as HTMLElement | null;
+        );
         if (widget) {
           result.siteKey = widget.getAttribute('data-sitekey');
           result.action = widget.getAttribute('data-action');
@@ -343,12 +384,12 @@ export class EstaScraper extends BaseScraper {
           }
         }
 
-        const iframe = document.querySelector(
+        const iframeElement = document.querySelector<HTMLIFrameElement>(
           'iframe[src*="recaptcha"]',
-        ) as HTMLIFrameElement | null;
-        if (iframe) {
+        );
+        if (iframeElement?.src) {
           try {
-            const url = new URL(iframe.src);
+            const url = new URL(iframeElement.src);
             if (!result.siteKey) {
               result.siteKey =
                 url.searchParams.get('k') ||
@@ -374,11 +415,10 @@ export class EstaScraper extends BaseScraper {
           result.isEnterprise = true;
         }
 
-        const grecaptchaCfg = (window as any).___grecaptcha_cfg;
-        if (grecaptchaCfg?.clients) {
-          const entries = Object.entries(grecaptchaCfg.clients) as Array<
-            [string, any]
-          >;
+        const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig })
+          .___grecaptcha_cfg;
+        if (cfg?.clients) {
+          const entries = Object.entries(cfg.clients);
 
           for (const [key, client] of entries) {
             if (!result.clientKey) {
@@ -386,27 +426,27 @@ export class EstaScraper extends BaseScraper {
             }
 
             const candidateSiteKey =
-              client?.sitekey ||
-              client?.S ||
-              client?.H?.sitekey ||
-              client?.R?.sitekey ||
-              client?.config?.sitekey;
+              client.sitekey ??
+              client.S ??
+              client.H?.sitekey ??
+              client.R?.sitekey ??
+              client.config?.sitekey;
             if (!result.siteKey && typeof candidateSiteKey === 'string') {
               result.siteKey = candidateSiteKey;
             }
 
-            const nestedSources = [
+            const nestedSources: Array<GrecaptchaClient | undefined> = [
               client,
-              client?.client,
-              client?.data,
-              client?.R,
-              client?.H,
-              client?.aa,
-              client?.widget?.data,
+              client.client,
+              client.data,
+              client.R,
+              client.H,
+              client.aa,
+              client.widget?.data,
             ];
 
-            nestedSources.forEach((source: any) => {
-              if (!source || typeof source !== 'object') {
+            nestedSources.forEach((source) => {
+              if (!source) {
                 return;
               }
 
@@ -420,15 +460,13 @@ export class EstaScraper extends BaseScraper {
                 result.dataS = source.s;
               }
 
-              if (source.params && typeof source.params === 'object') {
-                if (
-                  !result.action &&
-                  typeof source.params.action === 'string'
-                ) {
-                  result.action = source.params.action;
+              const params = source.params;
+              if (params) {
+                if (!result.action && typeof params.action === 'string') {
+                  result.action = params.action;
                 }
-                if (!result.dataS && typeof source.params.s === 'string') {
-                  result.dataS = source.params.s;
+                if (!result.dataS && typeof params.s === 'string') {
+                  result.dataS = params.s;
                 }
               }
             });
@@ -448,8 +486,9 @@ export class EstaScraper extends BaseScraper {
           clientKey: result.clientKey,
         };
       });
-    } catch (error) {
-      console.warn('Failed to inspect reCAPTCHA configuration', error);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      console.warn('Failed to inspect reCAPTCHA configuration', message);
       return null;
     }
   }
@@ -494,9 +533,9 @@ export class EstaScraper extends BaseScraper {
             if (!form) {
               return;
             }
-            let hidden = form.querySelector(
+            let hidden = form.querySelector<HTMLTextAreaElement>(
               'textarea[name="g-recaptcha-response"]',
-            ) as HTMLTextAreaElement | null;
+            );
             if (!hidden) {
               hidden = document.createElement('textarea');
               hidden.name = 'g-recaptcha-response';
@@ -508,32 +547,34 @@ export class EstaScraper extends BaseScraper {
           };
           ensureHiddenField();
 
-          const traverseCallbacks = (node: any) => {
+          const traverseCallbacks = (node: unknown) => {
             if (!node || typeof node !== 'object') {
               return;
             }
-            if (typeof node.callback === 'function') {
+            const maybeCallback = (node as { callback?: unknown }).callback;
+            if (typeof maybeCallback === 'function') {
               try {
-                node.callback(response);
-              } catch (error) {
-                console.debug('reCAPTCHA callback invocation failed', error);
+                const callback = maybeCallback as (token: string) => void;
+                callback(response);
+              } catch (invokeError) {
+                console.debug('reCAPTCHA callback invocation failed', invokeError);
               }
             }
-            Object.values(node).forEach((value: any) => {
+            Object.values(node as Record<string, unknown>).forEach((value) => {
               if (value && typeof value === 'object') {
                 traverseCallbacks(value);
               }
             });
           };
 
-          const cfg = (window as any).___grecaptcha_cfg;
+          const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig }).___grecaptcha_cfg;
           if (cfg?.clients) {
             const keys = clientKey ? [clientKey] : Object.keys(cfg.clients);
             keys.forEach((key) => traverseCallbacks(cfg.clients[key]));
           }
 
-          const patchApi = (api: any) => {
-            if (!api || typeof api !== 'object') {
+          const patchApi = (api: GrecaptchaAPI | undefined) => {
+            if (!api) {
               return;
             }
             if (typeof api.getResponse === 'function') {
@@ -544,10 +585,15 @@ export class EstaScraper extends BaseScraper {
             }
           };
 
-          const grecaptchaGlobal = (window as any).grecaptcha;
-          patchApi(grecaptchaGlobal);
-          if (isEnterprise && grecaptchaGlobal?.enterprise) {
-            patchApi(grecaptchaGlobal.enterprise);
+          const grecaptchaGlobal = (window as typeof window & {
+            grecaptcha?: GrecaptchaGlobal;
+          }).grecaptcha as GrecaptchaGlobal | undefined;
+
+          if (grecaptchaGlobal) {
+            patchApi(grecaptchaGlobal);
+            if (isEnterprise && grecaptchaGlobal.enterprise) {
+              patchApi(grecaptchaGlobal.enterprise);
+            }
           }
 
           window.dispatchEvent(new Event('recaptcha-token-injected'));
@@ -558,8 +604,12 @@ export class EstaScraper extends BaseScraper {
           isEnterprise: info.isEnterprise,
         },
       );
-    } catch (error) {
-      this.logger.error('[ESTA] Failed to inject reCAPTCHA token', error);
+    } catch (error: unknown) {
+      const { message, stack } = this.describeError(error);
+      this.logger.error(
+        `[ESTA] Failed to inject reCAPTCHA token: ${message}`,
+        stack,
+      );
       throw new ScraperError('Unable to inject reCAPTCHA token', {
         code: 'CAPTCHA_INJECTION_FAILED',
         retryable: false,
@@ -571,6 +621,9 @@ export class EstaScraper extends BaseScraper {
    * Close the mobile app download popup if present
    */
   private async closeMobileAppPopup(): Promise<void> {
+    if (!this.page) {
+      return;
+    }
     try {
       // Wait a bit for popup to fully render
       await this.page.waitForTimeout(1000);
@@ -593,10 +646,10 @@ export class EstaScraper extends BaseScraper {
       } else {
         this.logger.log('[ESTA] No mobile app popup present');
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
       this.logger.warn(
-        '[ESTA] Failed to close mobile app popup (may not exist):',
-        error.message,
+        `[ESTA] Failed to close mobile app popup (may not exist): ${message}`,
       );
       // Non-critical, continue execution
     }
@@ -606,6 +659,9 @@ export class EstaScraper extends BaseScraper {
    * Handle security notification popup (appears on first navigation)
    */
   private async handleSecurityNotification(): Promise<void> {
+    if (!this.page) {
+      return;
+    }
     try {
       // Wait for potential security dialog
       await this.page.waitForTimeout(1000);
@@ -634,10 +690,10 @@ export class EstaScraper extends BaseScraper {
           '[ESTA] No security notification present (already accepted)',
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
       this.logger.warn(
-        '[ESTA] Failed to handle security notification (may not exist):',
-        error.message,
+        `[ESTA] Failed to handle security notification (may not exist): ${message}`,
       );
       // Non-critical, continue execution
     }
@@ -649,10 +705,14 @@ export class EstaScraper extends BaseScraper {
   private async fillLookupForm(
     credentials: ScraperJobData['credentials'],
   ): Promise<void> {
+    if (!this.page) {
+      throw new ScraperError('Page not initialized');
+    }
     this.logger.log('[ESTA] Filling lookup form...');
 
     // Parse date of birth (expecting ISO format: YYYY-MM-DD or Date object)
-    const dob = new Date(credentials.dateOfBirth);
+    const dateOfBirth = this.getCredentialString(credentials, 'dateOfBirth');
+    const dob = new Date(dateOfBirth);
     const dobDay = dob.getUTCDate().toString(); // Use UTC to avoid timezone issues
     const dobMonth = dob.toLocaleString('en-US', {
       month: 'long',
@@ -664,8 +724,9 @@ export class EstaScraper extends BaseScraper {
 
     // Fill Passport Number (find by label)
     this.logger.log('[ESTA] Filling passport number...');
+    const passportNumber = this.getCredentialString(credentials, 'passportNumber');
     const passportInput = this.page.getByLabel(/Passport Number/i);
-    await passportInput.fill(credentials.passportNumber);
+    await passportInput.fill(passportNumber);
 
     // Fill Date of Birth dropdowns
     this.logger.log('[ESTA] Filling date of birth...');
@@ -689,10 +750,71 @@ export class EstaScraper extends BaseScraper {
 
     // Fill Application Number (find by label)
     this.logger.log('[ESTA] Filling application number...');
+    const applicationNumber = this.getCredentialString(credentials, 'applicationNumber');
     const applicationInput = this.page.getByLabel(/Application Number/i);
-    await applicationInput.fill(credentials.applicationNumber);
+    await applicationInput.fill(applicationNumber);
 
     this.logger.log('[ESTA] Form filled successfully');
     await this.captureScreenshot('esta-04-form-filled');
+  }
+
+  private getCredentialString(
+    credentials: ScraperJobData['credentials'],
+    key: string,
+  ): string {
+    const record = (credentials ?? {}) as Record<string, unknown>;
+    const value = record[key];
+    const stringValue = this.stringifyValue(value).trim();
+    if (stringValue.length > 0) {
+      return stringValue;
+    }
+
+    throw new ScraperError(`Missing credential: ${key}`, {
+      code: 'INVALID_CREDENTIALS',
+      retryable: false,
+    });
+  }
+
+  private getOptionalCredentialString(
+    credentials: ScraperJobData['credentials'],
+    key: string,
+  ): string | null {
+    const record = (credentials ?? {}) as Record<string, unknown>;
+    const value = record[key];
+    if (value === undefined || value === null) {
+      return null;
+    }
+    const stringValue = this.stringifyValue(value).trim();
+    return stringValue.length > 0 ? stringValue : null;
+  }
+
+  private sanitizeFilenameSegment(value: string): string {
+    const cleaned = value.replace(/[^a-z0-9_-]+/gi, '_').replace(/_{2,}/g, '_');
+    const trimmed = cleaned.replace(/^_+|_+$/g, '');
+    return trimmed.length > 0 ? trimmed.toLowerCase() : 'document';
+  }
+
+  private stringifyValue(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[Complex Object]';
+    }
   }
 }

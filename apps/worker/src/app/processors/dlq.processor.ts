@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { SupabaseService } from '@visapi/core-supabase';
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 @Injectable()
 export class DlqProcessor {
   private readonly logger = new Logger(DlqProcessor.name);
@@ -17,12 +19,13 @@ export class DlqProcessor {
 
       // For now, just log the failure
       // In the future, we could implement retry logic, notifications, etc.
-      this.logger.warn(`Job ${job.id} moved to DLQ:`, {
+      const logData = {
         name: job.name,
-        data: job.data,
-        failedReason: job.failedReason,
+        data: job.data as JsonValue,
+        failedReason: job.failedReason ?? 'Unknown error',
         attempts: job.attemptsMade,
-      });
+      };
+      this.logger.warn(`Job ${job.id} moved to DLQ:`, logData);
 
       return {
         success: true,
@@ -39,17 +42,19 @@ export class DlqProcessor {
     try {
       const client = this.supabaseService.serviceClient;
 
+      const metadata = {
+        jobId: job.id,
+        jobName: job.name,
+        jobData: job.data as JsonValue,
+        failedReason: job.failedReason ?? 'Unknown error',
+        attempts: job.attemptsMade,
+        timestamp: job.timestamp,
+      };
+
       await client.from('logs').insert({
         level: 'error',
         message: `Job ${job.id} failed and moved to DLQ`,
-        metadata: {
-          jobId: job.id,
-          jobName: job.name,
-          jobData: job.data,
-          failedReason: job.failedReason,
-          attempts: job.attemptsMade,
-          timestamp: job.timestamp,
-        },
+        metadata,
         job_id: job.id?.toString(),
         pii_redacted: true,
       });

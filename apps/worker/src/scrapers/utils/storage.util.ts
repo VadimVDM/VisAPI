@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@visapi/shared-types';
 
 const logger = new Logger('ScraperStorageUtil');
 
@@ -22,7 +23,7 @@ export async function uploadDocumentToSupabase(
     throw new Error('Supabase credentials not configured');
   }
 
-  const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
   // Generate unique path with timestamp
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -80,7 +81,7 @@ export async function deleteDocumentFromSupabase(
     throw new Error('Supabase credentials not configured');
   }
 
-  const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
   logger.log(`Deleting document from Supabase: ${path}`);
 

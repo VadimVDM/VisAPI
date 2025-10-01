@@ -58,9 +58,10 @@ export class BrowserManagerService implements OnModuleDestroy {
       this.browser = await chromium.launch(launchOptions);
       this.logger.log('Browser launched successfully');
       return this.browser;
-    } catch (error) {
-      this.logger.error('Failed to launch browser:', error);
-      throw new Error(`Failed to launch Playwright browser: ${error.message}`);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.error(`Failed to launch browser: ${message}`);
+      throw new Error(`Failed to launch Playwright browser: ${message}`);
     }
   }
 
@@ -97,21 +98,29 @@ export class BrowserManagerService implements OnModuleDestroy {
 
       // Override navigator.webdriver to hide automation
       await context.addInitScript(() => {
-        Object.defineProperty(navigator, 'webdriver', {
+        const nav = navigator as Navigator & {
+          webdriver?: boolean;
+          plugins?: unknown;
+          languages?: readonly string[];
+        };
+
+        Object.defineProperty(nav, 'webdriver', {
           get: () => false,
         });
 
-        // Add common browser properties
-        Object.defineProperty(navigator, 'plugins', {
+        Object.defineProperty(nav, 'plugins', {
           get: () => [1, 2, 3, 4, 5],
         });
 
-        Object.defineProperty(navigator, 'languages', {
+        Object.defineProperty(nav, 'languages', {
           get: () => ['en-US', 'en'],
         });
 
-        // Override Chrome property
-        (window as any).chrome = {
+        const win = window as typeof window & {
+          chrome?: { runtime?: Record<string, unknown> };
+        };
+
+        win.chrome = {
           runtime: {},
         };
       });
@@ -125,8 +134,9 @@ export class BrowserManagerService implements OnModuleDestroy {
       this.logger.log(`Context created: ${contextId}`);
 
       return context;
-    } catch (error) {
-      this.logger.error(`Failed to create context ${contextId}:`, error);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.error(`Failed to create context ${contextId}: ${message}`);
       throw error;
     }
   }
@@ -157,8 +167,9 @@ export class BrowserManagerService implements OnModuleDestroy {
       try {
         await context.close();
         this.contexts.delete(contextId);
-      } catch (error) {
-        this.logger.error(`Error closing context ${contextId}:`, error);
+      } catch (error: unknown) {
+        const { message } = this.describeError(error);
+        this.logger.error(`Error closing context ${contextId}: ${message}`);
       }
     }
   }
@@ -193,8 +204,9 @@ export class BrowserManagerService implements OnModuleDestroy {
       try {
         await this.browser.close();
         this.logger.log('Browser closed');
-      } catch (error) {
-        this.logger.error('Error closing browser:', error);
+      } catch (error: unknown) {
+        const { message } = this.describeError(error);
+        this.logger.error(`Error closing browser: ${message}`);
       }
       this.browser = null;
     }
@@ -214,8 +226,9 @@ export class BrowserManagerService implements OnModuleDestroy {
       });
       this.logger.log(`Screenshot saved: ${filename}`);
       return screenshot;
-    } catch (error) {
-      this.logger.error(`Failed to take screenshot ${filename}:`, error);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.error(`Failed to take screenshot ${filename}: ${message}`);
       throw error;
     }
   }
@@ -223,15 +236,16 @@ export class BrowserManagerService implements OnModuleDestroy {
   /**
    * Get browser status for health checks
    */
-  async getStatus(): Promise<{
+  getStatus(): {
     browserConnected: boolean;
     activeContexts: number;
     browserVersion?: string;
-  }> {
+  } {
     const browserConnected = this.browser?.isConnected() ?? false;
-    const browserVersion = browserConnected
-      ? await this.browser?.version()
-      : undefined;
+    let browserVersion: string | undefined;
+    if (browserConnected && this.browser) {
+      browserVersion = this.browser.version();
+    }
 
     return {
       browserConnected,
@@ -245,5 +259,21 @@ export class BrowserManagerService implements OnModuleDestroy {
    */
   async onModuleDestroy() {
     await this.closeBrowser();
+  }
+
+  private describeError(error: unknown): { message: string; stack?: string } {
+    if (error instanceof Error) {
+      return { message: error.message, stack: error.stack };
+    }
+
+    if (typeof error === 'string') {
+      return { message: error };
+    }
+
+    try {
+      return { message: JSON.stringify(error) };
+    } catch {
+      return { message: 'Unknown error' };
+    }
   }
 }

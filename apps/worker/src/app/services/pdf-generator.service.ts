@@ -3,7 +3,10 @@ import { SupabaseService } from '@visapi/core-supabase';
 import * as puppeteer from 'puppeteer-core';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { nanoid } from 'nanoid';
+
+type PuppeteerPaperFormat =
+  | 'Letter' | 'Legal' | 'Tabloid' | 'Ledger'
+  | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6';
 
 interface GenerateOptions {
   filename: string;
@@ -19,6 +22,15 @@ interface GenerateOptions {
   preview?: boolean;
 }
 
+interface PdfGenerationResult {
+  filename: string;
+  size: number;
+  base64: string | null;
+  url: string | null;
+  signedUrl: string | null;
+  storagePath?: string;
+}
+
 @Injectable()
 export class PdfGeneratorService implements OnModuleDestroy {
   private readonly logger = new Logger(PdfGeneratorService.name);
@@ -26,10 +38,13 @@ export class PdfGeneratorService implements OnModuleDestroy {
   private browser: puppeteer.Browser | null = null;
 
   constructor(private readonly supabase: SupabaseService) {
-    this.ensureTempDir();
+    void this.ensureTempDir();
   }
 
-  async generateFromHtml(html: string, options: GenerateOptions) {
+  async generateFromHtml(
+    html: string,
+    options: GenerateOptions,
+  ): Promise<PdfGenerationResult> {
     const page = await this.getPage();
     
     try {
@@ -54,7 +69,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
       // Generate PDF
       const pdfBuffer = await page.pdf({
-        format: options.options.format as any,
+        format: options.options.format as PuppeteerPaperFormat,
         landscape: options.options.orientation === 'landscape',
         margin: options.options.margins,
         displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
@@ -64,13 +79,16 @@ export class PdfGeneratorService implements OnModuleDestroy {
         preferCSSPageSize: false,
       });
 
-      return await this.savePdf(Buffer.from(pdfBuffer), options);
+      return this.savePdf(Buffer.from(pdfBuffer), options);
     } finally {
       await page.close();
     }
   }
 
-  async generateFromUrl(url: string, options: GenerateOptions) {
+  async generateFromUrl(
+    url: string,
+    options: GenerateOptions,
+  ): Promise<PdfGenerationResult> {
     const page = await this.getPage();
     
     try {
@@ -86,7 +104,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
       // Generate PDF
       const pdfBuffer = await page.pdf({
-        format: options.options.format as any,
+        format: options.options.format as PuppeteerPaperFormat,
         landscape: options.options.orientation === 'landscape',
         margin: options.options.margins,
         displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
@@ -96,7 +114,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
         preferCSSPageSize: false,
       });
 
-      return await this.savePdf(Buffer.from(pdfBuffer), options);
+      return this.savePdf(Buffer.from(pdfBuffer), options);
     } finally {
       await page.close();
     }
@@ -147,7 +165,10 @@ export class PdfGeneratorService implements OnModuleDestroy {
     return browser;
   }
 
-  private async savePdf(buffer: Buffer, options: GenerateOptions) {
+  private async savePdf(
+    buffer: Buffer,
+    options: GenerateOptions,
+  ): Promise<PdfGenerationResult> {
     const filename = `${options.filename}.pdf`;
     const size = buffer.length;
 
@@ -165,9 +186,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
     // Save to Supabase Storage
     const storagePath = `pdfs/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${filename}`;
     
-    const { data, error } = await this.supabase
-      .client
-      .storage
+    const { error } = await this.supabase.client.storage
       .from('documents')
       .upload(storagePath, buffer, {
         contentType: 'application/pdf',
@@ -176,22 +195,20 @@ export class PdfGeneratorService implements OnModuleDestroy {
       });
 
     if (error) {
-      this.logger.error('Failed to upload PDF to storage:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to upload PDF to storage: ${message}`);
       throw error;
     }
 
     // Generate signed URL (valid for 1 hour)
-    const { data: urlData } = await this.supabase
-      .client
-      .storage
+    const { data: urlData } = await this.supabase.client.storage
       .from('documents')
       .createSignedUrl(storagePath, 3600);
 
-    const publicUrl = this.supabase
-      .client
-      .storage
+    const { data: publicData } = this.supabase.client.storage
       .from('documents')
-      .getPublicUrl(storagePath).data.publicUrl;
+      .getPublicUrl(storagePath);
+    const publicUrl = publicData?.publicUrl ?? null;
 
     return {
       filename,
@@ -203,39 +220,57 @@ export class PdfGeneratorService implements OnModuleDestroy {
     };
   }
 
-  async cleanupTempFiles(jobId: string) {
+  async cleanupTempFiles(jobId: string): Promise<void> {
     try {
       const tempPath = path.join(this.tempDir, jobId);
       if (await this.fileExists(tempPath)) {
-        await fs.rmdir(tempPath, { recursive: true });
+        await fs.rm(tempPath, { recursive: true, force: true });
         this.logger.log(`Cleaned up temp files for job ${jobId}`);
       }
-    } catch (error) {
-      this.logger.warn(`Failed to cleanup temp files for job ${jobId}:`, error);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.warn(`Failed to cleanup temp files for job ${jobId}: ${message}`);
     }
   }
 
-  private async ensureTempDir() {
+  private async ensureTempDir(): Promise<void> {
     try {
       await fs.mkdir(this.tempDir, { recursive: true });
-    } catch (error) {
-      this.logger.warn('Failed to create temp directory:', error);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.warn(`Failed to create temp directory: ${message}`);
     }
   }
 
-  private async fileExists(path: string): Promise<boolean> {
+  private async fileExists(targetPath: string): Promise<boolean> {
     try {
-      await fs.access(path);
+      await fs.access(targetPath);
       return true;
     } catch {
       return false;
     }
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     if (this.browser) {
       await this.browser.close();
       this.logger.log('Puppeteer browser closed');
+    }
+  }
+
+  private describeError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
     }
   }
 }

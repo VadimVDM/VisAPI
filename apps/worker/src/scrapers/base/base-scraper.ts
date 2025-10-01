@@ -6,7 +6,6 @@ import {
   ScraperJobData,
   ScraperJobResult,
   ScraperOptions,
-  ScraperStatus,
   ScraperType,
 } from '../types';
 
@@ -59,8 +58,9 @@ export abstract class BaseScraper {
 
       this.logger.log(`Scrape job completed: ${jobData.jobId}`);
       return result;
-    } catch (error) {
-      this.logger.error(`Scrape job failed: ${jobData.jobId}`, error);
+    } catch (error: unknown) {
+      const { message, stack } = this.describeError(error);
+      this.logger.error(`Scrape job failed: ${jobData.jobId} - ${message}`, stack);
 
       // Take screenshot on error if enabled
       if (options.screenshotsOnError && this.page) {
@@ -152,15 +152,17 @@ export abstract class BaseScraper {
       selector ? this.page.click(selector) : Promise.resolve(),
     ]);
 
-    const buffer = await download.createReadStream().then(
-      (stream) =>
-        new Promise<Buffer>((resolve, reject) => {
-          const chunks: Buffer[] = [];
-          stream.on('data', (chunk) => chunks.push(chunk));
-          stream.on('end', () => resolve(Buffer.concat(chunks)));
-          stream.on('error', reject);
-        }),
-    );
+    const stream = await download.createReadStream();
+    if (!stream) {
+      throw new ScraperError('Failed to acquire download stream');
+    }
+
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
 
     this.logger.log(`File downloaded: ${buffer.length} bytes`);
     return buffer;
@@ -182,8 +184,9 @@ export abstract class BaseScraper {
       const base64 = screenshot.toString('base64');
       this.screenshots.push(`data:image/png;base64,${base64}`);
       this.logger.log(`Screenshot captured: ${label}`);
-    } catch (error) {
-      this.logger.error(`Failed to capture screenshot ${label}:`, error);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.error(`Failed to capture screenshot ${label}: ${message}`);
     }
   }
 
@@ -248,7 +251,7 @@ export abstract class BaseScraper {
     });
 
     this.logger.log(`PDF generated: ${pdfBuffer.length} bytes`);
-    return Buffer.from(pdfBuffer);
+    return pdfBuffer;
   }
 
   /**
@@ -314,8 +317,8 @@ export abstract class BaseScraper {
    */
   protected createErrorResult(
     jobData: ScraperJobData,
-    error: any,
-    options: ScraperOptions,
+    error: unknown,
+    _options: ScraperOptions,
   ): ScraperJobResult {
     const maxRetries = jobData.maxRetries ?? 3;
     const currentRetry = jobData.retryCount ?? 0;
@@ -324,9 +327,11 @@ export abstract class BaseScraper {
     let shouldRetry = canRetry;
     if (error instanceof ScraperError) {
       shouldRetry = error.retryable ? canRetry : false;
-    } else if (typeof error?.retryable === 'boolean') {
+    } else if (this.hasRetryableFlag(error)) {
       shouldRetry = error.retryable ? canRetry : false;
     }
+
+    const errorMessage = this.extractErrorMessage(error);
 
     return {
       success: false,
@@ -334,7 +339,7 @@ export abstract class BaseScraper {
       scraperType: this.scraperType,
       status: 'failed',
       duration: Date.now() - this.startTime,
-      error: error.message || String(error),
+      error: errorMessage,
       errorCode: this.categorizeError(error),
       shouldRetry,
       retryAfter: shouldRetry
@@ -348,16 +353,16 @@ export abstract class BaseScraper {
   /**
    * Categorize error for better handling
    */
-  protected categorizeError(error: any): string {
+  protected categorizeError(error: unknown): string {
     if (error instanceof ScraperError && error.code) {
       return error.code;
     }
 
-    if (typeof error?.code === 'string') {
+    if (this.hasErrorCode(error)) {
       return error.code;
     }
 
-    const message = error.message?.toLowerCase() || '';
+    const message = this.extractErrorMessage(error).toLowerCase();
 
     if (message.includes('timeout')) return 'TIMEOUT';
     if (message.includes('navigation')) return 'NAVIGATION_ERROR';
@@ -378,8 +383,55 @@ export abstract class BaseScraper {
         this.page = null;
       }
       await this.browserManager.closeContext(contextId);
-    } catch (error) {
-      this.logger.error('Error during cleanup:', error);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.error(`Error during cleanup: ${message}`);
     }
+  }
+
+  protected describeError(error: unknown): { message: string; stack?: string } {
+    if (error instanceof Error) {
+      return { message: error.message, stack: error.stack };
+    }
+
+    if (typeof error === 'string') {
+      return { message: error };
+    }
+
+    try {
+      return { message: JSON.stringify(error) };
+    } catch {
+      return { message: 'Unknown error' };
+    }
+  }
+
+  private hasRetryableFlag(
+    error: unknown,
+  ): error is { retryable: boolean } {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      typeof (error as { retryable?: unknown }).retryable === 'boolean'
+    );
+  }
+
+  private hasErrorCode(
+    error: unknown,
+  ): error is { code: string } {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      typeof (error as { code?: unknown }).code === 'string'
+    );
+  }
+
+  private extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    return 'Unknown scraper error';
   }
 }

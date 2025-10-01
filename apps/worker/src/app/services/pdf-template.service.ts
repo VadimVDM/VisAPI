@@ -3,6 +3,14 @@ import * as Handlebars from 'handlebars';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type TemplateData = Record<string, JsonValue>;
+
+interface HandlebarsHelperOptions {
+  fn: (context: unknown) => string;
+  inverse: (context: unknown) => string;
+}
+
 @Injectable()
 export class PdfTemplateService {
   private readonly logger = new Logger(PdfTemplateService.name);
@@ -11,23 +19,24 @@ export class PdfTemplateService {
 
   constructor() {
     this.registerHelpers();
-    this.ensureTemplatesDirectory();
+    void this.ensureTemplatesDirectory();
   }
 
-  async compileTemplate(templateName: string, data: Record<string, any>): Promise<string> {
+  async compileTemplate(templateName: string, data: TemplateData): Promise<string> {
     const template = await this.getTemplate(templateName);
     const processedData = this.preprocessData(data);
     
     try {
       const html = template(processedData);
       return this.wrapWithLayout(html, templateName);
-    } catch (error) {
-      this.logger.error(`Failed to render template ${templateName}:`, error);
-      throw new Error(`Template rendering failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.error(`Failed to render template ${templateName}: ${message}`);
+      throw new Error(`Template rendering failed: ${message}`);
     }
   }
 
-  async processHtml(html: string, data: Record<string, any>): Promise<string> {
+  processHtml(html: string, data: TemplateData): string {
     if (!html.includes('{{')) {
       return html;
     }
@@ -36,9 +45,10 @@ export class PdfTemplateService {
       const template = Handlebars.compile(html);
       const processedData = this.preprocessData(data);
       return template(processedData);
-    } catch (error) {
-      this.logger.error('Failed to process HTML with Handlebars:', error);
-      throw new Error(`HTML processing failed: ${error.message}`);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.error(`Failed to process HTML with Handlebars: ${message}`);
+      throw new Error(`HTML processing failed: ${message}`);
     }
   }
 
@@ -66,7 +76,7 @@ export class PdfTemplateService {
       return str?.charAt(0).toUpperCase() + str?.slice(1).toLowerCase();
     });
 
-    Handlebars.registerHelper('ifEquals', function(arg1: any, arg2: any, options: any) {
+    Handlebars.registerHelper('ifEquals', function(arg1: unknown, arg2: unknown, options: HandlebarsHelperOptions) {
       return arg1 === arg2 ? options.fn(this) : options.inverse(this);
     });
   }
@@ -74,7 +84,7 @@ export class PdfTemplateService {
   private async getTemplate(templateName: string): Promise<HandlebarsTemplateDelegate> {
     // Check cache first
     if (this.compiledTemplates.has(templateName)) {
-      return this.compiledTemplates.get(templateName)!;
+      return this.compiledTemplates.get(templateName);
     }
 
     // Try loading from file system
@@ -87,7 +97,7 @@ export class PdfTemplateService {
       this.compiledTemplates.set(templateName, compiled);
       this.logger.log(`Loaded template from file: ${templateName}`);
       return compiled;
-    } catch (error) {
+    } catch {
       // Try loading from examples if not found
       const examplePath = path.join(this.templatesDir, 'examples', `${templateName}.hbs`);
       try {
@@ -102,15 +112,16 @@ export class PdfTemplateService {
     }
   }
 
-  private async ensureTemplatesDirectory() {
+  private async ensureTemplatesDirectory(): Promise<void> {
     try {
       await fs.mkdir(this.templatesDir, { recursive: true });
       await fs.mkdir(path.join(this.templatesDir, 'examples'), { recursive: true });
-      
+
       // Create example templates if they don't exist
       await this.createExampleTemplates();
-    } catch (error) {
-      this.logger.warn('Failed to ensure templates directory:', error);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.warn(`Failed to ensure templates directory: ${message}`);
     }
   }
 
@@ -133,33 +144,55 @@ export class PdfTemplateService {
     }
   }
 
-  private preprocessData(data: Record<string, any>): Record<string, any> {
-    const processed = { ...data };
-    
-    if (processed.date && typeof processed.date === 'string') {
-      processed.formattedDate = new Date(processed.date).toLocaleDateString();
+  private preprocessData(data: TemplateData): TemplateData {
+    const processed: TemplateData = { ...data };
+
+    const dateValue = data.date;
+    if (typeof dateValue === 'string') {
+      processed.formattedDate = new Date(dateValue).toLocaleDateString();
     }
-    
-    if (processed.items && Array.isArray(processed.items)) {
-      processed.items = processed.items.map(item => ({
-        ...item,
-        total: (item.quantity || 1) * (item.price || 0),
-      }));
-      
-      processed.subtotal = processed.items.reduce((sum, item) => sum + item.total, 0);
-      processed.tax = processed.tax || processed.subtotal * 0.17;
-      processed.total = processed.subtotal + processed.tax;
+
+    const itemsValue = data.items;
+    if (Array.isArray(itemsValue)) {
+      const normalizedItems = itemsValue
+        .map((item) =>
+          item && typeof item === 'object' && !Array.isArray(item)
+            ? ({ ...item } as Record<string, JsonValue>)
+            : null,
+        )
+        .filter((item): item is Record<string, JsonValue> => item !== null)
+        .map((item) => {
+          const quantity = this.toNumber(item.quantity, 1);
+          const price = this.toNumber(item.price, 0);
+          return {
+            ...item,
+            total: quantity * price,
+          } as Record<string, JsonValue>;
+        });
+
+      processed.items = normalizedItems as JsonValue;
+
+      const subtotal = normalizedItems.reduce((sum, item) => {
+        const total = this.toNumber(item.total, 0);
+        return sum + total;
+      }, 0);
+
+      processed.subtotal = subtotal;
+      const taxValue = this.toNumber(data.tax, subtotal * 0.17);
+      processed.tax = taxValue;
+      processed.total = subtotal + taxValue;
     }
-    
-    ['subtotal', 'tax', 'total', 'amount'].forEach(key => {
-      if (processed[key] !== undefined) {
+
+    (['subtotal', 'tax', 'total', 'amount'] as const).forEach((key) => {
+      const rawValue = processed[key];
+      if (typeof rawValue === 'number') {
         processed[`${key}Formatted`] = new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
-        }).format(processed[key]);
+        }).format(rawValue);
       }
     });
-    
+
     return processed;
   }
 
@@ -191,8 +224,9 @@ export class PdfTemplateService {
           });
         }
       }
-    } catch (error) {
-      this.logger.error('Failed to list templates:', error);
+    } catch (error: unknown) {
+      const message = this.describeError(error);
+      this.logger.error(`Failed to list templates: ${message}`);
     }
     
     return templates;
@@ -300,4 +334,34 @@ export class PdfTemplateService {
 <div>{{{content}}}</div>`;
   }
 
+  private toNumber(value: JsonValue | undefined, fallback: number): number {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return fallback;
+  }
+
+  private describeError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }
 }

@@ -73,8 +73,10 @@ export class ScraperProcessor extends WorkerHost {
           result = await this.koreaKetaScraper.scrape(data, options);
           break;
 
-        default:
-          throw new Error(`Unknown scraper type: ${data.scraperType}`);
+        default: {
+          const invalidType: never = data.scraperType;
+          throw new Error(`Unknown scraper type: ${String(invalidType)}`);
+        }
       }
 
       await job.updateProgress(100);
@@ -86,12 +88,29 @@ export class ScraperProcessor extends WorkerHost {
       // If job should be retried, throw to trigger retry
       if (result.shouldRetry && result.retryAfter) {
         const retryDelay = new Date(result.retryAfter).getTime() - Date.now();
-        throw new Error(`Job should be retried after ${retryDelay}ms: ${result.error}`);
+        const retryReason = result.error ?? 'Unknown scraper error';
+        throw new Error(
+          `Job should be retried after ${retryDelay}ms: ${retryReason}`,
+        );
       }
 
       return result;
-    } catch (error) {
-      this.logger.error(`Scraper job ${job.id} failed:`, error);
+    } catch (error: unknown) {
+      const message = (() => {
+        if (error instanceof Error) {
+          return error.message;
+        }
+        if (typeof error === 'string') {
+          return error;
+        }
+        try {
+          return JSON.stringify(error);
+        } catch {
+          return 'Unknown error';
+        }
+      })();
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Scraper job ${job.id} failed: ${message}`, stack);
 
       // Return error result
       return {
@@ -100,7 +119,7 @@ export class ScraperProcessor extends WorkerHost {
         scraperType: data.scraperType,
         status: 'failed',
         duration: Date.now() - startTime,
-        error: error.message || String(error),
+        error: message,
         errorCode: 'PROCESSING_ERROR',
         shouldRetry: true,
         metadata: data.metadata,
@@ -108,7 +127,7 @@ export class ScraperProcessor extends WorkerHost {
     }
   }
 
-  async onCompleted(job: Job<ScraperJobData>, result: ScraperJobResult) {
+  onCompleted(job: Job<ScraperJobData>, result: ScraperJobResult) {
     this.logger.log(
       `Job ${job.id} completed - Status: ${result.status}, Success: ${result.success}`
     );
@@ -127,20 +146,23 @@ export class ScraperProcessor extends WorkerHost {
     }
   }
 
-  async onFailed(job: Job<ScraperJobData>, error: Error) {
-    this.logger.error(`Job ${job.id} permanently failed:`, error);
+  onFailed(job: Job<ScraperJobData>, error: Error) {
+    this.logger.error(
+      `Job ${job.id} permanently failed: ${error.message}`,
+      error.stack,
+    );
 
     // Cleanup any resources if needed
     // (Browser contexts are already cleaned up by scrapers)
   }
 
-  async onActive(job: Job<ScraperJobData>) {
+  onActive(job: Job<ScraperJobData>) {
     this.logger.log(
       `Job ${job.id} started processing - Scraper: ${job.data.scraperType}`
     );
   }
 
-  async onStalled(job: Job<ScraperJobData>) {
+  onStalled(job: Job<ScraperJobData>) {
     this.logger.warn(`Job ${job.id} stalled and will be retried`);
   }
 }

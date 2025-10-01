@@ -1,13 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { WhatsAppJobData, WhatsAppJobResult } from '@visapi/shared-types';
-import { 
-  CbbClientService, 
-  ContactResolverService, 
+import {
+  WhatsAppJobData,
+  WhatsAppJobResult,
+  MessageResponse,
+} from '@visapi/shared-types';
+import {
+  CbbClientService,
+  ContactResolverService,
   TemplateService,
   CbbApiError,
-  ContactNotFoundError 
+  ContactNotFoundError,
 } from '@visapi/backend-core-cbb';
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+type TemplateVariables = Record<string, JsonValue>;
+type WhatsAppProcessorJobData = Omit<WhatsAppJobData, 'variables'> & {
+  variables?: TemplateVariables;
+};
 
 @Injectable()
 export class WhatsAppProcessor {
@@ -19,7 +36,7 @@ export class WhatsAppProcessor {
     private readonly templateService: TemplateService
   ) {}
 
-  async process(job: Job<WhatsAppJobData>): Promise<WhatsAppJobResult> {
+  async process(job: Job<WhatsAppProcessorJobData>): Promise<WhatsAppJobResult> {
     const { to, message, template, variables, fileUrl, fileType } = job.data;
 
     this.logger.log(`Processing WhatsApp message to: ${to}`);
@@ -29,7 +46,7 @@ export class WhatsAppProcessor {
       const contact = await this.contactResolver.resolveContact(to);
       this.logger.debug(`Resolved contact ID ${contact.id} for phone: ${to}`);
 
-      let messageResponse;
+      let messageResponse: MessageResponse;
 
       // Send message based on type
       if (fileUrl && fileType) {
@@ -42,10 +59,11 @@ export class WhatsAppProcessor {
         throw new Error('No message content provided (missing message, template, or fileUrl)');
       }
 
+      const messageId = messageResponse.message_id ?? `cbb_${Date.now()}`;
       const result: WhatsAppJobResult = {
         success: true,
         contactId: contact.id,
-        messageId: messageResponse.message_id || `cbb_${Date.now()}`,
+        messageId,
         to,
         timestamp: new Date().toISOString(),
       };
@@ -53,8 +71,13 @@ export class WhatsAppProcessor {
       this.logger.log(`WhatsApp message sent successfully to ${to} (contact ${contact.id})`);
       return result;
 
-    } catch (error) {
-      this.logger.error(`Failed to send WhatsApp message to ${to}:`, error);
+    } catch (error: unknown) {
+      const errorMessage = this.toErrorMessage(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Failed to send WhatsApp message to ${to}: ${errorMessage}`,
+        errorStack,
+      );
 
       const result: WhatsAppJobResult = {
         success: false,
@@ -77,20 +100,29 @@ export class WhatsAppProcessor {
   /**
    * Send text message to contact
    */
-  private async sendTextMessage(contactId: number, text: string) {
+  private async sendTextMessage(contactId: number, text: string): Promise<MessageResponse> {
     this.logger.debug(`Sending text message to contact ${contactId}: ${text.substring(0, 50)}...`);
-    return await this.cbbClient.sendTextMessage(contactId, text);
+    return this.cbbClient.sendTextMessage(contactId, text);
   }
 
   /**
    * Send template/flow message to contact
    */
   private async sendTemplateMessage(
-    contactId: number, 
-    templateName: string, 
-    variables?: Record<string, any>
-  ) {
-    this.logger.debug(`Sending template "${templateName}" to contact ${contactId}`, variables);
+    contactId: number,
+    templateName: string,
+    variables?: TemplateVariables,
+  ): Promise<MessageResponse> {
+    if (variables) {
+      this.logger.debug(
+        `Sending template "${templateName}" to contact ${contactId}`,
+        variables,
+      );
+    } else {
+      this.logger.debug(
+        `Sending template "${templateName}" to contact ${contactId} with no variables`,
+      );
+    }
 
     try {
       // Get flow ID for template
@@ -101,14 +133,15 @@ export class WhatsAppProcessor {
         await this.templateService.processTemplateVariables(templateName, variables);
       }
 
-      return await this.cbbClient.sendFlow(contactId, flowId);
-    } catch (error) {
-      if (error.message.includes('not found')) {
+      return this.cbbClient.sendFlow(contactId, flowId);
+    } catch (error: unknown) {
+      const message = this.toErrorMessage(error);
+      if (message.toLowerCase().includes('not found')) {
         // Template not found, fall back to text message if variables include a fallback
-        const fallbackMessage = variables?.fallback_message || variables?.message;
+        const fallbackMessage = this.extractFallbackMessage(variables);
         if (fallbackMessage) {
           this.logger.warn(`Template "${templateName}" not found, using fallback message`);
-          return await this.sendTextMessage(contactId, fallbackMessage);
+          return this.sendTextMessage(contactId, fallbackMessage);
         }
       }
       throw error;
@@ -119,18 +152,18 @@ export class WhatsAppProcessor {
    * Send file/media message to contact
    */
   private async sendFileMessage(
-    contactId: number, 
-    fileUrl: string, 
-    fileType: 'image' | 'document' | 'video' | 'audio'
-  ) {
+    contactId: number,
+    fileUrl: string,
+    fileType: 'image' | 'document' | 'video' | 'audio',
+  ): Promise<MessageResponse> {
     this.logger.debug(`Sending ${fileType} file to contact ${contactId}: ${fileUrl}`);
-    return await this.cbbClient.sendFileMessage(contactId, fileUrl, fileType);
+    return this.cbbClient.sendFileMessage(contactId, fileUrl, fileType);
   }
 
   /**
    * Format error message for job result
    */
-  private formatErrorMessage(error: any): string {
+  private formatErrorMessage(error: unknown): string {
     if (error instanceof CbbApiError) {
       return `CBB API Error (${error.statusCode}): ${error.message}`;
     }
@@ -139,13 +172,17 @@ export class WhatsAppProcessor {
       return `Contact resolution failed: ${error.message}`;
     }
 
-    return error.message || 'Unknown WhatsApp processing error';
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Unknown WhatsApp processing error';
   }
 
   /**
    * Determine if error is permanent and should not be retried
    */
-  private isPermanentFailure(error: any): boolean {
+  private isPermanentFailure(error: unknown): boolean {
     // Don't retry client errors (400-499) or contact resolution failures
     if (error instanceof CbbApiError && error.statusCode >= 400 && error.statusCode < 500) {
       return true;
@@ -153,7 +190,7 @@ export class WhatsAppProcessor {
 
     // Don't retry invalid phone numbers or malformed requests
     if (error instanceof ContactNotFoundError) {
-      return false; // Actually, we should retry these as contact creation might succeed later
+      return false; // Allow retry - contact creation might succeed later
     }
 
     // Specific error patterns that indicate permanent failures
@@ -165,7 +202,34 @@ export class WhatsAppProcessor {
       'template not found',
     ];
 
-    const errorMessage = error.message?.toLowerCase() || '';
-    return permanentErrorPatterns.some(pattern => errorMessage.includes(pattern));
+    const errorMessage = this.toErrorMessage(error).toLowerCase();
+    return permanentErrorPatterns.some((pattern) => errorMessage.includes(pattern));
+  }
+
+  private extractFallbackMessage(variables?: TemplateVariables): string | null {
+    if (!variables) {
+      return null;
+    }
+
+    const fallbackCandidate =
+      variables['fallback_message'] ?? variables['message'] ?? null;
+
+    return typeof fallbackCandidate === 'string' ? fallbackCandidate : null;
+  }
+
+  private toErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown WhatsApp processing error';
+    }
   }
 }

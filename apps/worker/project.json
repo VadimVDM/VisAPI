@@ -41,6 +41,12 @@
         "jestConfig": "apps/worker/jest.config.ts",
         "passWithNoTests": true
       }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/worker/**/*.ts"]
+      }
     }
   },
   "tags": ["scope:backend", "type:app"]

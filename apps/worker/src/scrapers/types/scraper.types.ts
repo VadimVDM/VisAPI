@@ -2,6 +2,8 @@
  * Base types for all visa document scrapers
  */
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 export type ScraperType = 'esta' | 'vietnam-evisa' | 'korea-keta';
 
 export type ScraperStatus =
@@ -22,7 +24,7 @@ export interface ScraperCredentials {
   /** Date of birth (ISO 8601) */
   dateOfBirth?: string;
   /** Additional country-specific fields */
-  [key: string]: any;
+  [key: string]: JsonValue | undefined;
 }
 
 export interface ScraperJobData {
@@ -45,7 +47,7 @@ export interface ScraperJobData {
   /** Optional webhook URL for completion notification */
   webhookUrl?: string;
   /** Additional metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface ScraperJobResult {
@@ -82,7 +84,7 @@ export interface ScraperJobResult {
   /** Screenshots for debugging (base64 encoded) */
   screenshots?: string[];
   /** Additional result metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface BrowserConfig {
@@ -101,7 +103,7 @@ export interface BrowserConfig {
   /** Whether to load images */
   images: boolean;
   /** Additional Playwright launch options */
-  launchOptions?: Record<string, any>;
+  launchOptions?: Record<string, JsonValue>;
 }
 
 export interface ScraperOptions {

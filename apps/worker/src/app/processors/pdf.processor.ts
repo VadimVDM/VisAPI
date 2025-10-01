@@ -1,9 +1,11 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { QUEUE_NAMES, JOB_NAMES } from '@visapi/shared-types';
+import { QUEUE_NAMES } from '@visapi/shared-types';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
 import { PdfTemplateService } from '../services/pdf-template.service';
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export interface PdfJobData {
   jobId: string;
@@ -11,7 +13,7 @@ export interface PdfJobData {
   template?: string;
   url?: string;
   html?: string;
-  data: Record<string, any>;
+  data: Record<string, JsonValue>;
   filename: string;
   options: {
     format: string;
@@ -23,7 +25,7 @@ export interface PdfJobData {
     printBackground: boolean;
   };
   webhookUrl?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, JsonValue>;
   timestamp: string;
   preview?: boolean;
   format?: 'base64' | 'url';
@@ -40,7 +42,16 @@ export interface PdfJobResult {
   mimeType: string;
   generatedAt: string;
   duration: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, JsonValue>;
+}
+
+interface PdfGenerationResult {
+  filename: string;
+  url?: string | null;
+  signedUrl?: string | null;
+  base64?: string | null;
+  size: number;
+  storagePath?: string;
 }
 
 @Injectable()
@@ -69,7 +80,7 @@ export class PdfProcessor extends WorkerHost {
       // Update progress
       await job.updateProgress(10);
 
-      let result: any;
+      let result: PdfGenerationResult;
 
       switch (data.source) {
         case 'template':
@@ -81,8 +92,10 @@ export class PdfProcessor extends WorkerHost {
         case 'html':
           result = await this.generateFromHtml(job);
           break;
-        default:
-          throw new Error(`Invalid PDF source: ${data.source}`);
+        default: {
+          const invalidSource: never = data.source;
+          throw new Error(`Invalid PDF source: ${String(invalidSource)}`);
+        }
       }
 
       await job.updateProgress(100);
@@ -165,7 +178,7 @@ export class PdfProcessor extends WorkerHost {
     await job.updateProgress(30);
     
     // Process HTML with template engine if it contains variables
-    const processedHtml = await this.templateService.processHtml(
+    const processedHtml = this.templateService.processHtml(
       data.html,
       data.data
     );
@@ -202,11 +215,11 @@ export class PdfProcessor extends WorkerHost {
     await this.pdfGenerator.cleanupTempFiles(job.id);
   }
 
-  async onActive(job: Job<PdfJobData>) {
+  onActive(job: Job<PdfJobData>) {
     this.logger.log(`Job ${job.id} started processing`);
   }
 
-  async onStalled(job: Job<PdfJobData>) {
+  onStalled(job: Job<PdfJobData>) {
     this.logger.warn(`Job ${job.id} stalled and will be retried`);
   }
 }
