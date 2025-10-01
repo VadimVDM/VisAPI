@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import {
   Coupon,
   ViziWebhookDto,
@@ -50,7 +50,7 @@ export class ViziOrderWorkflowService {
       correlationId,
     });
 
-    const webhookId = uuidv4();
+    const webhookId = randomUUID();
     await this.persistWebhookPayload(webhookId, webhookData, correlationId);
 
     const queueName = form.urgency === 'few_hours' ? 'critical' : 'default';

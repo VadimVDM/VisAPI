@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PinoLogger } from 'nestjs-pino';
 import * as puppeteer from 'puppeteer-core';
 import { PdfTemplateService } from './pdf-template.service';
 import { StorageService } from '@visapi/core-supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface PdfGenerationOptions {
   format?: 'A4' | 'Letter' | 'Legal';
@@ -80,7 +80,7 @@ export class PdfGeneratorService {
     data: Record<string, unknown>,
     options: PdfGenerationOptions = {},
   ): Promise<PdfGenerationResult> {
-    const jobId = uuidv4();
+    const jobId = randomUUID();
     const startTime = Date.now();
 
     try {
@@ -182,7 +182,7 @@ export class PdfGeneratorService {
     url: string,
     options: PdfGenerationOptions = {},
   ): Promise<PdfGenerationResult> {
-    const jobId = uuidv4();
+    const jobId = randomUUID();
     const startTime = Date.now();
 
     try {

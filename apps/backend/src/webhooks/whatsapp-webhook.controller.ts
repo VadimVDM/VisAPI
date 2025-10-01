@@ -25,8 +25,8 @@ import {
   MessageIdUpdaterService,
   EnhancedMessageStatus as LibraryEnhancedMessageStatus,
 } from '@visapi/backend-whatsapp-business';
+import { randomUUID } from 'node:crypto';
 import { firstValueFrom } from 'rxjs';
-import { v4 as uuidv4 } from 'uuid';
 import { SlackRateLimiterService } from './slack-rate-limiter.service';
 import {
   AccountUpdate,
@@ -39,7 +39,8 @@ import {
 } from './whatsapp.types';
 import { Database } from '@visapi/shared-types';
 
-type DbWhatsappMessages = Database['public']['Tables']['whatsapp_messages']['Row'];
+type DbWhatsappMessages =
+  Database['public']['Tables']['whatsapp_messages']['Row'];
 
 @ApiTags('WhatsApp Webhooks')
 @Controller('v1/webhooks/whatsapp')
@@ -84,8 +85,7 @@ export class WhatsAppWebhookController {
     }
 
     try {
-      const challenge =
-        this.webhookVerifier.verifyWebhookChallenge(query);
+      const challenge = this.webhookVerifier.verifyWebhookChallenge(query);
 
       await this.trackWebhookEvent({
         method: 'GET',
@@ -127,7 +127,7 @@ export class WhatsAppWebhookController {
     @Headers() headers: Record<string, string>,
     @Req() req: RawBodyRequest<Request>,
   ): Promise<{ status: string }> {
-    const eventId = uuidv4();
+    const eventId = randomUUID();
 
     // Only log event IDs in development to reduce production logs
     if (!this.configService.isProduction) {
@@ -201,7 +201,8 @@ export class WhatsAppWebhookController {
 
       return { status: 'success' };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Error processing webhook: ${errorMessage}`, error);
 
       await this.updateWebhookEventStatus(eventId, 'failed', errorMessage);
@@ -257,15 +258,24 @@ export class WhatsAppWebhookController {
         break;
 
       case 'message_template_status_update':
-        await this.processTemplateStatusWebhook(value as unknown as TemplateStatusUpdate, _eventId);
+        await this.processTemplateStatusWebhook(
+          value as unknown as TemplateStatusUpdate,
+          _eventId,
+        );
         break;
 
       case 'account_update':
-        await this.processAccountUpdateWebhook(value as AccountUpdate, _eventId);
+        await this.processAccountUpdateWebhook(
+          value as AccountUpdate,
+          _eventId,
+        );
         break;
 
       case 'business_capability_update':
-        this.processBusinessCapabilityWebhook(value as BusinessCapabilityUpdate, _eventId);
+        this.processBusinessCapabilityWebhook(
+          value as BusinessCapabilityUpdate,
+          _eventId,
+        );
         break;
 
       default:
@@ -290,18 +300,22 @@ export class WhatsAppWebhookController {
       let messageIdUpdated = false;
 
       // Update message ID if this is the first status update with real Meta message ID
-      if (status.id && status.id.startsWith('wamid.') && status.biz_opaque_callback_data) {
+      if (
+        status.id &&
+        status.id.startsWith('wamid.') &&
+        status.biz_opaque_callback_data
+      ) {
         try {
           const correlationData = this.messageIdUpdater.parseCorrelationData(
             status.biz_opaque_callback_data,
           );
-          
+
           if (correlationData) {
             const updateResult = await this.messageIdUpdater.updateMessageId(
               status.id,
               correlationData,
             );
-            
+
             if (updateResult.success) {
               this.logger.log(
                 `Updated message ID from ${updateResult.previousMessageId} to ${updateResult.newMessageId}`,
@@ -312,7 +326,10 @@ export class WhatsAppWebhookController {
                 `Failed to update message ID: ${updateResult.error}`,
               );
               // If correlation failed, we might need to use temporary ID for delivery updates
-              if (updateResult.error?.includes('No matching message found') && correlationData.contactId) {
+              if (
+                updateResult.error?.includes('No matching message found') &&
+                correlationData.contactId
+              ) {
                 // Try to find the temporary message ID
                 const tempMessage = await this.supabaseService.serviceClient
                   .from('whatsapp_messages')
@@ -322,7 +339,7 @@ export class WhatsAppWebhookController {
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .single();
-                
+
                 if (tempMessage.data?.message_id) {
                   // Manually update the message ID since correlation failed
                   await this.supabaseService.serviceClient
@@ -333,7 +350,7 @@ export class WhatsAppWebhookController {
                       updated_at: new Date().toISOString(),
                     })
                     .eq('message_id', tempMessage.data.message_id);
-                  
+
                   this.logger.log(
                     `Manually updated message ID from ${tempMessage.data.message_id} to ${status.id}`,
                   );
@@ -363,7 +380,9 @@ export class WhatsAppWebhookController {
         messageIdUpdated, // Pass flag to indicate if ID was updated
       };
 
-      this.deliveryTracker.updateMessageStatus(messageStatus as LibraryEnhancedMessageStatus);
+      this.deliveryTracker.updateMessageStatus(
+        messageStatus as LibraryEnhancedMessageStatus,
+      );
 
       await this.updateMessageInDatabase(messageStatus);
 
@@ -485,7 +504,9 @@ export class WhatsAppWebhookController {
     }
   }
 
-  private async updateMessageInDatabase(status: EnhancedMessageStatus): Promise<void> {
+  private async updateMessageInDatabase(
+    status: EnhancedMessageStatus,
+  ): Promise<void> {
     try {
       const updates: Partial<DbWhatsappMessages> = {
         status: status.status,
@@ -516,7 +537,11 @@ export class WhatsAppWebhookController {
         .select('order_id, message_id');
 
       // If no rows were updated and we have a real WAMID, it might be a correlation issue
-      if (!error && (!data || data.length === 0) && status.id.startsWith('wamid.')) {
+      if (
+        !error &&
+        (!data || data.length === 0) &&
+        status.id.startsWith('wamid.')
+      ) {
         this.logger.warn(
           `No message found with ID ${status.id}, delivery status update failed. This may indicate a message ID correlation issue.`,
         );
@@ -525,16 +550,22 @@ export class WhatsAppWebhookController {
 
       // Update orders table if we successfully updated the message
       if (
-        (status.status === 'delivered' || status.status === 'read' || status.status === 'failed') &&
-        data && data.length > 0 && data[0].order_id
+        (status.status === 'delivered' ||
+          status.status === 'read' ||
+          status.status === 'failed') &&
+        data &&
+        data.length > 0 &&
+        data[0].order_id
       ) {
         const orderId = data[0].order_id;
-        this.logger.debug(`Updating order ${orderId} with WhatsApp ${status.status} status`);
-        
+        this.logger.debug(
+          `Updating order ${orderId} with WhatsApp ${status.status} status`,
+        );
+
         // Note: Currently the orders table doesn't have whatsapp_* columns
         // This is a placeholder for when those columns are added
         // For now, the tracking is handled in the whatsapp_messages table
-        
+
         // If/when orders table gets WhatsApp status columns, uncomment:
         // const orderUpdate: any = {};
         // if (status.status === 'delivered') {
@@ -551,14 +582,17 @@ export class WhatsAppWebhookController {
         //   .eq('order_id', orderId);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
         `Failed to update message in database: ${errorMessage}`,
       );
     }
   }
 
-  private async trackWebhookEvent(data: Record<string, unknown>): Promise<void> {
+  private async trackWebhookEvent(
+    data: Record<string, unknown>,
+  ): Promise<void> {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
@@ -566,8 +600,10 @@ export class WhatsAppWebhookController {
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
-          payload: (data.payload || data) as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['payload'],
+          details:
+            data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
+          payload: (data.payload ||
+            data) as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['payload'],
           challenge: data.challenge as string | null,
           signature_verified: data.signature_verified as boolean | null,
           processing_status: data.processing_status as string | null,
@@ -576,12 +612,15 @@ export class WhatsAppWebhookController {
           created_at: new Date().toISOString(),
         });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to track webhook event: ${errorMessage}`);
     }
   }
 
-  private async trackIncomingMessage(data: Record<string, unknown>): Promise<void> {
+  private async trackIncomingMessage(
+    data: Record<string, unknown>,
+  ): Promise<void> {
     try {
       await this.supabaseService.serviceClient
         .from('whatsapp_webhook_events')
@@ -589,13 +628,15 @@ export class WhatsAppWebhookController {
           event_type: data.event_type as string | null,
           message_id: data.message_id as string | null,
           phone_number: data.phone_number as string | null,
-          details: data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
+          details:
+            data.details as Database['public']['Tables']['whatsapp_webhook_events']['Insert']['details'],
           method: 'POST',
           status: 'received',
           created_at: new Date().toISOString(),
         });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to track incoming message: ${errorMessage}`);
     }
   }
@@ -606,7 +647,9 @@ export class WhatsAppWebhookController {
     error?: string,
   ): Promise<void> {
     try {
-      const update: Partial<Database['public']['Tables']['whatsapp_webhook_events']['Row']> = {
+      const update: Partial<
+        Database['public']['Tables']['whatsapp_webhook_events']['Row']
+      > = {
         processing_status: status,
       };
 
@@ -619,14 +662,18 @@ export class WhatsAppWebhookController {
         .update(update)
         .eq('id', eventId);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
         `Failed to update webhook event status: ${errorMessage}`,
       );
     }
   }
 
-  private async forwardToZapier(body: WhatsAppWebhookPayload, eventId: string): Promise<void> {
+  private async forwardToZapier(
+    body: WhatsAppWebhookPayload,
+    eventId: string,
+  ): Promise<void> {
     try {
       // Forward the exact raw webhook body to Zapier (same as WebhookVerifier)
       // DO NOT add extra fields - Zapier expects the raw Meta webhook format
@@ -656,7 +703,8 @@ export class WhatsAppWebhookController {
         );
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to forward to Zapier: ${errorMessage}`);
 
       // Still mark the attempt in the database
@@ -673,7 +721,10 @@ export class WhatsAppWebhookController {
     }
   }
 
-  private async sendSlackAlert(title: string, data: Record<string, unknown>): Promise<void> {
+  private async sendSlackAlert(
+    title: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
     try {
       await firstValueFrom(
         this.httpService.post(this.slackWebhookUrl, {
@@ -706,7 +757,8 @@ export class WhatsAppWebhookController {
         }),
       );
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to send Slack alert: ${errorMessage}`);
     }
   }

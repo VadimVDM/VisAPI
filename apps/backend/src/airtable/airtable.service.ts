@@ -9,10 +9,10 @@ import { ConfigService } from '@visapi/core-config';
 import { CacheService } from '@visapi/backend-cache';
 import { SupabaseService } from '@visapi/core-supabase';
 import { ApiKeyRecord } from '@visapi/shared-types';
+import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
 import {
   AirtableLookupResponseDto,
   AirtableLookupStatus,
@@ -57,9 +57,10 @@ type PythonAirtableRecord = {
 @Injectable()
 export class AirtableLookupService {
   private readonly logger = new Logger(AirtableLookupService.name);
-  private readonly scriptPath = process.env.NODE_ENV === 'production'
-    ? join(process.cwd(), 'airtable', 'scripts', 'airtable_lookup.py')
-    : join(__dirname, 'scripts', 'airtable_lookup.py');
+  private readonly scriptPath =
+    process.env.NODE_ENV === 'production'
+      ? join(process.cwd(), 'airtable', 'scripts', 'airtable_lookup.py')
+      : join(__dirname, 'scripts', 'airtable_lookup.py');
   private readonly executionTimeoutMs = 15000;
   private readonly cacheTtlSeconds = 300; // 5 minutes default TTL
 
@@ -77,7 +78,7 @@ export class AirtableLookupService {
   ): Promise<AirtableLookupResponseDto> {
     const sanitizedValue = value.trim();
     const startTime = Date.now();
-    const correlationId = context?.correlationId || uuidv4();
+    const correlationId = context?.correlationId || randomUUID();
 
     if (!sanitizedValue) {
       throw new BadRequestException('Lookup value must not be empty');
@@ -98,9 +99,8 @@ export class AirtableLookupService {
       field,
       sanitizedValue,
     ]);
-    const cached = await this.cacheService.get<AirtableLookupResponseDto>(
-      cacheKey,
-    );
+    const cached =
+      await this.cacheService.get<AirtableLookupResponseDto>(cacheKey);
     if (cached) {
       // Log cache hit
       await this.logApiRequest(
@@ -135,7 +135,10 @@ export class AirtableLookupService {
       });
       pythonResponse = response;
     } catch (error) {
-      this.logger.error('Failed to execute Airtable lookup script', error as Error);
+      this.logger.error(
+        'Failed to execute Airtable lookup script',
+        error as Error,
+      );
       // Log error
       await this.logApiRequest(
         field,
@@ -190,15 +193,16 @@ export class AirtableLookupService {
       const fullFields = matches[0].fields || {};
 
       // Generate status message for IL orders
-      const statusMessage = await this.statusMessageGenerator.generateStatusMessage(
-        fullFields
-      );
+      const statusMessage =
+        await this.statusMessageGenerator.generateStatusMessage(fullFields);
 
       // Extract applications if status is Issue OR Completed (for visa resends)
       let applications: Record<string, unknown>[] | undefined;
       const statusField = fullFields['Status'];
-      if (typeof statusField === 'string' &&
-          (statusField.includes('Issue') || statusField.includes('Completed'))) {
+      if (
+        typeof statusField === 'string' &&
+        (statusField.includes('Issue') || statusField.includes('Completed'))
+      ) {
         // Check if we have expanded data with Applications
         interface ExpandedData {
           expanded?: {
@@ -239,7 +243,9 @@ export class AirtableLookupService {
       correlationId,
       undefined,
       undefined,
-      response.status === AirtableLookupStatus.FOUND ? (response.record?.id || null) : null,
+      response.status === AirtableLookupStatus.FOUND
+        ? response.record?.id || null
+        : null,
     );
 
     return response;
@@ -252,7 +258,7 @@ export class AirtableLookupService {
   ): Promise<AirtableLookupResponseDto> {
     const sanitizedValue = value.trim();
     const startTime = Date.now();
-    const correlationId = context?.correlationId || uuidv4();
+    const correlationId = context?.correlationId || randomUUID();
 
     if (!sanitizedValue) {
       throw new BadRequestException('Lookup value must not be empty');
@@ -274,9 +280,8 @@ export class AirtableLookupService {
       field,
       sanitizedValue,
     ]);
-    const cached = await this.cacheService.get<AirtableLookupResponseDto>(
-      cacheKey,
-    );
+    const cached =
+      await this.cacheService.get<AirtableLookupResponseDto>(cacheKey);
     if (cached) {
       // Log cache hit
       await this.logApiRequest(
@@ -315,7 +320,10 @@ export class AirtableLookupService {
       });
       pythonResponse = response;
     } catch (error) {
-      this.logger.error('Failed to execute Airtable completed script', error as Error);
+      this.logger.error(
+        'Failed to execute Airtable completed script',
+        error as Error,
+      );
       // Log error
       await this.logApiRequest(
         field,
@@ -341,7 +349,8 @@ export class AirtableLookupService {
         pythonResponse.code === 'AIRTABLE_IMPORT_ERROR'
           ? ' Install the pyairtable package in the backend runtime environment.'
           : '';
-      const message = pythonResponse.error || 'Airtable completed lookup failed.';
+      const message =
+        pythonResponse.error || 'Airtable completed lookup failed.';
       this.logger.warn(`Airtable completed script returned error: ${message}`);
       // Log error response
       await this.logApiRequest(
@@ -375,9 +384,8 @@ export class AirtableLookupService {
       const fullFields = matches[0].fields || {};
 
       // Generate status message for IL orders
-      const statusMessage = await this.statusMessageGenerator.generateStatusMessage(
-        fullFields
-      );
+      const statusMessage =
+        await this.statusMessageGenerator.generateStatusMessage(fullFields);
 
       // Always extract applications for completed records since we want to track them
       let applications: Record<string, unknown>[] | undefined;
@@ -420,7 +428,9 @@ export class AirtableLookupService {
       correlationId,
       undefined,
       undefined,
-      response.status === AirtableLookupStatus.FOUND ? (response.record?.id || null) : null,
+      response.status === AirtableLookupStatus.FOUND
+        ? response.record?.id || null
+        : null,
       '/api/v1/airtable/completed',
     );
 
@@ -433,7 +443,20 @@ export class AirtableLookupService {
     const filteredFields: Record<string, unknown> = {};
 
     // Include Status, ID, Email, Phone, Domain Branch, and Country fields for status message generation
-    const fieldsToInclude = ['Status', 'ID', 'Email', 'Phone', 'Domain Branch', 'Country', 'Type', 'Intent', 'Entry Count', 'Validity', 'Priority', 'Processing Time'];
+    const fieldsToInclude = [
+      'Status',
+      'ID',
+      'Email',
+      'Phone',
+      'Domain Branch',
+      'Country',
+      'Type',
+      'Intent',
+      'Entry Count',
+      'Validity',
+      'Priority',
+      'Processing Time',
+    ];
     for (const fieldName of fieldsToInclude) {
       if (fieldName in fields) {
         filteredFields[fieldName] = fields[fieldName];
@@ -562,20 +585,32 @@ export class AirtableLookupService {
             value: value.length > 100 ? value.substring(0, 100) + '...' : value,
           },
           response_status: status,
-          response_data: response ? {
-            status: 'status' in response ? response.status : undefined,
-            message: 'message' in response ? response.message : undefined,
-            hasRecord: !!(response && 'record' in response && response.record),
-            hasStatusMessage: !!(response && 'statusMessage' in response && response.statusMessage),
-          } : null,
+          response_data: response
+            ? {
+                status: 'status' in response ? response.status : undefined,
+                message: 'message' in response ? response.message : undefined,
+                hasRecord: !!(
+                  response &&
+                  'record' in response &&
+                  response.record
+                ),
+                hasStatusMessage: !!(
+                  response &&
+                  'statusMessage' in response &&
+                  response.statusMessage
+                ),
+              }
+            : null,
           response_time_ms: responseTimeMs,
           api_key_id: context?.apiKey?.id || null,
           api_key_prefix: context?.apiKey?.prefix || null,
           user_agent: context?.userAgent || null,
           ip_address: context?.ipAddress || null,
           lookup_field: field,
-          lookup_value: value.length > 100 ? value.substring(0, 100) + '...' : value,
-          lookup_status: response && 'status' in response ? response.status : null,
+          lookup_value:
+            value.length > 100 ? value.substring(0, 100) + '...' : value,
+          lookup_status:
+            response && 'status' in response ? response.status : null,
           record_id: recordId,
           cache_hit: cacheHit,
           error_message: error?.message || null,

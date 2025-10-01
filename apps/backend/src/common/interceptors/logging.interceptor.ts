@@ -5,9 +5,9 @@ import {
   CallHandler,
   Logger,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { v4 as uuidv4 } from 'uuid';
 import {
   EnhancedRequest,
   EnhancedResponse,
@@ -55,7 +55,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const startTime = Date.now();
 
     // Generate or extract correlation ID
-    const correlationId = getCorrelationId(request) || uuidv4();
+    const correlationId = getCorrelationId(request) || randomUUID();
 
     // Attach correlation ID to request and response
     request.correlationId = correlationId;
