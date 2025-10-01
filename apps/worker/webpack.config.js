@@ -7,6 +7,7 @@ module.exports = {
   },
   externals: {
     playwright: 'commonjs playwright',
+    '@2captcha/captcha-solver': 'commonjs @2captcha/captcha-solver',
   },
   resolve: {
     alias: {
