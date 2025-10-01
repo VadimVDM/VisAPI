@@ -1,41 +1,29 @@
 import axios from 'axios';
-import TwoCaptcha from '@2captcha/captcha-solver';
 import { ConfigService } from '@visapi/core-config';
 import {
   CaptchaSolverService,
   RecaptchaSolveOptions,
-  type TwoCaptchaRecaptchaOptions,
 } from './captcha-solver.service';
 import { ScraperError } from './scraper-error';
 
 jest.mock('axios');
 
-interface TwoCaptchaMockModule {
-  default: {
-    Solver: jest.MockedFunction<
-      new (apiKey: string, pollIntervalMs?: number) => {
-        recaptcha: jest.Mock<Promise<{ data?: string }>, [TwoCaptchaRecaptchaOptions]>;
-      }
-    >;
-  };
-  mockRecaptcha: jest.Mock<Promise<{ data?: string }>, [TwoCaptchaRecaptchaOptions]>;
-  MockSolver: jest.Mock;
-}
-
 jest.mock('@2captcha/captcha-solver', () => {
-  const mockRecaptcha = jest.fn<Promise<{ data?: string }>, [TwoCaptchaRecaptchaOptions]>();
-  const MockSolver = jest.fn().mockImplementation(() => ({
-    recaptcha: mockRecaptcha,
-  }));
+  const recaptchaMock = jest.fn();
+  const solverInstance = { recaptcha: recaptchaMock };
+  const SolverCtor = jest.fn(() => solverInstance);
 
   return {
     __esModule: true,
     default: {
-      Solver: MockSolver,
+      Solver: SolverCtor,
     },
-    mockRecaptcha,
-    MockSolver,
-  } satisfies TwoCaptchaMockModule;
+    // Export for testing
+    _mocks: {
+      recaptcha: recaptchaMock,
+      Solver: SolverCtor,
+    },
+  };
 });
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -77,9 +65,20 @@ const createService = (overrides?: {
 };
 
 describe('CaptchaSolverService', () => {
+  // Get references to the mocked functions
+  const getMocks = (): { recaptcha: jest.Mock; Solver: jest.Mock } => {
+    /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+    return require('@2captcha/captcha-solver')._mocks;
+    /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  };
+
   beforeEach(() => {
     jest.useFakeTimers();
     mockedAxios.post.mockReset();
+    // Reset 2Captcha mocks
+    const { recaptcha, Solver } = getMocks();
+    recaptcha.mockReset();
+    Solver.mockClear();
   });
 
   afterEach(() => {
@@ -126,10 +125,8 @@ describe('CaptchaSolverService', () => {
   });
 
   it('resolves token using 2Captcha workflow', async () => {
-    const mockedModule = TwoCaptcha as unknown as TwoCaptchaMockModule;
-    const { mockRecaptcha, MockSolver } = mockedModule;
-
-    mockRecaptcha.mockResolvedValue({ data: '2captcha-token' });
+    const { recaptcha, Solver } = getMocks();
+    recaptcha.mockResolvedValue({ data: '2captcha-token' });
 
     const service = createService({ provider: '2captcha', pollIntervalMs: 5 });
 
@@ -137,8 +134,8 @@ describe('CaptchaSolverService', () => {
       '2captcha-token',
     );
 
-    expect(MockSolver).toHaveBeenCalledWith('fake-key', 5);
-    expect(mockRecaptcha).toHaveBeenCalledWith(
+    expect(Solver).toHaveBeenCalledWith('fake-key', 5);
+    expect(recaptcha).toHaveBeenCalledWith(
       expect.objectContaining({
         pageurl: 'https://example.com',
         googlekey: 'test-site-key',

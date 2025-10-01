@@ -20,6 +20,15 @@ export interface RecaptchaSolveOptions {
   minScore?: number;
 }
 
+export interface TwoCaptchaRecaptchaOptions {
+  pageurl: string;
+  googlekey: string;
+  enterprise?: number;
+  invisible?: number;
+  action?: string;
+  data_s?: string;
+}
+
 interface CapsolverTaskPayload {
   type: string;
   websiteURL: string;
@@ -29,15 +38,6 @@ interface CapsolverTaskPayload {
   enterprisePayload?: { s: string };
   userAgent?: string;
   minScore?: number;
-}
-
-interface TwoCaptchaRecaptchaOptions {
-  pageurl: string;
-  googlekey: string;
-  enterprise?: number;
-  invisible?: number;
-  action?: string;
-  data_s?: string;
 }
 
 interface CapsolverCreateResponse {

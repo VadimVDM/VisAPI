@@ -91,6 +91,7 @@ describe('PdfProcessor', () => {
         url: 'https://example.com/public/visa.pdf',
         signedUrl: 'https://example.com/signed/visa.pdf',
         size: 50000,
+        base64: null,
       };
 
       mockPdfTemplate.compileTemplate.mockResolvedValue(
@@ -148,6 +149,7 @@ describe('PdfProcessor', () => {
         url: 'https://example.com/public/web.pdf',
         signedUrl: 'https://example.com/signed/web.pdf',
         size: 75000,
+        base64: null,
       };
 
       mockPdfGenerator.generateFromUrl.mockResolvedValue(mockResult);
