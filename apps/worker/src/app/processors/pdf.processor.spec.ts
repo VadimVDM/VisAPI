@@ -2,15 +2,31 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Job } from 'bullmq';
 import { PdfProcessor } from './pdf.processor';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
+import { PdfTemplateService } from '../services/pdf-template.service';
+import type { PdfJobData, PdfJobResult } from './pdf.processor';
 
 describe('PdfProcessor', () => {
   let processor: PdfProcessor;
   let mockPdfGenerator: any;
+  let mockPdfTemplate: any;
+
+  const createJob = (data: PdfJobData): Job<PdfJobData> =>
+    ({
+      id: data.jobId,
+      data,
+      updateProgress: jest.fn().mockResolvedValue(undefined),
+    }) as unknown as Job<PdfJobData>;
 
   beforeEach(async () => {
     mockPdfGenerator = {
-      generateFromTemplate: jest.fn(),
+      generateFromHtml: jest.fn(),
       generateFromUrl: jest.fn(),
+      cleanupTempFiles: jest.fn(),
+    };
+
+    mockPdfTemplate = {
+      compileTemplate: jest.fn(),
+      processHtml: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -20,6 +36,10 @@ describe('PdfProcessor', () => {
           provide: PdfGeneratorService,
           useValue: mockPdfGenerator,
         },
+        {
+          provide: PdfTemplateService,
+          useValue: mockPdfTemplate,
+        },
       ],
     }).compile();
 
@@ -28,131 +48,165 @@ describe('PdfProcessor', () => {
 
   describe('process', () => {
     it('should generate PDF from template', async () => {
-      const mockJob = {
-        id: 'job-123',
+      const pdfJob: PdfJobData = {
+        jobId: 'pdf-789',
+        source: 'template',
+        template: 'visa_approved',
         data: {
-          template: 'visa_approved',
-          data: {
-            applicant: { fullName: 'John Doe' },
-            visa: { type: 'Tourist' },
-          },
-          workflowId: 'workflow-456',
-          options: {
-            format: 'A4',
-            orientation: 'portrait',
-          },
+          applicant: { fullName: 'John Doe' },
+          visa: { type: 'Tourist' },
         },
-      } as Job;
+        filename: 'visa_approved-123456.pdf',
+        options: {
+          format: 'A4',
+          orientation: 'portrait',
+          margins: { top: 10, bottom: 10, left: 10, right: 10 },
+          pageNumbers: false,
+          printBackground: true,
+        },
+        metadata: { workflowId: 'workflow-456' },
+        timestamp: new Date().toISOString(),
+      };
 
       const mockResult = {
-        jobId: 'pdf-789',
         filename: 'visa_approved-123456.pdf',
-        publicUrl: 'https://example.com/public/visa.pdf',
+        url: 'https://example.com/public/visa.pdf',
         signedUrl: 'https://example.com/signed/visa.pdf',
         size: 50000,
       };
 
-      mockPdfGenerator.generateFromTemplate.mockResolvedValue(mockResult);
+      mockPdfTemplate.compileTemplate.mockResolvedValue(
+        '<html>compiled</html>',
+      );
+      mockPdfGenerator.generateFromHtml.mockResolvedValue(mockResult);
 
-      const result = await processor.process(mockJob);
+      const job = createJob(pdfJob);
+      const result = await processor.process(job);
 
-      expect(result).toEqual({
-        success: true,
-        jobId: 'pdf-789',
-        filename: 'visa_approved-123456.pdf',
-        template: 'visa_approved',
-        url: 'https://example.com/public/visa.pdf',
-        signedUrl: 'https://example.com/signed/visa.pdf',
-        size: 50000,
-        timestamp: expect.any(String),
-        workflowId: 'workflow-456',
-      });
-
-      expect(mockPdfGenerator.generateFromTemplate).toHaveBeenCalledWith(
-        'visa_approved',
+      expect(result).toEqual<PdfJobResult>(
         expect.objectContaining({
-          applicant: { fullName: 'John Doe' },
-          visa: { type: 'Tourist' },
-          workflowId: 'workflow-456',
-          generatedAt: expect.any(String),
-          jobId: 'job-123',
+          success: true,
+          jobId: 'pdf-789',
+          filename: 'visa_approved-123456.pdf',
+          url: 'https://example.com/public/visa.pdf',
+          signedUrl: 'https://example.com/signed/visa.pdf',
+          size: 50000,
+          metadata: { workflowId: 'workflow-456' },
         }),
+      );
+
+      expect(mockPdfTemplate.compileTemplate).toHaveBeenCalledWith(
+        'visa_approved',
+        pdfJob.data,
+      );
+      expect(mockPdfGenerator.generateFromHtml).toHaveBeenCalledWith(
+        '<html>compiled</html>',
         {
-          format: 'A4',
-          orientation: 'portrait',
-        }
+          filename: 'visa_approved-123456.pdf',
+          options: pdfJob.options,
+          preview: undefined,
+        },
       );
     });
 
     it('should generate PDF from URL', async () => {
-      const mockJob = {
-        id: 'job-123',
-        data: {
-          url: 'https://example.com/page-to-pdf',
-          options: {
-            format: 'Letter',
-            orientation: 'landscape',
-          },
+      const pdfJob: PdfJobData = {
+        jobId: 'pdf-web-1',
+        source: 'url',
+        url: 'https://example.com/page-to-pdf',
+        data: {},
+        filename: 'web-123456.pdf',
+        options: {
+          format: 'Letter',
+          orientation: 'landscape',
+          margins: { top: 5, bottom: 5, left: 5, right: 5 },
+          pageNumbers: false,
+          printBackground: true,
         },
-      } as Job;
+        metadata: {},
+        timestamp: new Date().toISOString(),
+      };
 
       const mockResult = {
-        jobId: 'pdf-789',
         filename: 'web-123456.pdf',
-        publicUrl: 'https://example.com/public/web.pdf',
+        url: 'https://example.com/public/web.pdf',
         signedUrl: 'https://example.com/signed/web.pdf',
         size: 75000,
       };
 
       mockPdfGenerator.generateFromUrl.mockResolvedValue(mockResult);
 
-      const result = await processor.process(mockJob);
+      const job = createJob(pdfJob);
+      const result = await processor.process(job);
 
-      expect(result).toEqual({
-        success: true,
-        jobId: 'pdf-789',
-        filename: 'web-123456.pdf',
-        template: 'url',
-        url: 'https://example.com/public/web.pdf',
-        signedUrl: 'https://example.com/signed/web.pdf',
-        size: 75000,
-        timestamp: expect.any(String),
-        workflowId: undefined,
-      });
+      expect(result).toEqual<PdfJobResult>(
+        expect.objectContaining({
+          success: true,
+          jobId: 'pdf-web-1',
+          filename: 'web-123456.pdf',
+          url: 'https://example.com/public/web.pdf',
+          signedUrl: 'https://example.com/signed/web.pdf',
+          size: 75000,
+        }),
+      );
 
       expect(mockPdfGenerator.generateFromUrl).toHaveBeenCalledWith(
         'https://example.com/page-to-pdf',
         {
-          format: 'Letter',
-          orientation: 'landscape',
-        }
+          filename: 'web-123456.pdf',
+          options: pdfJob.options,
+          preview: undefined,
+        },
       );
     });
 
-    it('should throw error if neither template nor url is provided', async () => {
-      const mockJob = {
-        id: 'job-123',
+    it('should throw error for unsupported source', async () => {
+      const pdfJob = {
+        jobId: 'job-unsupported',
+        source: 'unsupported',
         data: {},
-      } as Job;
+        filename: 'broken.pdf',
+        options: {
+          format: 'A4',
+          orientation: 'portrait',
+          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          pageNumbers: false,
+          printBackground: false,
+        },
+        metadata: {},
+        timestamp: new Date().toISOString(),
+      } as unknown as PdfJobData;
 
-      await expect(processor.process(mockJob)).rejects.toThrow(
-        'Either template or url must be provided'
+      const job = createJob(pdfJob);
+      await expect(processor.process(job)).rejects.toThrow(
+        'Invalid PDF source: unsupported',
       );
     });
 
     it('should handle generation errors', async () => {
-      const mockJob = {
-        id: 'job-123',
-        data: {
-          template: 'visa_approved',
-          data: {},
+      const pdfJob: PdfJobData = {
+        jobId: 'pdf-error',
+        source: 'template',
+        template: 'visa_error',
+        data: {},
+        filename: 'error.pdf',
+        options: {
+          format: 'A4',
+          orientation: 'portrait',
+          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          pageNumbers: false,
+          printBackground: false,
         },
-      } as Job;
+        metadata: {},
+        timestamp: new Date().toISOString(),
+      };
 
       const mockError = new Error('PDF generation failed');
-      mockPdfGenerator.generateFromTemplate.mockRejectedValue(mockError);
+      mockPdfTemplate.compileTemplate.mockResolvedValue('<html />');
+      mockPdfGenerator.generateFromHtml.mockRejectedValue(mockError);
 
-      await expect(processor.process(mockJob)).rejects.toThrow(mockError);
+      const job = createJob(pdfJob);
+      await expect(processor.process(job)).rejects.toThrow(mockError);
     });
   });
 });

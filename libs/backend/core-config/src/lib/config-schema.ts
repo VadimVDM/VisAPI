@@ -223,6 +223,22 @@ export const EnvSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().min(1).max(1000)),
 
+  // Captcha solver configuration
+  CAPTCHA_SOLVER_PROVIDER: z
+    .enum(['none', 'capsolver', '2captcha'])
+    .default('none'),
+  CAPTCHA_SOLVER_API_KEY: z.string().optional(),
+  CAPTCHA_SOLVER_TIMEOUT_MS: z
+    .string()
+    .default('180000')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().min(10000).max(600000)),
+  CAPTCHA_SOLVER_POLL_INTERVAL_MS: z
+    .string()
+    .default('4000')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().min(1000).max(20000)),
+
   // Airtable integration
   AIRTABLE_API_KEY: z.string().optional(),
   AIRTABLE_BASE_ID: z.string().optional(),
@@ -308,7 +324,9 @@ export function validateProductionEnv(config: EnvSchema): void {
     // JWT_SECRET is only needed for JWT-based auth, which we're not using (API keys instead)
     // Keep as warning instead of error
     if (!config.JWT_SECRET) {
-      console.warn('⚠️  JWT_SECRET not configured - JWT authentication disabled (API keys only)');
+      console.warn(
+        '⚠️  JWT_SECRET not configured - JWT authentication disabled (API keys only)',
+      );
     }
 
     // Warn about missing optional services
@@ -450,6 +468,12 @@ export function getValidatedConfig() {
     workflow: {
       processingDelayMs: env.WORKFLOW_PROCESSING_DELAY_MS,
       batchProcessingSize: env.WORKFLOW_BATCH_PROCESSING_SIZE,
+    },
+    captcha: {
+      solverProvider: env.CAPTCHA_SOLVER_PROVIDER,
+      apiKey: env.CAPTCHA_SOLVER_API_KEY,
+      timeoutMs: env.CAPTCHA_SOLVER_TIMEOUT_MS,
+      pollIntervalMs: env.CAPTCHA_SOLVER_POLL_INTERVAL_MS,
     },
     airtable: {
       apiKey: env.AIRTABLE_API_KEY,

@@ -15,6 +15,7 @@ import { ScraperProcessor } from './processors/scraper.processor';
 import { PdfTemplateService } from './services/pdf-template.service';
 import { PdfGeneratorService } from './services/pdf-generator.service';
 import { BrowserManagerService } from '../scrapers/base/browser-manager.service';
+import { CaptchaSolverService } from '../scrapers/base/captcha-solver.service';
 import { EstaScraper } from '../scrapers/esta/esta.scraper';
 import { VietnamEvisaScraper } from '../scrapers/vietnam-evisa/vietnam-evisa.scraper';
 import { KoreaKetaScraper } from '../scrapers/korea-keta/korea-keta.scraper';
@@ -22,8 +23,8 @@ import { LoggingModule } from '@visapi/backend-logging';
 
 @Module({
   imports: [
-    ConfigModule, 
-    SupabaseModule, 
+    ConfigModule,
+    SupabaseModule,
     CbbModule,
     LoggingModule,
     BullModule.forRootAsync({
@@ -39,7 +40,7 @@ import { LoggingModule } from '@visapi/backend-logging';
       { name: QUEUE_NAMES.CRITICAL },
       { name: QUEUE_NAMES.DEFAULT },
       { name: QUEUE_NAMES.BULK },
-      { name: QUEUE_NAMES.SCRAPER }
+      { name: QUEUE_NAMES.SCRAPER },
     ),
   ],
   providers: [
@@ -54,6 +55,7 @@ import { LoggingModule } from '@visapi/backend-logging';
     PdfTemplateService,
     PdfGeneratorService,
     BrowserManagerService,
+    CaptchaSolverService,
     EstaScraper,
     VietnamEvisaScraper,
     KoreaKetaScraper,

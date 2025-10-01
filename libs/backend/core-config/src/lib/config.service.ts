@@ -232,6 +232,26 @@ export class ConfigService {
     return this.get<number>('workflow.batchProcessingSize');
   }
 
+  get captchaConfig() {
+    return this.getConfig().captcha;
+  }
+
+  get captchaSolverProvider(): 'none' | 'capsolver' | '2captcha' {
+    return this.captchaConfig?.solverProvider ?? 'none';
+  }
+
+  get captchaSolverApiKey(): string | undefined {
+    return this.captchaConfig?.apiKey;
+  }
+
+  get captchaSolverTimeoutMs(): number {
+    return this.captchaConfig?.timeoutMs ?? 180000;
+  }
+
+  get captchaSolverPollIntervalMs(): number {
+    return this.captchaConfig?.pollIntervalMs ?? 4000;
+  }
+
   get airtableConfig() {
     return this.getConfig().airtable;
   }

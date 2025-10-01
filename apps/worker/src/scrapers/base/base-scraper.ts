@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Page, BrowserContext } from 'playwright';
 import { BrowserManagerService } from './browser-manager.service';
+import { ScraperError } from './scraper-error';
 import {
   ScraperJobData,
   ScraperJobResult,
@@ -22,7 +23,7 @@ export abstract class BaseScraper {
 
   constructor(
     protected readonly browserManager: BrowserManagerService,
-    protected readonly scraperType: ScraperType
+    protected readonly scraperType: ScraperType,
   ) {
     this.logger = new Logger(`${this.constructor.name}`);
   }
@@ -33,7 +34,7 @@ export abstract class BaseScraper {
    */
   async scrape(
     jobData: ScraperJobData,
-    options: ScraperOptions = {}
+    options: ScraperOptions = {},
   ): Promise<ScraperJobResult> {
     this.startTime = Date.now();
     const contextId = `${this.scraperType}-${jobData.jobId}`;
@@ -44,7 +45,7 @@ export abstract class BaseScraper {
       // Create browser context and page
       this.context = await this.browserManager.createContext(
         contextId,
-        options.browserConfig
+        options.browserConfig,
       );
       this.page = await this.context.newPage();
 
@@ -79,13 +80,16 @@ export abstract class BaseScraper {
    */
   protected abstract executeScrape(
     jobData: ScraperJobData,
-    options: ScraperOptions
+    options: ScraperOptions,
   ): Promise<ScraperJobResult>;
 
   /**
    * Navigate to URL with retry logic
    */
-  protected async navigateTo(url: string, waitUntil: 'load' | 'domcontentloaded' | 'networkidle' = 'load'): Promise<void> {
+  protected async navigateTo(
+    url: string,
+    waitUntil: 'load' | 'domcontentloaded' | 'networkidle' = 'load',
+  ): Promise<void> {
     if (!this.page) {
       throw new Error('Page not initialized');
     }
@@ -97,7 +101,10 @@ export abstract class BaseScraper {
   /**
    * Wait for element with timeout
    */
-  protected async waitForElement(selector: string, timeout: number = 30000): Promise<void> {
+  protected async waitForElement(
+    selector: string,
+    timeout: number = 30000,
+  ): Promise<void> {
     if (!this.page) {
       throw new Error('Page not initialized');
     }
@@ -152,7 +159,7 @@ export abstract class BaseScraper {
           stream.on('data', (chunk) => chunks.push(chunk));
           stream.on('end', () => resolve(Buffer.concat(chunks)));
           stream.on('error', reject);
-        })
+        }),
     );
 
     this.logger.log(`File downloaded: ${buffer.length} bytes`);
@@ -192,7 +199,7 @@ export abstract class BaseScraper {
       printBackground?: boolean;
       margin?: { top?: string; bottom?: string; left?: string; right?: string };
     },
-    hideAfterSelector?: string
+    hideAfterSelector?: string,
   ): Promise<Buffer> {
     if (!this.page) {
       throw new Error('Page not initialized');
@@ -232,7 +239,12 @@ export abstract class BaseScraper {
     const pdfBuffer = await this.page.pdf({
       format: options?.format || 'A4',
       printBackground: options?.printBackground ?? true,
-      margin: options?.margin || { top: '20px', bottom: '20px', left: '20px', right: '20px' },
+      margin: options?.margin || {
+        top: '20px',
+        bottom: '20px',
+        left: '20px',
+        right: '20px',
+      },
     });
 
     this.logger.log(`PDF generated: ${pdfBuffer.length} bytes`);
@@ -255,7 +267,7 @@ export abstract class BaseScraper {
     documentUrl: string,
     signedUrl: string,
     filename: string,
-    size: number
+    size: number,
   ): ScraperJobResult {
     return {
       success: true,
@@ -280,7 +292,7 @@ export abstract class BaseScraper {
   protected createNotFoundResult(
     jobData: ScraperJobData,
     message: string,
-    retryAfter?: string
+    retryAfter?: string,
   ): ScraperJobResult {
     return {
       success: false,
@@ -303,11 +315,18 @@ export abstract class BaseScraper {
   protected createErrorResult(
     jobData: ScraperJobData,
     error: any,
-    options: ScraperOptions
+    options: ScraperOptions,
   ): ScraperJobResult {
     const maxRetries = jobData.maxRetries ?? 3;
     const currentRetry = jobData.retryCount ?? 0;
-    const shouldRetry = currentRetry < maxRetries;
+    const canRetry = currentRetry < maxRetries;
+
+    let shouldRetry = canRetry;
+    if (error instanceof ScraperError) {
+      shouldRetry = error.retryable ? canRetry : false;
+    } else if (typeof error?.retryable === 'boolean') {
+      shouldRetry = error.retryable ? canRetry : false;
+    }
 
     return {
       success: false,
@@ -330,6 +349,14 @@ export abstract class BaseScraper {
    * Categorize error for better handling
    */
   protected categorizeError(error: any): string {
+    if (error instanceof ScraperError && error.code) {
+      return error.code;
+    }
+
+    if (typeof error?.code === 'string') {
+      return error.code;
+    }
+
     const message = error.message?.toLowerCase() || '';
 
     if (message.includes('timeout')) return 'TIMEOUT';
