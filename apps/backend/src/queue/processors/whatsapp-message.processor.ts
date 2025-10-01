@@ -44,7 +44,10 @@ interface SendMessageResult {
 
 @Injectable()
 @Processor(QUEUE_NAMES.WHATSAPP_MESSAGES)
-export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit {
+export class WhatsAppMessageProcessor
+  extends WorkerHost
+  implements OnModuleInit
+{
   private readonly logger = new Logger(WhatsAppMessageProcessor.name);
 
   constructor(
@@ -69,8 +72,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     this.logger.log('WhatsAppMessageProcessor onModuleInit - Starting worker');
     try {
       // Log processor registration
-      this.logger.log(`Registering processor for queue: ${QUEUE_NAMES.WHATSAPP_MESSAGES}`);
-      
+      this.logger.log(
+        `Registering processor for queue: ${QUEUE_NAMES.WHATSAPP_MESSAGES}`,
+      );
+
       // Log any initialization issues
       await this.logService.createLog({
         level: 'info',
@@ -94,7 +99,9 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   }
 
   async process(job: Job<WhatsAppMessageJobData>): Promise<ProcessResult> {
-    this.logger.log(`Processing WhatsApp job ${job.id} for order ${job.data.orderId}`);
+    this.logger.log(
+      `Processing WhatsApp job ${job.id} for order ${job.data.orderId}`,
+    );
     await this.logService.createLog({
       level: 'info',
       message: 'Processing WhatsApp message job',
@@ -165,7 +172,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       const templateName = job?.data?.templateName;
 
       // Check for duplicate messages (skip if forced resend)
-      if (!force && await this.isMessageAlreadySent(order, messageType, templateName)) {
+      if (
+        !force &&
+        (await this.isMessageAlreadySent(order, messageType, templateName))
+      ) {
         this.logger.log(
           `${messageType} already sent for order ${orderId}, skipping`,
         );
@@ -187,7 +197,13 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
 
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
       // Pass force flag to allow overwriting existing sent records for manual resends
-      const messageId = await this.createIdempotencyRecord(orderId, messageType, order.client_phone, templateName, force);
+      const messageId = await this.createIdempotencyRecord(
+        orderId,
+        messageType,
+        order.client_phone,
+        templateName,
+        force,
+      );
 
       // If null returned, another job is handling this message (only possible when force=false)
       if (!messageId) {
@@ -213,7 +229,8 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         // (e.g., wamid.HBgMOTcyNTM0MzYyNzE2FQIAERgS...) via webhook later.
         // Generate a temporary unique ID to avoid duplicate key errors.
         // This will be updated when we receive Meta's webhook with the real wamid.
-        const tempMessageId = result.message_id || `temp_${orderId}_${messageType}_${Date.now()}`;
+        const tempMessageId =
+          result.message_id || `temp_${orderId}_${messageType}_${Date.now()}`;
         await this.updateOrderWhatsAppStatus(
           orderId,
           messageType,
@@ -373,7 +390,9 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
 
         // Validate required fields
         if (!templateName || !documentUrl || !templateParams) {
-          throw new Error('Template name, parameters, and document URL are required for visa approval');
+          throw new Error(
+            'Template name, parameters, and document URL are required for visa approval',
+          );
         }
 
         // Only log individual sends in development
@@ -384,17 +403,27 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         }
 
         // Send visa approval with document attachment - exactly like order confirmation but with document
-        const correlationData = `visa_approval:${order.order_id}:${applicationIndex || 0}:${Date.now()}`;
+        // Generate temp message ID for correlation
+        const tempMessageId = `temp_${order.order_id}_visa_approval_${Date.now()}`;
 
-        const visaResult = await this.cbbService.sendWhatsAppTemplateWithDocument(
+        // Create correlation data in correct format: orderId:contactId:messageType:tempMessageId
+        const correlationData = this.messageIdUpdater.createCorrelationData(
+          order.order_id,
           cbbId || contactId,
-          templateName,
-          'he', // Hebrew
-          templateParams,
-          documentUrl,
-          `visa_${order.order_id}_${applicationIndex ? applicationIndex + 1 : 1}.pdf`,
-          correlationData,
+          'visa_approval',
+          tempMessageId,
         );
+
+        const visaResult =
+          await this.cbbService.sendWhatsAppTemplateWithDocument(
+            cbbId || contactId,
+            templateName,
+            'he', // Hebrew
+            templateParams,
+            documentUrl,
+            `visa_${order.order_id}_${applicationIndex ? applicationIndex + 1 : 1}.pdf`,
+            correlationData,
+          );
 
         // NOTE: Do NOT update visa_notification_sent here!
         // The VisaApprovalProcessorService handles this flag in queueVisaNotification()
@@ -418,11 +447,12 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   ): Promise<boolean> {
     // Special check for visa approvals - they're tracked in the orders table
     if (messageType === 'visa_approval') {
-      const { data: orderData, error: orderError } = await this.supabaseService.serviceClient
-        .from('orders')
-        .select('visa_notification_sent')
-        .eq('order_id', order.order_id)
-        .single();
+      const { data: orderData, error: orderError } =
+        await this.supabaseService.serviceClient
+          .from('orders')
+          .select('visa_notification_sent')
+          .eq('order_id', order.order_id)
+          .single();
 
       if (!orderError && orderData?.visa_notification_sent === true) {
         return true;
@@ -433,7 +463,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       .from('whatsapp_messages')
       .select('id, confirmation_sent, status, updated_at')
       .eq('order_id', order.order_id)
-      .eq('template_name', this.getTemplateNameForMessageType(messageType, templateName))
+      .eq(
+        'template_name',
+        this.getTemplateNameForMessageType(messageType, templateName),
+      )
       .maybeSingle();
 
     if (error) {
@@ -446,12 +479,12 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     if (!data) {
       return false;
     }
-    
+
     // Message was successfully sent
     if (data.confirmation_sent === true || data.status === 'sent') {
       return true;
     }
-    
+
     // Check if a 'pending' status is stale (older than 2 minutes)
     // This handles cases where a job crashed while sending
     if (data.status === 'pending' && data.updated_at) {
@@ -459,21 +492,21 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
       const now = new Date();
       const ageInMs = now.getTime() - updatedAt.getTime();
       const maxPendingAgeMs = 2 * 60 * 1000; // 2 minutes
-      
+
       if (ageInMs > maxPendingAgeMs) {
         this.logger.warn(
-          `Found stale pending message for order ${order.order_id} (age: ${Math.round(ageInMs/1000)}s), allowing retry`,
+          `Found stale pending message for order ${order.order_id} (age: ${Math.round(ageInMs / 1000)}s), allowing retry`,
         );
         return false; // Allow retry for stale pending messages
       }
-      
+
       // Fresh pending status - another job is processing
       this.logger.log(
-        `Message for order ${order.order_id} is being processed by another job (pending for ${Math.round(ageInMs/1000)}s)`,
+        `Message for order ${order.order_id} is being processed by another job (pending for ${Math.round(ageInMs / 1000)}s)`,
       );
       return true; // Skip to avoid duplicate
     }
-    
+
     // Status is 'queued' or other - allow processing
     return false;
   }
@@ -489,7 +522,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     templateName?: string,
     force = false,
   ): Promise<string | null> {
-    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
+    const actualTemplateName = this.getTemplateNameForMessageType(
+      messageType,
+      templateName,
+    );
     const now = new Date().toISOString();
     const tempMessageId = `temp_${orderId}_${messageType}_${Date.now()}`;
 
@@ -564,7 +600,7 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
         );
         return null;
       }
-      
+
       this.logger.error(
         `Failed to create idempotency record for order ${orderId}:`,
         error,
@@ -586,7 +622,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     messageType: string,
     templateName?: string,
   ): Promise<void> {
-    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
+    const actualTemplateName = this.getTemplateNameForMessageType(
+      messageType,
+      templateName,
+    );
 
     const { error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
@@ -606,7 +645,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   /**
    * Get template name for message type
    */
-  private getTemplateNameForMessageType(messageType: string, templateName?: string): string {
+  private getTemplateNameForMessageType(
+    messageType: string,
+    templateName?: string,
+  ): string {
     // If explicit template name provided, use it
     if (templateName) {
       return templateName;
@@ -663,7 +705,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
     }
 
     const now = new Date().toISOString();
-    const actualTemplateName = this.getTemplateNameForMessageType(messageType, templateName);
+    const actualTemplateName = this.getTemplateNameForMessageType(
+      messageType,
+      templateName,
+    );
 
     // Insert or update WhatsApp message record
     const messageData = {
@@ -735,7 +780,10 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
   /**
    * Update visa notification flag after successful message sending
    */
-  private async updateVisaNotificationFlag(orderId: string, messageId?: string): Promise<void> {
+  private async updateVisaNotificationFlag(
+    orderId: string,
+    messageId?: string,
+  ): Promise<void> {
     try {
       const { error } = await this.supabaseService.serviceClient
         .from('orders')
@@ -753,7 +801,9 @@ export class WhatsAppMessageProcessor extends WorkerHost implements OnModuleInit
           `Failed to update visa notification flag for order ${orderId}: ${error.message}`,
         );
       } else {
-        this.logger.log(`Updated visa_notification_sent flag for order ${orderId}`);
+        this.logger.log(
+          `Updated visa_notification_sent flag for order ${orderId}`,
+        );
       }
     } catch (error) {
       // Log but don't fail the message processing

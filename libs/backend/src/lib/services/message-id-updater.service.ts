@@ -26,7 +26,7 @@ export class MessageIdUpdaterService {
   constructor(private configService: ConfigService) {
     this.supabase = createClient(
       this.configService.get('SUPABASE_URL')!,
-      this.configService.get('SUPABASE_SERVICE_ROLE_KEY')!
+      this.configService.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
   }
 
@@ -59,7 +59,7 @@ export class MessageIdUpdaterService {
     } catch (error) {
       this.logger.warn(
         `Failed to parse correlation data: ${bizOpaqueCallbackData}`,
-        error
+        error,
       );
       return null;
     }
@@ -72,7 +72,7 @@ export class MessageIdUpdaterService {
     orderId: string,
     contactId: string,
     messageType: string,
-    tempMessageId: string
+    tempMessageId: string,
   ): string {
     // Use delimited format for efficiency
     return `${orderId}:${contactId}:${messageType}:${tempMessageId}`;
@@ -83,10 +83,10 @@ export class MessageIdUpdaterService {
    */
   async updateMessageId(
     realMessageId: string,
-    correlationData: CorrelationData
+    correlationData: CorrelationData,
   ): Promise<MessageIdUpdateResult> {
     const startTime = Date.now();
-    
+
     try {
       // Validate input
       if (!realMessageId || !realMessageId.startsWith('wamid.')) {
@@ -107,15 +107,15 @@ export class MessageIdUpdaterService {
         // Fastest lookup - direct message ID match
         query = query.eq('message_id', correlationData.tempMessageId);
       } else if (correlationData.orderId && correlationData.messageType) {
-        // Lookup by order ID and message type
+        // Lookup by order ID and message type (template_name contains the message type)
         query = query
           .eq('order_id', correlationData.orderId)
-          .eq('message_type', correlationData.messageType)
+          .like('template_name', `%${correlationData.messageType}%`)
           .like('message_id', 'temp_%');
       } else if (correlationData.contactId) {
-        // Fallback to contact ID (less precise)
+        // Fallback to phone number (less precise)
         query = query
-          .eq('contact_id', correlationData.contactId)
+          .eq('phone_number', correlationData.contactId)
           .like('message_id', 'temp_%')
           .order('created_at', { ascending: false })
           .limit(1);
@@ -140,7 +140,7 @@ export class MessageIdUpdaterService {
 
       if (!existingMessages || existingMessages.length === 0) {
         this.logger.warn(
-          `No message found for correlation data: ${JSON.stringify(correlationData)}`
+          `No message found for correlation data: ${JSON.stringify(correlationData)}`,
         );
         return {
           success: false,
@@ -154,9 +154,7 @@ export class MessageIdUpdaterService {
 
       // Check if already updated (idempotency)
       if (previousMessageId === realMessageId) {
-        this.logger.debug(
-          `Message ID already updated for ${realMessageId}`
-        );
+        this.logger.debug(`Message ID already updated for ${realMessageId}`);
         return {
           success: true,
           previousMessageId,
@@ -168,7 +166,7 @@ export class MessageIdUpdaterService {
       // Check if it's a temporary ID
       if (!previousMessageId.startsWith('temp_')) {
         this.logger.warn(
-          `Message ID is not temporary: ${previousMessageId}, skipping update`
+          `Message ID is not temporary: ${previousMessageId}, skipping update`,
         );
         return {
           success: false,
@@ -201,7 +199,7 @@ export class MessageIdUpdaterService {
       // Log success with timing
       const duration = Date.now() - startTime;
       this.logger.log(
-        `Successfully updated message ID from ${previousMessageId} to ${realMessageId} (${duration}ms)`
+        `Successfully updated message ID from ${previousMessageId} to ${realMessageId} (${duration}ms)`,
       );
 
       // Store audit trail
@@ -209,7 +207,7 @@ export class MessageIdUpdaterService {
         previousMessageId,
         realMessageId,
         correlationData,
-        duration
+        duration,
       );
 
       return {
@@ -235,7 +233,7 @@ export class MessageIdUpdaterService {
     previousId: string,
     newId: string,
     correlationData: CorrelationData,
-    durationMs: number
+    durationMs: number,
   ): Promise<void> {
     try {
       await this.supabase.from('logs').insert({
@@ -264,28 +262,28 @@ export class MessageIdUpdaterService {
     updates: Array<{
       realMessageId: string;
       correlationData: CorrelationData;
-    }>
+    }>,
   ): Promise<MessageIdUpdateResult[]> {
     const results: MessageIdUpdateResult[] = [];
-    
+
     for (const update of updates) {
       const result = await this.updateMessageId(
         update.realMessageId,
-        update.correlationData
+        update.correlationData,
       );
       results.push(result);
-      
+
       // Add small delay to prevent overwhelming the database
       if (updates.length > 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
     }
-    
-    const successCount = results.filter(r => r.success).length;
+
+    const successCount = results.filter((r) => r.success).length;
     this.logger.log(
-      `Batch update completed: ${successCount}/${updates.length} successful`
+      `Batch update completed: ${successCount}/${updates.length} successful`,
     );
-    
+
     return results;
   }
 }

@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
-import { JOB_NAMES, QUEUE_NAMES, WorkflowSchema, WorkflowStep } from '@visapi/shared-types';
+import {
+  JOB_NAMES,
+  QUEUE_NAMES,
+  WorkflowSchema,
+  WorkflowStep,
+} from '@visapi/shared-types';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 
@@ -33,13 +38,15 @@ export class WorkflowProcessor {
     try {
       // Fetch the workflow from database
       const workflow = await this.getWorkflow(workflowId);
-      
+
       if (!workflow) {
         throw new Error(`Workflow ${workflowId} not found`);
       }
 
       if (!workflow.enabled) {
-        this.logger.warn(`Workflow ${workflowId} is disabled, skipping execution`);
+        this.logger.warn(
+          `Workflow ${workflowId} is disabled, skipping execution`,
+        );
         return;
       }
 
@@ -51,9 +58,14 @@ export class WorkflowProcessor {
         await this.executeStep(step, workflowContext);
       }
 
-      this.logger.log(`Workflow ${workflowId} completed successfully with ${steps.length} steps`);
+      this.logger.log(
+        `Workflow ${workflowId} completed successfully with ${steps.length} steps`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to process workflow ${workflowId}`, (error as any)?.stack);
+      this.logger.error(
+        `Failed to process workflow ${workflowId}`,
+        (error as any)?.stack,
+      );
       throw error;
     }
   }
@@ -66,7 +78,10 @@ export class WorkflowProcessor {
       .single();
 
     if (error) {
-      this.logger.error(`Failed to fetch workflow ${workflowId}`, (error as any)?.stack);
+      this.logger.error(
+        `Failed to fetch workflow ${workflowId}`,
+        (error as any)?.stack,
+      );
       return null;
     }
 
@@ -87,33 +102,25 @@ export class WorkflowProcessor {
       );
 
       // Queue the appropriate job based on step type
+      // Spread resolvedConfig directly for processor compatibility
       const jobData = {
+        ...resolvedConfig,
         stepId: step.id,
         workflowId: context.workflowId,
-        config: resolvedConfig,
         context,
       };
 
       switch (step.type) {
         case 'slack.send':
-          await this.defaultQueue.add(
-            JOB_NAMES.SEND_SLACK,
-            jobData,
-          );
+          await this.defaultQueue.add(JOB_NAMES.SEND_SLACK, jobData);
           break;
 
         case 'whatsapp.send':
-          await this.defaultQueue.add(
-            JOB_NAMES.SEND_WHATSAPP,
-            jobData,
-          );
+          await this.defaultQueue.add(JOB_NAMES.SEND_WHATSAPP, jobData);
           break;
 
         case 'pdf.generate':
-          await this.defaultQueue.add(
-            JOB_NAMES.GENERATE_PDF,
-            jobData,
-          );
+          await this.defaultQueue.add(JOB_NAMES.GENERATE_PDF, jobData);
           break;
 
         case 'delay':
@@ -132,7 +139,7 @@ export class WorkflowProcessor {
         `Failed to execute workflow step ${step.id} of type ${step.type}: ${(error as any)?.message}`,
         (error as any)?.stack,
       );
-      
+
       // Check if step has retry configuration
       if (step.retries && step.retries > 0) {
         throw error; // Let BullMQ handle retries
