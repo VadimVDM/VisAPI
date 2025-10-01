@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { ConfigService } from '@visapi/core-config';
 import { ScraperError } from './scraper-error';
+import TwoCaptcha from '@2captcha/captcha-solver';
 
 export type CaptchaSolverProvider = 'capsolver' | '2captcha';
 
@@ -30,21 +31,6 @@ interface CapsolverResultResponse {
   errorId: number;
   errorCode?: string;
   errorDescription?: string;
-  status?: 'processing' | 'ready';
-  solution?: {
-    gRecaptchaResponse?: string;
-  };
-}
-
-interface TwoCaptchaCreateResponse {
-  errorId: number;
-  errorCode?: string;
-  taskId?: string | number;
-}
-
-interface TwoCaptchaResultResponse {
-  errorId: number;
-  errorCode?: string;
   status?: 'processing' | 'ready';
   solution?: {
     gRecaptchaResponse?: string;
@@ -231,115 +217,79 @@ export class CaptchaSolverService {
   private async solveWithTwoCaptcha(
     options: RecaptchaSolveOptions,
   ): Promise<string> {
-    const taskPayload: Record<string, any> = {
-      type: options.enterprise
-        ? 'RecaptchaV2EnterpriseTaskProxyless'
-        : 'RecaptchaV2TaskProxyless',
-      websiteURL: options.url,
-      websiteKey: options.siteKey,
-      isInvisible: options.invisible ?? true,
-    };
+    try {
+      // Initialize 2Captcha solver with polling interval (in milliseconds)
+      const solver = new TwoCaptcha.Solver(
+        this.apiKey as string,
+        this.pollIntervalMs,
+      );
 
-    if (options.action) {
-      taskPayload.pageAction = options.action;
-    }
-    if (options.dataS) {
-      taskPayload.enterprisePayload = { s: options.dataS };
-    }
-    if (options.userAgent) {
-      taskPayload.userAgent = options.userAgent;
-    }
-    if (options.minScore) {
-      taskPayload.minScore = options.minScore;
-    }
+      this.logger.log('[2Captcha] Submitting reCAPTCHA task...');
 
-    const createResponse = await axios
-      .post<TwoCaptchaCreateResponse>(
-        'https://api.2captcha.com/createTask',
-        {
-          clientKey: this.apiKey,
-          task: taskPayload,
-        },
-        {
-          timeout: this.timeoutMs,
-        },
-      )
-      .then((res) => res.data)
-      .catch((error) => {
-        this.logger.error('2Captcha createTask failed', error);
-        throw new ScraperError('2Captcha task creation failed', {
-          code: 'CAPTCHA_SOLVER_CREATE_FAILED',
-          retryable: false,
-        });
-      });
+      // Build recaptcha options
+      const recaptchaOptions: any = {
+        pageurl: options.url,
+        googlekey: options.siteKey,
+      };
 
-    if (createResponse.errorId) {
-      const message = createResponse.errorCode || 'Unknown 2Captcha error';
-      this.logger.error(`2Captcha createTask error: ${message}`);
-      throw new ScraperError(`2Captcha error: ${message}`, {
-        code: 'CAPTCHA_SOLVER_CREATE_FAILED',
-        retryable: this.isRetryableProviderError(createResponse.errorCode),
-      });
-    }
+      // Add enterprise flag if needed
+      if (options.enterprise) {
+        recaptchaOptions.enterprise = 1;
+      }
 
-    const taskId = createResponse.taskId;
-    if (!taskId) {
-      throw new ScraperError('2Captcha did not return a task id', {
-        code: 'CAPTCHA_SOLVER_NO_TASK_ID',
-        retryable: false,
-      });
-    }
+      // Add invisible flag if needed (2Captcha expects 1 for invisible)
+      if (options.invisible) {
+        recaptchaOptions.invisible = 1;
+      }
 
-    const deadline = Date.now() + this.timeoutMs;
+      // Add action for v3 or enterprise
+      if (options.action) {
+        recaptchaOptions.action = options.action;
+      }
 
-    while (Date.now() < deadline) {
-      await this.sleep(this.pollIntervalMs);
+      // Add data-s parameter for enterprise
+      if (options.dataS) {
+        recaptchaOptions.data_s = options.dataS;
+      }
 
-      const pollResponse = await axios
-        .post<TwoCaptchaResultResponse>(
-          'https://api.2captcha.com/getTaskResult',
-          {
-            clientKey: this.apiKey,
-            taskId,
-          },
-          {
-            timeout: this.timeoutMs,
-          },
-        )
-        .then((res) => res.data)
-        .catch((error) => {
-          this.logger.error('2Captcha polling failed', error);
-          throw new ScraperError('2Captcha polling failed', {
-            code: 'CAPTCHA_SOLVER_POLL_FAILED',
-            retryable: true,
-          });
-        });
+      // Submit and wait for solution
+      const result = await solver.recaptcha(recaptchaOptions);
 
-      if (pollResponse.errorId) {
-        const message = pollResponse.errorCode || 'Unknown 2Captcha error';
-        this.logger.error(`2Captcha getTaskResult error: ${message}`);
-        throw new ScraperError(`2Captcha error: ${message}`, {
-          code: 'CAPTCHA_SOLVER_POLL_FAILED',
-          retryable: this.isRetryableProviderError(pollResponse.errorCode),
+      if (!result || !result.data) {
+        throw new ScraperError('2Captcha returned empty response', {
+          code: 'CAPTCHA_SOLVER_EMPTY_TOKEN',
+          retryable: true,
         });
       }
 
-      if (pollResponse.status === 'ready') {
-        const token = pollResponse.solution?.gRecaptchaResponse;
-        if (!token) {
-          throw new ScraperError('2Captcha returned empty token', {
-            code: 'CAPTCHA_SOLVER_EMPTY_TOKEN',
-            retryable: true,
-          });
-        }
-        return token;
-      }
-    }
+      this.logger.log('[2Captcha] Successfully received token');
+      return result.data;
+    } catch (error: any) {
+      this.logger.error('[2Captcha] Solve failed:', error);
 
-    throw new ScraperError('2Captcha timed out while solving captcha', {
-      code: 'CAPTCHA_SOLVER_TIMEOUT',
-      retryable: true,
-    });
+      // Check for specific 2Captcha error codes
+      const errorMessage = error.message || String(error);
+      const isRetryable = this.isTwoCaptchaErrorRetryable(errorMessage);
+
+      throw new ScraperError(`2Captcha error: ${errorMessage}`, {
+        code: 'CAPTCHA_SOLVER_FAILED',
+        retryable: isRetryable,
+      });
+    }
+  }
+
+  private isTwoCaptchaErrorRetryable(errorMessage: string): boolean {
+    const normalized = errorMessage.toUpperCase();
+    const nonRetryableErrors = [
+      'ERROR_WRONG_USER_KEY',
+      'ERROR_KEY_DOES_NOT_EXIST',
+      'ERROR_ZERO_BALANCE',
+      'ERROR_WRONG_GOOGLEKEY',
+      'ERROR_WRONG_CAPTCHA_ID',
+      'ERROR_BAD_TOKEN_OR_PAGEURL',
+    ];
+
+    return !nonRetryableErrors.some((err) => normalized.includes(err));
   }
 
   private isRetryableProviderError(providerCode?: string): boolean {
