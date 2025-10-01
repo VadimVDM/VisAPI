@@ -233,8 +233,8 @@ export class CaptchaSolverService {
   ): Promise<string> {
     const taskPayload: Record<string, any> = {
       type: options.enterprise
-        ? 'RecaptchaV2EnterpriseTaskProxyLess'
-        : 'RecaptchaV2TaskProxyLess',
+        ? 'RecaptchaV2EnterpriseTaskProxyless'
+        : 'RecaptchaV2TaskProxyless',
       websiteURL: options.url,
       websiteKey: options.siteKey,
       isInvisible: options.invisible ?? true,
