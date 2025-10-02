@@ -138,7 +138,11 @@ export class EstaScraper extends BaseScraper {
       // Step 8: Fill in the form
       await this.fillLookupForm(jobData.credentials);
 
-      // Step 9: Solve reCAPTCHA (if present) and prepare for submission
+      // Step 9: Wait for reCAPTCHA to load (invisible captcha loads after form interaction)
+      this.logger.log('[ESTA] Waiting for reCAPTCHA to load...');
+      await this.page.waitForTimeout(3000);
+
+      // Step 10: Solve reCAPTCHA (if present) and prepare for submission
       const submitButton = this.page.locator(
         'button:has-text("RETRIEVE APPLICATION")',
       );
@@ -150,20 +154,42 @@ export class EstaScraper extends BaseScraper {
         recaptchaSolved ? 750 : 5000,
       );
 
-      // Step 10: Submit the form and wait for navigation
+      // Step 11: Submit the form and wait for navigation
+      await this.captureScreenshot('esta-05-before-submit');
       this.logger.log('[ESTA] Submitting form...');
 
-      await Promise.all([
-        this.page.waitForURL('**/estaStatus**', {
-          timeout: recaptchaSolved ? 45000 : 25000,
-        }),
-        submitButton.click(),
-      ]);
+      try {
+        await Promise.all([
+          this.page.waitForURL('**/estaStatus**', {
+            timeout: recaptchaSolved ? 45000 : 25000,
+          }),
+          submitButton.click(),
+        ]);
+      } catch (navError: unknown) {
+        // Capture state on failure
+        await this.captureScreenshot('esta-ERROR-submit-failed');
+        const currentUrl = this.page.url();
+        const { message } = this.describeError(navError);
+        this.logger.error(
+          `[ESTA] Navigation failed. Current URL: ${currentUrl}, Error: ${message}`,
+        );
+
+        // Check if there's a validation or error message on the page
+        const errorMessage = await this.page
+          .locator('[role="alert"], .error, .alert-danger')
+          .textContent()
+          .catch(() => null);
+        if (errorMessage) {
+          this.logger.error(`[ESTA] Page error message: ${errorMessage}`);
+        }
+
+        throw navError;
+      }
 
       this.logger.log('[ESTA] Successfully navigated to status page');
-      await this.captureScreenshot('esta-05-status-page');
+      await this.captureScreenshot('esta-06-status-page');
 
-      // Step 11: Verify we're on the status page
+      // Step 12: Verify we're on the status page
       const statusPageUrl = this.page.url();
       if (!statusPageUrl.includes('estaStatus')) {
         this.logger.error('[ESTA] Form submission failed - not on status page');
@@ -174,7 +200,7 @@ export class EstaScraper extends BaseScraper {
         );
       }
 
-      // Step 12: Check for authorization status
+      // Step 13: Check for authorization status
       const authApproved = await this.page
         .locator('text=AUTHORIZATION APPROVED')
         .isVisible()
@@ -190,11 +216,11 @@ export class EstaScraper extends BaseScraper {
 
       this.logger.log('[ESTA] Authorization found - opening detailed view...');
 
-      // Step 13: Click View button to open detailed page
+      // Step 14: Click View button to open detailed page
       await this.clickElement('text=View');
       await this.page.waitForTimeout(2000);
 
-      // Step 14: Switch to the new tab/page
+      // Step 15: Switch to the new tab/page
       const pages = this.context.pages();
       const detailPage = pages[pages.length - 1];
       if (detailPage !== this.page) {
@@ -202,9 +228,9 @@ export class EstaScraper extends BaseScraper {
         await this.page.waitForLoadState('networkidle');
       }
 
-      await this.captureScreenshot('esta-06-detail-view');
+      await this.captureScreenshot('esta-07-detail-view');
 
-      // Step 15: Generate PDF with content limited to first section
+      // Step 16: Generate PDF with content limited to first section
       // Hide everything from "Personal Information" heading onwards
       this.logger.log('[ESTA] Generating PDF...');
 
@@ -243,7 +269,7 @@ export class EstaScraper extends BaseScraper {
         margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
       });
 
-      // Step 16: Upload to Supabase
+      // Step 17: Upload to Supabase
       const applicationNumber = this.getOptionalCredentialString(
         jobData.credentials,
         'applicationNumber',
@@ -261,7 +287,7 @@ export class EstaScraper extends BaseScraper {
 
       this.logger.log(`[ESTA] PDF uploaded successfully: ${path}`);
 
-      // Step 17: Return success result
+      // Step 18: Return success result
       return this.createSuccessResult(
         jobData,
         url,

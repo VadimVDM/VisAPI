@@ -141,30 +141,6 @@ export class BrowserManagerService implements OnModuleDestroy {
       let context: BrowserContext;
       try {
         context = await browser.newContext(contextOptions);
-
-        // Test proxy connection with a simple request
-        if (contextOptions.proxy) {
-          this.logger.log(`Testing proxy connection for ${contextId}...`);
-          const testPage = await context.newPage();
-          try {
-            await testPage.goto('https://api.ipify.org?format=json', {
-              waitUntil: 'networkidle',
-              timeout: 15000,
-            });
-            const content = await testPage.content();
-            this.logger.log(
-              `✅ Proxy test successful for ${contextId}: ${content}`,
-            );
-            await testPage.close();
-          } catch (proxyError: unknown) {
-            const { message } = this.describeError(proxyError);
-            this.logger.warn(
-              `⚠️ Proxy test failed for ${contextId}: ${message}. Proceeding anyway...`,
-            );
-            await testPage.close();
-            // Don't throw - allow scraping to proceed
-          }
-        }
       } catch (error: unknown) {
         const { message, stack } = this.describeError(error);
         this.logger.error(
