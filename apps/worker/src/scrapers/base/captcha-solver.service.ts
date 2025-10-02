@@ -27,6 +27,8 @@ export interface TwoCaptchaRecaptchaOptions {
   invisible?: number;
   action?: string;
   data_s?: string;
+  proxy?: string;
+  proxytype?: string;
 }
 
 interface CapsolverTaskPayload {
@@ -84,6 +86,8 @@ export class CaptchaSolverService {
   private readonly apiKey: string | null;
   private readonly timeoutMs: number;
   private readonly pollIntervalMs: number;
+  private readonly proxyUrl: string | null;
+  private readonly proxyType: string | null;
 
   constructor(private readonly configService: ConfigService) {
     const provider = this.configService.captchaSolverProvider;
@@ -92,15 +96,47 @@ export class CaptchaSolverService {
     this.timeoutMs = this.configService.captchaSolverTimeoutMs;
     this.pollIntervalMs = this.configService.captchaSolverPollIntervalMs;
 
+    // Proxy configuration
+    if (this.configService.proxyEnabled) {
+      this.proxyUrl = this.buildProxyString();
+      this.proxyType = this.configService.proxyType;
+      this.logger.log(
+        `Proxy configured: ${this.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`,
+      );
+    } else {
+      this.proxyUrl = null;
+      this.proxyType = null;
+    }
+
     if (this.isEnabled()) {
       this.logger.log(
-        `Captcha solver provider ${this.provider} initialized (timeout ${this.timeoutMs}ms, poll ${this.pollIntervalMs}ms)`,
+        `Captcha solver provider ${this.provider} initialized (timeout ${this.timeoutMs}ms, poll ${this.pollIntervalMs}ms, proxy: ${this.proxyUrl ? 'enabled' : 'disabled'})`,
       );
     } else {
       this.logger.warn(
         'Captcha solver not configured - reCAPTCHA challenges require manual resolution',
       );
     }
+  }
+
+  /**
+   * Build proxy string in format: username:password@host:port
+   */
+  private buildProxyString(): string | null {
+    const host = this.configService.proxyHost;
+    const port = this.configService.proxyPort;
+    const username = this.configService.proxyUsername;
+    const password = this.configService.proxyPassword;
+
+    if (!host || !port) {
+      return null;
+    }
+
+    if (username && password) {
+      return `${username}:${password}@${host}:${port}`;
+    }
+
+    return `${host}:${port}`;
   }
 
   isEnabled(): boolean {
@@ -299,6 +335,15 @@ export class CaptchaSolverService {
       // Add data-s parameter for enterprise
       if (options.dataS) {
         recaptchaOptions.data_s = options.dataS;
+      }
+
+      // Add proxy if configured
+      if (this.proxyUrl && this.proxyType) {
+        recaptchaOptions.proxy = this.proxyUrl;
+        recaptchaOptions.proxytype = this.proxyType.toUpperCase();
+        this.logger.log(
+          `[2Captcha] Using proxy: ${this.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`,
+        );
       }
 
       // Submit and wait for solution

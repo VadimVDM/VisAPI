@@ -252,6 +252,51 @@ export class ConfigService {
     return this.captchaConfig?.pollIntervalMs ?? 4000;
   }
 
+  // Proxy Configuration
+  get proxyConfig() {
+    return this.getConfig().proxy;
+  }
+
+  get proxyEnabled(): boolean {
+    return this.proxyConfig?.enabled ?? false;
+  }
+
+  get proxyHost(): string | undefined {
+    return this.proxyConfig?.host;
+  }
+
+  get proxyPort(): number | undefined {
+    return this.proxyConfig?.port;
+  }
+
+  get proxyUsername(): string | undefined {
+    return this.proxyConfig?.username;
+  }
+
+  get proxyPassword(): string | undefined {
+    return this.proxyConfig?.password;
+  }
+
+  get proxyType(): 'http' | 'https' | 'socks4' | 'socks5' {
+    return this.proxyConfig?.type ?? 'http';
+  }
+
+  /**
+   * Get proxy URL in format: protocol://username:password@host:port
+   */
+  get proxyUrl(): string | null {
+    if (!this.proxyEnabled || !this.proxyHost || !this.proxyPort) {
+      return null;
+    }
+
+    const protocol = this.proxyType;
+    const auth =
+      this.proxyUsername && this.proxyPassword
+        ? `${this.proxyUsername}:${this.proxyPassword}@`
+        : '';
+    return `${protocol}://${auth}${this.proxyHost}:${this.proxyPort}`;
+  }
+
   get airtableConfig() {
     return this.getConfig().airtable;
   }

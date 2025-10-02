@@ -239,6 +239,21 @@ export const EnvSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().min(1000).max(20000)),
 
+  // Proxy configuration for scraper/captcha solver
+  PROXY_ENABLED: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
+  PROXY_HOST: z.string().optional(),
+  PROXY_PORT: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : undefined))
+    .pipe(z.number().min(1).max(65535).optional()),
+  PROXY_USERNAME: z.string().optional(),
+  PROXY_PASSWORD: z.string().optional(),
+  PROXY_TYPE: z.enum(['http', 'https', 'socks4', 'socks5']).default('http'),
+
   // Airtable integration
   AIRTABLE_API_KEY: z.string().optional(),
   AIRTABLE_BASE_ID: z.string().optional(),
@@ -474,6 +489,14 @@ export function getValidatedConfig() {
       apiKey: env.CAPTCHA_SOLVER_API_KEY,
       timeoutMs: env.CAPTCHA_SOLVER_TIMEOUT_MS,
       pollIntervalMs: env.CAPTCHA_SOLVER_POLL_INTERVAL_MS,
+    },
+    proxy: {
+      enabled: env.PROXY_ENABLED,
+      host: env.PROXY_HOST,
+      port: env.PROXY_PORT,
+      username: env.PROXY_USERNAME,
+      password: env.PROXY_PASSWORD,
+      type: env.PROXY_TYPE,
     },
     airtable: {
       apiKey: env.AIRTABLE_API_KEY,

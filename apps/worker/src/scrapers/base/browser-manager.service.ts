@@ -1,5 +1,12 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { chromium, Browser, BrowserContext, Page, LaunchOptions } from 'playwright';
+import {
+  chromium,
+  Browser,
+  BrowserContext,
+  Page,
+  LaunchOptions,
+} from 'playwright';
+import { ConfigService } from '@visapi/core-config';
 import { BrowserConfig } from '../types';
 
 /**
@@ -12,6 +19,14 @@ export class BrowserManagerService implements OnModuleDestroy {
   private browser: Browser | null = null;
   private contexts: Map<string, BrowserContext> = new Map();
   private isShuttingDown = false;
+
+  constructor(private readonly configService: ConfigService) {
+    if (this.configService.proxyEnabled) {
+      this.logger.log(
+        `Proxy configured for browser contexts: ${this.configService.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`,
+      );
+    }
+  }
 
   private readonly DEFAULT_CONFIG: BrowserConfig = {
     headless: true,
@@ -71,7 +86,7 @@ export class BrowserManagerService implements OnModuleDestroy {
    */
   async createContext(
     contextId: string,
-    config: Partial<BrowserConfig> = {}
+    config: Partial<BrowserConfig> = {},
   ): Promise<BrowserContext> {
     const browser = await this.getBrowser();
     const mergedConfig = { ...this.DEFAULT_CONFIG, ...config };
@@ -79,19 +94,48 @@ export class BrowserManagerService implements OnModuleDestroy {
     this.logger.log(`Creating browser context: ${contextId}`);
 
     try {
-      const context = await browser.newContext({
+      const contextOptions: Parameters<Browser['newContext']>[0] = {
         viewport: {
           width: mergedConfig.viewportWidth,
           height: mergedConfig.viewportHeight,
         },
-        userAgent: mergedConfig.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        userAgent:
+          mergedConfig.userAgent ||
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         javaScriptEnabled: mergedConfig.javascript,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
         locale: 'en-US',
         timezoneId: 'America/New_York',
         ...mergedConfig.launchOptions,
-      });
+      };
+
+      // Add proxy configuration if enabled
+      if (
+        this.configService.proxyEnabled &&
+        this.configService.proxyHost &&
+        this.configService.proxyPort
+      ) {
+        const proxyServer = `${this.configService.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`;
+        contextOptions.proxy = {
+          server: proxyServer,
+        };
+
+        // Add authentication if provided
+        if (
+          this.configService.proxyUsername &&
+          this.configService.proxyPassword
+        ) {
+          contextOptions.proxy.username = this.configService.proxyUsername;
+          contextOptions.proxy.password = this.configService.proxyPassword;
+        }
+
+        this.logger.log(
+          `Browser context ${contextId} will use proxy: ${proxyServer}`,
+        );
+      }
+
+      const context = await browser.newContext(contextOptions);
 
       // Set default timeout
       context.setDefaultTimeout(mergedConfig.timeout);
@@ -127,7 +171,9 @@ export class BrowserManagerService implements OnModuleDestroy {
 
       // Optionally disable images for faster loading
       if (!mergedConfig.images) {
-        await context.route('**/*.{png,jpg,jpeg,gif,svg,webp}', (route) => route.abort());
+        await context.route('**/*.{png,jpg,jpeg,gif,svg,webp}', (route) =>
+          route.abort(),
+        );
       }
 
       this.contexts.set(contextId, context);
@@ -144,7 +190,10 @@ export class BrowserManagerService implements OnModuleDestroy {
   /**
    * Get or create a page in a specific context
    */
-  async getPage(contextId: string, config?: Partial<BrowserConfig>): Promise<Page> {
+  async getPage(
+    contextId: string,
+    config?: Partial<BrowserConfig>,
+  ): Promise<Page> {
     let context = this.contexts.get(contextId);
 
     if (!context) {
@@ -180,7 +229,7 @@ export class BrowserManagerService implements OnModuleDestroy {
   async closeAllContexts(): Promise<void> {
     this.logger.log(`Closing ${this.contexts.size} contexts`);
     const promises = Array.from(this.contexts.keys()).map((contextId) =>
-      this.closeContext(contextId)
+      this.closeContext(contextId),
     );
     await Promise.allSettled(promises);
   }
