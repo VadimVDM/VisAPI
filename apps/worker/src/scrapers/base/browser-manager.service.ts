@@ -138,7 +138,45 @@ export class BrowserManagerService implements OnModuleDestroy {
         );
       }
 
-      const context = await browser.newContext(contextOptions);
+      let context: BrowserContext;
+      try {
+        context = await browser.newContext(contextOptions);
+
+        // Test proxy connection with a simple request
+        if (contextOptions.proxy) {
+          this.logger.log(`Testing proxy connection for ${contextId}...`);
+          const testPage = await context.newPage();
+          try {
+            await testPage.goto('https://api.ipify.org?format=json', {
+              waitUntil: 'networkidle',
+              timeout: 15000,
+            });
+            const content = await testPage.content();
+            this.logger.log(
+              `✅ Proxy test successful for ${contextId}: ${content}`,
+            );
+            await testPage.close();
+          } catch (proxyError: unknown) {
+            const { message } = this.describeError(proxyError);
+            this.logger.error(
+              `❌ Proxy test failed for ${contextId}: ${message}`,
+            );
+            await testPage.close();
+            throw new Error(`Proxy connection test failed: ${message}`);
+          }
+        }
+      } catch (error: unknown) {
+        const { message, stack } = this.describeError(error);
+        this.logger.error(
+          `Failed to create context ${contextId}: ${message}`,
+          stack,
+        );
+        // Log full proxy config for debugging
+        this.logger.error(
+          `Proxy config: ${JSON.stringify(contextOptions.proxy)}`,
+        );
+        throw error;
+      }
 
       // Set default timeout
       context.setDefaultTimeout(mergedConfig.timeout);
