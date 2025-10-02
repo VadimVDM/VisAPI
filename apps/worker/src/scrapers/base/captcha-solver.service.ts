@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { ConfigService } from '@visapi/core-config';
 import { ScraperError } from './scraper-error';
-import TwoCaptcha from '@2captcha/captcha-solver';
+import * as TwoCaptcha from '@2captcha/captcha-solver';
 
 export type CaptchaSolverProvider = 'capsolver' | '2captcha';
 
@@ -57,16 +57,24 @@ interface CapsolverResultResponse {
   };
 }
 
+/**
+ * 2Captcha SDK types
+ * @see https://github.com/2captcha/2captcha-javascript
+ */
 interface TwoCaptchaResult {
-  data?: string;
+  data: string;
 }
 
 interface TwoCaptchaSolver {
   recaptcha(options: TwoCaptchaRecaptchaOptions): Promise<TwoCaptchaResult>;
 }
 
+interface TwoCaptchaConstructor {
+  new (apiKey: string, pollingIntervalMs?: number): TwoCaptchaSolver;
+}
+
 interface TwoCaptchaModule {
-  Solver: new (apiKey: string, pollIntervalMs?: number) => TwoCaptchaSolver;
+  Solver: TwoCaptchaConstructor;
 }
 
 @Injectable()
@@ -260,8 +268,10 @@ export class CaptchaSolverService {
         });
       }
 
-      const module = TwoCaptcha as unknown as TwoCaptchaModule;
-      const solver = new module.Solver(apiKey, this.pollIntervalMs);
+      // Initialize 2Captcha solver with API key and polling interval
+      // Cast to TwoCaptchaModule since the external CommonJS module structure isn't recognized by TS
+      const TwoCaptchaLib = TwoCaptcha as unknown as TwoCaptchaModule;
+      const solver = new TwoCaptchaLib.Solver(apiKey, this.pollIntervalMs);
 
       this.logger.log('[2Captcha] Submitting reCAPTCHA task...');
 
@@ -294,8 +304,8 @@ export class CaptchaSolverService {
       // Submit and wait for solution
       const result = await solver.recaptcha(recaptchaOptions);
 
-      if (!result?.data) {
-        throw new ScraperError('2Captcha returned empty response', {
+      if (!result.data) {
+        throw new ScraperError('2Captcha returned empty token', {
           code: 'CAPTCHA_SOLVER_EMPTY_TOKEN',
           retryable: true,
         });
