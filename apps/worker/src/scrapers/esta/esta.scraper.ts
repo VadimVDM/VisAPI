@@ -86,81 +86,54 @@ export class EstaScraper extends BaseScraper {
         }
       });
 
-      // CRITICAL FIX: Bypass proxy for:
-      // 1. Google reCAPTCHA domains (BrightData blocks with 402/502)
-      // 2. ESTA API POST requests (BrightData requires KYC for POST)
+      // CRITICAL FIX: Bypass proxy for Google reCAPTCHA domains only
+      // BrightData residential proxy blocks Google reCAPTCHA scripts (402/502 errors)
+      // This causes grecaptcha API to never load, breaking token injection
+      // Solution: Intercept Google requests and fetch them directly (without proxy)
+      //
+      // NOTE: ESTA API POST requests CANNOT be bypassed because:
+      // 1. BrightData blocks POST without KYC verification (402 error)
+      // 2. Bypassing causes IP mismatch (page from residential, POST from datacenter)
+      // 3. ESTA security detects mismatch and rejects with "Error Processing Application"
+      // Resolution: Complete BrightData KYC verification to enable POST through proxy
       await this.page.route('**/*', async (route) => {
         const url = route.request().url();
-        const method = route.request().method();
-
         const isGoogleDomain =
           url.includes('google.com/recaptcha') ||
           url.includes('gstatic.com/recaptcha') ||
           url.includes('recaptcha.net');
 
-        // BrightData blocks POST to ESTA API without KYC verification
-        // Error: "POST requests are not allowed. To get full residential access, fill in the KYC form"
-        const isEstaApiPost =
-          method === 'POST' &&
-          url.includes('esta.cbp.dhs.gov/api/');
-
-        if (isGoogleDomain || isEstaApiPost) {
+        if (isGoogleDomain) {
           try {
-            const resourceType = isEstaApiPost ? 'ESTA API POST' : 'reCAPTCHA';
-            this.logger.log(`[ESTA] Bypassing proxy for ${resourceType}: ${url.substring(0, 80)}...`);
+            // Fetch Google reCAPTCHA scripts directly (bypass BrightData proxy)
+            this.logger.log(`[ESTA] Bypassing proxy for reCAPTCHA: ${url.substring(0, 80)}...`);
 
-            if (isEstaApiPost) {
-              // For POST requests, we need to forward the body and method
-              const postData = route.request().postDataBuffer();
+            // Use native fetch (no proxy) to get the resource
+            const response = await fetch(url, {
+              headers: route.request().headers(),
+            });
 
-              const response = await fetch(url, {
-                method: 'POST',
-                headers: route.request().headers(),
-                // Convert Buffer to Uint8Array (which is a valid BodyInit)
-                body: postData ? new Uint8Array(postData) : undefined,
-              });
+            const body = await response.arrayBuffer();
+            const headers: Record<string, string> = {};
+            response.headers.forEach((value, key) => {
+              headers[key] = value;
+            });
 
-              const body = await response.arrayBuffer();
-              const headers: Record<string, string> = {};
-              response.headers.forEach((value, key) => {
-                headers[key] = value;
-              });
+            await route.fulfill({
+              status: response.status,
+              headers,
+              body: Buffer.from(body),
+            });
 
-              await route.fulfill({
-                status: response.status,
-                headers,
-                body: Buffer.from(body),
-              });
-
-              this.logger.log(`[ESTA] Successfully bypassed proxy for ${resourceType} (status: ${response.status})`);
-            } else {
-              // For Google reCAPTCHA (GET requests)
-              const response = await fetch(url, {
-                headers: route.request().headers(),
-              });
-
-              const body = await response.arrayBuffer();
-              const headers: Record<string, string> = {};
-              response.headers.forEach((value, key) => {
-                headers[key] = value;
-              });
-
-              await route.fulfill({
-                status: response.status,
-                headers,
-                body: Buffer.from(body),
-              });
-
-              this.logger.log(`[ESTA] Successfully bypassed proxy for ${resourceType} (status: ${response.status})`);
-            }
+            this.logger.log(`[ESTA] Successfully bypassed proxy for reCAPTCHA (status: ${response.status})`);
           } catch (error: unknown) {
             const { message } = this.describeError(error);
-            this.logger.error(`[ESTA] Failed to bypass proxy: ${message}`);
+            this.logger.error(`[ESTA] Failed to bypass proxy for reCAPTCHA: ${message}`);
             // Fallback to normal routing if bypass fails
             await route.continue();
           }
         } else {
-          // Use proxy for everything else (ESTA pages)
+          // Use proxy for everything else (ESTA pages and API calls)
           await route.continue();
         }
       });
