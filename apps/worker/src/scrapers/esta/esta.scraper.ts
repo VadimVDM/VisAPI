@@ -86,6 +86,52 @@ export class EstaScraper extends BaseScraper {
         }
       });
 
+      // CRITICAL FIX: Bypass proxy for Google reCAPTCHA domains
+      // BrightData residential proxy blocks Google reCAPTCHA scripts (402/502 errors)
+      // This causes grecaptcha API to never load, breaking token injection
+      // Solution: Intercept Google requests and fetch them directly (without proxy)
+      await this.page.route('**/*', async (route) => {
+        const url = route.request().url();
+        const isGoogleDomain =
+          url.includes('google.com/recaptcha') ||
+          url.includes('gstatic.com/recaptcha') ||
+          url.includes('recaptcha.net');
+
+        if (isGoogleDomain) {
+          try {
+            // Fetch Google reCAPTCHA scripts directly (bypass BrightData proxy)
+            this.logger.log(`[ESTA] Bypassing proxy for reCAPTCHA: ${url.substring(0, 80)}...`);
+
+            // Use native fetch (no proxy) to get the resource
+            const response = await fetch(url, {
+              headers: route.request().headers(),
+            });
+
+            const body = await response.arrayBuffer();
+            const headers: Record<string, string> = {};
+            response.headers.forEach((value, key) => {
+              headers[key] = value;
+            });
+
+            await route.fulfill({
+              status: response.status,
+              headers,
+              body: Buffer.from(body),
+            });
+
+            this.logger.log(`[ESTA] Successfully bypassed proxy for reCAPTCHA (status: ${response.status})`);
+          } catch (error: unknown) {
+            const { message } = this.describeError(error);
+            this.logger.error(`[ESTA] Failed to bypass proxy for reCAPTCHA: ${message}`);
+            // Fallback to normal routing if bypass fails
+            await route.continue();
+          }
+        } else {
+          // Use proxy for everything else (ESTA pages)
+          await route.continue();
+        }
+      });
+
       // Step 1: Navigate to ESTA homepage
       this.logger.log('[ESTA] Navigating to homepage...');
       await this.navigateTo('https://esta.cbp.dhs.gov/esta', 'load');
