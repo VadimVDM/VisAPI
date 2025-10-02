@@ -158,11 +158,11 @@ export class BrowserManagerService implements OnModuleDestroy {
             await testPage.close();
           } catch (proxyError: unknown) {
             const { message } = this.describeError(proxyError);
-            this.logger.error(
-              `❌ Proxy test failed for ${contextId}: ${message}`,
+            this.logger.warn(
+              `⚠️ Proxy test failed for ${contextId}: ${message}. Proceeding anyway...`,
             );
             await testPage.close();
-            throw new Error(`Proxy connection test failed: ${message}`);
+            // Don't throw - allow scraping to proceed
           }
         }
       } catch (error: unknown) {
