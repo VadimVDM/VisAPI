@@ -116,22 +116,24 @@ export class BrowserManagerService implements OnModuleDestroy {
         this.configService.proxyHost &&
         this.configService.proxyPort
       ) {
-        const proxyServer = `${this.configService.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`;
-        contextOptions.proxy = {
-          server: proxyServer,
-        };
+        let proxyServer: string;
 
-        // Add authentication if provided
+        // Build proxy URL with authentication embedded for better compatibility
         if (
           this.configService.proxyUsername &&
           this.configService.proxyPassword
         ) {
-          contextOptions.proxy.username = this.configService.proxyUsername;
-          contextOptions.proxy.password = this.configService.proxyPassword;
+          proxyServer = `${this.configService.proxyType}://${this.configService.proxyUsername}:${this.configService.proxyPassword}@${this.configService.proxyHost}:${this.configService.proxyPort}`;
+        } else {
+          proxyServer = `${this.configService.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`;
         }
 
+        contextOptions.proxy = {
+          server: proxyServer,
+        };
+
         this.logger.log(
-          `Browser context ${contextId} will use proxy: ${proxyServer}`,
+          `Browser context ${contextId} will use proxy: ${this.configService.proxyType}://${this.configService.proxyHost}:${this.configService.proxyPort}`,
         );
       }
 
