@@ -460,6 +460,33 @@ export class EstaScraper extends BaseScraper {
           clientKey: null as string | null,
         };
 
+        // FIRST: Search page source for grecaptcha.execute calls to find action parameter
+        // This is the most reliable way to find v3 action
+        const pageSource = document.documentElement.outerHTML;
+
+        // Pattern 1: grecaptcha.enterprise.execute('sitekey', {action: 'value'})
+        const enterpriseExecutePattern = /grecaptcha\.enterprise\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
+        const enterpriseMatch = pageSource.match(enterpriseExecutePattern);
+        if (enterpriseMatch) {
+          result.siteKey = enterpriseMatch[1];
+          result.action = enterpriseMatch[2];
+          result.isEnterprise = true;
+          result.isV3 = true;
+          console.debug(`[reCAPTCHA] Found v3 Enterprise via execute call: action=${result.action}`);
+        }
+
+        // Pattern 2: grecaptcha.execute('sitekey', {action: 'value'})
+        if (!result.action) {
+          const executePattern = /grecaptcha\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
+          const executeMatch = pageSource.match(executePattern);
+          if (executeMatch) {
+            if (!result.siteKey) result.siteKey = executeMatch[1];
+            result.action = executeMatch[2];
+            result.isV3 = true;
+            console.debug(`[reCAPTCHA] Found v3 via execute call: action=${result.action}`);
+          }
+        }
+
         // Method 1: Check for widget with data-sitekey attribute
         const widget = document.querySelector(
           '[data-sitekey]',
@@ -629,7 +656,34 @@ export class EstaScraper extends BaseScraper {
 
     try {
       await this.page.evaluate(
-        ({ response, clientKey, isEnterprise }) => {
+        ({ response, clientKey, isEnterprise, isV3 }) => {
+          // For v3, we need to set the token in a different way
+          // v3 doesn't use hidden textareas, it calls callbacks directly
+          if (isV3) {
+            // Set window.__recaptcha_token for any code that might read it
+            (window as typeof window & { __recaptcha_token?: string }).__recaptcha_token = response;
+
+            // For v3, we need to make grecaptcha.enterprise.execute() return our token
+            // Use bracket notation to avoid TypeScript unsafe member access errors
+            const w = window as typeof window & Record<string, unknown>;
+
+            if (isEnterprise && w['grecaptcha'] && typeof w['grecaptcha'] === 'object') {
+              // Patch grecaptcha.enterprise.execute to return our token
+              const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
+              if (grecaptcha['enterprise'] && typeof grecaptcha['enterprise'] === 'object') {
+                const enterprise = grecaptcha['enterprise'] as Record<string, unknown>;
+                enterprise['execute'] = () => Promise.resolve(response);
+                console.debug('[reCAPTCHA] Patched grecaptcha.enterprise.execute to return 2captcha token');
+              }
+            } else if (w['grecaptcha'] && typeof w['grecaptcha'] === 'object') {
+              // Patch regular grecaptcha.execute for non-enterprise v3
+              const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
+              grecaptcha['execute'] = () => Promise.resolve(response);
+              console.debug('[reCAPTCHA] Patched grecaptcha.execute to return 2captcha token');
+            }
+          }
+
+          // For v2 or as fallback, also set the traditional hidden fields
           const updateElementValue = (element: Element | null) => {
             if (!element) {
               return;
@@ -728,6 +782,7 @@ export class EstaScraper extends BaseScraper {
           response: token,
           clientKey: info.clientKey,
           isEnterprise: info.isEnterprise,
+          isV3: info.isV3,
         },
       );
     } catch (error: unknown) {
