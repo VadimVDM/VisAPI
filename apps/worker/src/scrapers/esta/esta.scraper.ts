@@ -141,20 +141,24 @@ export class EstaScraper extends BaseScraper {
       // Step 9: Wait for reCAPTCHA to load (invisible captcha loads after form interaction)
       this.logger.log('[ESTA] Waiting for reCAPTCHA to load...');
 
-      // Try to detect reCAPTCHA loading over time
+      // First, wait for the reCAPTCHA iframe to appear in the DOM
+      await this.waitForRecaptchaIframe();
+
+      // Then try to detect full reCAPTCHA configuration over time
       let recaptchaDetected = false;
-      for (let attempt = 0; attempt < 6; attempt++) {
+      for (let attempt = 0; attempt < 12; attempt++) {
         await this.page.waitForTimeout(500);
         const recaptchaInfo = await this.detectRecaptchaInfo();
         if (recaptchaInfo) {
           this.logger.log(`[ESTA] reCAPTCHA detected after ${(attempt + 1) * 500}ms`);
+          this.logger.log(`[ESTA] reCAPTCHA details: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}..., enterprise=${recaptchaInfo.isEnterprise}, invisible=${recaptchaInfo.isInvisible}`);
           recaptchaDetected = true;
           break;
         }
       }
 
       if (!recaptchaDetected) {
-        this.logger.log('[ESTA] No reCAPTCHA detected after 3 seconds');
+        this.logger.warn('[ESTA] No reCAPTCHA configuration detected after 6 seconds - form submission may fail');
       }
 
       // Step 10: Solve reCAPTCHA (if present) and prepare for submission
@@ -208,18 +212,8 @@ export class EstaScraper extends BaseScraper {
           `[ESTA] Navigation failed. Current URL: ${currentUrl}, Error: ${message}`,
         );
 
-        // Check if there's a validation or error message on the page
-        let errorMessage: string | null = null;
-        try {
-          errorMessage = await this.page
-            .locator('[role="alert"], .error, .alert-danger')
-            .textContent();
-        } catch {
-          // Ignore error if element not found
-        }
-        if (errorMessage) {
-          this.logger.error(`[ESTA] Page error message: ${errorMessage}`);
-        }
+        // Perform detailed diagnostics
+        await this.diagnoseSubmissionFailure();
 
         throw navError;
       }
@@ -432,6 +426,7 @@ export class EstaScraper extends BaseScraper {
           clientKey: null as string | null,
         };
 
+        // Method 1: Check for widget with data-sitekey attribute
         const widget = document.querySelector(
           '[data-sitekey]',
         );
@@ -448,8 +443,9 @@ export class EstaScraper extends BaseScraper {
           }
         }
 
+        // Method 2: Check for reCAPTCHA iframe and extract sitekey from URL
         const iframeElement = document.querySelector<HTMLIFrameElement>(
-          'iframe[src*="recaptcha"]',
+          'iframe[src*="recaptcha"], iframe[src*="google.com/recaptcha"]',
         );
         if (iframeElement?.src) {
           try {
@@ -760,6 +756,105 @@ export class EstaScraper extends BaseScraper {
         `[ESTA] Failed to handle security notification (may not exist): ${message}`,
       );
       // Non-critical, continue execution
+    }
+  }
+
+  /**
+   * Diagnose why form submission failed
+   */
+  private async diagnoseSubmissionFailure(): Promise<void> {
+    if (!this.page) {
+      return;
+    }
+
+    try {
+      // Check for validation errors
+      const validationErrors = await this.page
+        .locator('[role="alert"], .error, .alert-danger, .validation-error, .field-error')
+        .allTextContents();
+      if (validationErrors.length > 0) {
+        this.logger.error(`[ESTA] Validation errors: ${validationErrors.join(', ')}`);
+      }
+
+      // Check if reCAPTCHA challenge appeared
+      const recaptchaChallenge = await this.page
+        .locator('iframe[title*="recaptcha challenge"], .recaptcha-checkbox')
+        .isVisible()
+        .catch(() => false);
+      if (recaptchaChallenge) {
+        this.logger.error('[ESTA] reCAPTCHA challenge appeared after submit - token may be invalid or expired');
+      }
+
+      // Check for any error messages on the page
+      const errorElements = await this.page.locator('text=/error|failed|invalid/i').allTextContents();
+      if (errorElements.length > 0) {
+        this.logger.error(`[ESTA] Error messages found: ${errorElements.slice(0, 3).join(', ')}`);
+      }
+
+      // Check if reCAPTCHA was detected at all
+      const recaptchaInfo = await this.detectRecaptchaInfo();
+      if (!recaptchaInfo) {
+        this.logger.error('[ESTA] CRITICAL: No reCAPTCHA detected on page - form submission blocked');
+
+        // Check if iframe exists but wasn't detected
+        const iframeExists = await this.page
+          .locator('iframe[src*="recaptcha"], iframe[src*="google.com/recaptcha"]')
+          .count();
+        this.logger.error(`[ESTA] reCAPTCHA iframes found: ${iframeExists}`);
+      } else {
+        this.logger.log(`[ESTA] reCAPTCHA was detected: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}...`);
+      }
+
+      // Log current URL and page title
+      const pageTitle = await this.page.title();
+      this.logger.error(`[ESTA] Page title: ${pageTitle}`);
+      this.logger.error(`[ESTA] Current URL: ${this.page.url()}`);
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.warn(`[ESTA] Diagnostic check failed: ${message}`);
+    }
+  }
+
+  /**
+   * Wait for reCAPTCHA iframe to appear and load
+   */
+  private async waitForRecaptchaIframe(): Promise<void> {
+    if (!this.page) {
+      return;
+    }
+
+    try {
+      this.logger.log('[ESTA] Waiting for reCAPTCHA iframe to appear...');
+
+      // Wait for the iframe element to exist in DOM (up to 10 seconds)
+      await this.page.waitForSelector('iframe[src*="recaptcha"], iframe[src*="google.com/recaptcha"]', {
+        timeout: 10000,
+        state: 'attached',
+      });
+
+      this.logger.log('[ESTA] reCAPTCHA iframe found in DOM');
+
+      // Wait a bit more for the iframe to fully initialize
+      await this.page.waitForTimeout(1000);
+
+      // Wait for the grecaptcha script to load and initialize
+      await this.page.waitForFunction(
+        () => {
+          return (
+            typeof (window as typeof window & { grecaptcha?: unknown }).grecaptcha !== 'undefined' ||
+            typeof (window as typeof window & { ___grecaptcha_cfg?: unknown }).___grecaptcha_cfg !== 'undefined'
+          );
+        },
+        { timeout: 10000 }
+      ).catch(() => {
+        this.logger.warn('[ESTA] grecaptcha global not detected, but iframe exists');
+      });
+
+      this.logger.log('[ESTA] reCAPTCHA iframe initialized');
+    } catch (error: unknown) {
+      const { message } = this.describeError(error);
+      this.logger.warn(`[ESTA] reCAPTCHA iframe not found or failed to load: ${message}`);
+      // Non-fatal - continue and let the detection logic handle it
     }
   }
 
