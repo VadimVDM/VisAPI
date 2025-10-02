@@ -73,6 +73,19 @@ export class EstaScraper extends BaseScraper {
     );
 
     try {
+      // Set up console logging to capture browser console output
+      this.page.on('console', (msg) => {
+        const type = msg.type();
+        const text = msg.text();
+        if (text.includes('[reCAPTCHA')) {
+          // Highlight reCAPTCHA debug messages
+          this.logger.log(`[BROWSER CONSOLE ${type.toUpperCase()}] ${text}`);
+        } else if (type === 'error' || type === 'warning') {
+          // Log errors and warnings
+          this.logger.warn(`[BROWSER CONSOLE ${type.toUpperCase()}] ${text}`);
+        }
+      });
+
       // Step 1: Navigate to ESTA homepage
       this.logger.log('[ESTA] Navigating to homepage...');
       await this.navigateTo('https://esta.cbp.dhs.gov/esta', 'load');
@@ -679,6 +692,12 @@ export class EstaScraper extends BaseScraper {
             // Use bracket notation to avoid TypeScript unsafe member access errors
             const w = window as typeof window & Record<string, unknown>;
 
+            // DEBUG: Check what actually exists
+            const hasGrecaptcha = typeof w['grecaptcha'] !== 'undefined';
+            const hasGrecaptchaEnterprise = hasGrecaptcha && typeof (w['grecaptcha'] as Record<string, unknown>)['enterprise'] !== 'undefined';
+            const hasCfg = typeof w['___grecaptcha_cfg'] !== 'undefined';
+            console.log(`[reCAPTCHA DEBUG] grecaptcha=${hasGrecaptcha}, enterprise=${hasGrecaptchaEnterprise}, cfg=${hasCfg}`);
+
             if (isEnterprise && w['grecaptcha'] && typeof w['grecaptcha'] === 'object') {
               // Patch grecaptcha.enterprise.execute to return our token
               const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
@@ -812,7 +831,87 @@ export class EstaScraper extends BaseScraper {
           const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig }).___grecaptcha_cfg;
           if (cfg?.clients) {
             const keys = clientKey ? [clientKey] : Object.keys(cfg.clients);
-            keys.forEach((key) => traverseCallbacks(cfg.clients[key]));
+            console.log(`[reCAPTCHA DEBUG] Found ${keys.length} client(s) in ___grecaptcha_cfg: ${keys.join(', ')}`);
+            keys.forEach((key) => {
+              console.log(`[reCAPTCHA DEBUG] Traversing callbacks for client: ${key}`);
+              traverseCallbacks(cfg.clients[key]);
+            });
+          } else {
+            console.log('[reCAPTCHA DEBUG] No ___grecaptcha_cfg.clients found');
+          }
+
+          // CRITICAL FALLBACK: If grecaptcha.enterprise doesn't exist but we have v3 Enterprise,
+          // wait for it to load and then patch it
+          const win = window as typeof window & Record<string, unknown>;
+          const grecaptchaExists = win['grecaptcha'] != null && typeof win['grecaptcha'] === 'object';
+          if (isV3 && isEnterprise && !grecaptchaExists) {
+            console.log('[reCAPTCHA DEBUG] grecaptcha not loaded yet, installing onload hook...');
+
+            // Define a setup function that will patch once grecaptcha loads
+            const setupPatch = () => {
+              const win = window as typeof window & Record<string, unknown>;
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              const grecaptchaValue = win['grecaptcha'];
+              if (grecaptchaValue && typeof grecaptchaValue === 'object') {
+                const gr = grecaptchaValue as Record<string, unknown>;
+                if (gr['enterprise'] && typeof gr['enterprise'] === 'object') {
+                  const ent = gr['enterprise'] as Record<string, unknown>;
+                  console.log('[reCAPTCHA DEBUG] grecaptcha.enterprise NOW available, patching...');
+
+                  ent['execute'] = (_sk?: string, _opt?: Record<string, unknown>) => {
+                    console.log('[reCAPTCHA] execute() called (late patch), returning 2captcha token');
+                    return Promise.resolve(response);
+                  };
+
+                  ent['getResponse'] = () => {
+                    console.log('[reCAPTCHA] getResponse() called (late patch), returning 2captcha token');
+                    return response;
+                  };
+
+                  console.log('[reCAPTCHA DEBUG] Late patch applied successfully');
+
+                  // Try triggering execute to update ESTA's cached token
+                  if (typeof ent['execute'] === 'function') {
+                    const exec = ent['execute'] as (sk?: string, opt?: Record<string, unknown>) => Promise<string>;
+                    exec(siteKey, action ? { action } : undefined)
+                      .then(() => console.log('[reCAPTCHA DEBUG] Late execute() completed'))
+                      .catch((e: unknown) => console.warn('[reCAPTCHA DEBUG] Late execute() failed:', e));
+                  }
+                }
+              }
+            };
+
+            // Set up mutation observer to watch for grecaptcha loading
+            const observer = new MutationObserver(() => {
+              const win = window as typeof window & Record<string, unknown>;
+              if (win['grecaptcha']) {
+                console.log('[reCAPTCHA DEBUG] grecaptcha detected via MutationObserver');
+                setupPatch();
+                observer.disconnect();
+              }
+            });
+
+            observer.observe(document.documentElement, {
+              childList: true,
+              subtree: true,
+            });
+
+            // Also try periodically for 10 seconds
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+              attempts++;
+              const win = window as typeof window & Record<string, unknown>;
+              if (win['grecaptcha']) {
+                console.log(`[reCAPTCHA DEBUG] grecaptcha detected via polling (attempt ${attempts})`);
+                setupPatch();
+                clearInterval(checkInterval);
+                observer.disconnect();
+              } else if (attempts >= 20) {
+                console.warn('[reCAPTCHA DEBUG] grecaptcha never loaded after 10s of polling');
+                clearInterval(checkInterval);
+                observer.disconnect();
+              }
+            }, 500);
           }
 
           window.dispatchEvent(new Event('recaptcha-token-injected'));
@@ -829,9 +928,10 @@ export class EstaScraper extends BaseScraper {
 
       // Wait for the fresh execute() call to complete before proceeding
       // This ensures ESTA's callbacks have run with our token
+      // For v3, wait longer to allow late-patch observer to detect and patch grecaptcha
       if (info.isV3) {
-        this.logger.log('[ESTA] Waiting for fresh execute() to complete...');
-        await this.page.waitForTimeout(2000);
+        this.logger.log('[ESTA] Waiting for token injection and late-patch observer (12s)...');
+        await this.page.waitForTimeout(12000); // 10s for observer + 2s buffer
       }
     } catch (error: unknown) {
       const { message, stack } = this.describeError(error);
