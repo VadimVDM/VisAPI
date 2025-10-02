@@ -140,13 +140,47 @@ export class EstaScraper extends BaseScraper {
 
       // Step 9: Wait for reCAPTCHA to load (invisible captcha loads after form interaction)
       this.logger.log('[ESTA] Waiting for reCAPTCHA to load...');
-      await this.page.waitForTimeout(3000);
+
+      // Try to detect reCAPTCHA loading over time
+      let recaptchaDetected = false;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        await this.page.waitForTimeout(500);
+        const recaptchaInfo = await this.detectRecaptchaInfo();
+        if (recaptchaInfo) {
+          this.logger.log(`[ESTA] reCAPTCHA detected after ${(attempt + 1) * 500}ms`);
+          recaptchaDetected = true;
+          break;
+        }
+      }
+
+      if (!recaptchaDetected) {
+        this.logger.log('[ESTA] No reCAPTCHA detected after 3 seconds');
+      }
 
       // Step 10: Solve reCAPTCHA (if present) and prepare for submission
       const submitButton = this.page.locator(
         'button:has-text("RETRIEVE APPLICATION")',
       );
       const recaptchaSolved = await this.solveRecaptchaIfPresent();
+
+      // Check button state before submission
+      const isEnabled = await submitButton.isEnabled().catch(() => false);
+      const isVisible = await submitButton.isVisible().catch(() => false);
+      this.logger.log(
+        `[ESTA] Submit button state - enabled: ${isEnabled}, visible: ${isVisible}`,
+      );
+
+      if (!isEnabled) {
+        this.logger.warn('[ESTA] Submit button is disabled - checking for validation errors');
+        const validationErrors = await this.page.locator('[role="alert"], .error, .validation-error, .field-error').allTextContents();
+        if (validationErrors.length > 0) {
+          this.logger.error(`[ESTA] Validation errors found: ${validationErrors.join(', ')}`);
+        }
+      }
+
+      // Scroll submit button into view and ensure it's ready
+      await submitButton.scrollIntoViewIfNeeded();
+      await this.page.waitForTimeout(1000);
 
       // Keep subtle human-like behaviour regardless of solver usage
       await this.mimicHumanBeforeSubmit(
@@ -175,7 +209,7 @@ export class EstaScraper extends BaseScraper {
         );
 
         // Check if there's a validation or error message on the page
-        const errorMessage = await this.page
+        const errorMessage: string | null = await this.page
           .locator('[role="alert"], .error, .alert-danger')
           .textContent()
           .catch(() => null);
