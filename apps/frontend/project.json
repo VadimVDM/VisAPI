@@ -18,7 +18,11 @@
       "executor": "@nx/eslint:lint",
       "options": {
         "lintFilePatterns": ["apps/frontend/**/*.{ts,tsx,js,jsx}"],
-        "exclude": ["apps/frontend/.next/**/*", "apps/frontend/out/**/*", "apps/frontend/build/**/*"]
+        "exclude": [
+          "apps/frontend/.next/**/*",
+          "apps/frontend/out/**/*",
+          "apps/frontend/build/**/*"
+        ]
       }
     }
   }

@@ -64,7 +64,12 @@ const availableScopes = [
 ];
 
 export default function ApiKeysPage() {
-  const { data: apiKeys, loading, error, refetch } = useApiData<ApiKeyWithSecret[]>('/api/v1/api-keys');
+  const {
+    data: apiKeys,
+    loading,
+    error,
+    refetch,
+  } = useApiData<ApiKeyWithSecret[]>('/api/v1/api-keys');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyWithSecret | null>(null);
   const [creating, setCreating] = useState(false);
@@ -98,12 +103,14 @@ export default function ApiKeysPage() {
         throw new Error(`Failed to create API key: ${response.statusText}`);
       }
 
-      const data = await response.json() as ApiKeyWithSecret;
+      const data = (await response.json()) as ApiKeyWithSecret;
       setCreatedKey(data);
       refetch(); // Refresh the list
     } catch (err) {
       console.error('Error creating API key:', err);
-      setActionError(err instanceof Error ? err.message : 'Failed to create API key');
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to create API key',
+      );
     } finally {
       setCreating(false);
     }
@@ -112,7 +119,7 @@ export default function ApiKeysPage() {
   async function deleteApiKey(id: string) {
     if (
       !confirm(
-        'Are you sure you want to delete this API key? This action cannot be undone.'
+        'Are you sure you want to delete this API key? This action cannot be undone.',
       )
     ) {
       return;
@@ -124,7 +131,7 @@ export default function ApiKeysPage() {
         `${apiUrl}/api/v1/api-keys/${id}`,
         {
           method: 'DELETE',
-        }
+        },
       );
 
       if (!response.ok) {
@@ -134,10 +141,11 @@ export default function ApiKeysPage() {
       refetch(); // Refresh the list
     } catch (err) {
       console.error('Error deleting API key:', err);
-      setActionError(err instanceof Error ? err.message : 'Failed to delete API key');
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to delete API key',
+      );
     }
   }
-
 
   const copyToClipboard = (text: string) => {
     void navigator.clipboard.writeText(text);
@@ -152,8 +160,6 @@ export default function ApiKeysPage() {
         : [...prev.scopes, scope],
     }));
   };
-
-
 
   return (
     <div className="space-y-6">
@@ -271,8 +277,8 @@ export default function ApiKeysPage() {
                     <div>
                       <span className="text-gray-500">Expires:</span>
                       <div className="text-gray-900">
-                        {apiKey.expires_at 
-                          ? new Date(apiKey.expires_at).toLocaleDateString() 
+                        {apiKey.expires_at
+                          ? new Date(apiKey.expires_at).toLocaleDateString()
                           : 'Never'}
                       </div>
                     </div>
@@ -295,7 +301,10 @@ export default function ApiKeysPage() {
 
               <form className="space-y-4">
                 <div>
-                  <label htmlFor="api-key-name" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="api-key-name"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Name
                   </label>
                   <input
@@ -314,7 +323,10 @@ export default function ApiKeysPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="api-key-expires" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="api-key-expires"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Expires in
                   </label>
                   <select
@@ -340,21 +352,21 @@ export default function ApiKeysPage() {
                     <legend className="block text-sm font-medium text-gray-700">
                       Scopes
                     </legend>
-                  <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                    {availableScopes.map((scope) => (
-                      <label key={scope} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newKeyData.scopes.includes(scope)}
-                          onChange={() => handleScopeToggle(scope)}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">
-                          {scope}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                      {availableScopes.map((scope) => (
+                        <label key={scope} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={newKeyData.scopes.includes(scope)}
+                            onChange={() => handleScopeToggle(scope)}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">
+                            {scope}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </fieldset>
                 </div>
               </form>
@@ -376,7 +388,11 @@ export default function ApiKeysPage() {
                       await createApiKey();
                       if (!error) {
                         setShowCreateModal(false);
-                        setNewKeyData({ name: '', scopes: [], expiresIn: '90' });
+                        setNewKeyData({
+                          name: '',
+                          scopes: [],
+                          expiresIn: '90',
+                        });
                       }
                     })();
                   }}
@@ -452,8 +468,8 @@ export default function ApiKeysPage() {
                     Expires
                   </span>
                   <p className="mt-1 text-sm text-gray-900">
-                    {createdKey.expires_at 
-                      ? new Date(createdKey.expires_at).toLocaleDateString() 
+                    {createdKey.expires_at
+                      ? new Date(createdKey.expires_at).toLocaleDateString()
                       : 'Never'}
                   </p>
                 </div>

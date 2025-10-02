@@ -7,45 +7,40 @@ const path = require('path');
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
  **/
 const nextConfig = {
-  // Use this to set Nx-specific options
-  // See: https://nx.dev/recipes/next/next-config-setup
+  // Nx-specific options
   nx: {
     svgr: false,
   },
-  // Use 'export' to skip SSR and avoid Next.js 15 static generation issues
-  output: 'export',
+
+  // Enable React Strict Mode for better development experience
   reactStrictMode: true,
+
+  // ESLint configuration
   eslint: {
     ignoreDuringBuilds: true,
   },
+
+  // Output file tracing for monorepo support
   outputFileTracingRoot: path.join(__dirname, '../../'),
-  
-  // Temporarily disable static page generation for error pages to work around Next.js 15 Html import issue
-  trailingSlash: false,
-  
-  // Skip generating static error pages due to Next.js 15 issue
-  generateBuildId: async () => {
-    return 'build-' + Date.now();
-  },
-  
-  // Image configuration for SVG support
+
+  // Image optimization configuration
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
   },
-  
-  // Skip problematic pages during builds to avoid Next.js 15 Html import issues
-  ...(process.env.NODE_ENV === 'production' && {
-    skipTrailingSlashRedirect: true,
-    skipMiddlewareUrlNormalize: true,
-    // exportPathMap is not compatible with app directory
-    // Use generateStaticParams in page components instead
-    experimental: {
-      optimizePackageImports: ['lucide-react'],
-    },
-  }),
-  
+
+  // Experimental features for Next.js 15
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts'],
+  },
+
   // Webpack configuration for SVGR
   webpack(config) {
     config.module.rules.push({

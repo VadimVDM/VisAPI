@@ -8,9 +8,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@visapi/frontend-data': path.resolve(__dirname, '../../libs/frontend/data-access/src/index.ts'),
-      '@visapi/shared-types': path.resolve(__dirname, '../../libs/shared/types/src/index.ts'),
-      '@visapi/shared-utils': path.resolve(__dirname, '../../libs/shared/utils/src/index.ts'),
+      '@visapi/frontend-data': path.resolve(
+        __dirname,
+        '../../libs/frontend/data-access/src/index.ts',
+      ),
+      '@visapi/shared-types': path.resolve(
+        __dirname,
+        '../../libs/shared/types/src/index.ts',
+      ),
+      '@visapi/shared-utils': path.resolve(
+        __dirname,
+        '../../libs/shared/utils/src/index.ts',
+      ),
     },
   },
   test: {
