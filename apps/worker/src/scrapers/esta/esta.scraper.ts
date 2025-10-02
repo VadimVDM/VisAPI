@@ -464,6 +464,11 @@ export class EstaScraper extends BaseScraper {
         // This is the most reliable way to find v3 action
         const pageSource = document.documentElement.outerHTML;
 
+        // Debug: Check if grecaptcha code exists at all
+        const hasGrecaptchaCode = pageSource.includes('grecaptcha');
+        const hasExecuteCode = pageSource.includes('.execute');
+        console.debug(`[reCAPTCHA] Page source check: has 'grecaptcha'=${hasGrecaptchaCode}, has '.execute'=${hasExecuteCode}`);
+
         // Pattern 1: grecaptcha.enterprise.execute('sitekey', {action: 'value'})
         const enterpriseExecutePattern = /grecaptcha\.enterprise\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
         const enterpriseMatch = pageSource.match(enterpriseExecutePattern);
@@ -484,6 +489,16 @@ export class EstaScraper extends BaseScraper {
             result.action = executeMatch[2];
             result.isV3 = true;
             console.debug(`[reCAPTCHA] Found v3 via execute call: action=${result.action}`);
+          }
+        }
+
+        // Pattern 3: Try simpler patterns for action in options
+        if (!result.action) {
+          const simpleActionPattern = /action\s*:\s*['"]([^'"]+)['"]/;
+          const actionMatch = pageSource.match(simpleActionPattern);
+          if (actionMatch) {
+            result.action = actionMatch[1];
+            console.debug(`[reCAPTCHA] Found action via simple pattern: ${result.action}`);
           }
         }
 
@@ -627,6 +642,13 @@ export class EstaScraper extends BaseScraper {
 
         if (!result.siteKey) {
           return null;
+        }
+
+        // Fallback: If v3 detected but no action found, use common default
+        // Government forms typically use 'verify', 'submit', or 'homepage'
+        if (result.isV3 && !result.action) {
+          result.action = 'verify'; // Most common action for government forms
+          console.debug(`[reCAPTCHA] No action found in source, using fallback: ${result.action}`);
         }
 
         return {
