@@ -694,13 +694,33 @@ export class EstaScraper extends BaseScraper {
               const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
               if (grecaptcha['enterprise'] && typeof grecaptcha['enterprise'] === 'object') {
                 const enterprise = grecaptcha['enterprise'] as Record<string, unknown>;
-                enterprise['execute'] = () => Promise.resolve(response);
+
+                // Patch to return our token
+                enterprise['execute'] = () => {
+                  console.debug('[reCAPTCHA] grecaptcha.enterprise.execute() called, returning 2captcha token');
+                  return Promise.resolve(response);
+                };
+
+                // Also patch ready() to ensure our token is used
+                if (typeof enterprise['ready'] === 'function') {
+                  const originalReady = enterprise['ready'] as (callback: () => void) => void;
+                  enterprise['ready'] = (callback: () => void) => {
+                    originalReady(() => {
+                      console.debug('[reCAPTCHA] grecaptcha.enterprise.ready() callback triggered');
+                      callback();
+                    });
+                  };
+                }
+
                 console.debug('[reCAPTCHA] Patched grecaptcha.enterprise.execute to return 2captcha token');
               }
             } else if (w['grecaptcha'] && typeof w['grecaptcha'] === 'object') {
               // Patch regular grecaptcha.execute for non-enterprise v3
               const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
-              grecaptcha['execute'] = () => Promise.resolve(response);
+              grecaptcha['execute'] = () => {
+                console.debug('[reCAPTCHA] grecaptcha.execute() called, returning 2captcha token');
+                return Promise.resolve(response);
+              };
               console.debug('[reCAPTCHA] Patched grecaptcha.execute to return 2captcha token');
             }
           }
