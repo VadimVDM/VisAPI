@@ -372,7 +372,7 @@ export class ScraperService {
       size: job.file_size,
       downloadedAt: job.downloaded_at,
       duration: job.duration_ms,
-      error: job.error_message,
+      errorMessage: job.error_message,
       errorCode: job.error_code,
       shouldRetry: job.should_retry,
       retryAfter: job.retry_after,

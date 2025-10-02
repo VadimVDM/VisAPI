@@ -9,7 +9,13 @@ export class ScraperJobResponseDto {
   scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta';
 
   /** Current job status */
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'not_found' | 'retry';
+  status:
+    | 'pending'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'not_found'
+    | 'retry';
 
   /** Message describing the job */
   message: string;
@@ -35,7 +41,13 @@ export class ScraperJobStatusDto {
   scraperType: 'esta' | 'vietnam-evisa' | 'korea-keta';
 
   /** Current status */
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'not_found' | 'retry';
+  status:
+    | 'pending'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'not_found'
+    | 'retry';
 
   /** Document URL if completed */
   documentUrl?: string;
@@ -56,7 +68,7 @@ export class ScraperJobStatusDto {
   duration?: number;
 
   /** Error message if failed */
-  error?: string;
+  errorMessage?: string;
 
   /** Error code if failed */
   errorCode?: string;
