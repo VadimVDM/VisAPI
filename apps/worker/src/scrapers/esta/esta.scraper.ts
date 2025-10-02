@@ -84,7 +84,8 @@ export class EstaScraper extends BaseScraper {
     try {
       // Step 1: Navigate to ESTA homepage
       this.logger.log('[ESTA] Navigating to homepage...');
-      await this.navigateTo('https://esta.cbp.dhs.gov/esta', 'networkidle');
+      await this.navigateTo('https://esta.cbp.dhs.gov/esta', 'load');
+      await this.page.waitForTimeout(2000); // Wait for JS to initialize
       await this.captureScreenshot('esta-01-homepage');
 
       // Step 2: Close mobile app popup if present
