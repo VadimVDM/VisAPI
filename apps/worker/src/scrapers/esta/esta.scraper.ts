@@ -110,8 +110,9 @@ export class EstaScraper extends BaseScraper {
       if (!currentUrl.includes('individualStatusLookup')) {
         this.logger.log('[ESTA] Redirected to home, retrying navigation...');
 
-        // Reload page to get fresh state
-        await this.page.reload({ waitUntil: 'networkidle' });
+        // Reload page to get fresh state (use 'load' instead of 'networkidle' to avoid timeout)
+        await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+        await this.page.waitForTimeout(2000); // Extra wait for JS to initialize
         await this.captureScreenshot('esta-02-after-reload');
 
         // Close mobile app popup again if present
