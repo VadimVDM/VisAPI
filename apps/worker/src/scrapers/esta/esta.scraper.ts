@@ -209,10 +209,14 @@ export class EstaScraper extends BaseScraper {
         );
 
         // Check if there's a validation or error message on the page
-        const errorMessage: string | null = await this.page
-          .locator('[role="alert"], .error, .alert-danger')
-          .textContent()
-          .catch(() => null);
+        let errorMessage: string | null = null;
+        try {
+          errorMessage = await this.page
+            .locator('[role="alert"], .error, .alert-danger')
+            .textContent();
+        } catch {
+          // Ignore error if element not found
+        }
         if (errorMessage) {
           this.logger.error(`[ESTA] Page error message: ${errorMessage}`);
         }
