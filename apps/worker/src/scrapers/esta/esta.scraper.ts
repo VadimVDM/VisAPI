@@ -24,6 +24,7 @@ type RecaptchaInfo = {
   action: string | null;
   isEnterprise: boolean;
   isInvisible: boolean;
+  isV3: boolean;
   dataS: string | null;
   clientKey: string | null;
 };
@@ -143,8 +144,27 @@ export class EstaScraper extends BaseScraper {
       // Step 9: Wait for reCAPTCHA to load (invisible captcha loads after form interaction)
       this.logger.log('[ESTA] Waiting for reCAPTCHA to load...');
 
-      // First, wait for the reCAPTCHA iframe to appear in the DOM
+      // First, try to wait for iframe (optional - may not exist for v3/Enterprise programmatic mode)
       await this.waitForRecaptchaIframe();
+
+      // Wait for grecaptcha.enterprise global to be available (required for v3/Enterprise)
+      this.logger.log('[ESTA] Waiting for grecaptcha.enterprise API to load...');
+      await this.page.waitForFunction(
+        () => {
+          const w = window as typeof window & {
+            grecaptcha?: Record<string, unknown>;
+            ___grecaptcha_cfg?: unknown;
+          };
+          return (
+            (w.grecaptcha && 'enterprise' in w.grecaptcha) ||
+            typeof w.___grecaptcha_cfg !== 'undefined'
+          );
+        },
+        { timeout: 30000 }
+      ).catch((error: unknown) => {
+        const { message } = this.describeError(error);
+        this.logger.warn(`[ESTA] grecaptcha.enterprise API not detected: ${message}`);
+      });
 
       // Then try to detect full reCAPTCHA configuration over time
       // Use extended polling for production proxy environments
@@ -155,7 +175,7 @@ export class EstaScraper extends BaseScraper {
         const recaptchaInfo = await this.detectRecaptchaInfo();
         if (recaptchaInfo) {
           this.logger.log(`[ESTA] reCAPTCHA detected after ${(attempt + 1) * 500}ms`);
-          this.logger.log(`[ESTA] reCAPTCHA details: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}..., enterprise=${recaptchaInfo.isEnterprise}, invisible=${recaptchaInfo.isInvisible}`);
+          this.logger.log(`[ESTA] reCAPTCHA details: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}..., version=${recaptchaInfo.isV3 ? 'v3' : 'v2'}, enterprise=${recaptchaInfo.isEnterprise}, invisible=${recaptchaInfo.isInvisible}`);
           recaptchaDetected = true;
           break;
         }
@@ -386,7 +406,7 @@ export class EstaScraper extends BaseScraper {
     }
 
     this.logger.log(
-      `[ESTA] reCAPTCHA detected (enterprise=${recaptchaInfo.isEnterprise}, action=${recaptchaInfo.action ?? 'n/a'}) - requesting solver token`,
+      `[ESTA] reCAPTCHA detected (version=${recaptchaInfo.isV3 ? 'v3' : 'v2'}, enterprise=${recaptchaInfo.isEnterprise}, action=${recaptchaInfo.action ?? 'n/a'}) - requesting solver token`,
     );
 
     try {
@@ -399,6 +419,8 @@ export class EstaScraper extends BaseScraper {
         enterprise: recaptchaInfo.isEnterprise,
         dataS: recaptchaInfo.dataS,
         userAgent,
+        // For v3, request score of 0.7 (government sites typically require decent scores)
+        minScore: recaptchaInfo.isV3 ? 0.7 : undefined,
       });
 
       await this.injectRecaptchaToken(token, recaptchaInfo);
@@ -433,6 +455,7 @@ export class EstaScraper extends BaseScraper {
           action: null as string | null,
           isEnterprise: false,
           isInvisible: true,
+          isV3: false,
           dataS: null as string | null,
           clientKey: null as string | null,
         };
@@ -479,13 +502,38 @@ export class EstaScraper extends BaseScraper {
           }
         }
 
-        const enterpriseScript = Array.from(
-          document.querySelectorAll('script[src*="recaptcha"]'),
-        ).some((node) => node.getAttribute('src')?.includes('/enterprise'));
-        if (enterpriseScript) {
-          result.isEnterprise = true;
+        // Method 3: Check for reCAPTCHA script tags and extract from render= parameter
+        // This handles programmatic v3/Enterprise reCAPTCHA that doesn't create iframes
+        const scriptElements = Array.from(
+          document.querySelectorAll<HTMLScriptElement>('script[src*="recaptcha"]'),
+        );
+        for (const scriptNode of scriptElements) {
+          const src = scriptNode.getAttribute('src');
+          if (!src) continue;
+
+          try {
+            const url = new URL(src, window.location.origin);
+
+            // Check for enterprise mode
+            if (url.pathname.includes('/enterprise')) {
+              result.isEnterprise = true;
+            }
+
+            // Extract site key from render= parameter (used in v3/Enterprise programmatic mode)
+            if (!result.siteKey) {
+              const renderParam = url.searchParams.get('render');
+              if (renderParam && renderParam !== 'explicit') {
+                result.siteKey = renderParam;
+                result.isV3 = true; // render= parameter indicates v3
+                console.debug(`[reCAPTCHA] v3 site key extracted from script render parameter: ${renderParam}`);
+              }
+            }
+          } catch (error) {
+            console.debug('Failed to parse reCAPTCHA script URL', error);
+          }
         }
 
+        // Method 4: Check window.___grecaptcha_cfg configuration object
         const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig })
           .___grecaptcha_cfg;
         if (cfg?.clients) {
@@ -494,6 +542,12 @@ export class EstaScraper extends BaseScraper {
           for (const [key, client] of entries) {
             if (!result.clientKey) {
               result.clientKey = key;
+            }
+
+            // Detect v3 by client ID (>= 100000 indicates v3)
+            const clientId = parseInt(key, 10);
+            if (!isNaN(clientId) && clientId >= 100000) {
+              result.isV3 = true;
             }
 
             const candidateSiteKey =
@@ -553,6 +607,7 @@ export class EstaScraper extends BaseScraper {
           action: result.action,
           isEnterprise: result.isEnterprise,
           isInvisible: result.isInvisible,
+          isV3: result.isV3,
           dataS: result.dataS,
           clientKey: result.clientKey,
         };

@@ -23,9 +23,11 @@ export interface RecaptchaSolveOptions {
 export interface TwoCaptchaRecaptchaOptions {
   pageurl: string;
   googlekey: string;
+  version?: 'v2' | 'v3';
   enterprise?: number;
   invisible?: number;
   action?: string;
+  score?: number;
   data_s?: string;
   proxy?: string;
   proxytype?: string;
@@ -317,13 +319,22 @@ export class CaptchaSolverService {
         googlekey: options.siteKey,
       };
 
+      // Detect version based on minScore parameter (v3 requires score)
+      // If minScore is set, it's v3, otherwise assume v2
+      if (options.minScore) {
+        recaptchaOptions.version = 'v3';
+        recaptchaOptions.score = options.minScore;
+        this.logger.log(`[2Captcha] Using reCAPTCHA v3 with minScore ${options.minScore}`);
+      }
+
       // Add enterprise flag if needed
       if (options.enterprise) {
         recaptchaOptions.enterprise = 1;
       }
 
       // Add invisible flag if needed (2Captcha expects 1 for invisible)
-      if (options.invisible) {
+      // Note: invisible flag is only for v2, v3 is always "invisible"
+      if (options.invisible && !options.minScore) {
         recaptchaOptions.invisible = 1;
       }
 
