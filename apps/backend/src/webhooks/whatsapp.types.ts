@@ -1,4 +1,3 @@
-
 export interface WhatsAppWebhookPayload {
   object: string;
   entry: WhatsAppEntry[];
@@ -10,7 +9,11 @@ export interface WhatsAppEntry {
 }
 
 export interface WhatsAppChange {
-  field: 'messages' | 'message_template_status_update' | 'account_update' | 'business_capability_update';
+  field:
+    | 'messages'
+    | 'message_template_status_update'
+    | 'account_update'
+    | 'business_capability_update';
   value: WhatsAppValue;
 }
 
@@ -51,7 +54,15 @@ export interface WhatsAppMessage {
   text?: {
     body: string;
   };
-  type: 'text' | 'image' | 'document' | 'audio' | 'video' | 'sticker' | 'reaction' | 'unknown';
+  type:
+    | 'text'
+    | 'image'
+    | 'document'
+    | 'audio'
+    | 'video'
+    | 'sticker'
+    | 'reaction'
+    | 'unknown';
   // Other message types can be added here
 }
 
@@ -81,22 +92,22 @@ export interface WhatsAppPricing {
 }
 
 export interface TemplateStatusUpdate {
-    message_template_name: string;
-    message_template_language: string;
-    event: 'APPROVED' | 'REJECTED' | 'PENDING';
-    reason?: string;
+  message_template_name: string;
+  message_template_language: string;
+  event: 'APPROVED' | 'REJECTED' | 'PENDING';
+  reason?: string;
 }
 
 export interface AccountUpdate {
-    ban_info?: {
-        waba_ban_state: string;
-        waba_ban_date: string;
-    };
+  ban_info?: {
+    waba_ban_state: string;
+    waba_ban_date: string;
+  };
 }
 
 export interface BusinessCapabilityUpdate {
-    max_daily_conversation_per_phone?: number;
-    max_phone_numbers_per_business?: number;
+  max_daily_conversation_per_phone?: number;
+  max_phone_numbers_per_business?: number;
 }
 
 export interface EnhancedMessageStatus {
@@ -105,7 +116,10 @@ export interface EnhancedMessageStatus {
   timestamp: Date;
   recipient: string;
   conversationId?: string;
-  conversationCategory?: 'user_initiated' | 'business_initiated' | 'referral_conversion';
+  conversationCategory?:
+    | 'user_initiated'
+    | 'business_initiated'
+    | 'referral_conversion';
   pricingModel?: 'CBP';
   isBillable?: boolean;
   error?: WhatsAppError;

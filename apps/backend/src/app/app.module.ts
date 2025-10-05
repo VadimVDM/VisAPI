@@ -9,6 +9,7 @@ import { QueueModule } from '../queue/queue.module';
 import { HealthModule } from '../health/health.module';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { ViziWebhooksModule } from '../webhooks/vizi/vizi-webhooks.module';
+import { VisanetWebhooksModule } from '../webhooks/visanet/visanet-webhooks.module';
 import { AdminModule } from '../admin/admin.module';
 import { CronModule } from '../cron/cron.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -155,6 +156,7 @@ if (sentryConfig.dsn) {
     HealthModule,
     ApiKeysModule,
     ViziWebhooksModule,
+    VisanetWebhooksModule,
     AdminModule,
     CronModule,
     WorkflowsModule,

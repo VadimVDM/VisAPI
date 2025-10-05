@@ -226,6 +226,7 @@ Modern layered architecture with enterprise design patterns:
 ✅ **Duplicate Prevention**: Prevents duplicate CBB contacts from phone format issues
 
 **Service Architecture**
+
 - **Vizi**: Split into focused services for webhooks, workflows, and admin operations
 - **CBB**: Orchestrator delegates to specialized contact sync and WhatsApp services
 - **Phone Processing**: Universal normalization at webhook transformation layer

@@ -23,10 +23,12 @@ export class VietnamEvisaScraper extends BaseScraper {
 
   protected async executeScrape(
     jobData: ScraperJobData,
-    options: ScraperOptions
+    options: ScraperOptions,
   ): Promise<ScraperJobResult> {
     this.logger.log(`[Vietnam eVisa] Starting scrape for job ${jobData.jobId}`);
-    this.logger.log(`[Vietnam eVisa] Credentials: ${JSON.stringify(jobData.credentials)}`);
+    this.logger.log(
+      `[Vietnam eVisa] Credentials: ${JSON.stringify(jobData.credentials)}`,
+    );
 
     // TODO: Replace this placeholder with actual scraping logic
     // Steps typically include:
@@ -41,7 +43,10 @@ export class VietnamEvisaScraper extends BaseScraper {
 
     try {
       // PLACEHOLDER: Navigate to Vietnam eVisa website
-      await this.navigateTo('https://evisa.xuatnhapcanh.gov.vn/', 'networkidle');
+      await this.navigateTo(
+        'https://evisa.xuatnhapcanh.gov.vn/',
+        'networkidle',
+      );
       await this.captureScreenshot('vietnam-homepage');
 
       // PLACEHOLDER: For now, return not_found to indicate document not ready
@@ -49,7 +54,7 @@ export class VietnamEvisaScraper extends BaseScraper {
       return this.createNotFoundResult(
         jobData,
         'Vietnam eVisa scraper not yet implemented - waiting for scraping logic from Ubuntu server',
-        new Date(Date.now() + 3600000).toISOString() // Retry in 1 hour
+        new Date(Date.now() + 3600000).toISOString(), // Retry in 1 hour
       );
 
       /*
@@ -95,7 +100,10 @@ export class VietnamEvisaScraper extends BaseScraper {
       );
       */
     } catch (error) {
-      this.logger.error(`[Vietnam eVisa] Scrape failed for job ${jobData.jobId}:`, error);
+      this.logger.error(
+        `[Vietnam eVisa] Scrape failed for job ${jobData.jobId}:`,
+        error,
+      );
       return this.createErrorResult(jobData, error, options);
     }
   }

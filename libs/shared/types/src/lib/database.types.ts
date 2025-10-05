@@ -61,6 +61,81 @@ export type Database = {
           },
         ]
       }
+      applicant_issues: {
+        Row: {
+          applicant_email: string | null
+          applicant_id: string
+          applicant_metadata: Json | null
+          applicant_name: string | null
+          applicant_phone: string | null
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          issues: Json
+          metadata: Json | null
+          order_id: string | null
+          processed_at: string | null
+          retry_count: number | null
+          status: string
+          updated_at: string | null
+          whatsapp_contact_id: string | null
+          whatsapp_correlation_id: string | null
+          whatsapp_message_id: string | null
+          whatsapp_notification_sent: boolean | null
+          whatsapp_notification_sent_at: string | null
+          whatsapp_template_used: string | null
+        }
+        Insert: {
+          applicant_email?: string | null
+          applicant_id: string
+          applicant_metadata?: Json | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          issues: Json
+          metadata?: Json | null
+          order_id?: string | null
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
+          updated_at?: string | null
+          whatsapp_contact_id?: string | null
+          whatsapp_correlation_id?: string | null
+          whatsapp_message_id?: string | null
+          whatsapp_notification_sent?: boolean | null
+          whatsapp_notification_sent_at?: string | null
+          whatsapp_template_used?: string | null
+        }
+        Update: {
+          applicant_email?: string | null
+          applicant_id?: string
+          applicant_metadata?: Json | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          issues?: Json
+          metadata?: Json | null
+          order_id?: string | null
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
+          updated_at?: string | null
+          whatsapp_contact_id?: string | null
+          whatsapp_correlation_id?: string | null
+          whatsapp_message_id?: string | null
+          whatsapp_notification_sent?: boolean | null
+          whatsapp_notification_sent_at?: string | null
+          whatsapp_template_used?: string | null
+        }
+        Relationships: []
+      }
       cbb_contacts: {
         Row: {
           alerts_enabled: boolean | null

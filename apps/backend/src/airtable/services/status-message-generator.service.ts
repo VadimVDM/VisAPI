@@ -44,39 +44,50 @@ export class StatusMessageGeneratorService {
   ) {
     // Initialize message templates for different statuses
     this.statusTemplates = new Map([
-      ['active', {
-        check: (status: string) => status?.toLowerCase().includes('active'),
-        generate: (ctx: MessageContext) => [
-          '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳',
-          '',
-          `בקשתכם עבור ${ctx.visaTypeHebrew} ל${ctx.countryHebrew} הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות ב${ctx.countryHebrew} ${ctx.countryFlag}`,
-          '',
-          `בדרך כלל התהליך נמשך עד ${ctx.processingDays} ימי עסקים.`,
-          '',
-          'נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.',
-        ],
-      }],
+      [
+        'active',
+        {
+          check: (status: string) => status?.toLowerCase().includes('active'),
+          generate: (ctx: MessageContext) => [
+            '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳',
+            '',
+            `בקשתכם עבור ${ctx.visaTypeHebrew} ל${ctx.countryHebrew} הוגשה בהצלחה ונמצאת כעת בטיפול מול הרשויות הממשלתיות ב${ctx.countryHebrew} ${ctx.countryFlag}`,
+            '',
+            `בדרך כלל התהליך נמשך עד ${ctx.processingDays} ימי עסקים.`,
+            '',
+            'נעדכן אתכם כאן בוואטסאפ ובמייל מיד עם קבלת האישור.',
+          ],
+        },
+      ],
       // Add more status templates here in the future
-      ['processing', {
-        check: (status: string) => status?.toLowerCase().includes('processing'),
-        generate: (ctx: MessageContext) => [
-          '*סטטוס עדכני: בקשתכם בטיפול* 🔄',
-          '',
-          `הבקשה שלכם ל${ctx.visaTypeHebrew} ל${ctx.countryHebrew} נמצאת כעת בטיפול פעיל ${ctx.countryFlag}`,
-          '',
-          'נעדכן אתכם ברגע שיהיה עדכון נוסף.',
-        ],
-      }],
-      ['completed', {
-        check: (status: string) => status?.toLowerCase().includes('completed'),
-        generate: (ctx: MessageContext) => [
-          '*סטטוס עדכני: הבקשה אושרה!* ✅',
-          '',
-          `ה${ctx.visaTypeHebrew} שלכם ל${ctx.countryHebrew} ${ctx.countryFlag} אושרה בהצלחה!`,
-          '',
-          'המסמכים נשלחו אליכם במייל.',
-        ],
-      }],
+      [
+        'processing',
+        {
+          check: (status: string) =>
+            status?.toLowerCase().includes('processing'),
+          generate: (ctx: MessageContext) => [
+            '*סטטוס עדכני: בקשתכם בטיפול* 🔄',
+            '',
+            `הבקשה שלכם ל${ctx.visaTypeHebrew} ל${ctx.countryHebrew} נמצאת כעת בטיפול פעיל ${ctx.countryFlag}`,
+            '',
+            'נעדכן אתכם ברגע שיהיה עדכון נוסף.',
+          ],
+        },
+      ],
+      [
+        'completed',
+        {
+          check: (status: string) =>
+            status?.toLowerCase().includes('completed'),
+          generate: (ctx: MessageContext) => [
+            '*סטטוס עדכני: הבקשה אושרה!* ✅',
+            '',
+            `ה${ctx.visaTypeHebrew} שלכם ל${ctx.countryHebrew} ${ctx.countryFlag} אושרה בהצלחה!`,
+            '',
+            'המסמכים נשלחו אליכם במייל.',
+          ],
+        },
+      ],
     ]);
   }
 
@@ -130,11 +141,16 @@ export class StatusMessageGeneratorService {
    * Build context object with all necessary translations
    * Implements fallback chain: Airtable → Supabase → 3 days default
    */
-  private async buildMessageContext(fields: OrderFields): Promise<MessageContext> {
+  private async buildMessageContext(
+    fields: OrderFields,
+  ): Promise<MessageContext> {
     // Extract fields with defaults
     // Strip emoji and trim country name (e.g., "India 🇮🇳" -> "India")
     const countryRaw = fields['Country'] || 'Unknown';
-    const country = countryRaw.toString().replace(/\s*[\u{1F1E6}-\u{1F1FF}]+\s*$/gu, '').trim();
+    const country = countryRaw
+      .toString()
+      .replace(/\s*[\u{1F1E6}-\u{1F1FF}]+\s*$/gu, '')
+      .trim();
     const visaType = fields['Type'] || 'Visa';
     const intent = fields['Intent'] || 'Tourism';
     const validity = fields['Validity'] || '30 Days';
@@ -154,23 +170,32 @@ export class StatusMessageGeneratorService {
 
         if (!error && data?.processing_days) {
           processingTime = data.processing_days;
-          this.logger.debug(`Using processing_days from Supabase for ${orderId}: ${processingTime}`);
+          this.logger.debug(
+            `Using processing_days from Supabase for ${orderId}: ${processingTime}`,
+          );
         }
       } catch (error) {
-        this.logger.warn(`Failed to fetch processing_days from Supabase for ${orderId}`, error);
+        this.logger.warn(
+          `Failed to fetch processing_days from Supabase for ${orderId}`,
+          error,
+        );
       }
     }
 
     // Final fallback to 3 days
     if (!processingTime) {
       processingTime = 3;
-      this.logger.debug(`Using default processing time (3 days) for ${orderId}`);
+      this.logger.debug(
+        `Using default processing time (3 days) for ${orderId}`,
+      );
     }
 
     // Get Hebrew translations
     const countryHebrew = this.translationService.getCountryNameHebrew(country);
     // Try to extract flag from original string, or get from translation service
-    const countryFlag = countryRaw.toString().match(/[\u{1F1E6}-\u{1F1FF}]+/gu)?.[0] || this.translationService.getCountryFlag(country);
+    const countryFlag =
+      countryRaw.toString().match(/[\u{1F1E6}-\u{1F1FF}]+/gu)?.[0] ||
+      this.translationService.getCountryFlag(country);
 
     // Get Hebrew visa type
     const visaTypeHebrew = this.translationService.getVisaTypeHebrew(
@@ -182,9 +207,8 @@ export class StatusMessageGeneratorService {
     );
 
     // Get processing days directly (simplified)
-    const processingDays = this.translationService.getProcessingDays(
-      processingTime,
-    );
+    const processingDays =
+      this.translationService.getProcessingDays(processingTime);
 
     return {
       visaTypeHebrew,

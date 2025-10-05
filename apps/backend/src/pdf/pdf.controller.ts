@@ -10,7 +10,12 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PdfService } from './pdf.service';
 import { PdfStatusService } from './services/pdf-status.service';
@@ -31,14 +36,14 @@ export class PdfController {
 
   @Post('generate')
   @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Generate PDF from template or URL',
-    description: 'Queues a PDF generation job and returns job ID for tracking'
+    description: 'Queues a PDF generation job and returns job ID for tracking',
   })
-  @ApiResponse({ 
-    status: HttpStatus.ACCEPTED, 
+  @ApiResponse({
+    status: HttpStatus.ACCEPTED,
     description: 'PDF generation job queued successfully',
-    type: PdfJobResponseDto 
+    type: PdfJobResponseDto,
   })
   async generatePdf(
     @Body(ValidationPipe) dto: GeneratePdfDto,
@@ -56,34 +61,33 @@ export class PdfController {
   }
 
   @Get('status/:jobId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get PDF generation job status',
-    description: 'Returns current status and result of a PDF generation job'
+    description: 'Returns current status and result of a PDF generation job',
   })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Job status retrieved successfully',
-    type: PdfJobStatusDto 
+    type: PdfJobStatusDto,
   })
-  async getJobStatus(
-    @Param('jobId') jobId: string,
-  ): Promise<PdfJobStatusDto> {
+  async getJobStatus(@Param('jobId') jobId: string): Promise<PdfJobStatusDto> {
     return this.pdfStatusService.getJobStatus(jobId);
   }
 
   @Post('generate/batch')
   @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Generate multiple PDFs in batch',
-    description: 'Queues multiple PDF generation jobs and returns job IDs'
+    description: 'Queues multiple PDF generation jobs and returns job IDs',
   })
   async generateBatch(
     @Body(ValidationPipe) dtos: GeneratePdfDto[],
   ): Promise<PdfJobResponseDto[]> {
     const jobs = await this.pdfService.generateBatch(dtos);
-    
-    return jobs.map(job => {
-      const jobId = job.id || job.opts?.jobId || `job-${Date.now()}-${Math.random()}`;
+
+    return jobs.map((job) => {
+      const jobId =
+        job.id || job.opts?.jobId || `job-${Date.now()}-${Math.random()}`;
       return {
         jobId,
         status: 'queued',
@@ -95,9 +99,9 @@ export class PdfController {
   }
 
   @Get('templates')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'List available PDF templates',
-    description: 'Returns list of available PDF templates with their variables'
+    description: 'Returns list of available PDF templates with their variables',
   })
   getTemplates() {
     return this.pdfService.getAvailableTemplates();
@@ -105,9 +109,9 @@ export class PdfController {
 
   @Post('preview')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Preview PDF without saving',
-    description: 'Generates a preview PDF and returns as base64 or URL'
+    description: 'Generates a preview PDF and returns as base64 or URL',
   })
   async previewPdf(
     @Body(ValidationPipe) dto: GeneratePdfDto,

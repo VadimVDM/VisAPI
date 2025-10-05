@@ -10,7 +10,13 @@ export interface ValidationResult {
 @Injectable()
 export class OrderValidatorService {
   private readonly logger = new Logger(OrderValidatorService.name);
-  private static readonly VALID_BRANCHES = new Set(['se', 'co', 'il', 'ru', 'kz']);
+  private static readonly VALID_BRANCHES = new Set([
+    'se',
+    'co',
+    'il',
+    'ru',
+    'kz',
+  ]);
   private static readonly VALID_CURRENCIES = new Set([
     'USD',
     'EUR',
@@ -68,11 +74,17 @@ export class OrderValidatorService {
       warnings.push(`Invalid phone format: ${orderData.client_phone}`);
     }
 
-    if (!OrderValidatorService.VALID_BRANCHES.has(orderData.branch.toLowerCase())) {
+    if (
+      !OrderValidatorService.VALID_BRANCHES.has(orderData.branch.toLowerCase())
+    ) {
       warnings.push(`Unknown branch code: ${orderData.branch}`);
     }
 
-    if (!OrderValidatorService.VALID_CURRENCIES.has(orderData.currency.toUpperCase())) {
+    if (
+      !OrderValidatorService.VALID_CURRENCIES.has(
+        orderData.currency.toUpperCase(),
+      )
+    ) {
       warnings.push(`Unknown currency code: ${orderData.currency}`);
     }
 

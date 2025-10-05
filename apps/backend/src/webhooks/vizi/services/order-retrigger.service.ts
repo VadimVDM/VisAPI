@@ -136,7 +136,8 @@ export class ViziOrderRetriggerService {
 
     if (dto.mode === RetriggerMode.BULK) {
       if (dto.orderIds?.length) {
-        const results: Array<{ orderId: string; webhookData: ViziWebhookDto }> = [];
+        const results: Array<{ orderId: string; webhookData: ViziWebhookDto }> =
+          [];
         for (const orderId of dto.orderIds) {
           const payload = await this.getWebhookDataForOrder(orderId);
           if (payload) {
@@ -183,7 +184,9 @@ export class ViziOrderRetriggerService {
     let dbOrderId: string;
     try {
       dbOrderId = await this.ordersService.createOrder(normalizedPayload);
-      this.logger.log(`Order saved to database: ${orderId} (DB ID: ${dbOrderId})`);
+      this.logger.log(
+        `Order saved to database: ${orderId} (DB ID: ${dbOrderId})`,
+      );
     } catch (error) {
       await this.handleOrderPersistenceError({
         orderId,
@@ -233,7 +236,10 @@ export class ViziOrderRetriggerService {
       'bit',
       'paybox',
     ];
-    if (order?.payment_processor && !validProcessors.includes(order.payment_processor)) {
+    if (
+      order?.payment_processor &&
+      !validProcessors.includes(order.payment_processor)
+    ) {
       this.logger.warn(
         `Invalid payment processor: ${order.payment_processor}, defaulting to stripe`,
       );
@@ -242,7 +248,9 @@ export class ViziOrderRetriggerService {
 
     const validStatuses = ['active', 'completed', 'issue', 'canceled'];
     if (order?.status && !validStatuses.includes(order.status)) {
-      this.logger.warn(`Invalid order status: ${order.status}, defaulting to active`);
+      this.logger.warn(
+        `Invalid order status: ${order.status}, defaulting to active`,
+      );
       order.status = 'active';
     }
 

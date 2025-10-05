@@ -45,7 +45,13 @@ export interface ScraperCredentials {
 export interface ScraperJobRecord {
   job_id: string;
   scraper_type: 'esta' | 'vietnam-evisa' | 'korea-keta';
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'retry' | 'not_found';
+  status:
+    | 'pending'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'retry'
+    | 'not_found';
   document_url?: string;
   signed_url?: string;
   filename?: string;

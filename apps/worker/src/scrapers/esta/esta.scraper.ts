@@ -106,7 +106,9 @@ export class EstaScraper extends BaseScraper {
         if (isGoogleDomain) {
           try {
             // Fetch Google reCAPTCHA scripts directly (bypass BrightData proxy)
-            this.logger.log(`[ESTA] Bypassing proxy for reCAPTCHA: ${url.substring(0, 80)}...`);
+            this.logger.log(
+              `[ESTA] Bypassing proxy for reCAPTCHA: ${url.substring(0, 80)}...`,
+            );
 
             // Use native fetch (no proxy) to get the resource
             const response = await fetch(url, {
@@ -125,10 +127,14 @@ export class EstaScraper extends BaseScraper {
               body: Buffer.from(body),
             });
 
-            this.logger.log(`[ESTA] Successfully bypassed proxy for reCAPTCHA (status: ${response.status})`);
+            this.logger.log(
+              `[ESTA] Successfully bypassed proxy for reCAPTCHA (status: ${response.status})`,
+            );
           } catch (error: unknown) {
             const { message } = this.describeError(error);
-            this.logger.error(`[ESTA] Failed to bypass proxy for reCAPTCHA: ${message}`);
+            this.logger.error(
+              `[ESTA] Failed to bypass proxy for reCAPTCHA: ${message}`,
+            );
             // Fallback to normal routing if bypass fails
             await route.continue();
           }
@@ -203,23 +209,29 @@ export class EstaScraper extends BaseScraper {
       await this.waitForRecaptchaIframe();
 
       // Wait for grecaptcha.enterprise global to be available (required for v3/Enterprise)
-      this.logger.log('[ESTA] Waiting for grecaptcha.enterprise API to load...');
-      await this.page.waitForFunction(
-        () => {
-          const w = window as typeof window & {
-            grecaptcha?: Record<string, unknown>;
-            ___grecaptcha_cfg?: unknown;
-          };
-          return (
-            (w.grecaptcha && 'enterprise' in w.grecaptcha) ||
-            typeof w.___grecaptcha_cfg !== 'undefined'
+      this.logger.log(
+        '[ESTA] Waiting for grecaptcha.enterprise API to load...',
+      );
+      await this.page
+        .waitForFunction(
+          () => {
+            const w = window as typeof window & {
+              grecaptcha?: Record<string, unknown>;
+              ___grecaptcha_cfg?: unknown;
+            };
+            return (
+              (w.grecaptcha && 'enterprise' in w.grecaptcha) ||
+              typeof w.___grecaptcha_cfg !== 'undefined'
+            );
+          },
+          { timeout: 30000 },
+        )
+        .catch((error: unknown) => {
+          const { message } = this.describeError(error);
+          this.logger.warn(
+            `[ESTA] grecaptcha.enterprise API not detected: ${message}`,
           );
-        },
-        { timeout: 30000 }
-      ).catch((error: unknown) => {
-        const { message } = this.describeError(error);
-        this.logger.warn(`[ESTA] grecaptcha.enterprise API not detected: ${message}`);
-      });
+        });
 
       // Then try to detect full reCAPTCHA configuration over time
       // Use extended polling for production proxy environments
@@ -229,22 +241,32 @@ export class EstaScraper extends BaseScraper {
         await this.page.waitForTimeout(500);
         const recaptchaInfo = await this.detectRecaptchaInfo();
         if (recaptchaInfo) {
-          this.logger.log(`[ESTA] reCAPTCHA detected after ${(attempt + 1) * 500}ms`);
-          this.logger.log(`[ESTA] reCAPTCHA details: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}..., version=${recaptchaInfo.isV3 ? 'v3' : 'v2'}, enterprise=${recaptchaInfo.isEnterprise}, invisible=${recaptchaInfo.isInvisible}`);
+          this.logger.log(
+            `[ESTA] reCAPTCHA detected after ${(attempt + 1) * 500}ms`,
+          );
+          this.logger.log(
+            `[ESTA] reCAPTCHA details: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}..., version=${recaptchaInfo.isV3 ? 'v3' : 'v2'}, enterprise=${recaptchaInfo.isEnterprise}, invisible=${recaptchaInfo.isInvisible}`,
+          );
           recaptchaDetected = true;
           break;
         }
       }
 
       if (!recaptchaDetected) {
-        this.logger.warn(`[ESTA] No reCAPTCHA configuration detected after ${maxAttempts * 0.5} seconds - form submission may fail`);
+        this.logger.warn(
+          `[ESTA] No reCAPTCHA configuration detected after ${maxAttempts * 0.5} seconds - form submission may fail`,
+        );
         // Log additional debugging information
         const scriptTags = await this.page.evaluate(() => {
-          return Array.from(document.querySelectorAll('script[src*="recaptcha"], script[src*="gstatic"]')).map(
-            (script) => (script as HTMLScriptElement).src
-          );
+          return Array.from(
+            document.querySelectorAll(
+              'script[src*="recaptcha"], script[src*="gstatic"]',
+            ),
+          ).map((script) => (script as HTMLScriptElement).src);
         });
-        this.logger.warn(`[ESTA] reCAPTCHA-related scripts on page: ${scriptTags.length > 0 ? scriptTags.join(', ') : 'none found'}`);
+        this.logger.warn(
+          `[ESTA] reCAPTCHA-related scripts on page: ${scriptTags.length > 0 ? scriptTags.join(', ') : 'none found'}`,
+        );
       }
 
       // Step 10: Solve reCAPTCHA (if present) and prepare for submission
@@ -261,10 +283,16 @@ export class EstaScraper extends BaseScraper {
       );
 
       if (!isEnabled) {
-        this.logger.warn('[ESTA] Submit button is disabled - checking for validation errors');
-        const validationErrors = await this.page.locator('[role="alert"], .error, .validation-error, .field-error').allTextContents();
+        this.logger.warn(
+          '[ESTA] Submit button is disabled - checking for validation errors',
+        );
+        const validationErrors = await this.page
+          .locator('[role="alert"], .error, .validation-error, .field-error')
+          .allTextContents();
         if (validationErrors.length > 0) {
-          this.logger.error(`[ESTA] Validation errors found: ${validationErrors.join(', ')}`);
+          this.logger.error(
+            `[ESTA] Validation errors found: ${validationErrors.join(', ')}`,
+          );
         }
       }
 
@@ -415,7 +443,10 @@ export class EstaScraper extends BaseScraper {
       );
     } catch (error: unknown) {
       const { message, stack } = this.describeError(error);
-      this.logger.error(`[ESTA] Scrape failed for job ${jobData.jobId}: ${message}`, stack);
+      this.logger.error(
+        `[ESTA] Scrape failed for job ${jobData.jobId}: ${message}`,
+        stack,
+      );
       return this.createErrorResult(jobData, error, options);
     }
   }
@@ -522,28 +553,36 @@ export class EstaScraper extends BaseScraper {
         // Debug: Check if grecaptcha code exists at all
         const hasGrecaptchaCode = pageSource.includes('grecaptcha');
         const hasExecuteCode = pageSource.includes('.execute');
-        console.debug(`[reCAPTCHA] Page source check: has 'grecaptcha'=${hasGrecaptchaCode}, has '.execute'=${hasExecuteCode}`);
+        console.debug(
+          `[reCAPTCHA] Page source check: has 'grecaptcha'=${hasGrecaptchaCode}, has '.execute'=${hasExecuteCode}`,
+        );
 
         // Pattern 1: grecaptcha.enterprise.execute('sitekey', {action: 'value'})
-        const enterpriseExecutePattern = /grecaptcha\.enterprise\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
+        const enterpriseExecutePattern =
+          /grecaptcha\.enterprise\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
         const enterpriseMatch = pageSource.match(enterpriseExecutePattern);
         if (enterpriseMatch) {
           result.siteKey = enterpriseMatch[1];
           result.action = enterpriseMatch[2];
           result.isEnterprise = true;
           result.isV3 = true;
-          console.debug(`[reCAPTCHA] Found v3 Enterprise via execute call: action=${result.action}`);
+          console.debug(
+            `[reCAPTCHA] Found v3 Enterprise via execute call: action=${result.action}`,
+          );
         }
 
         // Pattern 2: grecaptcha.execute('sitekey', {action: 'value'})
         if (!result.action) {
-          const executePattern = /grecaptcha\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
+          const executePattern =
+            /grecaptcha\.execute\s*\(\s*['"]([^'"]+)['"]\s*,\s*\{[^}]*action\s*:\s*['"]([^'"]+)['"]/;
           const executeMatch = pageSource.match(executePattern);
           if (executeMatch) {
             if (!result.siteKey) result.siteKey = executeMatch[1];
             result.action = executeMatch[2];
             result.isV3 = true;
-            console.debug(`[reCAPTCHA] Found v3 via execute call: action=${result.action}`);
+            console.debug(
+              `[reCAPTCHA] Found v3 via execute call: action=${result.action}`,
+            );
           }
         }
 
@@ -553,14 +592,14 @@ export class EstaScraper extends BaseScraper {
           const actionMatch = pageSource.match(simpleActionPattern);
           if (actionMatch) {
             result.action = actionMatch[1];
-            console.debug(`[reCAPTCHA] Found action via simple pattern: ${result.action}`);
+            console.debug(
+              `[reCAPTCHA] Found action via simple pattern: ${result.action}`,
+            );
           }
         }
 
         // Method 1: Check for widget with data-sitekey attribute
-        const widget = document.querySelector(
-          '[data-sitekey]',
-        );
+        const widget = document.querySelector('[data-sitekey]');
         if (widget) {
           result.siteKey = widget.getAttribute('data-sitekey');
           result.action = widget.getAttribute('data-action');
@@ -602,7 +641,9 @@ export class EstaScraper extends BaseScraper {
         // Method 3: Check for reCAPTCHA script tags and extract from render= parameter
         // This handles programmatic v3/Enterprise reCAPTCHA that doesn't create iframes
         const scriptElements = Array.from(
-          document.querySelectorAll<HTMLScriptElement>('script[src*="recaptcha"]'),
+          document.querySelectorAll<HTMLScriptElement>(
+            'script[src*="recaptcha"]',
+          ),
         );
         for (const scriptNode of scriptElements) {
           const src = scriptNode.getAttribute('src');
@@ -622,7 +663,9 @@ export class EstaScraper extends BaseScraper {
               if (renderParam && renderParam !== 'explicit') {
                 result.siteKey = renderParam;
                 result.isV3 = true; // render= parameter indicates v3
-                console.debug(`[reCAPTCHA] v3 site key extracted from script render parameter: ${renderParam}`);
+                console.debug(
+                  `[reCAPTCHA] v3 site key extracted from script render parameter: ${renderParam}`,
+                );
               }
             }
           } catch (error) {
@@ -631,8 +674,9 @@ export class EstaScraper extends BaseScraper {
         }
 
         // Method 4: Check window.___grecaptcha_cfg configuration object
-        const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig })
-          .___grecaptcha_cfg;
+        const cfg = (
+          window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig }
+        ).___grecaptcha_cfg;
         if (cfg?.clients) {
           const entries = Object.entries(cfg.clients);
 
@@ -703,7 +747,9 @@ export class EstaScraper extends BaseScraper {
         // Government forms typically use 'verify', 'submit', or 'homepage'
         if (result.isV3 && !result.action) {
           result.action = 'verify'; // Most common action for government forms
-          console.debug(`[reCAPTCHA] No action found in source, using fallback: ${result.action}`);
+          console.debug(
+            `[reCAPTCHA] No action found in source, using fallback: ${result.action}`,
+          );
         }
 
         return {
@@ -738,7 +784,9 @@ export class EstaScraper extends BaseScraper {
           // v3 doesn't use hidden textareas, it calls callbacks directly
           if (isV3) {
             // Set window.__recaptcha_token for any code that might read it
-            (window as typeof window & { __recaptcha_token?: string }).__recaptcha_token = response;
+            (
+              window as typeof window & { __recaptcha_token?: string }
+            ).__recaptcha_token = response;
 
             // For v3, we need to make grecaptcha.enterprise.execute() return our token
             // Use bracket notation to avoid TypeScript unsafe member access errors
@@ -746,42 +794,77 @@ export class EstaScraper extends BaseScraper {
 
             // DEBUG: Check what actually exists
             const hasGrecaptcha = typeof w['grecaptcha'] !== 'undefined';
-            const hasGrecaptchaEnterprise = hasGrecaptcha && typeof (w['grecaptcha'] as Record<string, unknown>)['enterprise'] !== 'undefined';
+            const hasGrecaptchaEnterprise =
+              hasGrecaptcha &&
+              typeof (w['grecaptcha'] as Record<string, unknown>)[
+                'enterprise'
+              ] !== 'undefined';
             const hasCfg = typeof w['___grecaptcha_cfg'] !== 'undefined';
-            console.log(`[reCAPTCHA DEBUG] grecaptcha=${hasGrecaptcha}, enterprise=${hasGrecaptchaEnterprise}, cfg=${hasCfg}`);
+            console.log(
+              `[reCAPTCHA DEBUG] grecaptcha=${hasGrecaptcha}, enterprise=${hasGrecaptchaEnterprise}, cfg=${hasCfg}`,
+            );
 
-            if (isEnterprise && w['grecaptcha'] && typeof w['grecaptcha'] === 'object') {
+            if (
+              isEnterprise &&
+              w['grecaptcha'] &&
+              typeof w['grecaptcha'] === 'object'
+            ) {
               // Patch grecaptcha.enterprise.execute to return our token
               const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
-              if (grecaptcha['enterprise'] && typeof grecaptcha['enterprise'] === 'object') {
-                const enterprise = grecaptcha['enterprise'] as Record<string, unknown>;
+              if (
+                grecaptcha['enterprise'] &&
+                typeof grecaptcha['enterprise'] === 'object'
+              ) {
+                const enterprise = grecaptcha['enterprise'] as Record<
+                  string,
+                  unknown
+                >;
 
                 // Patch execute() to return our token
-                enterprise['execute'] = (_siteKeyArg?: string, _options?: Record<string, unknown>) => {
-                  console.debug('[reCAPTCHA] grecaptcha.enterprise.execute() called, returning 2captcha token');
+                enterprise['execute'] = (
+                  _siteKeyArg?: string,
+                  _options?: Record<string, unknown>,
+                ) => {
+                  console.debug(
+                    '[reCAPTCHA] grecaptcha.enterprise.execute() called, returning 2captcha token',
+                  );
                   return Promise.resolve(response);
                 };
 
                 // Patch getResponse() as well
                 enterprise['getResponse'] = () => {
-                  console.debug('[reCAPTCHA] grecaptcha.enterprise.getResponse() called, returning 2captcha token');
+                  console.debug(
+                    '[reCAPTCHA] grecaptcha.enterprise.getResponse() called, returning 2captcha token',
+                  );
                   return response;
                 };
 
-                console.debug('[reCAPTCHA] Patched grecaptcha.enterprise API to return 2captcha token');
+                console.debug(
+                  '[reCAPTCHA] Patched grecaptcha.enterprise API to return 2captcha token',
+                );
 
                 // CRITICAL FIX: Trigger a fresh execute() call to force ESTA to update its cached token
                 // ESTA calls execute() on page load and caches the result. We need to trigger it again
                 // after our patch so ESTA's callbacks run with our 2captcha token.
                 if (typeof enterprise['execute'] === 'function') {
-                  console.debug('[reCAPTCHA] Triggering fresh execute() call to update ESTA cached token...');
-                  const executeFunc = enterprise['execute'] as (siteKeyArg?: string, options?: Record<string, unknown>) => Promise<string>;
+                  console.debug(
+                    '[reCAPTCHA] Triggering fresh execute() call to update ESTA cached token...',
+                  );
+                  const executeFunc = enterprise['execute'] as (
+                    siteKeyArg?: string,
+                    options?: Record<string, unknown>,
+                  ) => Promise<string>;
                   executeFunc(siteKey, action ? { action } : undefined)
                     .then((token: string) => {
-                      console.debug(`[reCAPTCHA] Fresh execute() completed, token length: ${token.length}`);
+                      console.debug(
+                        `[reCAPTCHA] Fresh execute() completed, token length: ${token.length}`,
+                      );
                     })
                     .catch((err: unknown) => {
-                      console.warn('[reCAPTCHA] Fresh execute() call failed:', err);
+                      console.warn(
+                        '[reCAPTCHA] Fresh execute() call failed:',
+                        err,
+                      );
                     });
                 }
               }
@@ -789,28 +872,47 @@ export class EstaScraper extends BaseScraper {
               // Patch regular grecaptcha.execute for non-enterprise v3
               const grecaptcha = w['grecaptcha'] as Record<string, unknown>;
 
-              grecaptcha['execute'] = (_siteKeyArg?: string, _options?: Record<string, unknown>) => {
-                console.debug('[reCAPTCHA] grecaptcha.execute() called, returning 2captcha token');
+              grecaptcha['execute'] = (
+                _siteKeyArg?: string,
+                _options?: Record<string, unknown>,
+              ) => {
+                console.debug(
+                  '[reCAPTCHA] grecaptcha.execute() called, returning 2captcha token',
+                );
                 return Promise.resolve(response);
               };
 
               grecaptcha['getResponse'] = () => {
-                console.debug('[reCAPTCHA] grecaptcha.getResponse() called, returning 2captcha token');
+                console.debug(
+                  '[reCAPTCHA] grecaptcha.getResponse() called, returning 2captcha token',
+                );
                 return response;
               };
 
-              console.debug('[reCAPTCHA] Patched grecaptcha API to return 2captcha token');
+              console.debug(
+                '[reCAPTCHA] Patched grecaptcha API to return 2captcha token',
+              );
 
               // Trigger fresh execute() for non-enterprise v3
               if (typeof grecaptcha['execute'] === 'function') {
-                console.debug('[reCAPTCHA] Triggering fresh execute() call to update cached token...');
-                const executeFunc = grecaptcha['execute'] as (siteKeyArg?: string, options?: Record<string, unknown>) => Promise<string>;
+                console.debug(
+                  '[reCAPTCHA] Triggering fresh execute() call to update cached token...',
+                );
+                const executeFunc = grecaptcha['execute'] as (
+                  siteKeyArg?: string,
+                  options?: Record<string, unknown>,
+                ) => Promise<string>;
                 executeFunc(siteKey, action ? { action } : undefined)
                   .then((token: string) => {
-                    console.debug(`[reCAPTCHA] Fresh execute() completed, token length: ${token.length}`);
+                    console.debug(
+                      `[reCAPTCHA] Fresh execute() completed, token length: ${token.length}`,
+                    );
                   })
                   .catch((err: unknown) => {
-                    console.warn('[reCAPTCHA] Fresh execute() call failed:', err);
+                    console.warn(
+                      '[reCAPTCHA] Fresh execute() call failed:',
+                      err,
+                    );
                   });
               }
             }
@@ -870,7 +972,10 @@ export class EstaScraper extends BaseScraper {
                 const callback = maybeCallback as (token: string) => void;
                 callback(response);
               } catch (invokeError) {
-                console.debug('reCAPTCHA callback invocation failed', invokeError);
+                console.debug(
+                  'reCAPTCHA callback invocation failed',
+                  invokeError,
+                );
               }
             }
             Object.values(node as Record<string, unknown>).forEach((value) => {
@@ -880,12 +985,18 @@ export class EstaScraper extends BaseScraper {
             });
           };
 
-          const cfg = (window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig }).___grecaptcha_cfg;
+          const cfg = (
+            window as typeof window & { ___grecaptcha_cfg?: GrecaptchaConfig }
+          ).___grecaptcha_cfg;
           if (cfg?.clients) {
             const keys = clientKey ? [clientKey] : Object.keys(cfg.clients);
-            console.log(`[reCAPTCHA DEBUG] Found ${keys.length} client(s) in ___grecaptcha_cfg: ${keys.join(', ')}`);
+            console.log(
+              `[reCAPTCHA DEBUG] Found ${keys.length} client(s) in ___grecaptcha_cfg: ${keys.join(', ')}`,
+            );
             keys.forEach((key) => {
-              console.log(`[reCAPTCHA DEBUG] Traversing callbacks for client: ${key}`);
+              console.log(
+                `[reCAPTCHA DEBUG] Traversing callbacks for client: ${key}`,
+              );
               traverseCallbacks(cfg.clients[key]);
             });
           } else {
@@ -895,9 +1006,12 @@ export class EstaScraper extends BaseScraper {
           // CRITICAL FALLBACK: If grecaptcha.enterprise doesn't exist but we have v3 Enterprise,
           // wait for it to load and then patch it
           const win = window as typeof window & Record<string, unknown>;
-          const grecaptchaExists = win['grecaptcha'] != null && typeof win['grecaptcha'] === 'object';
+          const grecaptchaExists =
+            win['grecaptcha'] != null && typeof win['grecaptcha'] === 'object';
           if (isV3 && isEnterprise && !grecaptchaExists) {
-            console.log('[reCAPTCHA DEBUG] grecaptcha not loaded yet, installing onload hook...');
+            console.log(
+              '[reCAPTCHA DEBUG] grecaptcha not loaded yet, installing onload hook...',
+            );
 
             // Define a setup function that will patch once grecaptcha loads
             const setupPatch = () => {
@@ -908,26 +1022,49 @@ export class EstaScraper extends BaseScraper {
                 const gr = grecaptchaValue as Record<string, unknown>;
                 if (gr['enterprise'] && typeof gr['enterprise'] === 'object') {
                   const ent = gr['enterprise'] as Record<string, unknown>;
-                  console.log('[reCAPTCHA DEBUG] grecaptcha.enterprise NOW available, patching...');
+                  console.log(
+                    '[reCAPTCHA DEBUG] grecaptcha.enterprise NOW available, patching...',
+                  );
 
-                  ent['execute'] = (_sk?: string, _opt?: Record<string, unknown>) => {
-                    console.log('[reCAPTCHA] execute() called (late patch), returning 2captcha token');
+                  ent['execute'] = (
+                    _sk?: string,
+                    _opt?: Record<string, unknown>,
+                  ) => {
+                    console.log(
+                      '[reCAPTCHA] execute() called (late patch), returning 2captcha token',
+                    );
                     return Promise.resolve(response);
                   };
 
                   ent['getResponse'] = () => {
-                    console.log('[reCAPTCHA] getResponse() called (late patch), returning 2captcha token');
+                    console.log(
+                      '[reCAPTCHA] getResponse() called (late patch), returning 2captcha token',
+                    );
                     return response;
                   };
 
-                  console.log('[reCAPTCHA DEBUG] Late patch applied successfully');
+                  console.log(
+                    '[reCAPTCHA DEBUG] Late patch applied successfully',
+                  );
 
                   // Try triggering execute to update ESTA's cached token
                   if (typeof ent['execute'] === 'function') {
-                    const exec = ent['execute'] as (sk?: string, opt?: Record<string, unknown>) => Promise<string>;
+                    const exec = ent['execute'] as (
+                      sk?: string,
+                      opt?: Record<string, unknown>,
+                    ) => Promise<string>;
                     exec(siteKey, action ? { action } : undefined)
-                      .then(() => console.log('[reCAPTCHA DEBUG] Late execute() completed'))
-                      .catch((e: unknown) => console.warn('[reCAPTCHA DEBUG] Late execute() failed:', e));
+                      .then(() =>
+                        console.log(
+                          '[reCAPTCHA DEBUG] Late execute() completed',
+                        ),
+                      )
+                      .catch((e: unknown) =>
+                        console.warn(
+                          '[reCAPTCHA DEBUG] Late execute() failed:',
+                          e,
+                        ),
+                      );
                   }
                 }
               }
@@ -937,7 +1074,9 @@ export class EstaScraper extends BaseScraper {
             const observer = new MutationObserver(() => {
               const win = window as typeof window & Record<string, unknown>;
               if (win['grecaptcha']) {
-                console.log('[reCAPTCHA DEBUG] grecaptcha detected via MutationObserver');
+                console.log(
+                  '[reCAPTCHA DEBUG] grecaptcha detected via MutationObserver',
+                );
                 setupPatch();
                 observer.disconnect();
               }
@@ -954,12 +1093,16 @@ export class EstaScraper extends BaseScraper {
               attempts++;
               const win = window as typeof window & Record<string, unknown>;
               if (win['grecaptcha']) {
-                console.log(`[reCAPTCHA DEBUG] grecaptcha detected via polling (attempt ${attempts})`);
+                console.log(
+                  `[reCAPTCHA DEBUG] grecaptcha detected via polling (attempt ${attempts})`,
+                );
                 setupPatch();
                 clearInterval(checkInterval);
                 observer.disconnect();
               } else if (attempts >= 20) {
-                console.warn('[reCAPTCHA DEBUG] grecaptcha never loaded after 10s of polling');
+                console.warn(
+                  '[reCAPTCHA DEBUG] grecaptcha never loaded after 10s of polling',
+                );
                 clearInterval(checkInterval);
                 observer.disconnect();
               }
@@ -982,7 +1125,9 @@ export class EstaScraper extends BaseScraper {
       // This ensures ESTA's callbacks have run with our token
       // For v3, wait longer to allow late-patch observer to detect and patch grecaptcha
       if (info.isV3) {
-        this.logger.log('[ESTA] Waiting for token injection and late-patch observer (12s)...');
+        this.logger.log(
+          '[ESTA] Waiting for token injection and late-patch observer (12s)...',
+        );
         await this.page.waitForTimeout(12000); // 10s for observer + 2s buffer
       }
     } catch (error: unknown) {
@@ -1091,10 +1236,14 @@ export class EstaScraper extends BaseScraper {
     try {
       // Check for validation errors
       const validationErrors = await this.page
-        .locator('[role="alert"], .error, .alert-danger, .validation-error, .field-error')
+        .locator(
+          '[role="alert"], .error, .alert-danger, .validation-error, .field-error',
+        )
         .allTextContents();
       if (validationErrors.length > 0) {
-        this.logger.error(`[ESTA] Validation errors: ${validationErrors.join(', ')}`);
+        this.logger.error(
+          `[ESTA] Validation errors: ${validationErrors.join(', ')}`,
+        );
       }
 
       // Check if reCAPTCHA challenge appeared
@@ -1103,27 +1252,39 @@ export class EstaScraper extends BaseScraper {
         .isVisible()
         .catch(() => false);
       if (recaptchaChallenge) {
-        this.logger.error('[ESTA] reCAPTCHA challenge appeared after submit - token may be invalid or expired');
+        this.logger.error(
+          '[ESTA] reCAPTCHA challenge appeared after submit - token may be invalid or expired',
+        );
       }
 
       // Check for any error messages on the page
-      const errorElements = await this.page.locator('text=/error|failed|invalid/i').allTextContents();
+      const errorElements = await this.page
+        .locator('text=/error|failed|invalid/i')
+        .allTextContents();
       if (errorElements.length > 0) {
-        this.logger.error(`[ESTA] Error messages found: ${errorElements.slice(0, 3).join(', ')}`);
+        this.logger.error(
+          `[ESTA] Error messages found: ${errorElements.slice(0, 3).join(', ')}`,
+        );
       }
 
       // Check if reCAPTCHA was detected at all
       const recaptchaInfo = await this.detectRecaptchaInfo();
       if (!recaptchaInfo) {
-        this.logger.error('[ESTA] CRITICAL: No reCAPTCHA detected on page - form submission blocked');
+        this.logger.error(
+          '[ESTA] CRITICAL: No reCAPTCHA detected on page - form submission blocked',
+        );
 
         // Check if iframe exists but wasn't detected
         const iframeExists = await this.page
-          .locator('iframe[src*="recaptcha"], iframe[src*="google.com/recaptcha"]')
+          .locator(
+            'iframe[src*="recaptcha"], iframe[src*="google.com/recaptcha"]',
+          )
           .count();
         this.logger.error(`[ESTA] reCAPTCHA iframes found: ${iframeExists}`);
       } else {
-        this.logger.log(`[ESTA] reCAPTCHA was detected: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}...`);
+        this.logger.log(
+          `[ESTA] reCAPTCHA was detected: siteKey=${recaptchaInfo.siteKey?.substring(0, 20)}...`,
+        );
       }
 
       // Log current URL and page title
@@ -1155,9 +1316,13 @@ export class EstaScraper extends BaseScraper {
         await passportInput.focus();
         await this.page.waitForTimeout(500);
         await passportInput.blur();
-        this.logger.log('[ESTA] Triggered potential reCAPTCHA load via form interaction');
+        this.logger.log(
+          '[ESTA] Triggered potential reCAPTCHA load via form interaction',
+        );
       } catch {
-        this.logger.warn('[ESTA] Could not trigger reCAPTCHA via form interaction');
+        this.logger.warn(
+          '[ESTA] Could not trigger reCAPTCHA via form interaction',
+        );
       }
 
       // Wait longer for production proxy environment (30s instead of 10s)
@@ -1172,7 +1337,9 @@ export class EstaScraper extends BaseScraper {
         'iframe[name^="a-"]', // Google reCAPTCHA often uses names like "a-xxxxxxxx"
       ];
 
-      this.logger.log(`[ESTA] Checking for reCAPTCHA iframe with ${iframeTimeout}ms timeout...`);
+      this.logger.log(
+        `[ESTA] Checking for reCAPTCHA iframe with ${iframeTimeout}ms timeout...`,
+      );
 
       let iframeFound = false;
       for (const selector of iframeSelectors) {
@@ -1181,7 +1348,9 @@ export class EstaScraper extends BaseScraper {
             timeout: iframeTimeout / iframeSelectors.length,
             state: 'attached',
           });
-          this.logger.log(`[ESTA] reCAPTCHA iframe found with selector: ${selector}`);
+          this.logger.log(
+            `[ESTA] reCAPTCHA iframe found with selector: ${selector}`,
+          );
           iframeFound = true;
           break;
         } catch {
@@ -1198,22 +1367,30 @@ export class EstaScraper extends BaseScraper {
 
       // Wait for the grecaptcha script to load and initialize
       this.logger.log('[ESTA] Waiting for grecaptcha script to initialize...');
-      await this.page.waitForFunction(
-        () => {
-          return (
-            typeof (window as typeof window & { grecaptcha?: unknown }).grecaptcha !== 'undefined' ||
-            typeof (window as typeof window & { ___grecaptcha_cfg?: unknown }).___grecaptcha_cfg !== 'undefined'
+      await this.page
+        .waitForFunction(
+          () => {
+            return (
+              typeof (window as typeof window & { grecaptcha?: unknown })
+                .grecaptcha !== 'undefined' ||
+              typeof (window as typeof window & { ___grecaptcha_cfg?: unknown })
+                .___grecaptcha_cfg !== 'undefined'
+            );
+          },
+          { timeout: 15000 },
+        )
+        .catch(() => {
+          this.logger.warn(
+            '[ESTA] grecaptcha global not detected, but iframe exists',
           );
-        },
-        { timeout: 15000 }
-      ).catch(() => {
-        this.logger.warn('[ESTA] grecaptcha global not detected, but iframe exists');
-      });
+        });
 
       this.logger.log('[ESTA] reCAPTCHA iframe initialized successfully');
     } catch (error: unknown) {
       const { message } = this.describeError(error);
-      this.logger.warn(`[ESTA] reCAPTCHA iframe not found or failed to load: ${message}`);
+      this.logger.warn(
+        `[ESTA] reCAPTCHA iframe not found or failed to load: ${message}`,
+      );
 
       // Check if there are ANY iframes on the page for debugging
       const iframeCount = await this.page.locator('iframe').count();
@@ -1223,7 +1400,7 @@ export class EstaScraper extends BaseScraper {
       if (iframeCount > 0) {
         const iframeSrcs = await this.page.evaluate(() => {
           return Array.from(document.querySelectorAll('iframe')).map(
-            (iframe) => iframe.src || iframe.getAttribute('src') || '(no src)'
+            (iframe) => iframe.src || iframe.getAttribute('src') || '(no src)',
           );
         });
         this.logger.warn(`[ESTA] Iframe sources: ${iframeSrcs.join(', ')}`);
@@ -1258,7 +1435,10 @@ export class EstaScraper extends BaseScraper {
 
     // Fill Passport Number (find by label)
     this.logger.log('[ESTA] Filling passport number...');
-    const passportNumber = this.getCredentialString(credentials, 'passportNumber');
+    const passportNumber = this.getCredentialString(
+      credentials,
+      'passportNumber',
+    );
     const passportInput = this.page.getByLabel(/Passport Number/i);
     await passportInput.fill(passportNumber);
 
@@ -1284,7 +1464,10 @@ export class EstaScraper extends BaseScraper {
 
     // Fill Application Number (find by label)
     this.logger.log('[ESTA] Filling application number...');
-    const applicationNumber = this.getCredentialString(credentials, 'applicationNumber');
+    const applicationNumber = this.getCredentialString(
+      credentials,
+      'applicationNumber',
+    );
     const applicationInput = this.page.getByLabel(/Application Number/i);
     await applicationInput.fill(applicationNumber);
 

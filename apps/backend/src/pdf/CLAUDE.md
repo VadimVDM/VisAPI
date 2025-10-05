@@ -21,12 +21,14 @@ Return Result <─────────────────────�
 ## Key Components
 
 ### Backend API (`/api/v1/pdf/*`)
+
 - **PdfController**: REST endpoints for PDF operations
 - **PdfService**: Job queuing and management
 - **PdfJobService**: Redis-based job tracking
 - **PdfStatusService**: Real-time status updates
 
 ### Worker Service
+
 - **PdfProcessor**: BullMQ job processor (concurrency: 3)
 - **PdfGeneratorService**: Puppeteer wrapper for PDF creation
 - **PdfTemplateService**: Handlebars template compilation
@@ -49,7 +51,7 @@ POST /api/v1/pdf/preview        // Preview without saving
 
 ## Job Processing
 
-- Queue: `QUEUE_NAMES.PDF` 
+- Queue: `QUEUE_NAMES.PDF`
 - Concurrency: 3 simultaneous jobs
 - Retry: 3 attempts with exponential backoff
 - Timeout: 60 seconds per job
@@ -60,6 +62,7 @@ POST /api/v1/pdf/preview        // Preview without saving
 Location: `/app/templates/pdf/examples/`
 
 Available templates:
+
 - `invoice` - Invoice with line items
 - `receipt` - Payment receipt
 - `report` - Generic report

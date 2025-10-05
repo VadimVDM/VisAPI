@@ -10,15 +10,19 @@ export class AirtableRecordDto {
   @ApiProperty({ description: 'Airtable record identifier.' })
   id!: string;
 
-  @ApiProperty({ description: 'Key fields from Airtable record (Status, ID, Email, Phone).', type: Object })
+  @ApiProperty({
+    description: 'Key fields from Airtable record (Status, ID, Email, Phone).',
+    type: Object,
+  })
   fields!: Record<string, unknown>;
 
   @ApiProperty({ description: 'Record creation timestamp in Airtable.' })
   createdTime!: string;
 
   @ApiPropertyOptional({
-    description: 'Expanded linked records from Applications, Applicants, and Transactions tables.',
-    type: Object
+    description:
+      'Expanded linked records from Applications, Applicants, and Transactions tables.',
+    type: Object,
   })
   expanded?: Record<string, unknown>;
 }
@@ -34,13 +38,14 @@ export class AirtableLookupResponseDto {
   record?: AirtableRecordDto;
 
   @ApiPropertyOptional({
-    description: 'Formatted status message for WhatsApp/customer communication (IL orders only).'
+    description:
+      'Formatted status message for WhatsApp/customer communication (IL orders only).',
   })
   statusMessage?: string;
 
   @ApiPropertyOptional({
     description: 'Applications data when status is Issue 🛑.',
-    type: [Object]
+    type: [Object],
   })
   applications?: Record<string, unknown>[];
 }

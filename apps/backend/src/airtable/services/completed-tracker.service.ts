@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit, forwardRef, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { ConfigService } from '@visapi/core-config';
 import { RedisService } from '@visapi/util-redis';
 import { SupabaseService } from '@visapi/core-supabase';
@@ -28,9 +34,15 @@ export class CompletedTrackerService implements OnModuleInit {
   private readonly BOOTSTRAP_KEY = 'airtable:completed:bootstrap';
   private readonly STATS_KEY = 'airtable:completed:stats';
 
-  private readonly scriptPath = process.env.NODE_ENV === 'production'
-    ? join(process.cwd(), 'airtable', 'scripts', 'airtable_completed_tracker.py')
-    : join(__dirname, '..', 'scripts', 'airtable_completed_tracker.py');
+  private readonly scriptPath =
+    process.env.NODE_ENV === 'production'
+      ? join(
+          process.cwd(),
+          'airtable',
+          'scripts',
+          'airtable_completed_tracker.py',
+        )
+      : join(__dirname, '..', 'scripts', 'airtable_completed_tracker.py');
 
   private isCheckingForNew = false;
 
@@ -48,7 +60,9 @@ export class CompletedTrackerService implements OnModuleInit {
     // Check if we need to bootstrap on startup
     const bootstrapped = await this.redis.get(this.BOOTSTRAP_KEY);
     if (!bootstrapped) {
-      this.logger.warn('Completed tracker not bootstrapped. Run bootstrap() to initialize.');
+      this.logger.warn(
+        'Completed tracker not bootstrapped. Run bootstrap() to initialize.',
+      );
     } else {
       this.logger.log('Completed tracker initialized and ready');
     }
@@ -64,7 +78,9 @@ export class CompletedTrackerService implements OnModuleInit {
       // Check if already bootstrapped
       const existingBootstrap = await this.redis.get(this.BOOTSTRAP_KEY);
       if (existingBootstrap) {
-        this.logger.warn('Already bootstrapped. Delete Redis keys to re-bootstrap.');
+        this.logger.warn(
+          'Already bootstrapped. Delete Redis keys to re-bootstrap.',
+        );
         return { recordCount: 0, success: false };
       }
 
@@ -76,7 +92,7 @@ export class CompletedTrackerService implements OnModuleInit {
       }
 
       // Store all record IDs in Redis set
-      const recordIds = allCompleted.map(r => r.id);
+      const recordIds = allCompleted.map((r) => r.id);
       if (recordIds.length > 0) {
         await this.redis.sadd(this.PROCESSED_IDS_KEY, ...recordIds);
       }
@@ -87,13 +103,19 @@ export class CompletedTrackerService implements OnModuleInit {
       await this.redis.set(this.LAST_CHECK_KEY, now);
 
       // Store initial stats
-      await this.redis.hset(this.STATS_KEY,
-        'bootstrap_date', now,
-        'total_processed', recordIds.length.toString(),
-        'last_successful_check', now,
+      await this.redis.hset(
+        this.STATS_KEY,
+        'bootstrap_date',
+        now,
+        'total_processed',
+        recordIds.length.toString(),
+        'last_successful_check',
+        now,
       );
 
-      this.logger.log(`Bootstrap completed: ${recordIds.length} records loaded`);
+      this.logger.log(
+        `Bootstrap completed: ${recordIds.length} records loaded`,
+      );
 
       // Log to database
       await this.logToDatabase('bootstrap', {
@@ -178,22 +200,28 @@ export class CompletedTrackerService implements OnModuleInit {
 
       // Update stats
       const currentTotal = await this.redis.scard(this.PROCESSED_IDS_KEY);
-      await this.redis.hset(this.STATS_KEY,
-        'last_successful_check', checkStartTime.toISOString(),
-        'total_processed', String(currentTotal),
-        'last_new_count', genuinelyNew.length.toString(),
+      await this.redis.hset(
+        this.STATS_KEY,
+        'last_successful_check',
+        checkStartTime.toISOString(),
+        'total_processed',
+        String(currentTotal),
+        'last_new_count',
+        genuinelyNew.length.toString(),
       );
 
       // Log results
       this.logger.log(
-        `Check completed: ${genuinelyNew.length} new, ${alreadyProcessed} already processed, ${recentRecords.length} total checked`
+        `Check completed: ${genuinelyNew.length} new, ${alreadyProcessed} already processed, ${recentRecords.length} total checked`,
       );
 
       // Process new records for visa approvals
       if (genuinelyNew.length > 0) {
         try {
           await this.visaProcessor.processCompletedRecords(genuinelyNew);
-          this.logger.log(`Processed ${genuinelyNew.length} records for visa approvals`);
+          this.logger.log(
+            `Processed ${genuinelyNew.length} records for visa approvals`,
+          );
         } catch (error) {
           this.logger.error('Failed to process visa approvals:', error);
           // Don't throw - we still want to mark the check as successful
@@ -218,9 +246,12 @@ export class CompletedTrackerService implements OnModuleInit {
       this.logger.error('Failed to check for new records', error);
 
       // Update stats with error
-      await this.redis.hset(this.STATS_KEY,
-        'last_error', checkStartTime.toISOString(),
-        'last_error_message', (error as Error).message,
+      await this.redis.hset(
+        this.STATS_KEY,
+        'last_error',
+        checkStartTime.toISOString(),
+        'last_error_message',
+        (error as Error).message,
       );
 
       throw error;
@@ -268,7 +299,7 @@ export class CompletedTrackerService implements OnModuleInit {
       this.PROCESSED_IDS_KEY,
       this.LAST_CHECK_KEY,
       this.BOOTSTRAP_KEY,
-      this.STATS_KEY
+      this.STATS_KEY,
     );
 
     this.logger.log('Completed tracker reset');
@@ -329,7 +360,9 @@ export class CompletedTrackerService implements OnModuleInit {
   /**
    * Fetch records completed after a specific timestamp
    */
-  private async fetchRecentlyCompleted(afterTimestamp: string): Promise<CompletedRecord[]> {
+  private async fetchRecentlyCompleted(
+    afterTimestamp: string,
+  ): Promise<CompletedRecord[]> {
     const payload = JSON.stringify({
       mode: 'incremental',
       view_id: 'viwgYjpU6K6nXq8ii',
@@ -342,7 +375,9 @@ export class CompletedTrackerService implements OnModuleInit {
   /**
    * Execute Python script to fetch from Airtable
    */
-  private async executePythonScript(payload: string): Promise<CompletedRecord[]> {
+  private async executePythonScript(
+    payload: string,
+  ): Promise<CompletedRecord[]> {
     const apiKey = this.configService.airtableApiKey;
     const baseId = this.configService.airtableBaseId;
     const tableId = this.configService.airtableTableId;
@@ -352,9 +387,15 @@ export class CompletedTrackerService implements OnModuleInit {
     }
 
     // Use the dedicated completed tracker script
-    const scriptPath = process.env.NODE_ENV === 'production'
-      ? join(process.cwd(), 'airtable', 'scripts', 'airtable_completed_tracker.py')
-      : join(__dirname, '..', 'scripts', 'airtable_completed_tracker.py');
+    const scriptPath =
+      process.env.NODE_ENV === 'production'
+        ? join(
+            process.cwd(),
+            'airtable',
+            'scripts',
+            'airtable_completed_tracker.py',
+          )
+        : join(__dirname, '..', 'scripts', 'airtable_completed_tracker.py');
 
     if (!existsSync(scriptPath)) {
       throw new Error(`Script not found at ${scriptPath}`);
@@ -394,7 +435,11 @@ export class CompletedTrackerService implements OnModuleInit {
         }
 
         try {
-          const response = JSON.parse(stdoutContent) as { status: string; matches?: CompletedRecord[]; error?: string };
+          const response = JSON.parse(stdoutContent) as {
+            status: string;
+            matches?: CompletedRecord[];
+            error?: string;
+          };
           if (response.status === 'ok') {
             resolve(response.matches || []);
           } else {
@@ -415,21 +460,19 @@ export class CompletedTrackerService implements OnModuleInit {
    */
   private async logToDatabase(
     eventType: string,
-    metadata: Record<string, unknown>
+    metadata: Record<string, unknown>,
   ): Promise<void> {
     try {
-      await this.supabaseService.serviceClient
-        .from('logs')
-        .insert({
-          level: 'info',
-          message: `Airtable completed tracker: ${eventType}`,
-          metadata: {
-            service: 'completed-tracker',
-            event_type: eventType,
-            ...metadata,
-          },
-          created_at: new Date().toISOString(),
-        });
+      await this.supabaseService.serviceClient.from('logs').insert({
+        level: 'info',
+        message: `Airtable completed tracker: ${eventType}`,
+        metadata: {
+          service: 'completed-tracker',
+          event_type: eventType,
+          ...metadata,
+        },
+        created_at: new Date().toISOString(),
+      });
     } catch (error) {
       this.logger.error('Failed to log to database', error);
     }

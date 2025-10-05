@@ -5,7 +5,13 @@ import { QUEUE_NAMES } from '@visapi/shared-types';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
 import { PdfTemplateService } from '../services/pdf-template.service';
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 export interface PdfJobData {
   jobId: string;
@@ -106,7 +112,8 @@ export class PdfProcessor extends WorkerHost {
         filename: result.filename,
         url: data.preview ? undefined : result.url,
         signedUrl: data.preview ? undefined : result.signedUrl,
-        base64: data.preview && data.format === 'base64' ? result.base64 : undefined,
+        base64:
+          data.preview && data.format === 'base64' ? result.base64 : undefined,
         size: result.size,
         mimeType: 'application/pdf',
         generatedAt: new Date().toISOString(),
@@ -115,7 +122,7 @@ export class PdfProcessor extends WorkerHost {
       };
 
       this.logger.log(
-        `PDF generated successfully: ${result.filename} (${result.size} bytes) in ${response.duration}ms`
+        `PDF generated successfully: ${result.filename} (${result.size} bytes) in ${response.duration}ms`,
       );
 
       return response;
@@ -127,81 +134,72 @@ export class PdfProcessor extends WorkerHost {
 
   private async generateFromTemplate(job: Job<PdfJobData>) {
     const { data } = job;
-    
+
     await job.updateProgress(20);
-    
+
     // Compile template with data
     const html = await this.templateService.compileTemplate(
       data.template,
-      data.data
+      data.data,
     );
-    
+
     await job.updateProgress(40);
-    
+
     // Generate PDF from compiled HTML
-    const result = await this.pdfGenerator.generateFromHtml(
-      html,
-      {
-        filename: data.filename,
-        options: data.options,
-        preview: data.preview,
-      }
-    );
-    
+    const result = await this.pdfGenerator.generateFromHtml(html, {
+      filename: data.filename,
+      options: data.options,
+      preview: data.preview,
+    });
+
     await job.updateProgress(90);
-    
+
     return result;
   }
 
   private async generateFromUrl(job: Job<PdfJobData>) {
     const { data } = job;
-    
+
     await job.updateProgress(30);
-    
-    const result = await this.pdfGenerator.generateFromUrl(
-      data.url,
-      {
-        filename: data.filename,
-        options: data.options,
-        preview: data.preview,
-      }
-    );
-    
+
+    const result = await this.pdfGenerator.generateFromUrl(data.url, {
+      filename: data.filename,
+      options: data.options,
+      preview: data.preview,
+    });
+
     await job.updateProgress(90);
-    
+
     return result;
   }
 
   private async generateFromHtml(job: Job<PdfJobData>) {
     const { data } = job;
-    
+
     await job.updateProgress(30);
-    
+
     // Process HTML with template engine if it contains variables
     const processedHtml = this.templateService.processHtml(
       data.html,
-      data.data
+      data.data,
     );
-    
+
     await job.updateProgress(50);
-    
-    const result = await this.pdfGenerator.generateFromHtml(
-      processedHtml,
-      {
-        filename: data.filename,
-        options: data.options,
-        preview: data.preview,
-      }
-    );
-    
+
+    const result = await this.pdfGenerator.generateFromHtml(processedHtml, {
+      filename: data.filename,
+      options: data.options,
+      preview: data.preview,
+    });
+
     await job.updateProgress(90);
-    
+
     return result;
   }
 
   async onCompleted(job: Job<PdfJobData>, result: PdfJobResult) {
     this.logger.log(`Job ${job.id} completed successfully`);
-    
+
     // Clean up temporary files if any
     if (result.success && !job.data.preview) {
       await this.pdfGenerator.cleanupTempFiles(job.id);
@@ -210,7 +208,7 @@ export class PdfProcessor extends WorkerHost {
 
   async onFailed(job: Job<PdfJobData>, error: Error) {
     this.logger.error(`Job ${job.id} failed:`, error);
-    
+
     // Clean up any partial files
     await this.pdfGenerator.cleanupTempFiles(job.id);
   }

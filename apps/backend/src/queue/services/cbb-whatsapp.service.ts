@@ -24,7 +24,9 @@ export class CbbWhatsAppService {
     hasWhatsApp: boolean,
     cbbContact: CBBContactRecord,
   ): Promise<void> {
-    const alreadySent = await this.isOrderConfirmationAlreadySent(order.order_id);
+    const alreadySent = await this.isOrderConfirmationAlreadySent(
+      order.order_id,
+    );
 
     this.logger.info(
       `Checking WhatsApp confirmation conditions for order ${order.order_id}:`,
@@ -196,7 +198,9 @@ export class CbbWhatsAppService {
     return 'Unknown';
   }
 
-  private async isOrderConfirmationAlreadySent(orderId: string): Promise<boolean> {
+  private async isOrderConfirmationAlreadySent(
+    orderId: string,
+  ): Promise<boolean> {
     const { data, error } = await this.supabaseService.serviceClient
       .from('whatsapp_messages')
       .select('id')

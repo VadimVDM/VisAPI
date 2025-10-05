@@ -26,7 +26,7 @@ export class ScraperProcessor extends WorkerHost {
     private readonly browserManager: BrowserManagerService,
     private readonly estaScraper: EstaScraper,
     private readonly vietnamEvisaScraper: VietnamEvisaScraper,
-    private readonly koreaKetaScraper: KoreaKetaScraper
+    private readonly koreaKetaScraper: KoreaKetaScraper,
   ) {
     super();
   }
@@ -36,7 +36,7 @@ export class ScraperProcessor extends WorkerHost {
     const { data } = job;
 
     this.logger.log(
-      `Processing scraper job ${job.id} - Type: ${data.scraperType}, JobId: ${data.jobId}`
+      `Processing scraper job ${job.id} - Type: ${data.scraperType}, JobId: ${data.jobId}`,
     );
 
     try {
@@ -82,7 +82,7 @@ export class ScraperProcessor extends WorkerHost {
       await job.updateProgress(100);
 
       this.logger.log(
-        `Scraper job ${job.id} completed - Status: ${result.status}, Duration: ${Date.now() - startTime}ms`
+        `Scraper job ${job.id} completed - Status: ${result.status}, Duration: ${Date.now() - startTime}ms`,
       );
 
       // If job should be retried, throw to trigger retry
@@ -129,19 +129,21 @@ export class ScraperProcessor extends WorkerHost {
 
   onCompleted(job: Job<ScraperJobData>, result: ScraperJobResult) {
     this.logger.log(
-      `Job ${job.id} completed - Status: ${result.status}, Success: ${result.success}`
+      `Job ${job.id} completed - Status: ${result.status}, Success: ${result.success}`,
     );
 
     // Log document URL if successful
     if (result.success && result.documentUrl) {
-      this.logger.log(`Document downloaded: ${result.filename} (${result.size} bytes)`);
+      this.logger.log(
+        `Document downloaded: ${result.filename} (${result.size} bytes)`,
+      );
       this.logger.log(`Document URL: ${result.documentUrl}`);
     }
 
     // Log error if failed
     if (!result.success) {
       this.logger.error(
-        `Job ${job.id} failed - Error: ${result.error} (Code: ${result.errorCode})`
+        `Job ${job.id} failed - Error: ${result.error} (Code: ${result.errorCode})`,
       );
     }
   }
@@ -158,7 +160,7 @@ export class ScraperProcessor extends WorkerHost {
 
   onActive(job: Job<ScraperJobData>) {
     this.logger.log(
-      `Job ${job.id} started processing - Scraper: ${job.data.scraperType}`
+      `Job ${job.id} started processing - Scraper: ${job.data.scraperType}`,
     );
   }
 

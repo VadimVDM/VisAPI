@@ -7,6 +7,7 @@ Core domain module for visa order processing with streamlined architecture.
 ### OrdersService
 
 Main service orchestrating order operations:
+
 - Creates orders from Vizi webhooks with validation
 - Triggers CBB sync directly for IL branch orders
 - Handles duplicate orders gracefully
@@ -15,6 +16,7 @@ Main service orchestrating order operations:
 ### OrderSyncService
 
 Handles async sync operations:
+
 - CBB contact synchronization via queue
 - WhatsApp message queuing
 - Workflow processing coordination
@@ -22,6 +24,7 @@ Handles async sync operations:
 ### OrderTransformerService
 
 Transforms raw webhook data to domain models:
+
 - **Phone normalization**: Strips leading zeros after country codes
 - Maps Vizi fields to database schema
 - Handles missing/malformed data gracefully

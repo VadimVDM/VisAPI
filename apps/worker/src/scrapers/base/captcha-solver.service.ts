@@ -324,7 +324,9 @@ export class CaptchaSolverService {
       if (options.minScore) {
         recaptchaOptions.version = 'v3';
         recaptchaOptions.score = options.minScore;
-        this.logger.log(`[2Captcha] Using reCAPTCHA v3 with minScore ${options.minScore}`);
+        this.logger.log(
+          `[2Captcha] Using reCAPTCHA v3 with minScore ${options.minScore}`,
+        );
       }
 
       // Add enterprise flag if needed

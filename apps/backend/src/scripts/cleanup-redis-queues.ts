@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Redis Queue Cleanup Script
- * 
+ *
  * CRITICAL: This script removes ALL jobs and duplicate queue metadata from Redis.
  * Used to clean up after the queue name mismatch issue that caused duplicate processing.
- * 
+ *
  * DO NOT run this if you have pending jobs that need to be processed!
  */
 
@@ -25,7 +25,7 @@ if (!REDIS_URL) {
 
 async function cleanupQueues() {
   console.log('🧹 Starting Redis queue cleanup...\n');
-  
+
   const redis = new Redis(REDIS_URL, {
     maxRetriesPerRequest: 1,
   });
@@ -33,16 +33,16 @@ async function cleanupQueues() {
   try {
     // Get all keys matching queue patterns
     console.log('📋 Scanning for queue keys...');
-    
+
     const patterns = [
-      'bull:*',           // All BullMQ queues
+      'bull:*', // All BullMQ queues
       'WHATSAPP_MESSAGES:*', // Wrong uppercase constant name
-      'cgb-sync:*',       // Typo in queue name
-      'CBB_SYNC:*',       // Wrong uppercase constant
+      'cgb-sync:*', // Typo in queue name
+      'CBB_SYNC:*', // Wrong uppercase constant
     ];
 
     let allKeys: string[] = [];
-    
+
     for (const pattern of patterns) {
       const keys = await redis.keys(pattern);
       if (keys.length > 0) {
@@ -53,7 +53,7 @@ async function cleanupQueues() {
 
     // Group keys by queue name for analysis
     const queueGroups = new Map<string, string[]>();
-    
+
     for (const key of allKeys) {
       const match = key.match(/^(?:bull:)?([^:]+):/);
       if (match) {
@@ -67,32 +67,33 @@ async function cleanupQueues() {
 
     console.log('\n📊 Queue Analysis:');
     console.log('==================');
-    
+
     for (const [queueName, keys] of queueGroups) {
       console.log(`\n Queue: ${queueName}`);
       console.log(`   Total keys: ${keys.length}`);
-      
+
       // Check for specific key types
-      const metaKeys = keys.filter(k => k.includes(':meta'));
-      const jobKeys = keys.filter(k => k.match(/:\d+$/));
-      const waitKeys = keys.filter(k => k.includes(':wait'));
-      const activeKeys = keys.filter(k => k.includes(':active'));
-      const completedKeys = keys.filter(k => k.includes(':completed'));
-      const failedKeys = keys.filter(k => k.includes(':failed'));
-      
+      const metaKeys = keys.filter((k) => k.includes(':meta'));
+      const jobKeys = keys.filter((k) => k.match(/:\d+$/));
+      const waitKeys = keys.filter((k) => k.includes(':wait'));
+      const activeKeys = keys.filter((k) => k.includes(':active'));
+      const completedKeys = keys.filter((k) => k.includes(':completed'));
+      const failedKeys = keys.filter((k) => k.includes(':failed'));
+
       if (metaKeys.length) console.log(`   - Meta keys: ${metaKeys.length}`);
       if (jobKeys.length) console.log(`   - Job data: ${jobKeys.length}`);
       if (waitKeys.length) console.log(`   - Waiting: ${waitKeys.length}`);
       if (activeKeys.length) console.log(`   - Active: ${activeKeys.length}`);
-      if (completedKeys.length) console.log(`   - Completed: ${completedKeys.length}`);
+      if (completedKeys.length)
+        console.log(`   - Completed: ${completedKeys.length}`);
       if (failedKeys.length) console.log(`   - Failed: ${failedKeys.length}`);
     }
 
     // Identify queues to clean
     const queuesToClean = [
-      'WHATSAPP_MESSAGES',  // Wrong - should be whatsapp-messages
-      'cgb-sync',           // Typo - should be cbb-sync
-      'CBB_SYNC',           // Wrong - should be cbb-sync
+      'WHATSAPP_MESSAGES', // Wrong - should be whatsapp-messages
+      'cgb-sync', // Typo - should be cbb-sync
+      'CBB_SYNC', // Wrong - should be cbb-sync
     ];
 
     // Also clean the correct queues to remove old jobs
@@ -105,11 +106,13 @@ async function cleanupQueues() {
     ];
 
     console.log('\n🗑️  Cleaning duplicate/wrong queue names...');
-    
+
     for (const queueName of queuesToClean) {
       const keys = queueGroups.get(queueName) || [];
       if (keys.length > 0) {
-        console.log(`   Removing ${keys.length} keys for wrong queue: ${queueName}`);
+        console.log(
+          `   Removing ${keys.length} keys for wrong queue: ${queueName}`,
+        );
         for (const key of keys) {
           await redis.del(key);
         }
@@ -117,7 +120,7 @@ async function cleanupQueues() {
     }
 
     console.log('\n🧹 Cleaning old jobs from correct queues...');
-    
+
     for (const queueName of correctQueues) {
       try {
         const queue = new Queue(queueName, {
@@ -127,24 +130,26 @@ async function cleanupQueues() {
         // Get job counts before cleaning
         const counts = await queue.getJobCounts();
         console.log(`\n   Queue: ${queueName}`);
-        console.log(`   Before: waiting=${counts.waiting}, active=${counts.active}, completed=${counts.completed}, failed=${counts.failed}`);
+        console.log(
+          `   Before: waiting=${counts.waiting}, active=${counts.active}, completed=${counts.completed}, failed=${counts.failed}`,
+        );
 
         // Clean all job states (remove ALL old jobs)
         if (counts.waiting > 0) {
           await queue.clean(0, 0, 'wait');
           console.log(`   ✅ Cleaned ${counts.waiting} waiting jobs`);
         }
-        
+
         if (counts.active > 0) {
           await queue.clean(0, 0, 'active');
           console.log(`   ✅ Cleaned ${counts.active} active jobs`);
         }
-        
+
         if (counts.completed > 0) {
           await queue.clean(0, 0, 'completed');
           console.log(`   ✅ Cleaned ${counts.completed} completed jobs`);
         }
-        
+
         if (counts.failed > 0) {
           await queue.clean(0, 0, 'failed');
           console.log(`   ✅ Cleaned ${counts.failed} failed jobs`);
@@ -157,7 +162,7 @@ async function cleanupQueues() {
 
         // Drain any remaining jobs
         await queue.drain();
-        
+
         // Resume queue if paused
         const isPaused = await queue.isPaused();
         if (isPaused) {
@@ -172,24 +177,26 @@ async function cleanupQueues() {
     }
 
     console.log('\n✨ Cleanup complete!');
-    
+
     // Final verification
     console.log('\n📊 Final Verification:');
     console.log('======================');
-    
+
     for (const queueName of correctQueues) {
       try {
         const queue = new Queue(queueName, {
           connection: { url: REDIS_URL },
         });
-        
+
         const counts = await queue.getJobCounts();
         const isPaused = await queue.isPaused();
-        
+
         console.log(`${queueName}:`);
         console.log(`  Status: ${isPaused ? '⏸️ PAUSED' : '✅ ACTIVE'}`);
-        console.log(`  Jobs: waiting=${counts.waiting}, active=${counts.active}, failed=${counts.failed}`);
-        
+        console.log(
+          `  Jobs: waiting=${counts.waiting}, active=${counts.active}, failed=${counts.failed}`,
+        );
+
         await queue.close();
       } catch (error) {
         console.error(`  Error checking ${queueName}:`, error);
@@ -198,8 +205,9 @@ async function cleanupQueues() {
 
     await redis.quit();
     console.log('\n🎉 All duplicate queues removed and old jobs cleared!');
-    console.log('⚠️  IMPORTANT: Only NEW orders will be processed going forward.');
-    
+    console.log(
+      '⚠️  IMPORTANT: Only NEW orders will be processed going forward.',
+    );
   } catch (error) {
     console.error('❌ Error during cleanup:', error);
     await redis.quit();

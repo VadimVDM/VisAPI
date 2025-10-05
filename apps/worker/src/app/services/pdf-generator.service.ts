@@ -5,8 +5,17 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 
 type PuppeteerPaperFormat =
-  | 'Letter' | 'Legal' | 'Tabloid' | 'Ledger'
-  | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6';
+  | 'Letter'
+  | 'Legal'
+  | 'Tabloid'
+  | 'Ledger'
+  | 'A0'
+  | 'A1'
+  | 'A2'
+  | 'A3'
+  | 'A4'
+  | 'A5'
+  | 'A6';
 
 interface GenerateOptions {
   filename: string;
@@ -46,7 +55,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
     options: GenerateOptions,
   ): Promise<PdfGenerationResult> {
     const page = await this.getPage();
-    
+
     try {
       // Set content
       await page.setContent(html, {
@@ -72,7 +81,9 @@ export class PdfGeneratorService implements OnModuleDestroy {
         format: options.options.format as PuppeteerPaperFormat,
         landscape: options.options.orientation === 'landscape',
         margin: options.options.margins,
-        displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
+        displayHeaderFooter: !!(
+          options.options.headerTemplate || options.options.footerTemplate
+        ),
         headerTemplate: options.options.headerTemplate || '',
         footerTemplate: options.options.footerTemplate || '',
         printBackground: options.options.printBackground,
@@ -90,7 +101,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
     options: GenerateOptions,
   ): Promise<PdfGenerationResult> {
     const page = await this.getPage();
-    
+
     try {
       // Navigate to URL
       await page.goto(url, {
@@ -100,14 +111,16 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
       // Wait for any dynamic content
       await page.waitForFunction(() => document.readyState === 'complete');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Generate PDF
       const pdfBuffer = await page.pdf({
         format: options.options.format as PuppeteerPaperFormat,
         landscape: options.options.orientation === 'landscape',
         margin: options.options.margins,
-        displayHeaderFooter: !!(options.options.headerTemplate || options.options.footerTemplate),
+        displayHeaderFooter: !!(
+          options.options.headerTemplate || options.options.footerTemplate
+        ),
         headerTemplate: options.options.headerTemplate || '',
         footerTemplate: options.options.footerTemplate || '',
         printBackground: options.options.printBackground,
@@ -126,7 +139,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
     }
 
     const page = await this.browser.newPage();
-    
+
     // Set viewport for consistent rendering
     await page.setViewport({
       width: 1920,
@@ -136,7 +149,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
     // Set user agent
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     );
 
     return page;
@@ -144,7 +157,8 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
   private async launchBrowser(): Promise<puppeteer.Browser> {
     const browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
       headless: true,
       args: [
         '--no-sandbox',
@@ -185,7 +199,7 @@ export class PdfGeneratorService implements OnModuleDestroy {
 
     // Save to Supabase Storage
     const storagePath = `pdfs/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${filename}`;
-    
+
     const { error } = await this.supabase.client.storage
       .from('documents')
       .upload(storagePath, buffer, {
@@ -229,7 +243,9 @@ export class PdfGeneratorService implements OnModuleDestroy {
       }
     } catch (error: unknown) {
       const message = this.describeError(error);
-      this.logger.warn(`Failed to cleanup temp files for job ${jobId}: ${message}`);
+      this.logger.warn(
+        `Failed to cleanup temp files for job ${jobId}: ${message}`,
+      );
     }
   }
 

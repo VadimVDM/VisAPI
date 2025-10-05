@@ -367,16 +367,13 @@ export class CBBSyncOrchestratorService {
       }
 
       // 11. Queue WhatsApp confirmation if applicable
-      this.logger.info(
-        `Pre-WhatsApp queue check for order ${orderId}:`,
-        {
-          has_contact: !!contact,
-          contact_id: contact?.id,
-          has_error: !!error,
-          error_message: error,
-        },
-      );
-      
+      this.logger.info(`Pre-WhatsApp queue check for order ${orderId}:`, {
+        has_contact: !!contact,
+        contact_id: contact?.id,
+        has_error: !!error,
+        error_message: error,
+      });
+
       if (contact && !error) {
         await this.whatsappService.queueOrderConfirmation(
           order,
@@ -676,7 +673,6 @@ export class CBBSyncOrchestratorService {
     }
   }
 
-
   private mapOrderToContact(order: OrderData): CBBContactData {
     // Use the direct is_urgent boolean field from orders table
     const isUrgent = order.is_urgent === true;
@@ -689,7 +685,10 @@ export class CBBSyncOrchestratorService {
       order.webhook_received_at,
       order.order_id,
     );
-    const gender = this.extractGender(order.applicants_data || [], order.order_id);
+    const gender = this.extractGender(
+      order.applicants_data || [],
+      order.order_id,
+    );
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
     const visaValidityWithUnits = this.getVisaValidityWithUnits(

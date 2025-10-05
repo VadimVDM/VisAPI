@@ -3,7 +3,13 @@ import * as Handlebars from 'handlebars';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 type TemplateData = Record<string, JsonValue>;
 
 interface HandlebarsHelperOptions {
@@ -14,7 +20,10 @@ interface HandlebarsHelperOptions {
 @Injectable()
 export class PdfTemplateService {
   private readonly logger = new Logger(PdfTemplateService.name);
-  private readonly compiledTemplates = new Map<string, HandlebarsTemplateDelegate>();
+  private readonly compiledTemplates = new Map<
+    string,
+    HandlebarsTemplateDelegate
+  >();
   private readonly templatesDir = path.join(process.cwd(), 'templates', 'pdf');
 
   constructor() {
@@ -22,16 +31,21 @@ export class PdfTemplateService {
     void this.ensureTemplatesDirectory();
   }
 
-  async compileTemplate(templateName: string, data: TemplateData): Promise<string> {
+  async compileTemplate(
+    templateName: string,
+    data: TemplateData,
+  ): Promise<string> {
     const template = await this.getTemplate(templateName);
     const processedData = this.preprocessData(data);
-    
+
     try {
       const html = template(processedData);
       return this.wrapWithLayout(html, templateName);
     } catch (error: unknown) {
       const message = this.describeError(error);
-      this.logger.error(`Failed to render template ${templateName}: ${message}`);
+      this.logger.error(
+        `Failed to render template ${templateName}: ${message}`,
+      );
       throw new Error(`Template rendering failed: ${message}`);
     }
   }
@@ -76,12 +90,21 @@ export class PdfTemplateService {
       return str?.charAt(0).toUpperCase() + str?.slice(1).toLowerCase();
     });
 
-    Handlebars.registerHelper('ifEquals', function(arg1: unknown, arg2: unknown, options: HandlebarsHelperOptions) {
-      return arg1 === arg2 ? options.fn(this) : options.inverse(this);
-    });
+    Handlebars.registerHelper(
+      'ifEquals',
+      function (
+        arg1: unknown,
+        arg2: unknown,
+        options: HandlebarsHelperOptions,
+      ) {
+        return arg1 === arg2 ? options.fn(this) : options.inverse(this);
+      },
+    );
   }
 
-  private async getTemplate(templateName: string): Promise<HandlebarsTemplateDelegate> {
+  private async getTemplate(
+    templateName: string,
+  ): Promise<HandlebarsTemplateDelegate> {
     // Check cache first
     if (this.compiledTemplates.has(templateName)) {
       return this.compiledTemplates.get(templateName);
@@ -89,7 +112,7 @@ export class PdfTemplateService {
 
     // Try loading from file system
     const templatePath = path.join(this.templatesDir, `${templateName}.hbs`);
-    
+
     try {
       await fs.access(templatePath);
       const templateContent = await fs.readFile(templatePath, 'utf-8');
@@ -99,7 +122,11 @@ export class PdfTemplateService {
       return compiled;
     } catch {
       // Try loading from examples if not found
-      const examplePath = path.join(this.templatesDir, 'examples', `${templateName}.hbs`);
+      const examplePath = path.join(
+        this.templatesDir,
+        'examples',
+        `${templateName}.hbs`,
+      );
       try {
         const exampleContent = await fs.readFile(examplePath, 'utf-8');
         const compiled = Handlebars.compile(exampleContent);
@@ -107,7 +134,9 @@ export class PdfTemplateService {
         this.logger.log(`Loaded example template: ${templateName}`);
         return compiled;
       } catch {
-        throw new Error(`Template not found: ${templateName}. Please create ${templatePath}`);
+        throw new Error(
+          `Template not found: ${templateName}. Please create ${templatePath}`,
+        );
       }
     }
   }
@@ -115,7 +144,9 @@ export class PdfTemplateService {
   private async ensureTemplatesDirectory(): Promise<void> {
     try {
       await fs.mkdir(this.templatesDir, { recursive: true });
-      await fs.mkdir(path.join(this.templatesDir, 'examples'), { recursive: true });
+      await fs.mkdir(path.join(this.templatesDir, 'examples'), {
+        recursive: true,
+      });
 
       // Create example templates if they don't exist
       await this.createExampleTemplates();
@@ -133,7 +164,11 @@ export class PdfTemplateService {
     ];
 
     for (const example of examples) {
-      const examplePath = path.join(this.templatesDir, 'examples', `${example.name}.hbs`);
+      const examplePath = path.join(
+        this.templatesDir,
+        'examples',
+        `${example.name}.hbs`,
+      );
       try {
         await fs.access(examplePath);
       } catch {
@@ -196,9 +231,12 @@ export class PdfTemplateService {
     return processed;
   }
 
-  async getAvailableTemplates(): Promise<Array<{ name: string; path: string; isExample: boolean }>> {
-    const templates: Array<{ name: string; path: string; isExample: boolean }> = [];
-    
+  async getAvailableTemplates(): Promise<
+    Array<{ name: string; path: string; isExample: boolean }>
+  > {
+    const templates: Array<{ name: string; path: string; isExample: boolean }> =
+      [];
+
     try {
       // Get custom templates
       const customFiles = await fs.readdir(this.templatesDir);
@@ -211,7 +249,7 @@ export class PdfTemplateService {
           });
         }
       }
-      
+
       // Get example templates
       const examplesDir = path.join(this.templatesDir, 'examples');
       const exampleFiles = await fs.readdir(examplesDir);
@@ -228,7 +266,7 @@ export class PdfTemplateService {
       const message = this.describeError(error);
       this.logger.error(`Failed to list templates: ${message}`);
     }
-    
+
     return templates;
   }
 

@@ -17,12 +17,26 @@ async function main() {
   const tableId = process.env.AIRTABLE_TABLE_ID;
 
   if (!apiKey || !baseId || !tableId) {
-    throw new Error('Missing required environment variables: AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID');
+    throw new Error(
+      'Missing required environment variables: AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID',
+    );
   }
 
-  const scriptPath = process.env.NODE_ENV === 'production'
-    ? join(process.cwd(), 'airtable', 'scripts', 'airtable_completed_tracker.py')
-    : join(__dirname, '..', 'airtable', 'scripts', 'airtable_completed_tracker.py');
+  const scriptPath =
+    process.env.NODE_ENV === 'production'
+      ? join(
+          process.cwd(),
+          'airtable',
+          'scripts',
+          'airtable_completed_tracker.py',
+        )
+      : join(
+          __dirname,
+          '..',
+          'airtable',
+          'scripts',
+          'airtable_completed_tracker.py',
+        );
 
   console.log('Fetching records from Airtable...');
 

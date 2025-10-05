@@ -3,7 +3,11 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
 import { QUEUE_NAMES } from '@visapi/shared-types';
 import { PdfJobService, JobCacheData } from './pdf-job.service';
-import { PdfJobStatusDto, JobStatus, PdfResultDto } from '../dto/pdf-job-status.dto';
+import {
+  PdfJobStatusDto,
+  JobStatus,
+  PdfResultDto,
+} from '../dto/pdf-job-status.dto';
 import { JobMetadata } from '../dto/generate-pdf.dto';
 
 @Injectable()
@@ -52,19 +56,30 @@ export class PdfStatusService {
     return {
       jobId: job.id || '',
       status: this.mapQueueStatus(state),
-      progress: typeof progress === 'object' && progress !== null && 'percentage' in progress
-        ? ((progress as Record<string, unknown>).percentage as number) || 0
-        : Number(progress) || 0,
+      progress:
+        typeof progress === 'object' &&
+        progress !== null &&
+        'percentage' in progress
+          ? ((progress as Record<string, unknown>).percentage as number) || 0
+          : Number(progress) || 0,
       createdAt: new Date(job.timestamp).toISOString(),
-      startedAt: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
-      completedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
-      duration: job.finishedOn && job.processedOn ? job.finishedOn - job.processedOn : undefined,
+      startedAt: job.processedOn
+        ? new Date(job.processedOn).toISOString()
+        : undefined,
+      completedAt: job.finishedOn
+        ? new Date(job.finishedOn).toISOString()
+        : undefined,
+      duration:
+        job.finishedOn && job.processedOn
+          ? job.finishedOn - job.processedOn
+          : undefined,
       result: job.returnvalue as PdfResultDto | undefined,
       error: job.failedReason,
       attempts: job.attemptsMade,
-      metadata: job.data && typeof job.data === 'object' && 'metadata' in job.data
-        ? (job.data as { metadata: JobMetadata }).metadata
-        : undefined,
+      metadata:
+        job.data && typeof job.data === 'object' && 'metadata' in job.data
+          ? (job.data as { metadata: JobMetadata }).metadata
+          : undefined,
     };
   }
 

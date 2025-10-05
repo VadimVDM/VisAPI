@@ -2,17 +2,23 @@
  * Base types for all visa document scrapers
  */
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 export type ScraperType = 'esta' | 'vietnam-evisa' | 'korea-keta';
 
 export type ScraperStatus =
-  | 'pending'      // Job created, not started
-  | 'running'      // Currently scraping
-  | 'completed'    // Successfully downloaded document
-  | 'failed'       // Failed to download
-  | 'not_found'    // Document not available yet
-  | 'retry';       // Will retry later
+  | 'pending' // Job created, not started
+  | 'running' // Currently scraping
+  | 'completed' // Successfully downloaded document
+  | 'failed' // Failed to download
+  | 'not_found' // Document not available yet
+  | 'retry'; // Will retry later
 
 export interface ScraperCredentials {
   /** Applicant email or username */

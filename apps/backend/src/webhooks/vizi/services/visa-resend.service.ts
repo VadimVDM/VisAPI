@@ -1,10 +1,18 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { SupabaseService } from '@visapi/core-supabase';
 import { AirtableLookupService } from '../../../airtable/airtable.service';
 import { VisaApprovalProcessorService } from '../../../airtable/services/visa-approval-processor.service';
 import { AirtableLookupStatus } from '../../../airtable/dto/airtable-lookup-response.dto';
 import { VisaResendDto, VisaResendResultDto } from '../dto/visa-resend.dto';
-import { CompletedRecord, ExpandedApplication } from '../../../airtable/types/airtable.types';
+import {
+  CompletedRecord,
+  ExpandedApplication,
+} from '../../../airtable/types/airtable.types';
 
 @Injectable()
 export class ViziVisaResendService {
@@ -35,26 +43,37 @@ export class ViziVisaResendService {
     // Normalize phone: remove + prefix if present (CBB uses phone without + as contact ID)
     const phone = rawPhone?.replace(/^\+/, '');
 
-    this.logger.log(`[${correlationId}] Starting visa approval resend for order ${orderId}${phone ? ` with override phone ${phone}` : ''}`);
+    this.logger.log(
+      `[${correlationId}] Starting visa approval resend for order ${orderId}${phone ? ` with override phone ${phone}` : ''}`,
+    );
 
     try {
       // Step 1: Lookup order in Airtable with expansion
-      this.logger.debug(`[${correlationId}] Looking up order ${orderId} in Airtable`);
+      this.logger.debug(
+        `[${correlationId}] Looking up order ${orderId} in Airtable`,
+      );
       const airtableResult = await this.airtableLookup.lookup(
-        'orderId',  // This gets normalized to 'ID' field in Airtable
+        'orderId', // This gets normalized to 'ID' field in Airtable
         orderId,
         { correlationId },
       );
 
-      if (airtableResult.status !== AirtableLookupStatus.FOUND || !airtableResult.record) {
-        this.logger.warn(`[${correlationId}] Order ${orderId} not found in Airtable`);
+      if (
+        airtableResult.status !== AirtableLookupStatus.FOUND ||
+        !airtableResult.record
+      ) {
+        this.logger.warn(
+          `[${correlationId}] Order ${orderId} not found in Airtable`,
+        );
         throw new NotFoundException(`Order ${orderId} not found in Airtable`);
       }
 
       // Check if we have expanded application data
       const applications = airtableResult.applications;
       if (!applications || applications.length === 0) {
-        this.logger.warn(`[${correlationId}] No applications found for order ${orderId}`);
+        this.logger.warn(
+          `[${correlationId}] No applications found for order ${orderId}`,
+        );
         return {
           success: false,
           orderId,
@@ -87,7 +106,9 @@ export class ViziVisaResendService {
           `[${correlationId}] Failed to reset visa notification flag for ${orderId}:`,
           resetError,
         );
-        throw new Error(`Failed to reset visa notification status: ${resetError.message}`);
+        throw new Error(
+          `Failed to reset visa notification status: ${resetError.message}`,
+        );
       }
 
       this.logger.debug(
@@ -102,9 +123,11 @@ export class ViziVisaResendService {
           ...airtableResult.record.fields,
           ID: orderId,
         },
-        createdTime: airtableResult.record.createdTime || new Date().toISOString(),
+        createdTime:
+          airtableResult.record.createdTime || new Date().toISOString(),
         expanded: {
-          Applications_expanded: applications as unknown as ExpandedApplication[], // Applications from Airtable have correct structure
+          Applications_expanded:
+            applications as unknown as ExpandedApplication[], // Applications from Airtable have correct structure
         },
       };
 
@@ -115,7 +138,11 @@ export class ViziVisaResendService {
         `[${correlationId}] Processing visa approvals for order ${orderId} (force=true for manual resend)`,
       );
 
-      await this.visaProcessor.processCompletedRecords([completedRecord], true, phone);
+      await this.visaProcessor.processCompletedRecords(
+        [completedRecord],
+        true,
+        phone,
+      );
 
       this.logger.log(
         `[${correlationId}] Successfully triggered visa resend for order ${orderId}`,
@@ -134,7 +161,10 @@ export class ViziVisaResendService {
       };
     } catch (error) {
       // If it's already a known error type, re-throw it
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 

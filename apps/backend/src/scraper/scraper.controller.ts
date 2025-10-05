@@ -59,7 +59,7 @@ export class ScraperController {
   @HttpCode(HttpStatus.ACCEPTED)
   @Scopes('integrations:scraper:trigger')
   async triggerScraper(
-    @Body() dto: TriggerScraperDto
+    @Body() dto: TriggerScraperDto,
   ): Promise<ScraperJobResponseDto> {
     this.logger.log(`Triggering scraper job: ${JSON.stringify(dto)}`);
     return this.scraperService.triggerScraper(dto);
@@ -74,7 +74,9 @@ export class ScraperController {
    */
   @Get('status/:jobId')
   @Scopes('integrations:scraper:read')
-  async getJobStatus(@Param('jobId') jobId: string): Promise<ScraperJobStatusDto> {
+  async getJobStatus(
+    @Param('jobId') jobId: string,
+  ): Promise<ScraperJobStatusDto> {
     this.logger.log(`Getting scraper job status: ${jobId}`);
     return this.scraperService.getJobStatus(jobId);
   }
@@ -89,7 +91,7 @@ export class ScraperController {
   @Get('jobs')
   @Scopes('integrations:scraper:read')
   async listJobsForOrder(
-    @Query('orderId') orderId: string
+    @Query('orderId') orderId: string,
   ): Promise<ScraperJobStatusDto[]> {
     this.logger.log(`Listing scraper jobs for order: ${orderId}`);
     return this.scraperService.listJobsForOrder(orderId);
@@ -111,7 +113,11 @@ export class ScraperController {
           code: 'usa',
           scraperType: 'esta',
           visaType: 'ESTA (Electronic System for Travel Authorization)',
-          requiredCredentials: ['applicationNumber', 'passportNumber', 'dateOfBirth'],
+          requiredCredentials: [
+            'applicationNumber',
+            'passportNumber',
+            'dateOfBirth',
+          ],
         },
         {
           name: 'Vietnam',
@@ -125,7 +131,11 @@ export class ScraperController {
           code: 'south_korea',
           scraperType: 'korea-keta',
           visaType: 'K-ETA (Korea Electronic Travel Authorization)',
-          requiredCredentials: ['applicationNumber', 'passportNumber', 'dateOfBirth'],
+          requiredCredentials: [
+            'applicationNumber',
+            'passportNumber',
+            'dateOfBirth',
+          ],
         },
       ],
     };

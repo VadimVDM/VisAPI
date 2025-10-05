@@ -51,7 +51,10 @@ export class PdfJobStatusDto {
   @ApiPropertyOptional({ description: 'Processing duration in milliseconds' })
   duration?: number;
 
-  @ApiPropertyOptional({ type: PdfResultDto, description: 'Result data if completed' })
+  @ApiPropertyOptional({
+    type: PdfResultDto,
+    description: 'Result data if completed',
+  })
   result?: PdfResultDto;
 
   @ApiPropertyOptional({ description: 'Error message if failed' })

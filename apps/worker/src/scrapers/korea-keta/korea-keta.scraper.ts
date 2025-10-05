@@ -24,10 +24,12 @@ export class KoreaKetaScraper extends BaseScraper {
 
   protected async executeScrape(
     jobData: ScraperJobData,
-    options: ScraperOptions
+    options: ScraperOptions,
   ): Promise<ScraperJobResult> {
     this.logger.log(`[Korea K-ETA] Starting scrape for job ${jobData.jobId}`);
-    this.logger.log(`[Korea K-ETA] Credentials: ${JSON.stringify(jobData.credentials)}`);
+    this.logger.log(
+      `[Korea K-ETA] Credentials: ${JSON.stringify(jobData.credentials)}`,
+    );
 
     // TODO: Replace this placeholder with actual scraping logic
     // Steps typically include:
@@ -51,7 +53,7 @@ export class KoreaKetaScraper extends BaseScraper {
       return this.createNotFoundResult(
         jobData,
         'Korea K-ETA scraper not yet implemented - waiting for scraping logic from Ubuntu server',
-        new Date(Date.now() + 3600000).toISOString() // Retry in 1 hour
+        new Date(Date.now() + 3600000).toISOString(), // Retry in 1 hour
       );
 
       /*
@@ -100,7 +102,10 @@ export class KoreaKetaScraper extends BaseScraper {
       );
       */
     } catch (error) {
-      this.logger.error(`[Korea K-ETA] Scrape failed for job ${jobData.jobId}:`, error);
+      this.logger.error(
+        `[Korea K-ETA] Scrape failed for job ${jobData.jobId}:`,
+        error,
+      );
       return this.createErrorResult(jobData, error, options);
     }
   }

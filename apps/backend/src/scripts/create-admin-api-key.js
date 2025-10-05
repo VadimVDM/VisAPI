@@ -98,6 +98,7 @@ async function createAdminKey() {
         hashed_secret: hashedSecret,
         scopes: [
           'webhook:vizi',
+          'webhook:visanet',
           'admin',
           'orders:write',
           'triggers:create',

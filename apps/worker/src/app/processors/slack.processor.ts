@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 interface SlackJobData {
   channel: string;
@@ -40,11 +46,11 @@ export class SlackProcessor {
     channel: string,
     message: string,
     template?: string,
-    variables?: Record<string, JsonValue>
+    variables?: Record<string, JsonValue>,
   ) {
     // Simulate API delay
     await new Promise((resolve) =>
-      setTimeout(resolve, 100 + Math.random() * 400)
+      setTimeout(resolve, 100 + Math.random() * 400),
     );
 
     this.logger.log(`[SIMULATED] Slack message sent to ${channel}: ${message}`);
@@ -52,7 +58,7 @@ export class SlackProcessor {
     if (template) {
       this.logger.log(
         `[SIMULATED] Using template: ${template} with variables:`,
-        variables
+        variables,
       );
     }
 

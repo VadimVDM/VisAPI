@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsObject, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsObject,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 
 export enum ScraperCountry {
   USA = 'usa',

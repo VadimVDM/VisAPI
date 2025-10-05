@@ -1,7 +1,7 @@
 // Shared types for Airtable integration
 
 export interface ApplicationFields {
-  'ID'?: string; // Application ID like E250923ISR4185144524
+  ID?: string; // Application ID like E250923ISR4185144524
   'Visa ID'?: string;
   'Visa URL'?: string;
   'Application ID'?: string; // Legacy field name
@@ -9,7 +9,7 @@ export interface ApplicationFields {
   'First Name'?: string;
   'First name'?: string[] | string; // Can be array from Airtable
   'Last Name'?: string;
-  'Surname'?: string[] | string; // Can be array from Airtable
+  Surname?: string[] | string; // Can be array from Airtable
   'Order Name'?: string[]; // Array field
   Status?: string;
   Country?: string;

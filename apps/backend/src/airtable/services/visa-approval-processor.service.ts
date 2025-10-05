@@ -28,8 +28,14 @@ export class VisaApprovalProcessorService {
    * @param force If true, bypasses idempotency checks (for manual resends)
    * @param phoneOverride Optional phone number to send messages to (overrides order's phone)
    */
-  async processCompletedRecords(records: CompletedRecord[], force = false, phoneOverride?: string): Promise<void> {
-    this.logger.log(`Processing ${records.length} completed records for visa approvals (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
+  async processCompletedRecords(
+    records: CompletedRecord[],
+    force = false,
+    phoneOverride?: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Processing ${records.length} completed records for visa approvals (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`,
+    );
 
     const errors: Array<{ recordId: string; error: string }> = [];
 
@@ -38,17 +44,16 @@ export class VisaApprovalProcessorService {
         await this.processRecord(record, force, phoneOverride);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        this.logger.error(
-          `Failed to process record ${record.id}:`,
-          errorMsg,
-        );
+        this.logger.error(`Failed to process record ${record.id}:`, errorMsg);
         errors.push({ recordId: record.id, error: errorMsg });
       }
     }
 
     // If any errors occurred, throw them so the caller knows
     if (errors.length > 0) {
-      throw new Error(`Failed to process ${errors.length} record(s): ${JSON.stringify(errors)}`);
+      throw new Error(
+        `Failed to process ${errors.length} record(s): ${JSON.stringify(errors)}`,
+      );
     }
   }
 
@@ -57,7 +62,11 @@ export class VisaApprovalProcessorService {
    * @param force If true, bypasses automated checks and forces resend
    * @param phoneOverride Optional phone number to send messages to (overrides order's phone)
    */
-  private async processRecord(record: CompletedRecord, force = false, phoneOverride?: string): Promise<void> {
+  private async processRecord(
+    record: CompletedRecord,
+    force = false,
+    phoneOverride?: string,
+  ): Promise<void> {
     const orderId = record.fields.ID;
     if (!orderId) {
       this.logger.debug(`Skipping record ${record.id} - no order ID`);
@@ -69,11 +78,15 @@ export class VisaApprovalProcessorService {
     // Check if we have expanded application data
     const applications = record.expanded?.Applications_expanded;
     if (!applications || applications.length === 0) {
-      this.logger.warn(`No applications found for order ${orderId} - expanded data: ${JSON.stringify(record.expanded)}`);
+      this.logger.warn(
+        `No applications found for order ${orderId} - expanded data: ${JSON.stringify(record.expanded)}`,
+      );
       return;
     }
 
-    this.logger.log(`Found ${applications.length} applications for order ${orderId}`);
+    this.logger.log(
+      `Found ${applications.length} applications for order ${orderId}`,
+    );
 
     // Build visa details from applications
     const visaDetails = this.buildVisaDetails(applications);
@@ -86,16 +99,30 @@ export class VisaApprovalProcessorService {
     await this.updateOrderWithVisaDetails(orderId, visaDetails);
 
     // Check if we should send notification (skip check if forced)
-    const shouldNotify = force || await this.shouldSendNotification(orderId);
-    this.logger.log(`Should send notification for ${orderId}: ${shouldNotify} (force=${force})`);
+    const shouldNotify = force || (await this.shouldSendNotification(orderId));
+    this.logger.log(
+      `Should send notification for ${orderId}: ${shouldNotify} (force=${force})`,
+    );
 
     if (shouldNotify) {
-      this.logger.log(`Queueing visa notifications for ${orderId} (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
+      this.logger.log(
+        `Queueing visa notifications for ${orderId} (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`,
+      );
       try {
-        await this.queueVisaNotification(orderId, visaDetails, force, phoneOverride);
-        this.logger.log(`Successfully queued visa notifications for ${orderId}`);
+        await this.queueVisaNotification(
+          orderId,
+          visaDetails,
+          force,
+          phoneOverride,
+        );
+        this.logger.log(
+          `Successfully queued visa notifications for ${orderId}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to queue visa notifications for ${orderId}:`, error);
+        this.logger.error(
+          `Failed to queue visa notifications for ${orderId}:`,
+          error,
+        );
         throw error;
       }
     }
@@ -107,7 +134,9 @@ export class VisaApprovalProcessorService {
   private buildVisaDetails(applications: ExpandedApplication[]): VisaDetails {
     const visaApplications: VisaApplication[] = [];
 
-    this.logger.debug(`Building visa details from ${applications.length} applications`);
+    this.logger.debug(
+      `Building visa details from ${applications.length} applications`,
+    );
 
     for (const app of applications) {
       const visaId = app.fields['Visa ID']; // Optional - grab if available
@@ -142,11 +171,12 @@ export class VisaApprovalProcessorService {
 
         // Build full applicant name
         const orderNameField = app.fields['Order Name'];
-        const applicantName = (firstName && lastName)
-          ? `${firstName} ${lastName}`
-          : app.fields['Applicant Name'] ||
-            (Array.isArray(orderNameField) ? orderNameField[0] : undefined) ||
-            `Applicant ${visaApplications.length + 1}`;
+        const applicantName =
+          firstName && lastName
+            ? `${firstName} ${lastName}`
+            : app.fields['Applicant Name'] ||
+              (Array.isArray(orderNameField) ? orderNameField[0] : undefined) ||
+              `Applicant ${visaApplications.length + 1}`;
 
         visaApplications.push({
           applicationId,
@@ -173,8 +203,7 @@ export class VisaApprovalProcessorService {
     orderId: string,
     visaDetails: VisaDetails,
   ): Promise<void> {
-    const { error } = await this.supabase
-      .serviceClient
+    const { error } = await this.supabase.serviceClient
       .from('orders')
       .update({
         visa_details: visaDetails as unknown as Json,
@@ -195,8 +224,7 @@ export class VisaApprovalProcessorService {
    * Check if we should send visa notification
    */
   private async shouldSendNotification(orderId: string): Promise<boolean> {
-    const { data: order, error } = await this.supabase
-      .serviceClient
+    const { data: order, error } = await this.supabase.serviceClient
       .from('orders')
       .select('visa_notification_sent, cbb_contact_uuid')
       .eq('order_id', orderId)
@@ -213,10 +241,7 @@ export class VisaApprovalProcessorService {
     // Check conditions:
     // 1. Notification not already sent
     // 2. Has CBB contact synced
-    return (
-      !order.visa_notification_sent &&
-      order.cbb_contact_uuid !== null
-    );
+    return !order.visa_notification_sent && order.cbb_contact_uuid !== null;
   }
 
   /**
@@ -230,13 +255,15 @@ export class VisaApprovalProcessorService {
     force = false,
     phoneOverride?: string,
   ): Promise<void> {
-    this.logger.log(`Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`);
+    this.logger.log(
+      `Starting queueVisaNotification for ${orderId} with ${visaDetails.applications.length} applications (force=${force}${phoneOverride ? `, phoneOverride=${phoneOverride}` : ''})`,
+    );
 
     // Get order and CBB contact details
-    const { data: order, error } = await this.supabase
-      .serviceClient
+    const { data: order, error } = await this.supabase.serviceClient
       .from('orders')
-      .select(`
+      .select(
+        `
         *,
         cbb_contacts:cbb_contact_uuid (
           cbb_contact_id,
@@ -244,12 +271,15 @@ export class VisaApprovalProcessorService {
           client_name,
           alerts_enabled
         )
-      `)
+      `,
+      )
       .eq('order_id', orderId)
       .single();
 
     if (error || !order) {
-      throw new Error(`Failed to get order for notification: ${error?.message}`);
+      throw new Error(
+        `Failed to get order for notification: ${error?.message}`,
+      );
     }
 
     interface CbbContactType {
@@ -262,11 +292,14 @@ export class VisaApprovalProcessorService {
     // Handle both single object and array response from Supabase
     const cbbContactsData = (order as Record<string, unknown>)?.cbb_contacts;
 
-    this.logger.debug(`CBB contacts data for ${orderId}:`, JSON.stringify(cbbContactsData));
+    this.logger.debug(
+      `CBB contacts data for ${orderId}:`,
+      JSON.stringify(cbbContactsData),
+    );
 
     const cbbContact = Array.isArray(cbbContactsData)
-      ? cbbContactsData[0] as CbbContactType
-      : cbbContactsData as CbbContactType | undefined;
+      ? (cbbContactsData[0] as CbbContactType)
+      : (cbbContactsData as CbbContactType | undefined);
 
     if (!cbbContact) {
       this.logger.warn(`No CBB contact found for order ${orderId}`);
@@ -274,19 +307,26 @@ export class VisaApprovalProcessorService {
     }
 
     if (!cbbContact.client_phone) {
-      this.logger.error(`CBB contact for ${orderId} has no phone number:`, JSON.stringify(cbbContact));
+      this.logger.error(
+        `CBB contact for ${orderId} has no phone number:`,
+        JSON.stringify(cbbContact),
+      );
       throw new Error(`CBB contact missing phone number for order ${orderId}`);
     }
 
     if (cbbContact.alerts_enabled === false) {
-      this.logger.debug(`Skipping notification for ${orderId} - CBB notifications disabled`);
+      this.logger.debug(
+        `Skipping notification for ${orderId} - CBB notifications disabled`,
+      );
       return;
     }
 
     // Handle phone override: use the override phone directly
     let finalContact = cbbContact;
     if (phoneOverride) {
-      this.logger.log(`Using phone override: ${phoneOverride} (bypassing order's contact)`);
+      this.logger.log(
+        `Using phone override: ${phoneOverride} (bypassing order's contact)`,
+      );
       // Override the contact data with the new phone
       // CBB will resolve/create the contact automatically when sending
       finalContact = {
@@ -308,7 +348,9 @@ export class VisaApprovalProcessorService {
     // Queue messages for each application
     for (let i = 0; i < maxApplications; i++) {
       const application = visaDetails.applications[i];
-      const country = application.country || this.extractCountryFromOrder(order as Record<string, unknown>);
+      const country =
+        application.country ||
+        this.extractCountryFromOrder(order as Record<string, unknown>);
       const isFirstMessage = i === 0;
 
       // Determine template and params based on message index
@@ -319,7 +361,9 @@ export class VisaApprovalProcessorService {
         // First message uses the original template
         templateName = 'visa_approval_file_phone';
         templateParams = [
-          finalContact?.client_name || (order as Record<string, unknown>)?.first_name as string || 'לקוח יקר',
+          finalContact?.client_name ||
+            ((order as Record<string, unknown>)?.first_name as string) ||
+            'לקוח יקר',
           country || 'המדינה המבוקשת',
         ] as string[];
       } else {
@@ -384,8 +428,16 @@ export class VisaApprovalProcessorService {
    */
   private getNumberEmoji(num: number): string {
     const numberEmojis = [
-      '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
-      '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
+      '1️⃣',
+      '2️⃣',
+      '3️⃣',
+      '4️⃣',
+      '5️⃣',
+      '6️⃣',
+      '7️⃣',
+      '8️⃣',
+      '9️⃣',
+      '🔟',
     ];
     return numberEmojis[num - 1] || `${num}.`;
   }
@@ -393,9 +445,12 @@ export class VisaApprovalProcessorService {
   /**
    * Extract country from order data
    */
-  private extractCountryFromOrder(order: Record<string, unknown>): string | null {
+  private extractCountryFromOrder(
+    order: Record<string, unknown>,
+  ): string | null {
     // Try different fields that might contain country
-    if (typeof order.destination_country === 'string') return order.destination_country;
+    if (typeof order.destination_country === 'string')
+      return order.destination_country;
     if (typeof order.country === 'string') return order.country;
     if (typeof order.visa_type === 'string') {
       if (order.visa_type.includes('UK')) return 'בריטניה';

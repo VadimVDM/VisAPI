@@ -34,7 +34,8 @@ export class OrdersService {
     webhookData: ViziWebhookDto,
     correlationId?: string,
   ): Promise<string> {
-    const orderData = this.orderTransformerService.transformWebhookToOrder(webhookData);
+    const orderData =
+      this.orderTransformerService.transformWebhookToOrder(webhookData);
 
     try {
       const newOrder = await this.ordersRepository.create(orderData);

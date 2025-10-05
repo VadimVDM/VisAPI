@@ -101,12 +101,17 @@ export class WorkflowProcessor {
       );
     } catch (error: unknown) {
       const { message, stack } = this.describeError(error);
-      this.logger.error(`Failed to process workflow ${workflowId}: ${message}`, stack);
+      this.logger.error(
+        `Failed to process workflow ${workflowId}: ${message}`,
+        stack,
+      );
       throw error;
     }
   }
 
-  private async getWorkflow(workflowId: string): Promise<WorkflowDefinition | null> {
+  private async getWorkflow(
+    workflowId: string,
+  ): Promise<WorkflowDefinition | null> {
     const { data, error } = await this.supabase.client
       .from('workflows')
       .select('*')
@@ -206,10 +211,13 @@ export class WorkflowProcessor {
   ): JsonValue {
     if (typeof config === 'string') {
       // Replace template variables like {{workflow.id}} with actual values
-      return config.replace(/\{\{([^}]+)\}\}/g, (match: string, path: string) => {
-        const value = this.getValueByPath(context, path.trim());
-        return value !== undefined ? this.jsonValueToString(value) : match;
-      });
+      return config.replace(
+        /\{\{([^}]+)\}\}/g,
+        (match: string, path: string) => {
+          const value = this.getValueByPath(context, path.trim());
+          return value !== undefined ? this.jsonValueToString(value) : match;
+        },
+      );
     }
 
     if (Array.isArray(config)) {
@@ -230,7 +238,10 @@ export class WorkflowProcessor {
     return config;
   }
 
-  private getValueByPath(context: WorkflowContext, path: string): JsonValue | undefined {
+  private getValueByPath(
+    context: WorkflowContext,
+    path: string,
+  ): JsonValue | undefined {
     const segments = path.split('.');
     let current: JsonValue | undefined = context;
 
@@ -300,12 +311,19 @@ export class WorkflowProcessor {
     }
 
     const candidate = step as Partial<WorkflowStep>;
-    if (typeof candidate.id !== 'string' || typeof candidate.type !== 'string') {
+    if (
+      typeof candidate.id !== 'string' ||
+      typeof candidate.type !== 'string'
+    ) {
       return null;
     }
 
     const config: WorkflowStepConfig = {};
-    if (candidate.config && typeof candidate.config === 'object' && !Array.isArray(candidate.config)) {
+    if (
+      candidate.config &&
+      typeof candidate.config === 'object' &&
+      !Array.isArray(candidate.config)
+    ) {
       for (const [key, value] of Object.entries(candidate.config)) {
         const safeValue = this.safeJsonValue(value);
         if (safeValue !== undefined) {
@@ -324,7 +342,11 @@ export class WorkflowProcessor {
   }
 
   private normalizeVariables(variables: unknown): WorkflowContext | undefined {
-    if (!variables || typeof variables !== 'object' || Array.isArray(variables)) {
+    if (
+      !variables ||
+      typeof variables !== 'object' ||
+      Array.isArray(variables)
+    ) {
       return undefined;
     }
 
@@ -366,7 +388,9 @@ export class WorkflowProcessor {
 
     if (typeof value === 'object') {
       const normalizedObject: { [key: string]: JsonValue } = {};
-      for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      for (const [key, entry] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
         const safeEntry = this.safeJsonValue(entry);
         if (safeEntry !== undefined) {
           normalizedObject[key] = safeEntry;
@@ -394,7 +418,10 @@ export class WorkflowProcessor {
     }
   }
 
-  private extractNumber(value: JsonValue | undefined, fallback: number): number {
+  private extractNumber(
+    value: JsonValue | undefined,
+    fallback: number,
+  ): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return value;
     }

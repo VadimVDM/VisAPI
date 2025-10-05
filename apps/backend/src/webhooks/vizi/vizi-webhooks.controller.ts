@@ -21,8 +21,14 @@ import { ViziOrderRetriggerService } from './services/order-retrigger.service';
 import { ViziCbbResyncService } from './services/cbb-resync.service';
 import { ViziWhatsAppRetriggerService } from './services/whatsapp-retrigger.service';
 import { ViziVisaResendService } from './services/visa-resend.service';
-import { RetriggerOrdersDto, RetriggerResultDto } from './dto/retrigger-orders.dto';
-import { ResyncCBBContactDto, ResyncCBBResultDto } from './dto/resync-cbb-contact.dto';
+import {
+  RetriggerOrdersDto,
+  RetriggerResultDto,
+} from './dto/retrigger-orders.dto';
+import {
+  ResyncCBBContactDto,
+  ResyncCBBResultDto,
+} from './dto/resync-cbb-contact.dto';
 import {
   RetriggerWhatsAppDto,
   RetriggerWhatsAppResultDto,
@@ -55,10 +61,22 @@ export class ViziWebhooksController {
     type: ViziWebhookDto,
     description: 'Vizi webhook payload containing form and order data',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Webhook processed successfully' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid webhook payload' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Webhook processed successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid webhook payload',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions',
+  })
   async handleViziOrder(
     @Body() body: unknown,
     @Headers() headers: Record<string, string>,
@@ -82,9 +100,18 @@ export class ViziWebhooksController {
     description: 'Retrigger operation completed',
     type: RetriggerResultDto,
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid retrigger parameters' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid retrigger parameters',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions',
+  })
   async retriggerOrders(
     @Body() dto: RetriggerOrdersDto,
     @Headers() headers: Record<string, string>,
@@ -117,8 +144,14 @@ export class ViziWebhooksController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid parameters or order not found',
   })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions (admin required)' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions (admin required)',
+  })
   async resyncCBBContact(
     @Body() dto: ResyncCBBContactDto,
     @Headers() headers: Record<string, string>,
@@ -141,15 +174,27 @@ export class ViziWebhooksController {
       'Manually triggers WhatsApp order confirmation message for a specific order. Useful for recovery when message failed or needs to be resent. Requires admin API key.',
   })
   @ApiBearerAuth('api-key')
-  @ApiBody({ type: RetriggerWhatsAppDto, description: 'WhatsApp retrigger parameters' })
+  @ApiBody({
+    type: RetriggerWhatsAppDto,
+    description: 'WhatsApp retrigger parameters',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'WhatsApp retrigger completed',
     type: RetriggerWhatsAppResultDto,
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid parameters or order not found' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions (admin required)' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid parameters or order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions (admin required)',
+  })
   async retriggerWhatsApp(
     @Body() dto: RetriggerWhatsAppDto,
     @Headers() headers: Record<string, string>,
@@ -178,10 +223,22 @@ export class ViziWebhooksController {
     description: 'Visa resend completed',
     type: VisaResendResultDto,
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid parameters' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Order not found in Airtable' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Invalid or missing API key' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Insufficient permissions (admin required)' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid parameters',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Order not found in Airtable',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or missing API key',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Insufficient permissions (admin required)',
+  })
   async resendVisaApproval(
     @Body() dto: VisaResendDto,
     @Headers() headers: Record<string, string>,

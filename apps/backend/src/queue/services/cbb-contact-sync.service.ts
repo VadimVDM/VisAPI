@@ -35,7 +35,8 @@ export class CbbContactSyncService {
       );
 
       try {
-        const existingContact = await this.cbbService.getContactById(phoneNumber);
+        const existingContact =
+          await this.cbbService.getContactById(phoneNumber);
         if (existingContact) {
           return {
             contact: existingContact,

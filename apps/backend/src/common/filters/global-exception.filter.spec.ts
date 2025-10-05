@@ -84,7 +84,9 @@ describe('GlobalExceptionFilter', () => {
 
       const sentData = mockReply.send.mock.calls[0][0] as ProblemDetail;
       expect(sentData).toMatchObject({
-        type: expect.stringContaining('https://api.visanet.app/problems/') as unknown,
+        type: expect.stringContaining(
+          'https://api.visanet.app/problems/',
+        ) as unknown,
         title: 'Invalid Request Body',
         status: 400,
         detail: 'Test validation error',

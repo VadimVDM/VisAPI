@@ -35,21 +35,20 @@ export class AirtableController {
     @Req() request: Request & { apiKey?: ApiKeyRecord; correlationId?: string },
   ): Promise<AirtableLookupResponseDto> {
     const field: AirtableLookupField =
-      dto.field === 'email' ? 'email' :
-      dto.field === 'phone' ? 'phone' : 'orderId';
+      dto.field === 'email'
+        ? 'email'
+        : dto.field === 'phone'
+          ? 'phone'
+          : 'orderId';
     const value = dto.key.trim();
 
     // Pass API key and request context for logging
-    return this.airtableLookupService.lookup(
-      field,
-      value,
-      {
-        apiKey: request.apiKey,
-        correlationId: request.correlationId,
-        userAgent: request.headers['user-agent'],
-        ipAddress: request.ip || request.socket?.remoteAddress,
-      },
-    );
+    return this.airtableLookupService.lookup(field, value, {
+      apiKey: request.apiKey,
+      correlationId: request.correlationId,
+      userAgent: request.headers['user-agent'],
+      ipAddress: request.ip || request.socket?.remoteAddress,
+    });
   }
 
   @Post('completed')
@@ -61,7 +60,8 @@ export class AirtableController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Lookup result detailing whether a record was found in the completed view.',
+    description:
+      'Lookup result detailing whether a record was found in the completed view.',
     type: AirtableLookupResponseDto,
   })
   async completed(
@@ -69,22 +69,21 @@ export class AirtableController {
     @Req() request: Request & { apiKey?: ApiKeyRecord; correlationId?: string },
   ): Promise<AirtableLookupResponseDto> {
     const field: AirtableLookupField =
-      dto.field === 'email' ? 'email' :
-      dto.field === 'phone' ? 'phone' : 'orderId';
+      dto.field === 'email'
+        ? 'email'
+        : dto.field === 'phone'
+          ? 'phone'
+          : 'orderId';
     const value = dto.key.trim();
 
     // Pass API key and request context for logging
     // Use the completed method which will use the specific view
-    return this.airtableLookupService.completed(
-      field,
-      value,
-      {
-        apiKey: request.apiKey,
-        correlationId: request.correlationId,
-        userAgent: request.headers['user-agent'],
-        ipAddress: request.ip || request.socket?.remoteAddress,
-      },
-    );
+    return this.airtableLookupService.completed(field, value, {
+      apiKey: request.apiKey,
+      correlationId: request.correlationId,
+      userAgent: request.headers['user-agent'],
+      ipAddress: request.ip || request.socket?.remoteAddress,
+    });
   }
 
   @Post('completed/check')

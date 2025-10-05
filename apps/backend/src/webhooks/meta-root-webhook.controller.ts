@@ -14,7 +14,10 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Request } from 'express';
 import { WhatsAppWebhookController } from './whatsapp-webhook.controller';
-import { WebhookEvent, WebhookVerifyDto } from '@visapi/backend-whatsapp-business';
+import {
+  WebhookEvent,
+  WebhookVerifyDto,
+} from '@visapi/backend-whatsapp-business';
 import { WhatsAppWebhookPayload } from './whatsapp.types';
 
 /**
@@ -43,7 +46,9 @@ export class MetaRootWebhookController {
       this.logger.log(
         'Meta webhook verification request received, forwarding to WhatsApp controller',
       );
-      return this.whatsappController.verifyWebhook(query as unknown as WebhookVerifyDto);
+      return this.whatsappController.verifyWebhook(
+        query as unknown as WebhookVerifyDto,
+      );
     }
 
     // Not a webhook request, return a simple status page
@@ -81,6 +86,10 @@ export class MetaRootWebhookController {
     this.logger.log(
       'Meta webhook POST received, forwarding to WhatsApp controller',
     );
-    return this.whatsappController.receiveWebhook(body as WhatsAppWebhookPayload, headers, req);
+    return this.whatsappController.receiveWebhook(
+      body as WhatsAppWebhookPayload,
+      headers,
+      req,
+    );
   }
 }

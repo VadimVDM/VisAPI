@@ -7,9 +7,7 @@ import { Job } from 'bullmq';
 export class LogPruneProcessor {
   private readonly logger = new Logger(LogPruneProcessor.name);
 
-  constructor(
-    private readonly logService: LogService,
-  ) {}
+  constructor(private readonly logService: LogService) {}
 
   async process(job: Job<LogPruneJobData>): Promise<LogPruneJobResult> {
     const { olderThanDays } = job.data;
@@ -20,7 +18,7 @@ export class LogPruneProcessor {
 
     try {
       const result = await this.logService.pruneOldLogs(olderThanDays);
-      
+
       this.logger.log(
         `Log pruning completed successfully: deleted ${result.deleted} logs older than ${olderThanDays} days`,
       );

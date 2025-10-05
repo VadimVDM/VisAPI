@@ -48,7 +48,9 @@ class CacheServiceStub {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    return Promise.resolve(this.store.has(key) ? (this.store.get(key) as unknown as T) : null);
+    return Promise.resolve(
+      this.store.has(key) ? (this.store.get(key) as unknown as T) : null,
+    );
   }
 
   async set<T>(key: string, value: T, _ttl?: number): Promise<void> {
@@ -85,18 +87,17 @@ class SupabaseServiceStub {
 }
 
 describe('AirtableLookupService', () => {
-  const createService = (
-    options?: {
-      config?: ConfigServiceStub;
-      cache?: CacheServiceStub;
-      statusMessageGenerator?: StatusMessageGeneratorStub;
-      supabase?: SupabaseServiceStub;
-    },
-  ) => {
+  const createService = (options?: {
+    config?: ConfigServiceStub;
+    cache?: CacheServiceStub;
+    statusMessageGenerator?: StatusMessageGeneratorStub;
+    supabase?: SupabaseServiceStub;
+  }) => {
     const config =
       options?.config ?? new ConfigServiceStub('key', 'base', 'tbl123');
     const cache = options?.cache ?? new CacheServiceStub();
-    const statusMessageGenerator = options?.statusMessageGenerator ?? new StatusMessageGeneratorStub();
+    const statusMessageGenerator =
+      options?.statusMessageGenerator ?? new StatusMessageGeneratorStub();
     const supabase = options?.supabase ?? new SupabaseServiceStub();
 
     const service = new AirtableLookupService(
@@ -133,7 +134,7 @@ describe('AirtableLookupService', () => {
         Status: 'Active 🔵',
         Name: 'Test User',
         Phone: '1234567890',
-        'Domain Branch': 'US 🇺🇸'
+        'Domain Branch': 'US 🇺🇸',
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     };
@@ -159,7 +160,7 @@ describe('AirtableLookupService', () => {
         Status: 'Active 🔵',
         Email: 'test@example.com',
         Phone: '1234567890',
-        'Domain Branch': 'US 🇺🇸'
+        'Domain Branch': 'US 🇺🇸',
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     });
@@ -182,7 +183,7 @@ describe('AirtableLookupService', () => {
         Status: 'Processing 🟡',
         Name: 'Phone User',
         Email: 'phoneuser@example.com',
-        'Domain Branch': 'IL 🇮🇱'
+        'Domain Branch': 'IL 🇮🇱',
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     };
@@ -197,7 +198,10 @@ describe('AirtableLookupService', () => {
         },
       });
 
-    const result = await service.lookup('phone' as AirtableLookupField, '972507921512');
+    const result = await service.lookup(
+      'phone' as AirtableLookupField,
+      '972507921512',
+    );
 
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
     // Should contain Status, Phone, Email, and any other verification fields
@@ -208,7 +212,7 @@ describe('AirtableLookupService', () => {
         Status: 'Processing 🟡',
         Phone: '972507921512',
         Email: 'phoneuser@example.com',
-        'Domain Branch': 'IL 🇮🇱'
+        'Domain Branch': 'IL 🇮🇱',
       },
       createdTime: '2024-01-01T00:00:00.000Z',
     });
@@ -227,11 +231,11 @@ describe('AirtableLookupService', () => {
       id: 'rec789',
       fields: {
         ID: 'IL250928MA3',
-        Phone: '9720507921512',  // Stored with zero
+        Phone: '9720507921512', // Stored with zero
         Status: 'Completed ✅',
         Name: 'Israeli User',
         Email: 'israeli@example.com',
-        'Domain Branch': 'IL 🇮🇱'
+        'Domain Branch': 'IL 🇮🇱',
       },
       createdTime: '2024-01-02T00:00:00.000Z',
     };
@@ -245,13 +249,16 @@ describe('AirtableLookupService', () => {
           matches: [pythonRecord],
           meta: {
             used_phone_variant: true,
-            variant_used: '9720507921512'
-          }
+            variant_used: '9720507921512',
+          },
         },
       });
 
     // Search with number without zero, but it finds the one with zero
-    const result = await service.lookup('phone' as AirtableLookupField, '972507921512');
+    const result = await service.lookup(
+      'phone' as AirtableLookupField,
+      '972507921512',
+    );
 
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
     // Should contain Status, Phone, Email, and any other verification fields
@@ -262,7 +269,7 @@ describe('AirtableLookupService', () => {
         Status: 'Completed ✅',
         Phone: '9720507921512',
         Email: 'israeli@example.com',
-        'Domain Branch': 'IL 🇮🇱'
+        'Domain Branch': 'IL 🇮🇱',
       },
       createdTime: '2024-01-02T00:00:00.000Z',
     });
@@ -270,7 +277,7 @@ describe('AirtableLookupService', () => {
     // Verify the script was called with the correct value
     expect(executeSpy).toHaveBeenCalledWith(
       JSON.stringify({ field: 'phone', value: '972507921512' }),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
@@ -308,7 +315,9 @@ describe('AirtableLookupService', () => {
 
     expect(result.status).toBe(AirtableLookupStatus.FOUND);
     expect(result.statusMessage).toBeDefined();
-    expect(result.statusMessage).toContain('*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳');
+    expect(result.statusMessage).toContain(
+      '*סטטוס עדכני: הבקשה ממתינה לאישור* ⏳',
+    );
     expect(result.statusMessage).toContain('בריטניה');
     expect(result.statusMessage).toContain('🇬🇧');
     expect(result.statusMessage).toContain('3 ימי עסקים');
@@ -369,9 +378,15 @@ describe('AirtableLookupService', () => {
     expect(result.applications).toBeDefined();
     expect(result.applications).toHaveLength(2);
     expect(result.applications?.[0]).toHaveProperty('id', 'recApp1');
-    expect(result.applications?.[0].fields).toHaveProperty('Status', 'Issue - Missing Document');
+    expect(result.applications?.[0].fields).toHaveProperty(
+      'Status',
+      'Issue - Missing Document',
+    );
     expect(result.applications?.[1]).toHaveProperty('id', 'recApp2');
-    expect(result.applications?.[1].fields).toHaveProperty('Status', 'Issue - Incorrect Info');
+    expect(result.applications?.[1].fields).toHaveProperty(
+      'Status',
+      'Issue - Incorrect Info',
+    );
   });
 
   it('returns multiple status when more than one record is returned', async () => {
@@ -399,7 +414,10 @@ describe('AirtableLookupService', () => {
         },
       });
 
-    const result = await service.lookup('orderId' as AirtableLookupField, '123');
+    const result = await service.lookup(
+      'orderId' as AirtableLookupField,
+      '123',
+    );
 
     expect(result.status).toBe(AirtableLookupStatus.MULTIPLE);
     expect(result.record).toBeUndefined();

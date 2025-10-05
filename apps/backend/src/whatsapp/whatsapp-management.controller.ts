@@ -60,7 +60,8 @@ export class WhatsAppManagementController {
         })),
       };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Template sync failed: ${errorMessage}`, error);
       throw error;
     }
@@ -69,14 +70,16 @@ export class WhatsAppManagementController {
   @Get('templates')
   @ApiOperation({ summary: 'Get all approved WhatsApp templates' })
   @ApiResponse({ status: 200, description: 'Templates retrieved successfully' })
-  async getTemplates(): Promise<Array<{
-    name: string;
-    language: string;
-    status: string;
-    category: string;
-    quality_score: unknown;
-    components: unknown;
-  }>> {
+  async getTemplates(): Promise<
+    Array<{
+      name: string;
+      language: string;
+      status: string;
+      category: string;
+      quality_score: unknown;
+      components: unknown;
+    }>
+  > {
     try {
       const templates = await this.templateManager.getApprovedTemplates();
 
@@ -89,7 +92,8 @@ export class WhatsAppManagementController {
         components: t.components,
       }));
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to get templates: ${errorMessage}`, error);
       throw error;
     }
@@ -104,7 +108,10 @@ export class WhatsAppManagementController {
         await this.templateManager.checkTemplateCategoryCompliance();
       return report;
     } catch (error) {
-      this.logger.error(`Failed to check compliance: ${error instanceof Error ? error.message : String(error)}`, error);
+      this.logger.error(
+        `Failed to check compliance: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
       throw error;
     }
   }

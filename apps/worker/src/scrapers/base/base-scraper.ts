@@ -60,7 +60,10 @@ export abstract class BaseScraper {
       return result;
     } catch (error: unknown) {
       const { message, stack } = this.describeError(error);
-      this.logger.error(`Scrape job failed: ${jobData.jobId} - ${message}`, stack);
+      this.logger.error(
+        `Scrape job failed: ${jobData.jobId} - ${message}`,
+        stack,
+      );
 
       // Take screenshot on error if enabled
       if (options.screenshotsOnError && this.page) {
@@ -405,9 +408,7 @@ export abstract class BaseScraper {
     }
   }
 
-  private hasRetryableFlag(
-    error: unknown,
-  ): error is { retryable: boolean } {
+  private hasRetryableFlag(error: unknown): error is { retryable: boolean } {
     return (
       typeof error === 'object' &&
       error !== null &&
@@ -415,9 +416,7 @@ export abstract class BaseScraper {
     );
   }
 
-  private hasErrorCode(
-    error: unknown,
-  ): error is { code: string } {
+  private hasErrorCode(error: unknown): error is { code: string } {
     return (
       typeof error === 'object' &&
       error !== null &&

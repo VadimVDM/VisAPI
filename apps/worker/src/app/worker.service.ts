@@ -27,7 +27,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly pdfProcessor: PdfProcessor,
     private readonly dlqProcessor: DlqProcessor,
     private readonly workflowProcessor: WorkflowProcessor,
-    private readonly logPruneProcessor: LogPruneProcessor
+    private readonly logPruneProcessor: LogPruneProcessor,
   ) {}
 
   onModuleInit(): void {
@@ -41,14 +41,14 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       QUEUE_NAMES.CRITICAL,
       async (job) => {
         this.logger.log(
-          `Processing critical job ${job.id} of type ${job.name}`
+          `Processing critical job ${job.id} of type ${job.name}`,
         );
         return this.processJob(job);
       },
       {
         connection,
         concurrency: 5,
-      }
+      },
     );
 
     const defaultWorker = new Worker(
@@ -60,7 +60,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       {
         connection,
         concurrency: 10,
-      }
+      },
     );
 
     const bulkWorker = new Worker(
@@ -72,7 +72,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       {
         connection,
         concurrency: 20,
-      }
+      },
     );
 
     // For now, create a DLQ queue with a different name
@@ -85,7 +85,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       {
         connection,
         concurrency: 1,
-      }
+      },
     );
 
     // Register event handlers
@@ -154,23 +154,33 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     throw new Error(`Unknown job type: ${job.name}`);
   }
 
-  private isSlackJob(job: Job<unknown>): job is Parameters<SlackProcessor['process']>[0] {
+  private isSlackJob(
+    job: Job<unknown>,
+  ): job is Parameters<SlackProcessor['process']>[0] {
     return job.name === JOB_NAMES.SEND_SLACK || job.name === 'slack.send';
   }
 
-  private isWhatsAppJob(job: Job<unknown>): job is Parameters<WhatsAppProcessor['process']>[0] {
+  private isWhatsAppJob(
+    job: Job<unknown>,
+  ): job is Parameters<WhatsAppProcessor['process']>[0] {
     return job.name === JOB_NAMES.SEND_WHATSAPP || job.name === 'whatsapp.send';
   }
 
-  private isPdfJob(job: Job<unknown>): job is Parameters<PdfProcessor['process']>[0] {
+  private isPdfJob(
+    job: Job<unknown>,
+  ): job is Parameters<PdfProcessor['process']>[0] {
     return job.name === JOB_NAMES.GENERATE_PDF || job.name === 'pdf.generate';
   }
 
-  private isWorkflowJob(job: Job<unknown>): job is Job<Parameters<WorkflowProcessor['process']>[0]> {
+  private isWorkflowJob(
+    job: Job<unknown>,
+  ): job is Job<Parameters<WorkflowProcessor['process']>[0]> {
     return job.name === JOB_NAMES.PROCESS_WORKFLOW;
   }
 
-  private isLogPruneJob(job: Job<unknown>): job is Parameters<LogPruneProcessor['process']>[0] {
+  private isLogPruneJob(
+    job: Job<unknown>,
+  ): job is Parameters<LogPruneProcessor['process']>[0] {
     return job.name === JOB_NAMES.PRUNE_LOGS;
   }
 }

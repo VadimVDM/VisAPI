@@ -22,20 +22,16 @@ export class PdfService {
     const jobId = this.generateJobId();
     const jobData = this.prepareJobData(dto, jobId);
 
-    const job = await this.pdfQueue.add(
-      JOB_NAMES.GENERATE_PDF,
-      jobData,
-      {
-        jobId,
-        priority: this.getPriorityValue(dto.priority),
-        delay: dto.priority === PdfPriority.LOW ? 5000 : 0,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-      }
-    );
+    const job = await this.pdfQueue.add(JOB_NAMES.GENERATE_PDF, jobData, {
+      jobId,
+      priority: this.getPriorityValue(dto.priority),
+      delay: dto.priority === PdfPriority.LOW ? 5000 : 0,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
+      },
+    });
 
     await this.pdfJobService.trackJob(jobId, dto);
 
@@ -44,9 +40,7 @@ export class PdfService {
   }
 
   async generateBatch(dtos: GeneratePdfDto[]) {
-    const jobs = await Promise.all(
-      dtos.map(dto => this.generatePdf(dto))
-    );
+    const jobs = await Promise.all(dtos.map((dto) => this.generatePdf(dto)));
     return jobs;
   }
 
@@ -64,15 +58,11 @@ export class PdfService {
     };
 
     // Add to high priority queue for immediate processing
-    const job = await this.pdfQueue.add(
-      JOB_NAMES.GENERATE_PDF,
-      previewData,
-      {
-        priority: 1000, // Highest priority for previews
-        removeOnComplete: true,
-        removeOnFail: true,
-      }
-    );
+    const job = await this.pdfQueue.add(JOB_NAMES.GENERATE_PDF, previewData, {
+      priority: 1000, // Highest priority for previews
+      removeOnComplete: true,
+      removeOnFail: true,
+    });
 
     // Wait for completion (max 30 seconds for preview)
     const queueEvents = new QueueEvents(QUEUE_NAMES.PDF, {
@@ -82,7 +72,7 @@ export class PdfService {
     try {
       const result = (await job.waitUntilFinished(
         queueEvents,
-        30000
+        30000,
       )) as PdfPreviewResponseDto;
       return result;
     } catch (error) {
@@ -114,9 +104,7 @@ export class PdfService {
         example: {
           invoiceNumber: 'INV-001',
           date: '2025-09-03',
-          items: [
-            { description: 'Service', quantity: 1, price: 100 }
-          ],
+          items: [{ description: 'Service', quantity: 1, price: 100 }],
         },
       },
       {
@@ -134,14 +122,7 @@ export class PdfService {
       {
         name: 'report',
         description: 'Generic report template with charts',
-        variables: [
-          'title',
-          'subtitle',
-          'date',
-          'content',
-          'charts',
-          'tables',
-        ],
+        variables: ['title', 'subtitle', 'date', 'content', 'charts', 'tables'],
       },
       {
         name: 'certificate',
@@ -174,7 +155,9 @@ export class PdfService {
     switch (dto.source) {
       case PdfSource.TEMPLATE:
         if (!dto.template) {
-          throw new BadRequestException('Template name is required for template source');
+          throw new BadRequestException(
+            'Template name is required for template source',
+          );
         }
         break;
       case PdfSource.URL:
@@ -184,7 +167,9 @@ export class PdfService {
         break;
       case PdfSource.HTML:
         if (!dto.html) {
-          throw new BadRequestException('HTML content is required for HTML source');
+          throw new BadRequestException(
+            'HTML content is required for HTML source',
+          );
         }
         break;
       default:
@@ -208,7 +193,12 @@ export class PdfService {
       options: {
         format: dto.options?.format || 'A4',
         orientation: dto.options?.orientation || 'portrait',
-        margins: dto.options?.margins || { top: 20, bottom: 20, left: 20, right: 20 },
+        margins: dto.options?.margins || {
+          top: 20,
+          bottom: 20,
+          left: 20,
+          right: 20,
+        },
         pageNumbers: dto.options?.pageNumbers || false,
         headerTemplate: dto.options?.headerTemplate,
         footerTemplate: dto.options?.footerTemplate,

@@ -155,7 +155,11 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
 
     // Check for Basic authentication
     const authHeader = req.headers.authorization as string | undefined;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Basic ')) {
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Basic ')
+    ) {
       const base64Credentials = authHeader.slice(6);
       const credentials = Buffer.from(base64Credentials, 'base64').toString(
         'utf-8',
@@ -180,7 +184,10 @@ export function createSwaggerAuthMiddleware(configService: ConfigService) {
       }
     } else if (res.header && res.code && res.send) {
       // Fastify response
-      const headerRes = res.header('WWW-Authenticate', 'Basic realm="Swagger Documentation"');
+      const headerRes = res.header(
+        'WWW-Authenticate',
+        'Basic realm="Swagger Documentation"',
+      );
       if (headerRes && headerRes.code && headerRes.send) {
         const codeRes = headerRes.code(401);
         if (codeRes && codeRes.send) {

@@ -1,7 +1,15 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { LogService } from '@visapi/backend-logging';
 import { OrdersRepository, OrderRecord } from '@visapi/backend-repositories';
-import { ResyncCBBContactDto, ResyncCBBResultDto } from '../dto/resync-cbb-contact.dto';
+import {
+  ResyncCBBContactDto,
+  ResyncCBBResultDto,
+} from '../dto/resync-cbb-contact.dto';
 import { CBBContactSyncResult } from '@visapi/shared-types';
 import { CBBSyncOrchestratorService } from '../../../queue/services/cbb-sync-orchestrator.service';
 
@@ -19,7 +27,10 @@ export class ViziCbbResyncService {
     dto: ResyncCBBContactDto,
     correlationId: string,
   ): Promise<ResyncCBBResultDto> {
-    this.logger.log(`CBB resync initiated with DTO: ${JSON.stringify(dto)}`, correlationId);
+    this.logger.log(
+      `CBB resync initiated with DTO: ${JSON.stringify(dto)}`,
+      correlationId,
+    );
 
     if (!dto.phoneNumber && !dto.orderId && !dto.viziOrderId) {
       throw new BadRequestException(
@@ -46,9 +57,8 @@ export class ViziCbbResyncService {
         };
       }
 
-      const result: CBBContactSyncResult = await this.cbbSyncOrchestrator.syncOrderToCBB(
-        order.order_id,
-      );
+      const result: CBBContactSyncResult =
+        await this.cbbSyncOrchestrator.syncOrderToCBB(order.order_id);
 
       this.logger.log(
         `CBB resync completed for order ${order.id}: status=${result.status}, action=${result.action}`,
@@ -67,8 +77,12 @@ export class ViziCbbResyncService {
         error: successful ? undefined : result.error,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`CBB resync operation failed: ${errorMessage}`, error instanceof Error ? error : undefined);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `CBB resync operation failed: ${errorMessage}`,
+        error instanceof Error ? error : undefined,
+      );
 
       await this.logService.createLog({
         level: 'error',
@@ -77,7 +91,10 @@ export class ViziCbbResyncService {
         correlation_id: correlationId,
       });
 
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
 
@@ -99,7 +116,9 @@ export class ViziCbbResyncService {
     if (dto.orderId) {
       order = await this.ordersRepository.findById(dto.orderId);
     } else if (dto.viziOrderId) {
-      order = await this.ordersRepository.findOne({ where: { order_id: dto.viziOrderId } });
+      order = await this.ordersRepository.findOne({
+        where: { order_id: dto.viziOrderId },
+      });
     } else if (dto.phoneNumber) {
       const orders = await this.ordersRepository.findMany({
         where: { client_phone: dto.phoneNumber },
@@ -113,7 +132,9 @@ export class ViziCbbResyncService {
 
     if (!order) {
       const searchCriteria = JSON.stringify(dto);
-      throw new NotFoundException(`Order not found with criteria: ${searchCriteria}`);
+      throw new NotFoundException(
+        `Order not found with criteria: ${searchCriteria}`,
+      );
     }
 
     return order;

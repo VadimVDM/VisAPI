@@ -9,12 +9,14 @@ Separate NestJS application deployed on Railway alongside API and Redis.
 ## Primary Responsibilities
 
 ### PDF Queue
+
 - **Purpose**: Generate PDFs from HTML/URL/templates
 - **Processor**: `PdfProcessor` with Puppeteer integration
 - **Concurrency**: 3 simultaneous jobs
 - **Storage**: Supabase documents bucket
 
 ### Other Queues
+
 - **critical**: High-priority jobs (concurrency: 5)
 - **default**: Standard jobs (concurrency: 10)
 - **bulk**: Batch operations (concurrency: 20)
@@ -22,11 +24,13 @@ Separate NestJS application deployed on Railway alongside API and Redis.
 ## Key Services
 
 ### PdfGeneratorService
+
 - Puppeteer-based PDF generation
 - Chromium browser management
 - Supabase storage integration
 
 ### PdfTemplateService
+
 - Handlebars template compilation
 - Dynamic template loading
 - Built-in examples (invoice, receipt, report)

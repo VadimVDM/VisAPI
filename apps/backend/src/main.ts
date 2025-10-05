@@ -28,25 +28,34 @@ async function bootstrap() {
 
   // Security - Fastify helmet
   // Cast to unknown first then to the expected type to handle version mismatch
-  await app.register(fastifyHelmet as unknown as Parameters<NestFastifyApplication['register']>[0], {
-    contentSecurityPolicy:
-      configService.nodeEnv === 'production'
-        ? {
-            directives: {
-              defaultSrc: ["'self'"],
-              styleSrc: ["'self'", "'unsafe-inline'"],
-              scriptSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", 'data:', 'https:'],
-            },
-          }
-        : false,
-  });
+  await app.register(
+    fastifyHelmet as unknown as Parameters<
+      NestFastifyApplication['register']
+    >[0],
+    {
+      contentSecurityPolicy:
+        configService.nodeEnv === 'production'
+          ? {
+              directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+              },
+            }
+          : false,
+    },
+  );
 
   // Trust proxy in production (required for correct client IP behind Railway/Vercel proxies)
   if (configService.nodeEnv === 'production') {
     const fastifyInstance = app.getHttpAdapter().getInstance();
     // Set trust proxy for Fastify
-    if (fastifyInstance && 'server' in fastifyInstance && fastifyInstance.server) {
+    if (
+      fastifyInstance &&
+      'server' in fastifyInstance &&
+      fastifyInstance.server
+    ) {
       // Safely access trustProxy property
       const server = fastifyInstance.server as { trustProxy?: boolean };
       server.trustProxy = true;

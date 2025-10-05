@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsObject, IsUrl, ValidateNested, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsObject,
+  IsUrl,
+  ValidateNested,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -27,14 +35,24 @@ export enum PdfPriority {
 }
 
 // Type for template data - can be extended based on template requirements
-export type TemplateDataValue = string | number | boolean | null | undefined | TemplateDataObject | TemplateDataValue[];
+export type TemplateDataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | TemplateDataObject
+  | TemplateDataValue[];
 export interface TemplateDataObject {
   [key: string]: TemplateDataValue;
 }
 export type TemplateData = TemplateDataObject;
 
 // Type for job metadata
-export type JobMetadata = Record<string, string | number | boolean | null | undefined>;
+export type JobMetadata = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
 
 export class PdfOptionsDto {
   @ApiPropertyOptional({ enum: PdfFormat, default: PdfFormat.A4 })
@@ -42,12 +60,18 @@ export class PdfOptionsDto {
   @IsOptional()
   format?: PdfFormat = PdfFormat.A4;
 
-  @ApiPropertyOptional({ enum: PdfOrientation, default: PdfOrientation.PORTRAIT })
+  @ApiPropertyOptional({
+    enum: PdfOrientation,
+    default: PdfOrientation.PORTRAIT,
+  })
   @IsEnum(PdfOrientation)
   @IsOptional()
   orientation?: PdfOrientation = PdfOrientation.PORTRAIT;
 
-  @ApiPropertyOptional({ description: 'Page margins in pixels', example: { top: 20, bottom: 20, left: 20, right: 20 } })
+  @ApiPropertyOptional({
+    description: 'Page margins in pixels',
+    example: { top: 20, bottom: 20, left: 20, right: 20 },
+  })
   @IsObject()
   @IsOptional()
   margins?: {
@@ -72,38 +96,57 @@ export class PdfOptionsDto {
   @IsOptional()
   footerTemplate?: string;
 
-  @ApiPropertyOptional({ description: 'Print background graphics', default: true })
+  @ApiPropertyOptional({
+    description: 'Print background graphics',
+    default: true,
+  })
   @IsBoolean()
   @IsOptional()
   printBackground?: boolean = true;
 }
 
 export class GeneratePdfDto {
-  @ApiProperty({ enum: PdfSource, description: 'Source type for PDF generation' })
+  @ApiProperty({
+    enum: PdfSource,
+    description: 'Source type for PDF generation',
+  })
   @IsEnum(PdfSource)
   source: PdfSource;
 
-  @ApiPropertyOptional({ description: 'Template name (required if source is template)', example: 'invoice' })
+  @ApiPropertyOptional({
+    description: 'Template name (required if source is template)',
+    example: 'invoice',
+  })
   @IsString()
   @IsOptional()
   template?: string;
 
-  @ApiPropertyOptional({ description: 'URL to convert to PDF (required if source is url)' })
+  @ApiPropertyOptional({
+    description: 'URL to convert to PDF (required if source is url)',
+  })
   @IsUrl()
   @IsOptional()
   url?: string;
 
-  @ApiPropertyOptional({ description: 'HTML content (required if source is html)' })
+  @ApiPropertyOptional({
+    description: 'HTML content (required if source is html)',
+  })
   @IsString()
   @IsOptional()
   html?: string;
 
-  @ApiProperty({ description: 'Data to populate template or HTML', example: { name: 'John Doe', amount: 100 } })
+  @ApiProperty({
+    description: 'Data to populate template or HTML',
+    example: { name: 'John Doe', amount: 100 },
+  })
   @IsObject()
   @IsOptional()
   data?: TemplateData;
 
-  @ApiPropertyOptional({ description: 'Output filename without extension', example: 'invoice-2025-01' })
+  @ApiPropertyOptional({
+    description: 'Output filename without extension',
+    example: 'invoice-2025-01',
+  })
   @IsString()
   @IsOptional()
   filename?: string;
@@ -119,7 +162,9 @@ export class GeneratePdfDto {
   @IsOptional()
   priority?: PdfPriority = PdfPriority.NORMAL;
 
-  @ApiPropertyOptional({ description: 'Webhook URL for completion notification' })
+  @ApiPropertyOptional({
+    description: 'Webhook URL for completion notification',
+  })
   @IsUrl()
   @IsOptional()
   webhookUrl?: string;

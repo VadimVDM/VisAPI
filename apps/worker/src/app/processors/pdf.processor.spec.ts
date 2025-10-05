@@ -37,14 +37,29 @@ describe('PdfProcessor', () => {
 
   beforeEach(async () => {
     mockPdfGenerator = {
-      generateFromHtml: jest.fn<ReturnType<GenerateFromHtml>, Parameters<GenerateFromHtml>>() as jest.MockedFunction<GenerateFromHtml>,
-      generateFromUrl: jest.fn<ReturnType<GenerateFromUrl>, Parameters<GenerateFromUrl>>() as jest.MockedFunction<GenerateFromUrl>,
-      cleanupTempFiles: jest.fn<ReturnType<CleanupTempFiles>, Parameters<CleanupTempFiles>>() as jest.MockedFunction<CleanupTempFiles>,
+      generateFromHtml: jest.fn<
+        ReturnType<GenerateFromHtml>,
+        Parameters<GenerateFromHtml>
+      >() as jest.MockedFunction<GenerateFromHtml>,
+      generateFromUrl: jest.fn<
+        ReturnType<GenerateFromUrl>,
+        Parameters<GenerateFromUrl>
+      >() as jest.MockedFunction<GenerateFromUrl>,
+      cleanupTempFiles: jest.fn<
+        ReturnType<CleanupTempFiles>,
+        Parameters<CleanupTempFiles>
+      >() as jest.MockedFunction<CleanupTempFiles>,
     };
 
     mockPdfTemplate = {
-      compileTemplate: jest.fn<ReturnType<CompileTemplate>, Parameters<CompileTemplate>>() as jest.MockedFunction<CompileTemplate>,
-      processHtml: jest.fn<ReturnType<ProcessHtml>, Parameters<ProcessHtml>>() as jest.MockedFunction<ProcessHtml>,
+      compileTemplate: jest.fn<
+        ReturnType<CompileTemplate>,
+        Parameters<CompileTemplate>
+      >() as jest.MockedFunction<CompileTemplate>,
+      processHtml: jest.fn<
+        ReturnType<ProcessHtml>,
+        Parameters<ProcessHtml>
+      >() as jest.MockedFunction<ProcessHtml>,
     };
 
     const module: TestingModule = await Test.createTestingModule({

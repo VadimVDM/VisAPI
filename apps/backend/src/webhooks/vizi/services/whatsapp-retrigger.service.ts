@@ -25,7 +25,8 @@ export class ViziWhatsAppRetriggerService {
     dto: RetriggerWhatsAppDto,
     correlationId: string,
   ): Promise<RetriggerWhatsAppResultDto> {
-    const messageType = dto.messageType || WhatsAppMessageType.ORDER_CONFIRMATION;
+    const messageType =
+      dto.messageType || WhatsAppMessageType.ORDER_CONFIRMATION;
 
     this.logger.log(
       `Starting WhatsApp retrigger: phoneNumber=${dto.phoneNumber}, orderId=${dto.orderId}, viziOrderId=${dto.viziOrderId}, messageType=${messageType}, force=${dto.force}, correlationId=${correlationId}`,
@@ -86,7 +87,8 @@ export class ViziWhatsAppRetriggerService {
           success: false,
           orderId: order.id,
           phoneNumber: order.client_phone || 'unknown',
-          message: 'Order has not been synced with CBB yet. Please run CBB resync first.',
+          message:
+            'Order has not been synced with CBB yet. Please run CBB resync first.',
         };
       }
 
@@ -126,7 +128,8 @@ export class ViziWhatsAppRetriggerService {
               orderId: order.id,
               phoneNumber: order.client_phone || 'unknown',
               cbbContactUuid: order.cbb_contact_uuid,
-              message: 'WhatsApp order confirmation already sent. Use force=true to resend.',
+              message:
+                'WhatsApp order confirmation already sent. Use force=true to resend.',
               alreadySent: true,
             };
           }
@@ -150,7 +153,8 @@ export class ViziWhatsAppRetriggerService {
               orderId: order.id,
               phoneNumber: order.client_phone || 'unknown',
               cbbContactUuid: order.cbb_contact_uuid,
-              message: 'Visa approval notification already sent. Use force=true to resend.',
+              message:
+                'Visa approval notification already sent. Use force=true to resend.',
               alreadySent: true,
             };
           }
@@ -162,7 +166,8 @@ export class ViziWhatsAppRetriggerService {
               orderId: order.id,
               phoneNumber: order.client_phone || 'unknown',
               cbbContactUuid: order.cbb_contact_uuid,
-              message: 'No visa details found for this order. Please fetch from Airtable first.',
+              message:
+                'No visa details found for this order. Please fetch from Airtable first.',
             };
           }
         }
@@ -203,8 +208,10 @@ export class ViziWhatsAppRetriggerService {
           if (isFirstMessage) {
             // First message uses the phone template with name and country
             templateName = 'visa_approval_file_phone';
-            const nameHebrew = cbbContact.client_name || order.client_name || 'לקוח יקר';
-            const country = application.country || order.product_country || 'המדינה המבוקשת';
+            const nameHebrew =
+              cbbContact.client_name || order.client_name || 'לקוח יקר';
+            const country =
+              application.country || order.product_country || 'המדינה המבוקשת';
             templateParams = [nameHebrew, country];
           } else {
             // Subsequent messages use the multi template with just the applicant name

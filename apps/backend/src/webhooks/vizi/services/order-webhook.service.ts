@@ -99,7 +99,10 @@ export class ViziOrderWebhookService {
 
     let dbOrderId: string;
     try {
-      dbOrderId = await this.ordersService.createOrder(webhookData, correlationId);
+      dbOrderId = await this.ordersService.createOrder(
+        webhookData,
+        correlationId,
+      );
       this.logger.log(
         `Order saved to database: ${this.safeStringify(order.id)} (DB ID: ${dbOrderId})`,
       );
@@ -192,7 +195,11 @@ export class ViziOrderWebhookService {
       return undefined;
     }
     const value = order.id;
-    return typeof value === 'string' ? value : value ? this.safeStringify(value) : undefined;
+    return typeof value === 'string'
+      ? value
+      : value
+        ? this.safeStringify(value)
+        : undefined;
   }
 
   private async logTestOrderSkip({
@@ -316,7 +323,9 @@ export class ViziOrderWebhookService {
       typeof order.status === 'string' &&
       !validStatuses.includes(order.status)
     ) {
-      this.logger.warn(`Invalid order status: ${order.status}, defaulting to active`);
+      this.logger.warn(
+        `Invalid order status: ${order.status}, defaulting to active`,
+      );
       order.status = 'active';
     }
   }

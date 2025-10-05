@@ -22,13 +22,13 @@ const COUNTRY_NAMES_HEBREW: Record<string, string> = {
   indonesia: 'אינדונזיה',
   bahrain: 'בחריין',
   'new zealand': 'ניו זילנד',
-  'new_zealand': 'ניו זילנד',  // Also handle underscore version
+  new_zealand: 'ניו זילנד', // Also handle underscore version
   cambodia: 'קמבודיה',
   schengen: 'אזור שנגן',
   'schengen area': 'אזור שנגן',
   morocco: 'מרוקו',
   'sri lanka': 'סרי לנקה',
-  'sri_lanka': 'סרי לנקה',  // Also handle underscore version
+  sri_lanka: 'סרי לנקה', // Also handle underscore version
   togo: 'טוגו',
   china: 'סין',
   japan: 'יפן',
@@ -87,8 +87,6 @@ const VISA_TYPES_HEBREW: Record<string, string> = {
   single: 'כניסה יחידה',
 };
 
-
-
 const COUNTRY_FLAGS: Record<string, string> = {
   india: '🇮🇳',
   usa: '🇺🇸',
@@ -109,13 +107,13 @@ const COUNTRY_FLAGS: Record<string, string> = {
   indonesia: '🇮🇩',
   bahrain: '🇧🇭',
   'new zealand': '🇳🇿',
-  'new_zealand': '🇳🇿',  // Also handle underscore version
+  new_zealand: '🇳🇿', // Also handle underscore version
   cambodia: '🇰🇿',
   schengen: '🇪🇺',
   'schengen area': '🇪🇺',
   morocco: '🇲🇦',
   'sri lanka': '🇱🇰',
-  'sri_lanka': '🇱🇰',  // Also handle underscore version
+  sri_lanka: '🇱🇰', // Also handle underscore version
   togo: '🇹🇬',
   china: '🇨🇳',
   japan: '🇯🇵',
@@ -204,10 +202,12 @@ export class WhatsAppTranslationService {
       return `ויזה בהגעה ${validityHebrew}`;
     }
 
-    if (normalizedDocType === 'dtv' ||
-        normalizedDocType === 'stv' ||
-        normalizedDocType === 'ltv' ||
-        !VISA_TYPES_HEBREW[normalizedDocType]) {
+    if (
+      normalizedDocType === 'dtv' ||
+      normalizedDocType === 'stv' ||
+      normalizedDocType === 'ltv' ||
+      !VISA_TYPES_HEBREW[normalizedDocType]
+    ) {
       // Keep unknown doc types in English with validity
       const docTypeUpper = docType?.toUpperCase() || 'VISA';
       return `${docTypeUpper} ${validityHebrew}`;
@@ -220,7 +220,8 @@ export class WhatsAppTranslationService {
       intentHebrew = 'תיירות ועסקים';
     } else {
       // Get Hebrew intent (default to tourism if not provided)
-      intentHebrew = VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
+      intentHebrew =
+        VISA_TYPES_HEBREW[normalizedIntent || 'tourism'] || 'תיירות';
     }
 
     // Build dynamic visa type string

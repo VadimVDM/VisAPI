@@ -2,7 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { SupabaseService } from '@visapi/core-supabase';
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 @Injectable()
 export class DlqProcessor {

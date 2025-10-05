@@ -8,7 +8,11 @@ export class AirtableLookupDto {
     description: 'Field to search by. Supported values: email, orderid, phone.',
     example: 'email',
   })
-  @Transform(({ value }) => String(value || '').trim().toLowerCase())
+  @Transform(({ value }) =>
+    String(value || '')
+      .trim()
+      .toLowerCase(),
+  )
   @IsString()
   @IsNotEmpty()
   @IsIn(['email', 'orderid', 'phone'])

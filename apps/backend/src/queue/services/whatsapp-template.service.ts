@@ -163,6 +163,8 @@ export class WhatsAppTemplateService {
    */
   hasTemplate(messageType: string): boolean {
     // Templates that are currently implemented
-    return messageType === 'order_confirmation' || messageType === 'visa_approval';
+    return (
+      messageType === 'order_confirmation' || messageType === 'visa_approval'
+    );
   }
 }

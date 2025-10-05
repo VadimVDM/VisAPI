@@ -3,7 +3,8 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class VisaResendDto {
   @ApiProperty({
-    description: 'The order ID to resend visa approval notifications for (e.g., IL250928IN7)',
+    description:
+      'The order ID to resend visa approval notifications for (e.g., IL250928IN7)',
     example: 'IL250928IN7',
   })
   @IsString()
@@ -11,7 +12,8 @@ export class VisaResendDto {
   orderId: string;
 
   @ApiProperty({
-    description: 'Optional phone number to override recipient (e.g., 972507758758). If provided, messages will be sent to this number instead of the order\'s phone.',
+    description:
+      "Optional phone number to override recipient (e.g., 972507758758). If provided, messages will be sent to this number instead of the order's phone.",
     example: '972507758758',
     required: false,
   })
@@ -35,7 +37,8 @@ export class VisaResendResultDto {
 
   @ApiProperty({
     description: 'Human-readable message about the operation result',
-    example: 'Successfully triggered visa approval resend for order IL250928IN7',
+    example:
+      'Successfully triggered visa approval resend for order IL250928IN7',
   })
   message: string;
 

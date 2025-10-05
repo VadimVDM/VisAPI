@@ -45,7 +45,7 @@ export class PdfJobService {
     await this.cacheService.set(
       `${this.JOB_CACHE_PREFIX}${jobId}`,
       jobData,
-      this.JOB_CACHE_TTL
+      this.JOB_CACHE_TTL,
     );
 
     return jobData;
@@ -130,10 +130,14 @@ export class PdfJobService {
       });
 
       if (!response.ok) {
-        this.logger.warn(`Webhook failed: ${response.status} ${response.statusText}`);
+        this.logger.warn(
+          `Webhook failed: ${response.status} ${response.statusText}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Webhook error: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Webhook error: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

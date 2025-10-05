@@ -75,103 +75,119 @@ describe('WorkflowValidationService', () => {
       }),
     };
 
-    const mockValidationEngine: jest.Mocked<Pick<WorkflowValidationEngineService, 'validateStepConfig' | 'validateCronExpression' | 'validateUniqueStepIds' | 'validateBusinessRules' | 'validateWorkflowSteps' | 'validateWorkflowTriggers'>> = {
-      validateStepConfig: jest.fn((stepType: string, config: unknown): ValidationResult => {
-        // Validate unknown step types
-        const validStepTypes = [
-          'slack.send',
-          'whatsapp.send',
-          'pdf.generate',
-          'email.send',
-        ];
-        if (!validStepTypes.includes(stepType)) {
-          return {
-            valid: false,
-            errors: [`Unknown step type: ${stepType}`],
-          };
-        }
-
-        // Validate required fields
-        const requiredFields: Record<string, string[]> = {
-          'slack.send': ['channel'],
-          'whatsapp.send': ['contact'],
-          'pdf.generate': ['template'],
-          'email.send': ['recipient'],
-        };
-
-        const required = requiredFields[stepType] || [];
-        const configObj = config as Record<string, unknown>;
-        const missing = required.filter((field) => !configObj[field]);
-        if (missing.length > 0) {
-          return {
-            valid: false,
-            errors: missing.map((field) => `Missing required field: ${field}`),
-          };
-        }
-
-        // Validate phone format for whatsapp
-        const configWithContact = config as { contact?: unknown };
-        if (stepType === 'whatsapp.send' && configWithContact.contact) {
-          const phoneRegex = /^\+[1-9]\d{1,14}$/;
-          if (!phoneRegex.test(configWithContact.contact as string)) {
+    const mockValidationEngine: jest.Mocked<
+      Pick<
+        WorkflowValidationEngineService,
+        | 'validateStepConfig'
+        | 'validateCronExpression'
+        | 'validateUniqueStepIds'
+        | 'validateBusinessRules'
+        | 'validateWorkflowSteps'
+        | 'validateWorkflowTriggers'
+      >
+    > = {
+      validateStepConfig: jest.fn(
+        (stepType: string, config: unknown): ValidationResult => {
+          // Validate unknown step types
+          const validStepTypes = [
+            'slack.send',
+            'whatsapp.send',
+            'pdf.generate',
+            'email.send',
+          ];
+          if (!validStepTypes.includes(stepType)) {
             return {
               valid: false,
-              errors: [
-                'Invalid phone number format. Use E.164 format (e.g., +1234567890)',
-              ],
+              errors: [`Unknown step type: ${stepType}`],
             };
           }
-        }
 
-        // Validate email format for email.send
-        const configWithRecipient = config as { recipient?: unknown };
-        if (stepType === 'email.send' && configWithRecipient.recipient) {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(configWithRecipient.recipient as string)) {
+          // Validate required fields
+          const requiredFields: Record<string, string[]> = {
+            'slack.send': ['channel'],
+            'whatsapp.send': ['contact'],
+            'pdf.generate': ['template'],
+            'email.send': ['recipient'],
+          };
+
+          const required = requiredFields[stepType] || [];
+          const configObj = config as Record<string, unknown>;
+          const missing = required.filter((field) => !configObj[field]);
+          if (missing.length > 0) {
             return {
               valid: false,
-              errors: ['Invalid email format'],
+              errors: missing.map(
+                (field) => `Missing required field: ${field}`,
+              ),
             };
           }
-        }
 
-        return { valid: true };
-      }),
-      validateCronExpression: jest.fn((expression: unknown): ValidationResult => {
-        // Basic validation for cron expressions
-        if (!expression || typeof expression !== 'string') {
-          return {
-            valid: false,
-            errors: ['Cron expression must be a non-empty string'],
-          };
-        }
+          // Validate phone format for whatsapp
+          const configWithContact = config as { contact?: unknown };
+          if (stepType === 'whatsapp.send' && configWithContact.contact) {
+            const phoneRegex = /^\+[1-9]\d{1,14}$/;
+            if (!phoneRegex.test(configWithContact.contact as string)) {
+              return {
+                valid: false,
+                errors: [
+                  'Invalid phone number format. Use E.164 format (e.g., +1234567890)',
+                ],
+              };
+            }
+          }
 
-        const fields = expression.trim().split(/\s+/);
-        if (fields.length !== 5) {
-          return {
-            valid: false,
-            errors: ['Cron expression must have exactly 5 fields'],
-          };
-        }
+          // Validate email format for email.send
+          const configWithRecipient = config as { recipient?: unknown };
+          if (stepType === 'email.send' && configWithRecipient.recipient) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(configWithRecipient.recipient as string)) {
+              return {
+                valid: false,
+                errors: ['Invalid email format'],
+              };
+            }
+          }
 
-        // Validate minute field (0-59)
-        const minute = parseInt(fields[0]);
-        if (
-          fields[0] !== '*' &&
-          !fields[0].includes('/') &&
-          !fields[0].includes(',') &&
-          !fields[0].includes('-')
-        ) {
-          if (isNaN(minute) || minute < 0 || minute > 59) {
+          return { valid: true };
+        },
+      ),
+      validateCronExpression: jest.fn(
+        (expression: unknown): ValidationResult => {
+          // Basic validation for cron expressions
+          if (!expression || typeof expression !== 'string') {
             return {
               valid: false,
-              errors: [`Invalid minute value: ${fields[0]}`],
+              errors: ['Cron expression must be a non-empty string'],
             };
           }
-        }
 
-        return { valid: true };
-      }),
+          const fields = expression.trim().split(/\s+/);
+          if (fields.length !== 5) {
+            return {
+              valid: false,
+              errors: ['Cron expression must have exactly 5 fields'],
+            };
+          }
+
+          // Validate minute field (0-59)
+          const minute = parseInt(fields[0]);
+          if (
+            fields[0] !== '*' &&
+            !fields[0].includes('/') &&
+            !fields[0].includes(',') &&
+            !fields[0].includes('-')
+          ) {
+            if (isNaN(minute) || minute < 0 || minute > 59) {
+              return {
+                valid: false,
+                errors: [`Invalid minute value: ${fields[0]}`],
+              };
+            }
+          }
+
+          return { valid: true };
+        },
+      ),
       validateUniqueStepIds: jest.fn((steps: unknown): ValidationResult => {
         const stepsArray = steps as Array<{ id: string }>;
         const ids = stepsArray.map((step) => step.id);
@@ -189,24 +205,33 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateBusinessRules: jest.fn((workflow: { triggers?: unknown[]; steps?: unknown[] }): ValidationResult => {
-        if (!workflow.triggers || workflow.triggers.length === 0) {
-          return {
-            valid: false,
-            errors: ['Workflow must have at least one trigger'],
-          };
-        }
-        if (!workflow.steps || workflow.steps.length === 0) {
-          return {
-            valid: false,
-            errors: ['Workflow must have at least one step'],
-          };
-        }
-        return { valid: true };
-      }),
-      validateWorkflowSteps: jest.fn(function (workflow: unknown): ValidationResult {
+      validateBusinessRules: jest.fn(
+        (workflow: {
+          triggers?: unknown[];
+          steps?: unknown[];
+        }): ValidationResult => {
+          if (!workflow.triggers || workflow.triggers.length === 0) {
+            return {
+              valid: false,
+              errors: ['Workflow must have at least one trigger'],
+            };
+          }
+          if (!workflow.steps || workflow.steps.length === 0) {
+            return {
+              valid: false,
+              errors: ['Workflow must have at least one step'],
+            };
+          }
+          return { valid: true };
+        },
+      ),
+      validateWorkflowSteps: jest.fn(function (
+        workflow: unknown,
+      ): ValidationResult {
         // Use the arrow function to access the mocked validateUniqueStepIds
-        const wf = workflow as { steps: Array<{ id: string; type: string; config: unknown }> };
+        const wf = workflow as {
+          steps: Array<{ id: string; type: string; config: unknown }>;
+        };
         const uniqueIdResult = mockValidationEngine.validateUniqueStepIds(
           wf.steps,
         );
@@ -232,25 +257,29 @@ describe('WorkflowValidationService', () => {
 
         return { valid: true };
       }),
-      validateWorkflowTriggers: jest.fn((workflow: unknown): ValidationResult => {
-        const wf = workflow as { triggers: Array<{ type: string; config: { schedule?: string } }> };
-        for (const trigger of wf.triggers) {
-          if (trigger.type === 'cron' && trigger.config.schedule) {
-            const cronResult = mockValidationEngine.validateCronExpression(
-              trigger.config.schedule,
-            );
-            if (!cronResult.valid) {
-              return {
-                valid: false,
-                errors: cronResult.errors?.map(
-                  (error: string) => `Cron trigger: ${error}`,
-                ),
-              };
+      validateWorkflowTriggers: jest.fn(
+        (workflow: unknown): ValidationResult => {
+          const wf = workflow as {
+            triggers: Array<{ type: string; config: { schedule?: string } }>;
+          };
+          for (const trigger of wf.triggers) {
+            if (trigger.type === 'cron' && trigger.config.schedule) {
+              const cronResult = mockValidationEngine.validateCronExpression(
+                trigger.config.schedule,
+              );
+              if (!cronResult.valid) {
+                return {
+                  valid: false,
+                  errors: cronResult.errors?.map(
+                    (error: string) => `Cron trigger: ${error}`,
+                  ),
+                };
+              }
             }
           }
-        }
-        return { valid: true };
-      }),
+          return { valid: true };
+        },
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({

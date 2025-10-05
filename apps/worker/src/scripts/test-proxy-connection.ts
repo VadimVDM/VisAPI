@@ -13,19 +13,30 @@ const PROXY_CONFIG = {
 };
 
 const TEST_SITES = [
-  { name: 'BrightData Test', url: 'https://geo.brdtest.com/welcome.txt?product=resi&method=native' },
+  {
+    name: 'BrightData Test',
+    url: 'https://geo.brdtest.com/welcome.txt?product=resi&method=native',
+  },
   { name: 'IPify (Simple HTTP)', url: 'https://api.ipify.org?format=json' },
   { name: 'HTTPBin (Headers)', url: 'https://httpbin.org/headers' },
   { name: 'Google', url: 'https://www.google.com' },
   { name: 'ESTA Homepage', url: 'https://esta.cbp.dhs.gov/esta' },
-  { name: 'ESTA Check Status', url: 'https://esta.cbp.dhs.gov/esta/application?execution=e1s1' },
+  {
+    name: 'ESTA Check Status',
+    url: 'https://esta.cbp.dhs.gov/esta/application?execution=e1s1',
+  },
 ];
 
 async function testConnection(
   useName: string,
   url: string,
   useProxy: boolean,
-): Promise<{ success: boolean; ip?: string; error?: string; duration: number }> {
+): Promise<{
+  success: boolean;
+  ip?: string;
+  error?: string;
+  duration: number;
+}> {
   const start = Date.now();
   let browser;
   let context;
@@ -57,7 +68,9 @@ async function testConnection(
     // Enable verbose logging
     page.on('console', (msg) => console.log(`   📄 Console: ${msg.text()}`));
     page.on('requestfailed', (req) => {
-      console.log(`   ❌ Request failed: ${req.url()} - ${req.failure()?.errorText}`);
+      console.log(
+        `   ❌ Request failed: ${req.url()} - ${req.failure()?.errorText}`,
+      );
     });
 
     await page.goto(url, {
@@ -133,11 +146,15 @@ async function main() {
   }
 
   // Summary
-  console.log('\n\n═══════════════════════════════════════════════════════════');
+  console.log(
+    '\n\n═══════════════════════════════════════════════════════════',
+  );
   console.log('📊 TEST SUMMARY');
   console.log('═══════════════════════════════════════════════════════════\n');
 
-  console.log('Site                          | Type   | Status | Duration | IP/Error');
+  console.log(
+    'Site                          | Type   | Status | Duration | IP/Error',
+  );
   console.log('-'.repeat(100));
 
   for (const result of results) {
@@ -150,7 +167,9 @@ async function main() {
     console.log(`${siteName} | ${type} | ${status} | ${duration} | ${extra}`);
   }
 
-  console.log('\n═══════════════════════════════════════════════════════════\n');
+  console.log(
+    '\n═══════════════════════════════════════════════════════════\n',
+  );
 
   // Analysis
   const directSuccess = results.filter((r) => !r.proxy && r.success).length;
@@ -158,15 +177,25 @@ async function main() {
   const totalTests = TEST_SITES.length;
 
   console.log('🔍 ANALYSIS:');
-  console.log(`   Direct connections: ${directSuccess}/${totalTests} successful`);
-  console.log(`   Proxy connections:  ${proxySuccess}/${totalTests} successful`);
+  console.log(
+    `   Direct connections: ${directSuccess}/${totalTests} successful`,
+  );
+  console.log(
+    `   Proxy connections:  ${proxySuccess}/${totalTests} successful`,
+  );
 
-  const estaDirectResult = results.find((r) => r.site.includes('ESTA') && !r.proxy);
-  const estaProxyResult = results.find((r) => r.site.includes('ESTA') && r.proxy);
+  const estaDirectResult = results.find(
+    (r) => r.site.includes('ESTA') && !r.proxy,
+  );
+  const estaProxyResult = results.find(
+    (r) => r.site.includes('ESTA') && r.proxy,
+  );
 
   if (estaDirectResult?.success && !estaProxyResult?.success) {
     console.log('\n⚠️  ESTA site works directly but FAILS through proxy');
-    console.log('   This indicates the ESTA site is blocking the proxy IP or detecting the proxy.');
+    console.log(
+      '   This indicates the ESTA site is blocking the proxy IP or detecting the proxy.',
+    );
     console.log('   Possible solutions:');
     console.log('   1. Use a residential proxy instead of datacenter proxy');
     console.log('   2. Use a proxy rotation service');
