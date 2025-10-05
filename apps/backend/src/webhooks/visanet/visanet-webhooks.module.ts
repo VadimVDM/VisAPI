@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '@visapi/core-supabase';
 import { BackendCoreCbbModule } from '@visapi/backend-core-cbb';
 import { AirtableModule } from '../../airtable/airtable.module';
+import { AuthModule } from '../../auth/auth.module';
 import { VisanetWebhooksController } from './visanet-webhooks.controller';
 import { ApplicantIssuesService } from './services/applicant-issues.service';
 import { IssuesMessageBuilderService } from './services/issues-message-builder.service';
@@ -11,7 +12,7 @@ import { IssuesMessageBuilderService } from './services/issues-message-builder.s
  * Handles incoming webhooks from Visanet application
  */
 @Module({
-  imports: [SupabaseModule, BackendCoreCbbModule, AirtableModule],
+  imports: [SupabaseModule, BackendCoreCbbModule, AirtableModule, AuthModule],
   controllers: [VisanetWebhooksController],
   providers: [ApplicantIssuesService, IssuesMessageBuilderService],
   exports: [ApplicantIssuesService, IssuesMessageBuilderService],
