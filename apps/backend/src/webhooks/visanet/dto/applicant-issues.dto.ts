@@ -6,6 +6,7 @@ import {
   IsObject,
   ValidateNested,
   IsArray,
+  IsOptional,
 } from 'class-validator';
 
 /**
@@ -108,6 +109,16 @@ export class ApplicantIssuesWebhookDto {
   @ValidateNested()
   @Type(() => IssuesCategoriesDto)
   issues: IssuesCategoriesDto;
+
+  @ApiProperty({
+    description:
+      'Optional phone number override for WhatsApp notification. If provided, sends to this number instead of the number from order/Airtable. Leading + will be automatically removed.',
+    example: '+972509477317',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  phone?: string;
 }
 
 /**

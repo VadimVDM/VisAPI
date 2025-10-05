@@ -28,18 +28,20 @@ export class ApplicantIssuesService {
   /**
    * Process applicant issues webhook
    * 1. Store in database
-   * 2. Lookup applicant in Airtable
-   * 3. Build WhatsApp message
-   * 4. Send via CBB
+   * 2. Check if custom phone override provided
+   * 3. Try local DB lookup first (orders.applicants_data)
+   * 4. Fallback to Airtable if not found in DB
+   * 5. Build WhatsApp message
+   * 6. Send via CBB
    */
   async processApplicantIssues(
     dto: ApplicantIssuesWebhookDto,
     correlationId: string,
   ): Promise<ApplicantIssuesResponseDto> {
-    const { applicantId, issues } = dto;
+    const { applicantId, issues, phone: customPhone } = dto;
 
     this.logger.log(
-      `[${correlationId}] Processing issues for applicant ${applicantId}`,
+      `[${correlationId}] Processing issues for applicant ${applicantId}${customPhone ? ` with custom phone override` : ''}`,
     );
 
     try {
@@ -49,71 +51,126 @@ export class ApplicantIssuesService {
         `[${correlationId}] Created issue record: ${issueRecord.id}`,
       );
 
-      // Step 2: Lookup applicant in Airtable by applicantId
-      // Note: For now, we use the completed() endpoint which searches the completed view
-      // TODO: Airtable may need a field mapping for applicantId
-      this.logger.debug(
-        `[${correlationId}] Looking up applicant ${applicantId} in Airtable completed view`,
-      );
+      let applicantName: string | null = null;
+      let applicantPhone: string | null = null;
+      let applicantEmail: string | null = null;
+      let orderId: string | null = null;
+      let countryName: string | null = null;
 
-      const airtableResult = await this.airtableLookup.completed(
-        'orderId', // For now, we'll need the user to provide orderId instead of applicantId
-        applicantId, // This should be the order ID, not applicant ID
-        { correlationId },
-      );
+      // Step 2: Determine phone number priority
+      // Priority: custom phone > DB lookup > Airtable lookup
+      if (customPhone) {
+        this.logger.log(
+          `[${correlationId}] Using custom phone override: ${customPhone}`,
+        );
+        applicantPhone = customPhone;
 
-      if (
-        airtableResult.status !== AirtableLookupStatus.FOUND ||
-        !airtableResult.record
-      ) {
-        this.logger.warn(
-          `[${correlationId}] Applicant ${applicantId} not found in Airtable completed view`,
+        // Still need to get name and country, try DB first
+        const dbResult = await this.lookupOrderByApplicantId(
+          applicantId,
+          correlationId,
+        );
+        if (dbResult.found) {
+          applicantName = dbResult.clientName || null;
+          orderId = dbResult.orderId || null;
+          countryName = dbResult.productCountry || null;
+        }
+      } else {
+        // Step 3: Try local database lookup first
+        const dbResult = await this.lookupOrderByApplicantId(
+          applicantId,
+          correlationId,
         );
 
-        // Update record as failed
-        await this.updateIssueRecord(issueRecord.id, {
-          status: 'failed',
-          error_message: 'Applicant not found in Airtable',
-          error_code: 'APPLICANT_NOT_FOUND',
-        });
+        if (dbResult.found) {
+          // Found in local DB - use this data
+          this.logger.log(
+            `[${correlationId}] Using data from local database for order ${dbResult.orderId}`,
+          );
+          applicantPhone = dbResult.clientPhone || null;
+          applicantName = dbResult.clientName || null;
+          orderId = dbResult.orderId || null;
+          countryName = dbResult.productCountry || null;
 
-        return {
-          success: false,
-          message: `Applicant ${applicantId} not found in Airtable`,
-          issueRecordId: issueRecord.id,
-        };
+          // Update record with DB data
+          await this.updateIssueRecord(issueRecord.id, {
+            applicant_name: applicantName,
+            applicant_phone: applicantPhone,
+            order_id: orderId,
+            status: 'lookup_completed',
+            applicant_metadata: {
+              source: 'database',
+              product_country: countryName,
+            } as Json,
+          });
+        }
       }
 
-      // Extract applicant data from Airtable
-      const record = airtableResult.record as unknown as Record<
-        string,
-        unknown
-      >;
-      const applicantName = this.extractApplicantName(record);
-      const applicantPhone = this.extractApplicantPhone(record);
-      const applicantEmail = this.extractApplicantEmail(record);
-      const fields = record.fields as Record<string, unknown>;
-      const orderId = fields['ID'] as string;
+      // Step 4: Fallback to Airtable if no phone found yet
+      if (!applicantPhone) {
+        this.logger.debug(
+          `[${correlationId}] No phone found in DB, falling back to Airtable lookup`,
+        );
 
-      this.logger.log(
-        `[${correlationId}] Found applicant: ${applicantName}, phone: ${applicantPhone}, order: ${orderId}`,
-      );
+        const airtableResult = await this.airtableLookup.completed(
+          'orderId', // For now, we'll need the user to provide orderId instead of applicantId
+          applicantId, // This should be the order ID, not applicant ID
+          { correlationId },
+        );
 
-      // Update record with lookup data
-      await this.updateIssueRecord(issueRecord.id, {
-        applicant_name: applicantName,
-        applicant_phone: applicantPhone,
-        applicant_email: applicantEmail,
-        order_id: orderId,
-        status: 'lookup_completed',
-        applicant_metadata: fields as Json,
-      });
+        if (
+          airtableResult.status !== AirtableLookupStatus.FOUND ||
+          !airtableResult.record
+        ) {
+          this.logger.warn(
+            `[${correlationId}] Applicant ${applicantId} not found in Airtable`,
+          );
 
-      // Step 3: Extract country name from Airtable record
-      // Look for country in various possible fields
-      const countryName = this.extractCountryName(record);
+          // Update record as failed
+          await this.updateIssueRecord(issueRecord.id, {
+            status: 'failed',
+            error_message: 'Applicant not found in database or Airtable',
+            error_code: 'APPLICANT_NOT_FOUND',
+          });
 
-      // Step 4: Build WhatsApp template variables
+          return {
+            success: false,
+            message: `Applicant ${applicantId} not found in database or Airtable`,
+            issueRecordId: issueRecord.id,
+          };
+        }
+
+        // Extract applicant data from Airtable
+        const record = airtableResult.record as unknown as Record<
+          string,
+          unknown
+        >;
+        applicantName = this.extractApplicantName(record);
+        applicantPhone = this.extractApplicantPhone(record);
+        applicantEmail = this.extractApplicantEmail(record);
+        const fields = record.fields as Record<string, unknown>;
+        orderId = fields['ID'] as string;
+        countryName = this.extractCountryName(record);
+
+        this.logger.log(
+          `[${correlationId}] Found applicant in Airtable: ${applicantName}, phone: ${applicantPhone}, order: ${orderId}`,
+        );
+
+        // Update record with Airtable data
+        await this.updateIssueRecord(issueRecord.id, {
+          applicant_name: applicantName,
+          applicant_phone: applicantPhone,
+          applicant_email: applicantEmail,
+          order_id: orderId,
+          status: 'lookup_completed',
+          applicant_metadata: {
+            source: 'airtable',
+            ...fields,
+          } as Json,
+        });
+      }
+
+      // Step 5: Build WhatsApp template variables
       const templateVariables = this.messageBuilder.buildTemplateVariables(
         applicantName || 'לקוח יקר',
         countryName || 'היעד', // Fallback to "destination" if no country found
@@ -124,7 +181,7 @@ export class ApplicantIssuesService {
         `[${correlationId}] Built WhatsApp template variables for ${templateVariables.categoryHeader}`,
       );
 
-      // Step 5: Send WhatsApp message via CBB using template
+      // Step 6: Send WhatsApp message via CBB using template
       if (!applicantPhone) {
         this.logger.warn(
           `[${correlationId}] No phone number found for applicant ${applicantId}`,
@@ -198,7 +255,7 @@ export class ApplicantIssuesService {
         details: {
           applicantId,
           applicantName: applicantName || undefined,
-          orderId,
+          orderId: orderId || undefined,
           totalIssues,
           whatsappSent: true,
         },
@@ -381,5 +438,62 @@ export class ApplicantIssuesService {
     }
 
     return null;
+  }
+
+  /**
+   * Lookup order by applicant ID in local database
+   * Searches orders.applicants_data JSONB column for matching applicant ID
+   */
+  private async lookupOrderByApplicantId(
+    applicantId: string,
+    correlationId: string,
+  ): Promise<{
+    found: boolean;
+    orderId?: string;
+    clientPhone?: string;
+    clientName?: string;
+    productCountry?: string;
+  }> {
+    this.logger.debug(
+      `[${correlationId}] Searching orders table for applicant ID: ${applicantId}`,
+    );
+
+    // Query orders table where applicants_data JSONB contains the applicant ID
+    const { data, error } = await this.supabase.serviceClient
+      .from('orders')
+      .select('order_id, client_phone, client_name, product_country')
+      .contains('applicants_data', [{ id: applicantId }])
+      .limit(1)
+      .single();
+
+    if (error) {
+      // Not found is expected, other errors should be logged
+      if (error.code !== 'PGRST116') {
+        this.logger.error(
+          `[${correlationId}] Error searching orders for applicant ${applicantId}:`,
+          error,
+        );
+      }
+      return { found: false };
+    }
+
+    if (!data) {
+      this.logger.debug(
+        `[${correlationId}] No order found for applicant ${applicantId} in local database`,
+      );
+      return { found: false };
+    }
+
+    this.logger.log(
+      `[${correlationId}] Found order ${data.order_id} for applicant ${applicantId} in local database`,
+    );
+
+    return {
+      found: true,
+      orderId: data.order_id,
+      clientPhone: data.client_phone,
+      clientName: data.client_name,
+      productCountry: data.product_country,
+    };
   }
 }
