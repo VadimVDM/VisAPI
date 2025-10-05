@@ -38,11 +38,13 @@ export class IssuesCategoriesDto {
     description: 'Face photo issues',
     type: [IssueItemDto],
     example: [],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => IssueItemDto)
-  face_photo: IssueItemDto[];
+  face_photo?: IssueItemDto[];
 
   @ApiProperty({
     description: 'Passport photo issues',
@@ -51,41 +53,49 @@ export class IssuesCategoriesDto {
       { value: 'with_shadow_light', label: 'With Shadow/Light' },
       { value: 'code_hidden_at_bottom', label: 'Code Hidden at Bottom' },
     ],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => IssueItemDto)
-  passport_photo: IssueItemDto[];
+  passport_photo?: IssueItemDto[];
 
   @ApiProperty({
     description: 'Business document issues',
     type: [IssueItemDto],
     example: [],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => IssueItemDto)
-  business: IssueItemDto[];
+  business?: IssueItemDto[];
 
   @ApiProperty({
     description: 'Passport expiry issues',
     type: [IssueItemDto],
     example: [],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => IssueItemDto)
-  passport_expiry: IssueItemDto[];
+  passport_expiry?: IssueItemDto[];
 
   @ApiProperty({
     description: 'Application details issues',
     type: [IssueItemDto],
     example: [],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => IssueItemDto)
-  application_details: IssueItemDto[];
+  application_details?: IssueItemDto[];
 }
 
 /**

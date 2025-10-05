@@ -168,9 +168,11 @@ export class IssuesMessageBuilderService {
       total += cats.passport_expiry?.length || 0;
       total += cats.application_details?.length || 0;
     } else {
-      // It's a Record
-      for (const categoryIssues of Object.values(issues)) {
-        total += categoryIssues.length;
+      // It's a Record<string, IssueItemDto[]>
+      for (const categoryIssues of Object.values(
+        issues as Record<string, IssueItemDto[]>,
+      )) {
+        total += categoryIssues?.length || 0;
       }
     }
 
