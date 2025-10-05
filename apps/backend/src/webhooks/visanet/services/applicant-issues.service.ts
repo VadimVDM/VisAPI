@@ -56,6 +56,8 @@ export class ApplicantIssuesService {
       let applicantEmail: string | null = null;
       let orderId: string | null = null;
       let countryName: string | null = null;
+      let branch: string | null = null;
+      let whatsappAlertsEnabled: boolean | undefined = undefined;
 
       // Step 2: Determine phone number priority
       // Priority: custom phone > DB lookup > Airtable lookup
@@ -74,6 +76,8 @@ export class ApplicantIssuesService {
           applicantName = dbResult.clientName || null;
           orderId = dbResult.orderId || null;
           countryName = dbResult.productCountry || null;
+          branch = dbResult.branch || null;
+          whatsappAlertsEnabled = dbResult.whatsappAlertsEnabled;
         }
       } else {
         // Step 3: Try local database lookup first
@@ -91,6 +95,8 @@ export class ApplicantIssuesService {
           applicantName = dbResult.clientName || null;
           orderId = dbResult.orderId || null;
           countryName = dbResult.productCountry || null;
+          branch = dbResult.branch || null;
+          whatsappAlertsEnabled = dbResult.whatsappAlertsEnabled;
 
           // Update record with DB data
           await this.updateIssueRecord(issueRecord.id, {
@@ -101,6 +107,8 @@ export class ApplicantIssuesService {
             applicant_metadata: {
               source: 'database',
               product_country: countryName,
+              branch,
+              whatsapp_alerts_enabled: whatsappAlertsEnabled,
             } as Json,
           });
         }
@@ -156,6 +164,33 @@ export class ApplicantIssuesService {
           `[${correlationId}] Found applicant in Airtable: ${applicantName}, phone: ${applicantPhone}, order: ${orderId}`,
         );
 
+        // Extract branch from order ID if not already set
+        // Order IDs like "IL250928IN7" - first 2 chars are branch
+        if (!branch && orderId) {
+          branch = orderId.substring(0, 2).toUpperCase();
+          this.logger.debug(
+            `[${correlationId}] Extracted branch from order ID: ${branch}`,
+          );
+        }
+
+        // Note: Airtable doesn't return whatsapp_alerts_enabled
+        // For Airtable lookups without DB data, we'll need to query the order table
+        if (orderId && whatsappAlertsEnabled === undefined) {
+          const { data: orderData } = await this.supabase.serviceClient
+            .from('orders')
+            .select('whatsapp_alerts_enabled')
+            .eq('order_id', orderId)
+            .single();
+
+          if (orderData) {
+            whatsappAlertsEnabled =
+              orderData.whatsapp_alerts_enabled ?? undefined;
+            this.logger.debug(
+              `[${correlationId}] Fetched whatsapp_alerts_enabled from order: ${whatsappAlertsEnabled}`,
+            );
+          }
+        }
+
         // Update record with Airtable data
         await this.updateIssueRecord(issueRecord.id, {
           applicant_name: applicantName,
@@ -165,6 +200,8 @@ export class ApplicantIssuesService {
           status: 'lookup_completed',
           applicant_metadata: {
             source: 'airtable',
+            branch,
+            whatsapp_alerts_enabled: whatsappAlertsEnabled,
             ...fields,
           } as Json,
         });
@@ -198,6 +235,56 @@ export class ApplicantIssuesService {
           message: 'No phone number found for applicant',
           issueRecordId: issueRecord.id,
         };
+      }
+
+      // CRITICAL: Branch and alerts checks (only if NO custom phone override)
+      // If custom phone is provided, skip all checks and send regardless
+      if (!customPhone) {
+        // Check 1: Branch must be IL (Israel)
+        if (branch?.toLowerCase() !== 'il') {
+          this.logger.warn(
+            `[${correlationId}] Skipping WhatsApp notification - non-IL branch order (branch: ${branch})`,
+          );
+
+          await this.updateIssueRecord(issueRecord.id, {
+            status: 'failed',
+            error_message: `WhatsApp notification skipped - order is for ${branch} branch (only IL branch orders can send WhatsApp)`,
+            error_code: 'NON_IL_BRANCH',
+          });
+
+          return {
+            success: false,
+            message: `WhatsApp notification skipped - order is for ${branch} branch (only IL branch orders can send WhatsApp)`,
+            issueRecordId: issueRecord.id,
+          };
+        }
+
+        // Check 2: WhatsApp alerts must be enabled on order
+        if (whatsappAlertsEnabled === false) {
+          this.logger.warn(
+            `[${correlationId}] Skipping WhatsApp notification - WhatsApp alerts disabled for order ${orderId}`,
+          );
+
+          await this.updateIssueRecord(issueRecord.id, {
+            status: 'failed',
+            error_message: 'WhatsApp notifications are disabled for this order',
+            error_code: 'WHATSAPP_ALERTS_DISABLED',
+          });
+
+          return {
+            success: false,
+            message: 'WhatsApp notifications are disabled for this order',
+            issueRecordId: issueRecord.id,
+          };
+        }
+
+        this.logger.log(
+          `[${correlationId}] ✅ Branch and alerts checks passed (branch: ${branch}, alerts: ${whatsappAlertsEnabled})`,
+        );
+      } else {
+        this.logger.log(
+          `[${correlationId}] ⚠️  Custom phone override provided - bypassing branch and alerts checks`,
+        );
       }
 
       // Normalize phone: remove leading + if present
@@ -453,6 +540,8 @@ export class ApplicantIssuesService {
     clientPhone?: string;
     clientName?: string;
     productCountry?: string;
+    branch?: string;
+    whatsappAlertsEnabled?: boolean;
   }> {
     this.logger.debug(
       `[${correlationId}] Searching orders table for applicant ID: ${applicantId}`,
@@ -461,7 +550,9 @@ export class ApplicantIssuesService {
     // Query orders table where applicants_data JSONB contains the applicant ID
     const { data, error } = await this.supabase.serviceClient
       .from('orders')
-      .select('order_id, client_phone, client_name, product_country')
+      .select(
+        'order_id, client_phone, client_name, product_country, branch, whatsapp_alerts_enabled',
+      )
       .contains('applicants_data', [{ id: applicantId }])
       .limit(1)
       .single();
@@ -494,6 +585,8 @@ export class ApplicantIssuesService {
       clientPhone: data.client_phone,
       clientName: data.client_name,
       productCountry: data.product_country,
+      branch: data.branch,
+      whatsappAlertsEnabled: data.whatsapp_alerts_enabled ?? undefined,
     };
   }
 }
