@@ -235,7 +235,7 @@
     "puppeteer-core": "^24.23.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-hook-form": "^7.64.0",
+    "react-hook-form": "^7.65.0",
     "recharts": "^3.2.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.1.2",
