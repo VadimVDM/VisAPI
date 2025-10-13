@@ -183,7 +183,7 @@
     "@opentelemetry/exporter-metrics-otlp-http": "^0.205.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.205.0",
     "@opentelemetry/instrumentation-http": "^0.205.0",
-    "@opentelemetry/instrumentation-ioredis": "^0.53.3",
+    "@opentelemetry/instrumentation-ioredis": "^0.54.0",
     "@opentelemetry/instrumentation-nestjs-core": "^0.52.2",
     "@opentelemetry/resources": "^2.1.0",
     "@opentelemetry/sdk-metrics": "^2.1.0",
