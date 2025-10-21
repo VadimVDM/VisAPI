@@ -124,8 +124,7 @@ export class CBBSyncOrchestratorService {
       product_validity: order.product_validity ?? undefined,
       is_urgent: order.is_urgent === true, // Store boolean directly
       processing_days: processingDays,
-      language_code:
-        language === 'Hebrew' ? 'he' : language === 'Russian' ? 'ru' : 'en',
+      language_code: language, // Use language code directly from mapBranchToLanguage (he/ru/sv/en)
       country_name_translated: translations.countryNameTranslated,
       visa_type_translated: translations.visaTypeTranslated,
       processing_days_translated: translations.processingDaysTranslated,

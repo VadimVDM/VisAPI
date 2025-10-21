@@ -153,6 +153,7 @@ export class OrderTransformerService {
   /**
    * Transform phone number from object to string format
    * { code: "+44", number: "1234567890" } => "441234567890"
+   * Handles cases where number field already includes country code
    */
   private transformPhoneNumber(
     phone: { code: string; number: string } | string | undefined,
@@ -187,7 +188,21 @@ export class OrderTransformerService {
         return '0000000000';
       }
 
-      return `${cleanCode}${cleanNumber}`;
+      // Check if number already starts with country code (after zero removal)
+      // This prevents duplicate country codes like "972972544978750"
+      if (cleanNumber.startsWith(cleanCode)) {
+        this.logger.debug(
+          `Phone number already includes country code ${cleanCode}: ${cleanNumber}`,
+        );
+        return cleanNumber;
+      }
+
+      // Concatenate code + number only if code not already present
+      const result = `${cleanCode}${cleanNumber}`;
+      this.logger.debug(
+        `Transformed phone from code=${phone.code}, number=${phone.number} to ${result}`,
+      );
+      return result;
     } catch {
       this.logger.warn(
         `Failed to transform phone number: ${JSON.stringify(phone)}, using fallback`,
