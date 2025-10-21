@@ -1,42 +1,35 @@
 # syntax=docker/dockerfile:1.10
 # Production Dockerfile for Worker service
 # Optimized for Railway deployment - October 2025
-# BuildKit cache mounts reduce build time from 8m to ~2m
+# BuildKit multi-mount strategy eliminates 51s node_modules copy
 
 ARG NODE_VERSION=22-alpine
 ARG PNPM_VERSION=10.18.3
 
-# Stage 1: Dependencies
-FROM node:${NODE_VERSION} AS deps
-
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /app
-
-# Enable corepack and pin pnpm version
-ARG PNPM_VERSION
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-
-COPY package.json pnpm-lock.yaml nx.json tsconfig.base.json ./
-
-# Install dependencies with BuildKit cache mount (Railway format)
-RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-# Stage 2: Builder
+########################
+# Stage 1: Builder
+########################
 FROM node:${NODE_VERSION} AS builder
 
 WORKDIR /app
 
+# Build tooling for native deps
+RUN apk add --no-cache python3 make g++
+
 # Enable corepack and pin pnpm version
 ARG PNPM_VERSION
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./
-COPY --from=deps /app/pnpm-lock.yaml ./
-
+# Copy workspace metadata
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 COPY nx.json tsconfig.base.json ./
+
+# Install ALL dependencies using cache mount (NO node_modules copy!)
+# pnpm's virtual store architecture makes this fast
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
+
+# Copy source code
 COPY libs ./libs
 COPY apps/worker ./apps/worker
 
@@ -51,7 +44,7 @@ COPY apps/worker/package.json dist/apps/worker/
 
 # Install production dependencies with cache mount (Railway format)
 RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm-prod,target=/root/.local/share/pnpm/store \
-    cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
+    cd dist/apps/worker && pnpm install --production --no-frozen-lockfile --prefer-offline
 
 # Stage 3: Runner (Debian-based for Playwright compatibility)
 FROM node:22-slim AS runner
