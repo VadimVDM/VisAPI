@@ -359,13 +359,28 @@ Track build performance over time:
 
 ## Summary
 
-✅ **Implemented Optimizations:**
+✅ **Implemented Optimizations (Railway-Specific Format):**
 
-1. BuildKit cache mounts for pnpm store (3 stages)
-2. Pinned PNPM version (10.18.3)
-3. NX build cache mount
-4. NX local caching configuration
-5. Optimized Railway configuration (already in place)
+### Backend (service: 576692d1-8171-425f-a8fd-bd5e987e045d)
+
+1. **pnpm store cache** - `s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm`
+2. **NX build cache** - `s/576692d1-8171-425f-a8fd-bd5e987e045d-nx`
+3. **Production deps cache** - `s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm-prod`
+
+### Worker (service: 40592a1b-0050-4394-8e85-9b7198afea3a)
+
+1. **pnpm store cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm`
+2. **NX build cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-nx`
+3. **Production deps cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm-prod`
+4. **APT package cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-apt`
+5. **APT lists cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-apt-lists`
+6. **Playwright browser cache** - `s/40592a1b-0050-4394-8e85-9b7198afea3a-playwright`
+
+### Global
+
+- Pinned PNPM version (10.18.3)
+- NX local caching configuration
+- Railway-specific cache mount format implemented
 
 **Expected Results:**
 

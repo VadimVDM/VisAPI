@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.10
 # Optimized NestJS backend for Railway deployment - October 2025
 # BuildKit cache mounts reduce build time from 10m to ~2m
 
