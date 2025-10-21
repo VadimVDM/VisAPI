@@ -66,7 +66,7 @@ export class ViziCbbResyncService {
 
       const successful = ['success', 'no_whatsapp'].includes(result.status);
 
-      return {
+      const response: ResyncCBBResultDto = {
         success: successful,
         phoneNumber: order.client_phone || 'unknown',
         orderId: order.id,
@@ -74,8 +74,14 @@ export class ViziCbbResyncService {
         message: this.buildResultMessage(result),
         whatsappAvailable: result.hasWhatsApp ?? false,
         created: result.action === 'created',
-        error: successful ? undefined : result.error,
       };
+
+      // Only include error field if there's an actual error
+      if (!successful && result.error) {
+        response.error = result.error;
+      }
+
+      return response;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
