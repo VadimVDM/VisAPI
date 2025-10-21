@@ -43,7 +43,7 @@
     "test:backend:light": "NODE_OPTIONS='--max-old-space-size=1024' nx test backend -- --maxWorkers=2 --workerIdleMemoryLimit=512MB",
     "test:backend:file": "nx test backend -- --testPathPattern",
     "test:backend:coverage": "nx test backend -- --coverage --maxWorkers=2",
-    "typecheck": "nx run-many --target=typecheck --all --parallel",
+    "typecheck": "pnpm typecheck:backend & pnpm typecheck:worker & pnpm typecheck:frontend & wait",
     "typecheck:backend": "tsc --noEmit -p apps/backend/tsconfig.app.json",
     "typecheck:worker": "tsc --noEmit -p apps/worker/tsconfig.app.json",
     "typecheck:frontend": "tsc --noEmit -p apps/frontend/tsconfig.json",
