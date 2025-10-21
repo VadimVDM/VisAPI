@@ -24,6 +24,7 @@ type JsonValue =
 type TemplateVariables = Record<string, JsonValue>;
 type WhatsAppProcessorJobData = Omit<WhatsAppJobData, 'variables'> & {
   variables?: TemplateVariables;
+  contact?: string; // Alias for 'to' field (backward compatibility)
 };
 
 @Injectable()
@@ -39,32 +40,42 @@ export class WhatsAppProcessor {
   async process(
     job: Job<WhatsAppProcessorJobData>,
   ): Promise<WhatsAppJobResult> {
-    const { to, message, template, variables, fileUrl, fileType } = job.data;
+    const { to, contact, message, template, variables, fileUrl, fileType } =
+      job.data;
 
-    this.logger.log(`Processing WhatsApp message to: ${to}`);
+    // Support both 'to' and 'contact' field names for phone number
+    const phoneNumber = to || contact;
+
+    this.logger.log(`Processing WhatsApp message to: ${phoneNumber}`);
 
     try {
       // Resolve phone number to CBB contact
-      const contact = await this.contactResolver.resolveContact(to);
-      this.logger.debug(`Resolved contact ID ${contact.id} for phone: ${to}`);
+      const resolvedContact =
+        await this.contactResolver.resolveContact(phoneNumber);
+      this.logger.debug(
+        `Resolved contact ID ${resolvedContact.id} for phone: ${phoneNumber}`,
+      );
 
       let messageResponse: MessageResponse;
 
       // Send message based on type
       if (fileUrl && fileType) {
         messageResponse = await this.sendFileMessage(
-          contact.id,
+          resolvedContact.id,
           fileUrl,
           fileType,
         );
       } else if (template) {
         messageResponse = await this.sendTemplateMessage(
-          contact.id,
+          resolvedContact.id,
           template,
           variables,
         );
       } else if (message) {
-        messageResponse = await this.sendTextMessage(contact.id, message);
+        messageResponse = await this.sendTextMessage(
+          resolvedContact.id,
+          message,
+        );
       } else {
         throw new Error(
           'No message content provided (missing message, template, or fileUrl)',
@@ -74,28 +85,28 @@ export class WhatsAppProcessor {
       const messageId = messageResponse.message_id ?? `cbb_${Date.now()}`;
       const result: WhatsAppJobResult = {
         success: true,
-        contactId: contact.id,
+        contactId: resolvedContact.id,
         messageId,
-        to,
+        to: phoneNumber,
         timestamp: new Date().toISOString(),
       };
 
       this.logger.log(
-        `WhatsApp message sent successfully to ${to} (contact ${contact.id})`,
+        `WhatsApp message sent successfully to ${phoneNumber} (contact ${resolvedContact.id})`,
       );
       return result;
     } catch (error: unknown) {
       const errorMessage = this.toErrorMessage(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `Failed to send WhatsApp message to ${to}: ${errorMessage}`,
+        `Failed to send WhatsApp message to ${phoneNumber}: ${errorMessage}`,
         errorStack,
       );
 
       const result: WhatsAppJobResult = {
         success: false,
         contactId: 0,
-        to,
+        to: phoneNumber,
         timestamp: new Date().toISOString(),
         error: this.formatErrorMessage(error),
       };
@@ -103,7 +114,7 @@ export class WhatsAppProcessor {
       // Re-throw error to trigger job retry unless it's a permanent failure
       if (this.isPermanentFailure(error)) {
         this.logger.warn(
-          `Permanent failure for WhatsApp message to ${to}, not retrying`,
+          `Permanent failure for WhatsApp message to ${phoneNumber}, not retrying`,
         );
         return result;
       }
