@@ -167,9 +167,10 @@ export class WhatsAppMessageProcessor
         throw new Error(`Order ${orderId} not found`);
       }
 
-      // Extract force flag from job data
+      // Extract force flag and phone override from job data
       const force = job?.data?.force === true;
       const templateName = job?.data?.templateName;
+      const phoneOverride = job?.data?.phone; // Phone override for manual resends
 
       // Check for duplicate messages (skip if forced resend)
       if (
@@ -197,10 +198,11 @@ export class WhatsAppMessageProcessor
 
       // CRITICAL: Create idempotency record BEFORE sending to prevent duplicates on retry
       // Pass force flag to allow overwriting existing sent records for manual resends
+      // Use phone override if provided (for manual resends), otherwise use order's phone
       const messageId = await this.createIdempotencyRecord(
         orderId,
         messageType,
-        order.client_phone,
+        phoneOverride || order.client_phone,
         templateName,
         force,
       );
@@ -236,6 +238,7 @@ export class WhatsAppMessageProcessor
           messageType,
           tempMessageId,
           templateName,
+          phoneOverride,
         );
       } catch (error) {
         // If sending fails, remove idempotency record to allow retry
@@ -708,6 +711,7 @@ export class WhatsAppMessageProcessor
     messageType: string,
     messageId: string,
     templateName?: string,
+    phoneOverride?: string,
   ): Promise<void> {
     // Get order details for phone number
     const order = await this.getOrderByOrderId(orderId);
@@ -724,9 +728,10 @@ export class WhatsAppMessageProcessor
     );
 
     // Insert or update WhatsApp message record
+    // Use phone override if provided (for manual resends), otherwise use order's phone
     const messageData = {
       order_id: orderId,
-      phone_number: order.client_phone || '',
+      phone_number: phoneOverride || order.client_phone || '',
       template_name: actualTemplateName,
       message_id: messageId,
       status: 'sent',
