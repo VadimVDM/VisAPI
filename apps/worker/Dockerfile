@@ -19,8 +19,8 @@ RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 COPY package.json pnpm-lock.yaml nx.json tsconfig.base.json ./
 
-# Install dependencies with BuildKit cache mount
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# Install dependencies with BuildKit cache mount (Railway format)
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 # Stage 2: Builder
@@ -42,23 +42,23 @@ COPY apps/worker ./apps/worker
 
 ENV NODE_ENV=production
 
-# Build with NX cache mount
-RUN --mount=type=cache,id=nx,target=/app/.nx/cache \
+# Build with NX cache mount (Railway format)
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-nx,target=/app/.nx/cache \
     pnpm nx build worker --configuration=production
 
 # Copy the worker's package.json to the dist folder
 COPY apps/worker/package.json dist/apps/worker/
 
-# Install production dependencies with cache mount
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# Install production dependencies with cache mount (Railway format)
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm-prod,target=/root/.local/share/pnpm/store \
     cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
 
 # Stage 3: Runner (Debian-based for Playwright compatibility)
 FROM node:22-slim AS runner
 
-# Install dependencies for Puppeteer and Playwright with cache mount
-RUN --mount=type=cache,id=apt,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
+# Install dependencies for Puppeteer and Playwright with cache mount (Railway format)
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-apt,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-apt-lists,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
@@ -96,8 +96,8 @@ WORKDIR /app
 
 COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/worker ./
 
-# Install Playwright browsers with cache mount (reduces from ~1m to ~15s)
-RUN --mount=type=cache,id=playwright,target=/ms-playwright \
+# Install Playwright browsers with cache mount (reduces from ~1m to ~15s) (Railway format)
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-playwright,target=/ms-playwright \
     npx playwright install chromium && \
     mkdir -p /tmp/pdf-generator /app/templates/pdf/examples /ms-playwright && \
     chown -R nodejs:nodejs /tmp/pdf-generator /app/templates /ms-playwright

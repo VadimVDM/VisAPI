@@ -22,9 +22,9 @@ RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY package.json pnpm-lock.yaml ./
 COPY nx.json tsconfig.base.json ./
 
-# Install dependencies with BuildKit cache mount for pnpm store
+# Install dependencies with BuildKit cache mount for pnpm store (Railway format)
 # This reduces download time from 2m 13s to ~15s on subsequent builds
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 ########################
@@ -50,10 +50,10 @@ COPY apps/backend ./apps/backend
 COPY libs ./libs
 COPY migrations ./migrations
 
-# Build with production optimizations using NX cache mount
+# Build with production optimizations using NX cache mount (Railway format)
 # This reduces rebuild time from 1m 3s to ~15s when source unchanged
 ENV NODE_ENV=production
-RUN --mount=type=cache,id=nx,target=/app/.nx/cache \
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-nx,target=/app/.nx/cache \
     pnpm nx build backend
 
 ########################
@@ -82,8 +82,8 @@ RUN jq '.dependencies.tslib = "^2.8.1" | \
     < package.json > package.json.tmp && \
     mv package.json.tmp package.json
 
-# Install production deps with cache mount (reduces from 14.8s to ~5s)
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# Install production deps with cache mount (reduces from 14.8s to ~5s) (Railway format)
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm-prod,target=/root/.local/share/pnpm/store \
     pnpm install --prod --ignore-scripts
 
 ########################

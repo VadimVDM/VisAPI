@@ -4,6 +4,27 @@
 **Date**: October 21, 2025
 **Impact**: Reduces build time from **10+ minutes to ~2 minutes** (80% improvement)
 
+## ⚠️ Railway-Specific Cache Mount Format
+
+**CRITICAL**: Railway requires a specific cache mount ID format that differs from standard Docker:
+
+```dockerfile
+# ❌ WRONG - Standard Docker format (will NOT work on Railway)
+--mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store
+
+# ✅ CORRECT - Railway format (required for cache persistence)
+--mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm,target=/root/.local/share/pnpm/store
+```
+
+**Format**: `id=s/<service-id>-<cache-name>`
+
+**Service IDs:**
+
+- Backend: `576692d1-8171-425f-a8fd-bd5e987e045d`
+- Worker: `40592a1b-0050-4394-8e85-9b7198afea3a`
+
+Find your service ID: Railway Dashboard → Service → Settings → Service ID
+
 ## Problem Analysis
 
 Your Railway builds were extremely slow due to:
@@ -39,7 +60,7 @@ Your Railway builds were extremely slow due to:
 
 ## Optimization Implementation
 
-### 1. **BuildKit Cache Mounts for pnpm Store**
+### 1. **BuildKit Cache Mounts for pnpm Store (Railway Format)**
 
 **Before:**
 
@@ -47,12 +68,19 @@ Your Railway builds were extremely slow due to:
 RUN pnpm install --frozen-lockfile
 ```
 
-**After:**
+**After (Railway-specific format):**
 
 ```dockerfile
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# Backend service ID: 576692d1-8171-425f-a8fd-bd5e987e045d
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# Worker service ID: 40592a1b-0050-4394-8e85-9b7198afea3a
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 ```
+
+**Important**: Railway requires cache mount IDs in the format `s/<service-id>-<cache-name>`. Standard Docker cache IDs will NOT work on Railway.
 
 **Impact**:
 
@@ -80,7 +108,7 @@ ARG PNPM_VERSION=10.18.3
 - Uses pre-installed corepack version
 - Consistent builds across environments
 
-### 3. **NX Build Cache Mount**
+### 3. **NX Build Cache Mount (Railway Format)**
 
 **Before:**
 
@@ -88,11 +116,16 @@ ARG PNPM_VERSION=10.18.3
 RUN pnpm nx build backend
 ```
 
-**After:**
+**After (Railway-specific format):**
 
 ```dockerfile
-RUN --mount=type=cache,id=nx,target=/app/.nx/cache \
+# Backend
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-nx,target=/app/.nx/cache \
     pnpm nx build backend
+
+# Worker
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-nx,target=/app/.nx/cache \
+    pnpm nx build worker --configuration=production
 ```
 
 **Impact**:
@@ -101,7 +134,7 @@ RUN --mount=type=cache,id=nx,target=/app/.nx/cache \
 - Subsequent builds with unchanged libs: **~15 seconds** (76% faster)
 - Only rebuilds modified libraries
 
-### 4. **Production Dependencies Cache**
+### 4. **Production Dependencies Cache (Railway Format)**
 
 **Before:**
 
@@ -109,18 +142,42 @@ RUN --mount=type=cache,id=nx,target=/app/.nx/cache \
 RUN pnpm install --prod --ignore-scripts
 ```
 
-**After:**
+**After (Railway-specific format):**
 
 ```dockerfile
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+# Backend
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm-prod,target=/root/.local/share/pnpm/store \
     pnpm install --prod --ignore-scripts
+
+# Worker
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-pnpm-prod,target=/root/.local/share/pnpm/store \
+    cd dist/apps/worker && pnpm install --production --no-frozen-lockfile
 ```
 
 **Impact**:
 
 - Reduces from 14.8s to **~5 seconds** (66% faster)
 
-### 5. **NX Local Caching Configuration**
+### 5. **Worker-Specific Optimizations (Railway Format)**
+
+**APT Package Cache:**
+
+```dockerfile
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-apt,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-apt-lists,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y chromium fonts-liberation ...
+```
+
+**Playwright Browser Cache:**
+
+```dockerfile
+RUN --mount=type=cache,id=s/40592a1b-0050-4394-8e85-9b7198afea3a-playwright,target=/ms-playwright \
+    npx playwright install chromium
+```
+
+**Impact**: Reduces Chromium + Playwright installation from ~2-3m to ~30s
+
+### 6. **NX Local Caching Configuration**
 
 Added to `nx.json`:
 
