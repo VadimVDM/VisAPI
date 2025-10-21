@@ -116,9 +116,12 @@ export class ViziCbbResyncService {
     if (dto.orderId) {
       order = await this.ordersRepository.findById(dto.orderId);
     } else if (dto.viziOrderId) {
-      order = await this.ordersRepository.findOne({
+      const orders = await this.ordersRepository.findMany({
         where: { order_id: dto.viziOrderId },
       });
+      if (orders.length > 0) {
+        order = orders[0];
+      }
     } else if (dto.phoneNumber) {
       const orders = await this.ordersRepository.findMany({
         where: { client_phone: dto.phoneNumber },
