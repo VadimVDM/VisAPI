@@ -569,11 +569,12 @@ export class WhatsAppMessageProcessor
         }
       }
 
-      // Update existing record to pending with new message_id
+      // Update existing record to pending with new message_id and phone (for resends with phone override)
       const { error } = await this.supabaseService.serviceClient
         .from('whatsapp_messages')
         .update({
           message_id: tempMessageId,
+          phone_number: phoneNumber || '',
           status: 'pending',
           confirmation_sent: false,
           updated_at: now,
