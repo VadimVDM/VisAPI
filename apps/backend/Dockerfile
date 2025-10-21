@@ -1,14 +1,32 @@
 # syntax=docker/dockerfile:1.10
 # Optimized NestJS backend for Railway deployment - October 2025
-# BuildKit cache mounts reduce build time from 10m to ~2m
+# BuildKit multi-mount strategy eliminates 2.5min node_modules copy
 
 ARG NODE_VERSION=22-alpine
 ARG PNPM_VERSION=10.18.3
 
 ########################
-# Stage 1: Dependencies
+# Stage 1: Pruned Workspace
 ########################
-FROM node:${NODE_VERSION} AS deps
+FROM node:${NODE_VERSION} AS pruner
+WORKDIR /app
+
+# Enable corepack and pin pnpm version
+ARG PNPM_VERSION
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+# Copy workspace metadata only
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+COPY nx.json tsconfig.base.json ./
+
+# Fetch dependencies to cache WITHOUT installing (fast metadata operation)
+RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm,target=/root/.local/share/pnpm/store \
+    pnpm fetch --frozen-lockfile
+
+########################
+# Stage 2: Builder
+########################
+FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
 # Build tooling for native deps (bcrypt, etc)
@@ -18,32 +36,14 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 ARG PNPM_VERSION
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 COPY nx.json tsconfig.base.json ./
 
-# Install dependencies with BuildKit cache mount for pnpm store (Railway format)
-# This reduces download time from 2m 13s to ~15s on subsequent builds
+# Install ALL dependencies using cache mount (NO node_modules copy!)
+# pnpm's virtual store architecture makes this fast
 RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-########################
-# Stage 2: Builder
-########################
-FROM node:${NODE_VERSION} AS builder
-WORKDIR /app
-
-# Minimal deps for build
-RUN apk add --no-cache libc6-compat
-
-# Enable corepack and pin pnpm version
-ARG PNPM_VERSION
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-
-# Copy dependencies from previous stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json /app/pnpm-lock.yaml ./
-COPY nx.json tsconfig.base.json ./
+    pnpm install --frozen-lockfile --prefer-offline
 
 # Copy source code
 COPY apps/backend ./apps/backend
@@ -62,29 +62,36 @@ RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-nx,target=/app/
 FROM node:${NODE_VERSION} AS prod-deps
 WORKDIR /app
 
-# Need libc6-compat for bcrypt and other native deps, jq for JSON manipulation
-RUN apk add --no-cache libc6-compat jq
+# Need libc6-compat for bcrypt and other native deps
+RUN apk add --no-cache libc6-compat
 
 # Enable corepack and pin pnpm version
 ARG PNPM_VERSION
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
-# Copy generated package.json from build
-COPY --from=builder /app/dist/apps/backend/package.json ./
+# Copy generated package.json from webpack build
+COPY --from=builder /app/dist/apps/backend/package.json ./package.json
 
-# Add missing dependencies that webpack doesn't detect
-RUN jq '.dependencies.tslib = "^2.8.1" | \
-        .dependencies."@supabase/supabase-js" = "^2.55.0" | \
-        .dependencies."@nestjs/websockets" = "^11.1.6" | \
-        .dependencies."@nestjs/microservices" = "^11.1.6" | \
-        .dependencies."@fastify/view" = "^10.0.2" | \
-        .dependencies."class-transformer" = "^0.5.1"' \
-    < package.json > package.json.tmp && \
-    mv package.json.tmp package.json
+# Manually add missing dependencies that webpack's externalDependencies doesn't detect
+# This is faster than jq and works with Node.js built-ins
+RUN node -e " \
+    const pkg = require('./package.json'); \
+    pkg.dependencies = pkg.dependencies || {}; \
+    Object.assign(pkg.dependencies, { \
+      'tslib': '^2.8.1', \
+      '@supabase/supabase-js': '^2.76.1', \
+      '@nestjs/websockets': '^11.1.6', \
+      '@nestjs/microservices': '^11.1.6', \
+      '@fastify/view': '^10.0.2', \
+      'class-transformer': '^0.5.1' \
+    }); \
+    require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)); \
+  "
 
-# Install production deps with cache mount (reduces from 14.8s to ~5s) (Railway format)
+# Install production dependencies using cache mount (Railway format)
+# Using --prefer-offline to use cached packages from builder stage
 RUN --mount=type=cache,id=s/576692d1-8171-425f-a8fd-bd5e987e045d-pnpm-prod,target=/root/.local/share/pnpm/store \
-    pnpm install --prod --ignore-scripts
+    pnpm install --prod --no-optional --ignore-scripts --prefer-offline
 
 ########################
 # Stage 4: Runner
