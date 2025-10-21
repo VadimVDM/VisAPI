@@ -216,14 +216,15 @@ def main() -> None:
       # Check if we have pyairtable available
       use_pyairtable = True
       try:
-        from pyairtable import Table  # type: ignore
+        from pyairtable import Api  # type: ignore
       except ImportError:
         # Fall back to REST API
         use_pyairtable = False
 
       if use_pyairtable:
-        # Use pyairtable for the query
-        table = Table(api_key, base_id, table_id)
+        # Use modern pyairtable API (Api.table instead of deprecated Table constructor)
+        api = Api(api_key)
+        table = api.table(base_id, table_id)
         lowered_value = search_value.lower()
         formula = f"LOWER({{{field_name}}}) = '{sanitize_formula_value(lowered_value)}'"
 

@@ -6,7 +6,7 @@
 **Type**: External Dependency Failure  
 **Severity**: P1 - High  
 **Expected Duration**: 15-30 minutes  
-**Recovery Time Objective (RTO)**: 20 minutes  
+**Recovery Time Objective (RTO)**: 20 minutes
 
 ## Scenario Description
 
@@ -39,7 +39,7 @@ curl -X POST https://api.visanet.app/api/v1/test/whatsapp \
   -H "X-API-Key: $API_KEY" \
   -d '{"to": "+1234567890", "template": "test_message"}'
 
-# Email test  
+# Email test
 curl -X POST https://api.visanet.app/api/v1/test/email \
   -H "X-API-Key: $API_KEY" \
   -d '{"to": "test@visanet.com", "subject": "Game Day Test"}'
@@ -50,6 +50,7 @@ curl -X POST https://api.visanet.app/api/v1/test/email \
 Choose one or more services to simulate failure:
 
 #### Option A: WhatsApp CGB API Failure
+
 ```bash
 # Block WhatsApp API endpoint
 cd chaos-engineering/
@@ -60,6 +61,7 @@ cd chaos-engineering/
 ```
 
 #### Option B: Resend Email Service Failure
+
 ```bash
 # Block Resend API
 ./experiments/external-service-failure.sh resend block
@@ -69,6 +71,7 @@ cd chaos-engineering/
 ```
 
 #### Option C: Supabase Storage Failure
+
 ```bash
 # Block Supabase storage endpoints
 ./experiments/external-service-failure.sh supabase-storage block
@@ -78,6 +81,7 @@ cd chaos-engineering/
 ```
 
 #### Option D: Multiple Service Failure
+
 ```bash
 # Catastrophic scenario - multiple services fail
 ./chaos-runner.sh external-service-failure all medium
@@ -88,24 +92,28 @@ cd chaos-engineering/
 **Expected Behavior by Service:**
 
 **WhatsApp Failure:**
+
 - Jobs enter retry queue with exponential backoff
 - Circuit breaker activates after 5 consecutive failures
 - Webhook returns 202 Accepted with warning
 - Alternative notification channels activated (if configured)
 
 **Email Failure:**
+
 - Email jobs queued for retry
 - Fallback to alternative email service (if configured)
 - Non-critical emails deferred
 - Critical emails logged for manual sending
 
 **Storage Failure:**
+
 - PDF generation jobs fail gracefully
 - Temporary files cached locally
 - Upload retries with exponential backoff
 - User notified of delayed document availability
 
 **Monitoring Commands:**
+
 ```bash
 # Check circuit breaker status
 curl https://api.visanet.app/api/v1/circuit-breakers \
@@ -144,6 +152,7 @@ curl -X POST https://api.visanet.app/api/v1/triggers/visa-application \
 ### 5. Recovery Procedures (T+15 minutes)
 
 #### Restore Service Connectivity
+
 ```bash
 # Unblock services
 ./experiments/external-service-failure.sh --restore-all
@@ -154,6 +163,7 @@ curl -X POST https://api.visanet.app/api/v1/health/external-services \
 ```
 
 #### Process Retry Queues
+
 ```bash
 # Trigger immediate retry for queued jobs
 curl -X POST https://api.visanet.app/api/v1/queue/retry-all \
@@ -187,22 +197,36 @@ curl https://api.visanet.app/api/v1/audit/failed-operations \
 ## Service-Specific Recovery Procedures
 
 ### WhatsApp Recovery
+
 ```bash
-# 1. Verify CGB API key valid
-curl -X GET https://graph.callsbase.com/v19.0/me \
-  -H "Authorization: Bearer $WHATSAPP_TOKEN"
+# 1. Verify WABA API token valid
+curl -X GET "https://graph.facebook.com/v23.0/me" \
+  -H "Authorization: Bearer $WABA_ACCESS_TOKEN"
+
+# If token expired (401 error), refresh immediately:
+# See: /docs/whatsapp-business-api-setup.md#step-41-access-token-expiration--refresh
+# Quick steps:
+#   1. Go to Meta Business Suite > Business Settings > System Users
+#   2. Generate New Token for WhatsApp API system user
+#   3. Update WABA_ACCESS_TOKEN in Railway
+#   4. Redeploy backend service
 
 # 2. Check message template status
 curl https://api.visanet.app/api/v1/whatsapp/templates \
   -H "X-API-Key: $API_KEY"
 
-# 3. Process high-priority messages first
+# 3. Force template sync after token refresh
+curl -X POST https://api.visanet.app/api/v1/whatsapp/templates/sync \
+  -H "X-API-Key: $API_KEY"
+
+# 4. Process high-priority messages first
 curl -X POST https://api.visanet.app/api/v1/queue/prioritize \
   -H "X-API-Key: $API_KEY" \
   -d '{"service": "whatsapp", "priority": "critical"}'
 ```
 
 ### Email Recovery
+
 ```bash
 # 1. Verify Resend API key
 curl https://api.resend.com/emails \
@@ -218,6 +242,7 @@ curl -X POST https://api.visanet.app/api/v1/email/retry-failed \
 ```
 
 ### Storage Recovery
+
 ```bash
 # 1. Verify Supabase connectivity
 curl https://$SUPABASE_PROJECT.supabase.co/storage/v1/list \
@@ -244,21 +269,22 @@ curl -X POST https://api.visanet.app/api/v1/pdf/regenerate-failed \
 
 ## Degradation Strategy by Service
 
-| Service | Impact | Degradation Strategy | User Experience |
-|---------|--------|---------------------|-----------------|
-| WhatsApp | High | Queue & retry, email fallback | "Notification delayed" |
-| Email | Medium | Queue & retry, log critical | "Email will be sent shortly" |
-| Storage | Low | Local cache, delayed upload | "Document processing delayed" |
-| Database | Critical | Read-only mode, cache serving | "Limited functionality" |
+| Service  | Impact   | Degradation Strategy          | User Experience               |
+| -------- | -------- | ----------------------------- | ----------------------------- |
+| WhatsApp | High     | Queue & retry, email fallback | "Notification delayed"        |
+| Email    | Medium   | Queue & retry, log critical   | "Email will be sent shortly"  |
+| Storage  | Low      | Local cache, delayed upload   | "Document processing delayed" |
+| Database | Critical | Read-only mode, cache serving | "Limited functionality"       |
 
 ## Monitoring & Alerting
 
 ### Key Metrics
+
 ```bash
 # Service availability
 curl https://api.visanet.app/api/metrics | grep -E "external_service_availability{service="
 
-# Retry queue depth by service  
+# Retry queue depth by service
 curl https://api.visanet.app/api/metrics | grep retry_queue_depth
 
 # Circuit breaker state
@@ -269,6 +295,7 @@ curl https://api.visanet.app/api/metrics | grep degraded_mode_impact
 ```
 
 ### Alert Thresholds
+
 - Service unavailable > 30 seconds: Warning
 - Service unavailable > 2 minutes: Critical
 - Retry queue > 1000 items: Warning
@@ -277,6 +304,7 @@ curl https://api.visanet.app/api/metrics | grep degraded_mode_impact
 ## Common Issues & Solutions
 
 ### Issue: Circuit breaker won't reset
+
 ```bash
 # Manual reset after verifying service health
 curl -X POST https://api.visanet.app/api/v1/circuit-breakers/reset \
@@ -285,6 +313,7 @@ curl -X POST https://api.visanet.app/api/v1/circuit-breakers/reset \
 ```
 
 ### Issue: Retry storm after recovery
+
 ```bash
 # Implement rate limiting on retries
 curl -X POST https://api.visanet.app/api/v1/queue/retry-config \
@@ -293,6 +322,7 @@ curl -X POST https://api.visanet.app/api/v1/queue/retry-config \
 ```
 
 ### Issue: Memory exhaustion from queued jobs
+
 ```bash
 # Offload to persistent storage
 curl -X POST https://api.visanet.app/api/v1/queue/offload-memory \
@@ -303,18 +333,21 @@ curl -X POST https://api.visanet.app/api/v1/queue/offload-memory \
 ## Lessons Learned Template
 
 ### Failure Response
-1. Time to detect: _____ seconds
-2. Circuit breaker activation: _____ seconds  
-3. Degradation effectiveness: _____%
-4. User notifications sent: _____
+
+1. Time to detect: **\_** seconds
+2. Circuit breaker activation: **\_** seconds
+3. Degradation effectiveness: **\_**%
+4. User notifications sent: **\_**
 
 ### Recovery Metrics
-1. Service restoration time: _____ minutes
-2. Retry queue processing: _____ minutes
-3. Total jobs affected: _____
-4. Jobs successfully recovered: _____%
+
+1. Service restoration time: **\_** minutes
+2. Retry queue processing: **\_** minutes
+3. Total jobs affected: **\_**
+4. Jobs successfully recovered: **\_**%
 
 ### Improvement Opportunities
+
 - [ ] Detection speed
 - [ ] Fallback mechanisms
 - [ ] User communication
@@ -330,16 +363,19 @@ curl -X POST https://api.visanet.app/api/v1/queue/offload-memory \
 ## Vendor Contacts
 
 ### WhatsApp CGB
+
 - Status Page: https://status.callsbase.com
 - Support: support@callsbase.com
 - Escalation: whatsapp-enterprise@meta.com
 
 ### Resend
+
 - Status Page: https://status.resend.com
 - Support: support@resend.com
 - API Issues: api-support@resend.com
 
 ### Supabase
+
 - Status Page: https://status.supabase.com
 - Support: support@supabase.com
 - Enterprise Support: enterprise@supabase.com

@@ -350,9 +350,22 @@ export class WhatsAppMessageProcessor
           );
         }
 
+        // Generate temp message ID for correlation
+        const orderTempMessageId = `temp_${order.order_id}_order_confirmation_${Date.now()}`;
+
+        // Create correlation data in correct format: orderId:contactId:messageType:tempMessageId
+        const orderCorrelationData =
+          this.messageIdUpdater.createCorrelationData(
+            order.order_id,
+            contactId,
+            'order_confirmation',
+            orderTempMessageId,
+          );
+
         return await this.cbbService.sendOrderConfirmation(
           contactId,
           orderData,
+          orderCorrelationData,
         );
 
       case 'status_update':

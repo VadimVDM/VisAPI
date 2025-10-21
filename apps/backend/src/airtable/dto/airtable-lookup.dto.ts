@@ -22,9 +22,16 @@ export class AirtableLookupDto {
     description: 'Value to look up in Airtable using the specified field.',
     example: 'customer@example.com',
   })
-  @Transform(({ value }) => String(value || '').trim())
+  @Transform(({ value }) => {
+    const trimmed = String(value || '').trim();
+    // Return undefined instead of empty string to trigger @IsNotEmpty validation
+    return trimmed === '' ? undefined : trimmed;
+  })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({
+    message:
+      'The key field cannot be empty. Please provide a value to search for.',
+  })
   @MaxLength(200)
   key!: string;
 }

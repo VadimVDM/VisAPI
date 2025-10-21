@@ -12,6 +12,7 @@
 ### Step 2: Configure Webhook
 
 Configure the following webhook URL in your Meta App:
+
 ```
 https://api.visanet.app/api/v1/webhooks/whatsapp
 ```
@@ -19,15 +20,139 @@ https://api.visanet.app/api/v1/webhooks/whatsapp
 ### Step 3: Subscribe to Webhook Fields
 
 Subscribe to the following webhook fields:
+
 - `messages` - Incoming messages from users
 - `messages.status` - Message delivery status updates
 - `message_template_status_update` - Template approval status changes
 
-### Step 4: Generate Permanent Access Token
+### Step 4: Generate System User Access Token
 
-1. Navigate to WhatsApp > API Setup
-2. Generate a permanent access token (not temporary)
-3. Store this token securely
+**IMPORTANT**: Use System User tokens for production, not App-level tokens.
+
+#### Creating a System User (Recommended)
+
+1. Navigate to **Business Settings** > **Users** > **System Users**
+2. Click **Add** to create a new system user
+3. Name it descriptively (e.g., "WhatsApp API - Production")
+4. Select role: **Admin** (required for WhatsApp API access)
+5. Click **Create System User**
+
+#### Generate Access Token
+
+1. In System Users list, click **Generate New Token** for your system user
+2. Select your Meta App from the dropdown
+3. Select required permissions:
+   - `whatsapp_business_management` (required)
+   - `whatsapp_business_messaging` (required)
+4. Choose token expiration:
+   - **60 days** (default, requires manual refresh)
+   - **Never expire** (recommended for production - requires admin approval)
+5. Click **Generate Token**
+6. **CRITICAL**: Copy the token immediately - it won't be shown again
+7. Store this token securely in your password manager and Railway environment
+
+#### Token Types Comparison
+
+| Token Type                       | Lifespan  | Use Case                  | Notes                                    |
+| -------------------------------- | --------- | ------------------------- | ---------------------------------------- |
+| User Access Token                | 1-2 hours | Development/Testing       | Not for production                       |
+| App Access Token                 | Variable  | Limited use               | Missing some permissions                 |
+| System User Token (60 days)      | 60 days   | Production (with refresh) | Requires periodic renewal                |
+| System User Token (Never expire) | Permanent | Production (recommended)  | Requires Business Manager admin approval |
+
+### Step 4.1: Access Token Expiration & Refresh
+
+**Understanding Token Expiration**
+
+Even "permanent" tokens can expire due to:
+
+- Security policy changes at Meta
+- Password changes on Facebook account
+- Permissions being revoked
+- Business Manager role changes
+- Meta API version deprecation
+
+**Detecting Token Expiration**
+
+Signs your token has expired:
+
+```bash
+# Template sync fails with 401
+ERROR [TemplateManagerService] Failed to sync templates from Meta:
+Request failed with status code 401
+Error validating access token: Session has expired on Sunday, 24-Aug-25 05:00:00 PDT
+
+# WhatsApp API calls return authentication errors
+{
+  "error": {
+    "message": "Error validating access token",
+    "type": "OAuthException",
+    "code": 190,
+    "error_subcode": 463
+  }
+}
+```
+
+**Refresh Process (When Token Expires)**
+
+1. **Navigate to System Users**
+   - Go to [Meta Business Suite](https://business.facebook.com)
+   - Click **Business Settings** (gear icon)
+   - Select **Users** > **System Users**
+
+2. **Generate New Token**
+   - Find your WhatsApp API system user
+   - Click **Generate New Token** button
+   - Select the same Meta App
+   - Select same permissions (`whatsapp_business_management`, `whatsapp_business_messaging`)
+   - Choose expiration: **Never expire** (requires approval) or **60 days**
+   - Click **Generate Token**
+   - **Copy token immediately**
+
+3. **Update Environment Variable**
+   - Go to [Railway Dashboard](https://railway.app)
+   - Navigate to your backend service
+   - Find **Variables** tab
+   - Update `WABA_ACCESS_TOKEN` with new token value
+   - Click **Deploy** to restart with new token
+
+4. **Verify New Token**
+
+   ```bash
+   # Test token validity
+   curl -X GET "https://graph.facebook.com/v23.0/me" \
+     -H "Authorization: Bearer YOUR_NEW_TOKEN"
+
+   # Should return your WABA details, not an error
+   ```
+
+5. **Trigger Template Sync**
+   ```bash
+   # Force template sync with new token
+   curl -X POST https://api.visanet.app/api/v1/whatsapp/templates/sync \
+     -H "X-API-Key: YOUR_ADMIN_KEY"
+   ```
+
+**Token Refresh Automation (Future Enhancement)**
+
+Currently token refresh is manual. Future improvements could include:
+
+- Proactive monitoring with alerts 7 days before expiration
+- Automated token refresh using long-lived refresh tokens (if Meta provides)
+- Slack/email notifications when token expires
+- Health check endpoint that validates token daily
+
+**Best Practices**
+
+- ✅ Use System User tokens (not personal user tokens)
+- ✅ Choose "Never expire" option for production
+- ✅ Store token in password manager as backup
+- ✅ Set calendar reminder if using 60-day tokens (refresh at 50 days)
+- ✅ Monitor template sync errors as early warning signal
+- ✅ Document token refresh in runbook for on-call team
+- ❌ Never commit tokens to git
+- ❌ Never share tokens in Slack/email
+- ❌ Don't use temporary user access tokens in production
 
 ### Step 5: Business Phone Number Verification
 
@@ -51,12 +176,12 @@ WABA_WEBHOOK_VERIFY_TOKEN=<any random string you choose>
 
 ## Meta App Values Location Guide
 
-| Value | Location in Meta App |
-|-------|---------------------|
-| Phone Number ID | WhatsApp > API Setup > Phone Number ID |
-| WhatsApp Business Account ID | WhatsApp > API Setup > WhatsApp Business Account ID |
-| App Secret | App Settings > Basic > App Secret |
-| Permanent Access Token | WhatsApp > API Setup > Access Token (Generate Permanent) |
+| Value                        | Location in Meta App                                     |
+| ---------------------------- | -------------------------------------------------------- |
+| Phone Number ID              | WhatsApp > API Setup > Phone Number ID                   |
+| WhatsApp Business Account ID | WhatsApp > API Setup > WhatsApp Business Account ID      |
+| App Secret                   | App Settings > Basic > App Secret                        |
+| Permanent Access Token       | WhatsApp > API Setup > Access Token (Generate Permanent) |
 
 ## Message Template Approval
 
@@ -74,7 +199,7 @@ WABA_WEBHOOK_VERIFY_TOKEN=<any random string you choose>
 3. Choose category: "Transactional"
 4. Add template content with variables:
    ```
-   Hello {{1}}, your visa order {{2}} for {{3}} to {{4}} has been received. 
+   Hello {{1}}, your visa order {{2}} for {{3}} to {{4}} has been received.
    Processing time: {{5}}. We'll notify you when ready.
    ```
 5. Submit for Meta approval (24-48 hours typical)
@@ -108,11 +233,11 @@ if (req.method === 'GET') {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  
+
   if (mode === 'subscribe' && token === WABA_WEBHOOK_VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   }
-  
+
   return res.status(403).send('Forbidden');
 }
 ```
@@ -217,6 +342,7 @@ CREATE TABLE whatsapp_messages (
 ## Contact for Issues
 
 For integration support, contact the VisAPI development team with:
+
 - Meta App ID
 - Error messages and codes
 - Webhook payload samples
