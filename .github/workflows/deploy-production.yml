@@ -19,7 +19,7 @@ jobs:
     name: Pre-deployment Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify production health before deployment
         run: |
@@ -45,7 +45,7 @@ jobs:
       name: production
       url: https://app.visanet.app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.version || github.event.release.tag_name }}
 
@@ -68,7 +68,7 @@ jobs:
       name: production
       url: https://api.visanet.app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.version || github.event.release.tag_name }}
 
@@ -154,7 +154,7 @@ jobs:
     needs: health-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Tag deployment in monitoring
         run: |
