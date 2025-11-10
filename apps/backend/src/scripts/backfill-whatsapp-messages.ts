@@ -82,30 +82,46 @@ async function main() {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Step 1: Fetch webhook events with status updates
-  console.log('📥 Fetching webhook events...');
+  // Step 1: Fetch webhook events with status updates IN BATCHES
+  console.log('📥 Fetching webhook events in batches...');
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
 
-  const { data: webhookEvents, error: webhookError } = await supabase
-    .from('whatsapp_webhook_events')
-    .select('id, created_at, payload')
-    .eq('event_type', 'messages')
-    .gte('created_at', cutoffDate.toISOString())
-    .order('created_at', { ascending: true });
+  let allWebhookEvents: WebhookEvent[] = [];
+  let batchOffset = 0;
+  const batchSize = 1000;
+  let hasMore = true;
 
-  if (webhookError) {
-    console.error('❌ Error fetching webhook events:', webhookError);
-    process.exit(1);
+  while (hasMore) {
+    const { data: batchEvents, error: webhookError } = await supabase
+      .from('whatsapp_webhook_events')
+      .select('id, created_at, payload')
+      .eq('event_type', 'messages')
+      .gte('created_at', cutoffDate.toISOString())
+      .order('created_at', { ascending: true })
+      .range(batchOffset, batchOffset + batchSize - 1);
+
+    if (webhookError) {
+      console.error('❌ Error fetching webhook events:', webhookError);
+      process.exit(1);
+    }
+
+    if (!batchEvents || batchEvents.length === 0) {
+      hasMore = false;
+    } else {
+      allWebhookEvents = allWebhookEvents.concat(batchEvents);
+      batchOffset += batchSize;
+      console.log(`   Fetched ${allWebhookEvents.length} events so far...`);
+    }
   }
 
-  stats.totalWebhookEvents = webhookEvents?.length || 0;
-  console.log(`✅ Found ${stats.totalWebhookEvents} webhook events\n`);
+  stats.totalWebhookEvents = allWebhookEvents.length;
+  console.log(`✅ Found ${stats.totalWebhookEvents} webhook events total\n`);
 
   // Step 2: Process each webhook event
   console.log('🔄 Processing webhook events...\n');
 
-  for (const event of webhookEvents || []) {
+  for (const event of allWebhookEvents) {
     await processWebhookEvent(event, supabase, dryRun);
   }
 
@@ -276,6 +292,9 @@ async function markStuckMessagesAsFailed(
   supabase: any,
   dryRun: boolean,
 ): Promise<void> {
+  // Only mark messages as failed if they're from AFTER Nov 1 (payment issue period)
+  // Messages before Nov 1 likely delivered but just need correlation
+  const paymentIssueStart = new Date('2025-11-01T00:00:00Z');
   const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
 
   const { data: stuckMessages, error } = await supabase
@@ -283,6 +302,7 @@ async function markStuckMessagesAsFailed(
     .select('id, message_id, phone_number, created_at, template_name, order_id')
     .eq('status', 'sent')
     .like('message_id', 'temp_%')
+    .gte('created_at', paymentIssueStart.toISOString())
     .lt('created_at', twelveHoursAgo.toISOString())
     .order('created_at', { ascending: true });
 
