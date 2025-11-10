@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { CbbClientService } from '@visapi/backend-core-cbb';
-import { CBBContactSyncResult, CBBContactData } from '@visapi/shared-types';
+import { CbbClientService, getFieldDefinition } from '@visapi/backend-core-cbb';
+import {
+  CBBContactSyncResult,
+  CBBContactData,
+  CBBCustomField,
+} from '@visapi/shared-types';
 import { SupabaseService } from '@visapi/core-supabase';
 import { LogService } from '@visapi/backend-logging';
 import { CBBSyncMetricsService } from './cbb-sync-metrics.service';
@@ -719,7 +723,7 @@ export class CBBSyncOrchestratorService {
       email: order.client_email,
       gender: gender,
       language: language,
-      cufs: this.buildCustomFields(order, {
+      customFields: this.buildCustomFields(order, {
         isUrgent,
         orderDateUnix,
         orderCreationDateUnix,
@@ -733,6 +737,15 @@ export class CBBSyncOrchestratorService {
     };
   }
 
+  /**
+   * Build custom fields for CBB contact sync using new CBBCustomField[] array format
+   *
+   * Uses field registry to get stable field IDs for each custom field.
+   * This provides explicit field ID control and type safety at the orchestrator level.
+   *
+   * @returns Array of CBBCustomField objects with {id, name, value} structure
+   * @see libs/backend/core-cbb/src/lib/CLAUDE-FIELD-REGISTRY.md for field registry docs
+   */
   private buildCustomFields(
     order: OrderData,
     computed: {
@@ -746,37 +759,59 @@ export class CBBSyncOrchestratorService {
       processingDays: number;
       stayLimit: number;
     },
-  ): Record<string, string | number | boolean | undefined> {
-    return {
-      // Text fields (type 0)
-      customer_name: order.client_name,
-      visa_country: order.product_country,
-      visa_type: order.product_doc_type || 'tourist',
-      OrderNumber: order.order_id,
+  ): CBBCustomField[] {
+    const fields: CBBCustomField[] = [];
 
-      // Number fields (type 1)
-      visa_quantity: order.visa_quantity || 1,
-      order_days: computed.processingDays, // Processing days for WhatsApp template
-      order_sum_ils: order.amount || 0, // Total amount paid (CUF ID: 358366)
-      stay_limit: computed.stayLimit, // Maximum stay days (CUF ID: 189039)
+    // Helper to add field with registry lookup
+    const addField = (
+      name: string,
+      value: string | number | boolean | undefined,
+    ) => {
+      if (value === undefined || value === null) {
+        return; // Skip undefined/null values
+      }
 
-      // Boolean fields (type 4) - CBB expects 1 for true, 0 for false
-      order_urgent: computed.isUrgent ? 1 : 0,
-      wa_alerts: order.whatsapp_alerts_enabled ? 1 : 0, // WhatsApp alerts enabled (CUF ID: 662459)
+      const fieldDef = getFieldDefinition(name);
+      if (!fieldDef) {
+        this.logger.warn(
+          `Field '${name}' not found in registry - skipping (value: ${value})`,
+        );
+        return;
+      }
 
-      // Date field (type 2) expects Unix timestamp in seconds
-      order_date: computed.orderDateUnix, // Travel/entry date
-      order_date_time: computed.orderCreationDateUnix, // Order creation timestamp (CUF ID: 100644)
-
-      // Visa fields using actual product data
-      visa_intent: computed.visaIntent,
-      visa_entries: computed.visaEntries,
-      visa_validity: computed.visaValidityWithUnits, // CUF ID: 816014 - Visa document validity with units (e.g., "6 months", "2 years")
-      visa_flag: computed.countryFlag,
-
-      // System fields
-      Email: order.client_email, // System field ID -12
+      fields.push({
+        id: fieldDef.id,
+        name: fieldDef.name,
+        value,
+      });
     };
+
+    // Text fields (type 0)
+    addField('customer_name', order.client_name);
+    addField('visa_country', order.product_country);
+    addField('visa_type', order.product_doc_type || 'tourist');
+    addField('OrderNumber', order.order_id);
+    addField('visa_intent', computed.visaIntent);
+    addField('visa_entries', computed.visaEntries);
+    addField('visa_validity', computed.visaValidityWithUnits); // CUF ID: 816014
+    addField('visa_flag', computed.countryFlag);
+    addField('Email', order.client_email); // System field ID: -12
+
+    // Number fields (type 1)
+    addField('visa_quantity', order.visa_quantity || 1);
+    addField('order_days', computed.processingDays); // CUF ID: 271948
+    addField('order_sum_ils', order.amount || 0); // CUF ID: 358366
+    addField('stay_limit', computed.stayLimit); // CUF ID: 189039
+
+    // Boolean fields (type 4) - CBB expects 1 for true, 0 for false
+    addField('order_urgent', computed.isUrgent ? 1 : 0); // CUF ID: 763048
+    addField('wa_alerts', order.whatsapp_alerts_enabled ? 1 : 0); // CUF ID: 662459
+
+    // Date fields (type 3) - Unix timestamps in seconds
+    addField('order_date', computed.orderDateUnix);
+    addField('order_date_time', computed.orderCreationDateUnix); // CUF ID: 100644
+
+    return fields;
   }
 
   private convertDateToUnix(

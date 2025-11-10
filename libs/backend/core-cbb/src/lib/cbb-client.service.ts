@@ -18,6 +18,7 @@ import {
   CBBContact,
   WhatsAppValidationResponse,
 } from '@visapi/shared-types';
+import { getFieldDefinition } from './cbb-field-registry';
 
 export class CbbApiError extends Error {
   constructor(
@@ -45,30 +46,6 @@ export class CbbClientService {
   private readonly timeout: number;
   private readonly retryAttempts: number;
 
-  // Mapping of field names to CBB field IDs
-  private readonly fieldIdMap: Record<string, string> = {
-    Email: '-12',
-    email: '-12',
-    'Phone Number': '-8',
-    phone: '-8',
-    customer_name: '779770',
-    visa_country: '877737',
-    visa_type: '527249',
-    OrderNumber: '459752',
-    visa_quantity: '949873',
-    order_urgent: '763048',
-    order_priority: '470125',
-    order_date: '661549',
-    order_days: '271948', // Processing days for template
-    visa_intent: '837162',
-    visa_entries: '863041',
-    visa_validity: '816014',
-    visa_flag: '824812',
-    wa_alerts: '662459', // WhatsApp alerts enabled boolean
-    order_sum_ils: '358366', // Total payment amount
-    order_date_time: '100644', // Order creation timestamp
-  };
-
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
@@ -84,6 +61,34 @@ export class CbbClientService {
         'CBB_API_KEY not configured - WhatsApp messages will fail',
       );
     }
+
+    // TODO (Future Enhancement - Dynamic Registry):
+    // Implement automatic field discovery from CBB API on startup
+    //
+    // Goal: Fetch all custom field definitions from CBB API and merge with static registry
+    //
+    // Implementation:
+    // 1. Add onModuleInit() lifecycle hook
+    // 2. Call CBB API endpoint to fetch all custom fields (if such endpoint exists)
+    // 3. Merge fetched fields with static CBBFieldRegistry (static takes precedence)
+    // 4. Cache merged registry in memory
+    // 5. Log discovered fields for monitoring
+    //
+    // Benefits:
+    // - Automatic discovery of new fields added in CBB dashboard
+    // - No manual registry updates needed for new fields
+    // - Self-documenting custom fields
+    // - Validation warnings for unknown fields
+    //
+    // Challenges:
+    // - CBB API might not expose field list endpoint (needs investigation)
+    // - Need to handle API failures gracefully (fall back to static registry)
+    // - Performance: Cache duration and refresh strategy
+    //
+    // Priority: LOW - Static registry works perfectly for now
+    // Status: BLOCKED - Waiting for CBB API endpoint documentation
+    //
+    // @see libs/backend/core-cbb/src/lib/CLAUDE-FIELD-REGISTRY.md § 10 for details
   }
 
   /**
@@ -313,7 +318,59 @@ export class CbbClientService {
   }
 
   /**
+   * Build CBB actions array from custom fields
+   *
+   * NOTE: Actions array only uses field_name (not field_id) per CBB API spec.
+   * Field IDs are used in individual field update endpoints (POST /contacts/{id}/custom_fields/{field_id}).
+   *
+   * @private
+   * @param cufs - Custom fields as Record<string, any>
+   * @returns Array of CBB actions with field_name only
+   * @see https://app.chatgptbuilder.io/api/swagger/ - POST /contacts endpoint
+   */
+  private buildContactActions(cufs: Record<string, unknown>): Array<{
+    action: string;
+    field_name: string;
+    value: string;
+  }> {
+    const actions: Array<{
+      action: string;
+      field_name: string;
+      value: string;
+    }> = [];
+
+    for (const [fieldName, fieldValue] of Object.entries(cufs)) {
+      if (fieldValue === undefined || fieldValue === null) {
+        continue; // Skip undefined/null values
+      }
+
+      // Lookup field definition from registry for validation
+      const fieldDef = getFieldDefinition(fieldName);
+
+      if (!fieldDef) {
+        // Warn if field not in registry
+        this.logger.warn(
+          `Field '${fieldName}' not found in registry - proceeding with field_name only`,
+        );
+      } else {
+        this.logger.debug(
+          `Adding field: ${fieldName} (ID: ${fieldDef.id}) = ${fieldValue}`,
+        );
+      }
+
+      actions.push({
+        action: 'set_field_value',
+        field_name: fieldName, // Actions array uses field_name only per API spec
+        value: String(fieldValue),
+      });
+    }
+
+    return actions;
+  }
+
+  /**
    * Create contact with custom fields
+   * Supports both legacy (cufs) and new (customFields) formats
    */
   async createContactWithFields(data: CBBContactData): Promise<CBBContact> {
     try {
@@ -322,17 +379,30 @@ export class CbbClientService {
       );
 
       // Convert custom fields to CBB actions format
-      const actions = [];
-      if (data.cufs) {
-        for (const [fieldName, fieldValue] of Object.entries(data.cufs)) {
-          if (fieldValue !== undefined && fieldValue !== null) {
-            actions.push({
-              action: 'set_field_value',
-              field_name: fieldName,
-              value: String(fieldValue),
-            });
-          }
-        }
+      // Support both new customFields array and legacy cufs object
+      let actions: Array<{
+        action: string;
+        field_id?: string;
+        field_name: string;
+        value: string;
+      }> = [];
+
+      if (data.customFields && data.customFields.length > 0) {
+        // New format: customFields array with explicit field IDs
+        // NOTE: Actions array only uses field_name (not field_id)
+        // Field IDs are used in individual field update endpoints only
+        this.logger.debug(
+          `Using new customFields format (${data.customFields.length} fields)`,
+        );
+        actions = data.customFields.map((field) => ({
+          action: 'set_field_value',
+          field_name: field.name, // Actions array uses field_name only
+          value: String(field.value),
+        }));
+      } else if (data.cufs) {
+        // Legacy format: cufs object - auto-add field IDs via registry
+        this.logger.debug('Using legacy cufs format - looking up field IDs');
+        actions = this.buildContactActions(data.cufs);
       }
 
       const payload: any = {
@@ -369,7 +439,7 @@ export class CbbClientService {
         name: data.name ?? '',
         email: data.email ?? '',
         hasWhatsApp: true,
-        customFields: data.cufs,
+        customFields: data.cufs ?? {},
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -393,14 +463,16 @@ export class CbbClientService {
       // Update each custom field individually using field ID
       for (const [fieldName, fieldValue] of Object.entries(cufs)) {
         try {
-          // Get the field ID from our mapping
-          const fieldId = this.fieldIdMap[fieldName];
-          if (!fieldId) {
+          // Get the field definition from registry
+          const fieldDef = getFieldDefinition(fieldName);
+          if (!fieldDef || !fieldDef.id) {
             this.logger.warn(
-              `Unknown field name: ${fieldName}, skipping update`,
+              `Unknown field name or missing ID: ${fieldName}, skipping update`,
             );
             continue;
           }
+
+          const fieldId = fieldDef.id;
 
           this.logger.debug(
             `Updating custom field ${fieldName} (ID: ${fieldId}) = ${fieldValue}`,
@@ -479,7 +551,7 @@ export class CbbClientService {
         name: data.name ?? '',
         email: data.email ?? '',
         hasWhatsApp: true,
-        customFields: data.cufs,
+        customFields: data.cufs ?? {},
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

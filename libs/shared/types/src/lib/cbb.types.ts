@@ -44,6 +44,18 @@ export interface CreateContactDto {
 export interface ContactAction {
   action: 'add_tag' | 'set_field_value' | 'send_flow';
   tag_name?: string;
+  /**
+   * Field ID - NOT used in actions array per CBB API spec
+   * Only used in individual field update endpoints (POST /contacts/{id}/custom_fields/{field_id})
+   * Kept for documentation/future compatibility
+   * @deprecated Do not use in actions array - use field_name instead
+   */
+  field_id?: string;
+  /**
+   * Field name - REQUIRED for set_field_value actions
+   * Example: "visa_validity", "customer_name"
+   * @see https://app.chatgptbuilder.io/api/swagger/ - POST /contacts endpoint
+   */
   field_name?: string;
   value?: string;
   flow_id?: number;
@@ -99,6 +111,34 @@ export interface FieldType {
 }
 
 // CBB Contact Sync Types
+
+/**
+ * CBB Custom Field Definition
+ * Supports both field ID (primary, stable) and field name (fallback)
+ *
+ * @example
+ * // With field ID (preferred):
+ * { id: '816014', name: 'visa_validity', value: '6 months' }
+ *
+ * @example
+ * // Without field ID (fallback to name):
+ * { name: 'visa_validity', value: '6 months' }
+ */
+export interface CBBCustomField {
+  /** Field ID (stable identifier from CBB, preferred) - e.g., "816014" */
+  id?: string;
+
+  /** Field name (may change in CBB dashboard) - e.g., "visa_validity" */
+  name: string;
+
+  /** Field value */
+  value: string | number | boolean;
+}
+
+/**
+ * CBB Contact Data for sync operations
+ * Supports both legacy Record format and new CBBCustomField array
+ */
 export interface CBBContactData {
   id: string; // Phone number as ID
   phone: string;
@@ -106,7 +146,19 @@ export interface CBBContactData {
   email?: string;
   gender?: string; // 'male' | 'female' | undefined - Optional, extracted from first applicant's passport
   language?: string; // 'Hebrew' | 'Russian' | 'Swedish' | 'English US' - Optional, mapped from branch
-  cufs: Record<string, any>; // Custom fields
+
+  /**
+   * @deprecated Use customFields array instead for better type safety and field ID support
+   * Legacy format: Record<string, any>
+   * Kept for backwards compatibility - will be auto-upgraded to use field IDs via registry lookup
+   */
+  cufs?: Record<string, any>;
+
+  /**
+   * Custom fields with explicit field IDs (preferred)
+   * Field IDs are stable; field names may change in CBB dashboard
+   */
+  customFields?: CBBCustomField[];
 }
 
 export interface CBBContact {
@@ -141,7 +193,8 @@ export const CBB_ENDPOINTS = {
   FIND_CONTACT: '/contacts/find_by_custom_field',
   SEND_TEXT: (contactId: number) => `/contacts/${contactId}/send/text`,
   SEND_FILE: (contactId: number) => `/contacts/${contactId}/send/file`,
-  SEND_FLOW: (contactId: number, flowId: number) => `/contacts/${contactId}/send/${flowId}`,
+  SEND_FLOW: (contactId: number, flowId: number) =>
+    `/contacts/${contactId}/send/${flowId}`,
   FLOWS: '/accounts/flows',
   ACCOUNT: '/accounts/me',
   TAGS: '/accounts/tags',

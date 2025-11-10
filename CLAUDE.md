@@ -255,6 +255,64 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 
 ## Recent Updates
 
+### CBB API Verification & Field Registry Enhancement (November 10, 2025) 🔍
+
+**Investigation:** Comprehensive CBB API verification via Swagger docs at https://app.chatgptbuilder.io/api/swagger/
+
+**Key Findings:**
+
+1. **Field Types** - Discovered ALL 8 types from CBB API (was missing 4):
+   - 0 = Text, 1 = Number, 2 = Date, 3 = Date & Time, 4 = Boolean
+   - 5 = Long Text, 6 = Select, 7 = Multi Select ✨ **NEW**
+
+2. **Actions Array Format** - POST /contacts uses `field_name` ONLY:
+   - ❌ `field_id` NOT supported in actions array
+   - ✅ `field_name` is required for all set_field_value actions
+   - ℹ️ `field_id` used in individual update endpoints: POST /contacts/{id}/custom_fields/{field_id}
+
+3. **Dynamic Field Discovery** - GET /accounts/custom_fields endpoint exists:
+   - Returns: `[{ id: 0, name: "string", type: 0, description: "string" }]`
+   - Can be used for auto-populating field registry in future
+   - Marked as TODO in code for future enhancement
+
+**What Was Fixed:**
+
+✅ **Field Registry** (`libs/backend/core-cbb/src/lib/cbb-field-registry.ts`):
+
+- Added CBBFieldType enum with all 8 types
+- Fixed type 3: "Date" → "Date & Time" (Unix timestamp with time)
+- Fixed `order_date_time` field: type 2 → type 3 (Date & Time)
+- Updated validation function to handle all 8 types
+- Added comprehensive JSDoc comments
+
+✅ **Actions Array** (`libs/backend/core-cbb/src/lib/cbb-client.service.ts`):
+
+- Removed `field_id` from actions array (API doesn't support it)
+- Now only uses `field_name` per CBB API specification
+- Updated buildContactActions() to exclude field_id
+- Added documentation comments explaining field_id vs field_name usage
+
+✅ **TypeScript Types** (`libs/shared/types/src/lib/cbb.types.ts`):
+
+- Deprecated `field_id` in ContactAction interface
+- Clarified that field_id only used in individual field update endpoints
+- Added JSDoc comments with API documentation links
+
+✅ **Unit Tests** (`libs/backend/core-cbb/src/lib/cbb-field-registry.spec.ts`):
+
+- Updated to test all field types correctly
+- Fixed order_date_time test: expects DateTime (type 3), not Date (type 2)
+- All 124 tests passing ✅
+
+**Quality Assurance:**
+
+- ✅ 124/124 backend tests passing
+- ✅ TypeScript compilation successful
+- ✅ ESLint all files pass
+- ✅ No breaking changes
+
+---
+
 ### Visa Validity Data Fix (November 10, 2025) 🔧
 
 **The Problem:**

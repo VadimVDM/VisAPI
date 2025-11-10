@@ -167,19 +167,18 @@ await cbbClient.createContactWithFields({
 });
 ```
 
-**Hebrew Field Mapping:**
+**Custom Field Mapping:**
 
-```typescript
-const fieldIdMap = {
-  customer_name: '779770', // שם לקוח
-  visa_country: '877737', // מדינת ויזה
-  visa_type: '527249', // סוג ויזה
-  OrderNumber: '459752', // מספר הזמנה
-  order_days: '271948', // זמן טיפול (ימים)
-  Email: '-12',
-  'Phone Number': '-8',
-};
-```
+All CBB custom fields are managed through the **Field Registry** with stable field IDs.
+
+**See:** `libs/backend/core-cbb/src/lib/CLAUDE-FIELD-REGISTRY.md` for complete field list (22 fields)
+
+**Key Fields:**
+
+- `visa_validity` (ID: 816014) - Visa document validity
+- `order_days` (ID: 271948) - Processing time in days
+- `customer_name` (ID: 779770) - Customer full name
+- `OrderNumber` (ID: 459752) - Vizi order ID
 
 **Note:** CBB uses phone number for deduplication. Subsequent calls update the existing contact.
 
