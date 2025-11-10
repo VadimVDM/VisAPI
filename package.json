@@ -80,6 +80,8 @@
     "clean": "nx reset",
     "create-admin-key": "nx run backend:create-admin-key",
     "bootstrap-completed-tracker": "node apps/backend/src/scripts/bootstrap-completed-tracker.js",
+    "backfill-whatsapp": "npx ts-node apps/backend/src/scripts/backfill-whatsapp-messages.ts",
+    "backfill-whatsapp:dry-run": "npx ts-node apps/backend/src/scripts/backfill-whatsapp-messages.ts --dry-run",
     "test-proxy": "npx ts-node apps/worker/src/scripts/test-proxy-connection.ts",
     "docker:build:backend": "docker build -f apps/backend/Dockerfile -t visapi-backend:latest .",
     "docker:build:backend:prod": "NODE_ENV=production docker build -f apps/backend/Dockerfile -t visapi-backend:prod --build-arg NODE_ENV=production .",

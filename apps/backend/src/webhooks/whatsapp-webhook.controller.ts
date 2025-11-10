@@ -299,7 +299,7 @@ export class WhatsAppWebhookController {
       const finalMessageId = status.id;
       let messageIdUpdated = false;
 
-      // Update message ID if this is the first status update with real Meta message ID
+      // Update message ID using CBB correlation data (phone number)
       if (
         status.id &&
         status.id.startsWith('wamid.') &&
@@ -318,50 +318,22 @@ export class WhatsAppWebhookController {
 
             if (updateResult.success) {
               this.logger.log(
-                `Updated message ID from ${updateResult.previousMessageId} to ${updateResult.newMessageId}`,
+                `Correlated message: ${updateResult.previousMessageId} → ${updateResult.newMessageId} (phone: ${correlationData.contactId})`,
               );
               messageIdUpdated = true;
             } else {
               this.logger.warn(
-                `Failed to update message ID: ${updateResult.error}`,
+                `Message correlation failed for ${status.id}: ${updateResult.error}`,
               );
-              // If correlation failed, we might need to use temporary ID for delivery updates
-              if (
-                updateResult.error?.includes('No matching message found') &&
-                correlationData.contactId
-              ) {
-                // Try to find the temporary message ID
-                const tempMessage = await this.supabaseService.serviceClient
-                  .from('whatsapp_messages')
-                  .select('message_id')
-                  .eq('phone_number', correlationData.contactId)
-                  .like('message_id', 'temp_%')
-                  .order('created_at', { ascending: false })
-                  .limit(1)
-                  .single();
-
-                if (tempMessage.data?.message_id) {
-                  // Manually update the message ID since correlation failed
-                  await this.supabaseService.serviceClient
-                    .from('whatsapp_messages')
-                    .update({
-                      message_id: status.id,
-                      meta_message_id: status.id,
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq('message_id', tempMessage.data.message_id);
-
-                  this.logger.log(
-                    `Manually updated message ID from ${tempMessage.data.message_id} to ${status.id}`,
-                  );
-                  messageIdUpdated = true;
-                }
-              }
             }
+          } else {
+            this.logger.warn(
+              `Could not parse correlation data: ${status.biz_opaque_callback_data}`,
+            );
           }
         } catch (error) {
           this.logger.error(
-            `Error updating message ID for ${status.id}:`,
+            `Unexpected error during message correlation for ${status.id}:`,
             error,
           );
         }
@@ -529,21 +501,33 @@ export class WhatsAppWebhookController {
         updates.is_billable = status.isBillable;
       }
 
-      // Try to update with the real message ID first (after correlation)
-      const { data, error } = await this.supabaseService.serviceClient
+      // Strategy 1: Try updating by meta_message_id (if correlation already completed)
+      let { data, error } = await this.supabaseService.serviceClient
         .from('whatsapp_messages')
         .update(updates)
-        .eq('message_id', status.id)
+        .eq('meta_message_id', status.id)
         .select('order_id, message_id');
 
-      // If no rows were updated and we have a real WAMID, it might be a correlation issue
+      // Strategy 2: If no match found, try by message_id (handles both temp IDs and real WAMIDs)
+      if (!error && (!data || data.length === 0)) {
+        const result = await this.supabaseService.serviceClient
+          .from('whatsapp_messages')
+          .update(updates)
+          .eq('message_id', status.id)
+          .select('order_id, message_id');
+
+        data = result.data;
+        error = result.error;
+      }
+
+      // If still no match and this is a real WAMID, log warning
       if (
         !error &&
         (!data || data.length === 0) &&
         status.id.startsWith('wamid.')
       ) {
         this.logger.warn(
-          `No message found with ID ${status.id}, delivery status update failed. This may indicate a message ID correlation issue.`,
+          `No message found with WAMID ${status.id}. Message may not have been correlated yet.`,
         );
         return;
       }

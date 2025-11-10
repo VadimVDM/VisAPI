@@ -31,34 +31,28 @@ export class MessageIdUpdaterService {
   }
 
   /**
-   * Parse correlation data from biz_opaque_callback_data
-   * Format: "orderId:contactId:messageType:tempMessageId"
+   * Parse correlation data from CBB's biz_opaque_callback_data
+   * CBB sends: {"c":"972535777550"} where "c" is the contact phone number
+   * This is the ONLY format we support - CBB does not pass through custom correlation data
    */
   parseCorrelationData(bizOpaqueCallbackData: string): CorrelationData | null {
     try {
       if (!bizOpaqueCallbackData) return null;
 
-      // Try JSON parsing first (for backward compatibility)
-      if (bizOpaqueCallbackData.startsWith('{')) {
-        return JSON.parse(bizOpaqueCallbackData);
+      // Parse CBB's JSON format: {"c":"972535777550"}
+      const parsed = JSON.parse(bizOpaqueCallbackData);
+
+      if (parsed.c) {
+        return { contactId: parsed.c };
       }
 
-      // Parse delimited format
-      const parts = bizOpaqueCallbackData.split(':');
-      if (parts.length >= 3) {
-        return {
-          orderId: parts[0] || undefined,
-          contactId: parts[1] || undefined,
-          messageType: parts[2] || undefined,
-          tempMessageId: parts[3] || undefined,
-        };
-      }
-
-      // Legacy format - just contact ID
-      return { contactId: bizOpaqueCallbackData };
-    } catch (error) {
       this.logger.warn(
-        `Failed to parse correlation data: ${bizOpaqueCallbackData}`,
+        `Unexpected correlation data format: ${bizOpaqueCallbackData}`,
+      );
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse CBB correlation data: ${bizOpaqueCallbackData}`,
         error,
       );
       return null;
@@ -67,6 +61,8 @@ export class MessageIdUpdaterService {
 
   /**
    * Create correlation data string for biz_opaque_callback_data
+   * NOTE: CBB ignores this and sends its own format, but we still include it
+   * for potential future use or debugging
    */
   createCorrelationData(
     orderId: string,
@@ -74,7 +70,7 @@ export class MessageIdUpdaterService {
     messageType: string,
     tempMessageId: string,
   ): string {
-    // Use delimited format for efficiency
+    // CBB will ignore this, but we send it anyway for logging/debugging
     return `${orderId}:${contactId}:${messageType}:${tempMessageId}`;
   }
 
@@ -97,35 +93,27 @@ export class MessageIdUpdaterService {
         };
       }
 
-      // Build query based on available correlation data
-      let query = this.supabase
-        .from('whatsapp_messages')
-        .select('message_id, order_id, contact_id, created_at');
-
-      // Apply filters based on available correlation data
-      if (correlationData.tempMessageId) {
-        // Fastest lookup - direct message ID match
-        query = query.eq('message_id', correlationData.tempMessageId);
-      } else if (correlationData.orderId && correlationData.messageType) {
-        // Lookup by order ID and message type (template_name contains the message type)
-        query = query
-          .eq('order_id', correlationData.orderId)
-          .like('template_name', `%${correlationData.messageType}%`)
-          .like('message_id', 'temp_%');
-      } else if (correlationData.contactId) {
-        // Fallback to phone number (less precise)
-        query = query
-          .eq('phone_number', correlationData.contactId)
-          .like('message_id', 'temp_%')
-          .order('created_at', { ascending: false })
-          .limit(1);
-      } else {
+      // CBB only provides phone number in correlation data
+      // Find the most recent message sent to this phone number with a temp ID
+      // Use 5-minute time window to avoid matching old messages
+      if (!correlationData.contactId) {
         return {
           success: false,
           newMessageId: realMessageId,
-          error: 'Insufficient correlation data',
+          error: 'No contact ID in correlation data',
         };
       }
+
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+      let query = this.supabase
+        .from('whatsapp_messages')
+        .select('message_id, order_id, phone_number, created_at')
+        .eq('phone_number', correlationData.contactId)
+        .like('message_id', 'temp_%')
+        .gte('created_at', fiveMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       const { data: existingMessages, error: fetchError } = await query;
 
