@@ -47,7 +47,8 @@ export interface OrderData {
   product_intent?: string | null;
   product_entries?: string | null;
   product_validity?: string | null;
-  visa_validity_days?: number | null;
+  visa_usage_deadline_days?: number | null; // Renamed from visa_validity_days (contains days_to_use - often incorrect)
+  visa_document_validity_days?: number | null; // New field - parsed from product_validity string
   visa_quantity: number | null;
   amount: number;
   currency: string;

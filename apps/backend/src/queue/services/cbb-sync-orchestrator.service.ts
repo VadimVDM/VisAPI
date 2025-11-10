@@ -253,7 +253,7 @@ export class CBBSyncOrchestratorService {
             order.product_country,
             order.product_entries || undefined,
             order.product_validity || undefined,
-            order.visa_validity_days || undefined,
+            undefined, // Don't use visa_usage_deadline_days (days_to_use - incorrect data)
           );
 
         // Use processing_days directly from order (from product.wait in webhook)
@@ -690,9 +690,12 @@ export class CBBSyncOrchestratorService {
     );
     const language = this.mapBranchToLanguage(order.branch);
     const countryFlag = this.getCountryFlag(order.product_country);
+    // CRITICAL FIX: Use product_validity string ONLY, not visa_usage_deadline_days
+    // visa_usage_deadline_days contains days_to_use from Vizi (often incorrect)
+    // We should only use the validity string field for customer-facing validity info
     const visaValidityWithUnits = this.getVisaValidityWithUnits(
       order.product_validity ?? undefined,
-      order.visa_validity_days ?? undefined,
+      undefined, // DO NOT pass visa_usage_deadline_days - use validity string only
     );
 
     // Use processing_days from database (calculated by business rules engine)
@@ -768,7 +771,7 @@ export class CBBSyncOrchestratorService {
       // Visa fields using actual product data
       visa_intent: computed.visaIntent,
       visa_entries: computed.visaEntries,
-      visa_validity: computed.visaValidityWithUnits, // Now includes units like "30 days", "6 months", "1 year"
+      visa_validity: computed.visaValidityWithUnits, // CUF ID: 816014 - Visa document validity with units (e.g., "6 months", "2 years")
       visa_flag: computed.countryFlag,
 
       // System fields
@@ -871,7 +874,7 @@ export class CBBSyncOrchestratorService {
     validity?: string,
     daysToUse?: number,
   ): string {
-    // If specific days are provided, format with "days" unit
+    // If specific days are provided, format with "days" unit (priority logic)
     if (daysToUse) {
       if (daysToUse === 30) {
         return '1 month';
@@ -885,28 +888,55 @@ export class CBBSyncOrchestratorService {
         return '1 year';
       } else if (daysToUse === 730) {
         return '2 years';
+      } else if (daysToUse === 1095) {
+        return '3 years';
+      } else if (daysToUse === 1825) {
+        return '5 years';
+      } else if (daysToUse === 3650) {
+        return '10 years';
+      } else if (daysToUse === 14 || daysToUse === 15) {
+        return '2 weeks';
       } else {
         return `${daysToUse} days`;
       }
     }
 
+    // Normalize validity string: lowercase, trim, remove all underscores
+    // This handles formats like "2_years", "3_months", etc. from Vizi API
+    const normalizedValidity = validity?.toLowerCase().trim().replace(/_/g, '');
+
     // Map validity period to formatted string with units
-    switch (validity) {
+    switch (normalizedValidity) {
       case 'month':
+      case '1month':
         return '1 month';
       case 'year':
+      case '1year':
         return '1 year';
+      case '2weeks':
+      case '15days':
+        return '2 weeks';
+      case '2months':
+        return '2 months';
       case '3months':
         return '3 months';
       case '6months':
         return '6 months';
       case '2years':
         return '2 years';
+      case '3years':
+        return '3 years';
       case '5years':
         return '5 years';
       case '10years':
         return '10 years';
       default:
+        // Log unrecognized formats for debugging
+        if (validity) {
+          this.logger.warn(
+            `Unrecognized validity format: "${validity}" (normalized: "${normalizedValidity}") - using default "30 days"`,
+          );
+        }
         return '30 days'; // Default to 30 days
     }
   }

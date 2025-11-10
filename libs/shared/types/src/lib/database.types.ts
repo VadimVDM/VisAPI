@@ -167,6 +167,7 @@ export type Database = {
           product_intent: string | null
           product_validity: string | null
           updated_at: string | null
+          visa_document_validity_days: number | null
           visa_type_translated: string | null
         }
         Insert: {
@@ -199,6 +200,7 @@ export type Database = {
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_document_validity_days?: number | null
           visa_type_translated?: string | null
         }
         Update: {
@@ -231,6 +233,7 @@ export type Database = {
           product_intent?: string | null
           product_validity?: string | null
           updated_at?: string | null
+          visa_document_validity_days?: number | null
           visa_type_translated?: string | null
         }
         Relationships: [
@@ -334,12 +337,13 @@ export type Database = {
           product_validity: string | null
           updated_at: string | null
           visa_details: Json | null
+          visa_document_validity_days: number | null
           visa_entries: string | null
           visa_notification_message_id: string | null
           visa_notification_sent: boolean | null
           visa_notification_sent_at: string | null
           visa_quantity: number | null
-          visa_validity_days: number | null
+          visa_usage_deadline_days: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled: boolean | null
           workflow_id: string | null
@@ -393,12 +397,13 @@ export type Database = {
           product_validity?: string | null
           updated_at?: string | null
           visa_details?: Json | null
+          visa_document_validity_days?: number | null
           visa_entries?: string | null
           visa_notification_message_id?: string | null
           visa_notification_sent?: boolean | null
           visa_notification_sent_at?: string | null
           visa_quantity?: number | null
-          visa_validity_days?: number | null
+          visa_usage_deadline_days?: number | null
           webhook_received_at: string
           whatsapp_alerts_enabled?: boolean | null
           workflow_id?: string | null
@@ -452,12 +457,13 @@ export type Database = {
           product_validity?: string | null
           updated_at?: string | null
           visa_details?: Json | null
+          visa_document_validity_days?: number | null
           visa_entries?: string | null
           visa_notification_message_id?: string | null
           visa_notification_sent?: boolean | null
           visa_notification_sent_at?: string | null
           visa_quantity?: number | null
-          visa_validity_days?: number | null
+          visa_usage_deadline_days?: number | null
           webhook_received_at?: string
           whatsapp_alerts_enabled?: boolean | null
           workflow_id?: string | null

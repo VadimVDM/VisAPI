@@ -18,10 +18,11 @@ Essential reference for AI assistants. Updated: September 28, 2025
 
 - ✅ **Production stable** with Vizi webhook integration
 - ✅ **WhatsApp messaging** via CBB API with idempotency protection
+- ✅ **Visa validity** - Correct parsing from validity string (ignores unreliable days_to_use)
 - ✅ **Queue architecture** - Streamlined without CQRS complexity
 - ✅ **PDF generation** - HTML/URL to PDF with Puppeteer and templates
 - ✅ **Phone normalization** - Removes leading zeros from all countries
-- ✅ **12 test suites passing** (100% success rate)
+- ✅ **124 test suites passing** (100% success rate)
 
 ## Technology Stack
 
@@ -189,6 +190,7 @@ GET  /api/v1/queue/metrics           # Queue status
 - Uses `X-ACCESS-TOKEN` header authentication (NOT Bearer token)
 - Template-based messaging only (WhatsApp Business requirement)
 - Hebrew translations with custom field mapping
+- **Visa validity**: Uses `product_validity` string only (e.g., "6_months" → "6 חודשים"), ignores `days_to_use` field (unreliable data)
 - Phone numbers: E.164 format with leading zero removal (e.g., `972507...` not `9720507...`)
 
 **Queue:** `whatsapp-messages` (BullMQ) - 10 concurrent workers
@@ -252,6 +254,36 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 11. **Phone numbers**: Leading zeros removed after country codes
 
 ## Recent Updates
+
+### Visa Validity Data Fix (November 10, 2025) 🔧
+
+**The Problem:**
+
+- Morocco 6-month visas showed as "1 month" to customers (❌ 30 days instead of ✅ 180 days)
+- UK 2-year ETAs showed as "6 months" (❌ 180 days instead of ✅ 730 days)
+- Root Cause: Using `days_to_use` field from Vizi webhook (contains unreliable data)
+
+**The Solution:**
+
+- ✅ **Database Fields**: Renamed `visa_validity_days` → `visa_usage_deadline_days`, added `visa_document_validity_days`
+- ✅ **Validity Parser**: New `parseValidityToDays()` helper converts "6_months" → 180 days, "2_years" → 730 days
+- ✅ **CBB Integration**: CUF `visa_validity` (ID: 816014) uses `product_validity` string ONLY, ignores `days_to_use` entirely
+- ✅ **WhatsApp Messages**: Correct validity shown in Hebrew translations (6 חודשים, שנתיים, etc.)
+
+**The Result:**
+
+- 🎯 **Correct validity** for all visa types (Morocco: 6 months, UK: 2 years, Canada: 5 years)
+- 🎯 **Historical backfill**: All 767+ existing orders updated with correct values
+- 🎯 **Migration**: `supabase/migrations/20251110_separate_validity_fields.sql`
+
+**Files Modified:**
+
+- `apps/backend/src/orders/services/order-transformer.service.ts` - Added validity parser
+- `apps/backend/src/queue/services/cbb-sync-orchestrator.service.ts` - Use validity string only
+- `apps/backend/src/queue/services/whatsapp-template.service.ts` - Updated translations
+- Database migration + TypeScript types updated
+
+---
 
 ### WhatsApp Message Tracking Fix (November 10, 2025) 🎉
 

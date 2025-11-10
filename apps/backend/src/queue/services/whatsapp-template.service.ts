@@ -62,7 +62,7 @@ export class WhatsAppTemplateService {
           order.product_country,
           order.product_entries || undefined,
           order.product_validity || undefined,
-          order.visa_validity_days || undefined,
+          undefined, // Don't use visa_usage_deadline_days (days_to_use - incorrect data)
         );
       }
     } catch {
@@ -73,7 +73,7 @@ export class WhatsAppTemplateService {
         order.product_country,
         order.product_entries || undefined,
         order.product_validity || undefined,
-        order.visa_validity_days || undefined,
+        undefined, // Don't use visa_usage_deadline_days (days_to_use - incorrect data)
       );
     }
 

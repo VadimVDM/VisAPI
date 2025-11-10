@@ -36,6 +36,21 @@ export class OrderTransformerService {
       urgency: form.urgency,
     });
 
+    // Determine urgency status early (needed for processing days calculation)
+    const isUrgent = this.isUrgentOrder(form.urgency);
+
+    // Calculate processing days with urgency and country-specific rules
+    const productCountry = (
+      form.product?.country ||
+      form.country ||
+      'unknown'
+    ).toLowerCase();
+    const processingDays = this.calculateProcessingDays(
+      form.product?.wait,
+      productCountry,
+      isUrgent,
+    );
+
     // Transform the data
     const orderData: CreateOrderData = {
       // Order core data
@@ -62,10 +77,17 @@ export class OrderTransformerService {
       product_intent: form.product?.intent || 'tourism',
       product_entries: form.product?.entries || 'single',
       product_validity: form.product?.validity || 'month',
-      visa_validity_days: form.product?.days_to_use || 30,
 
-      // Processing days from webhook (product.wait field)
-      processing_days: form.product?.wait || 3,
+      // Visa validity fields (FIXED: was incorrectly using days_to_use)
+      // NOTE: days_to_use from Vizi webhook often has incorrect values
+      // We parse product.validity string instead (e.g., "6_months" → 180 days)
+      visa_usage_deadline_days: form.product?.days_to_use || 30, // Kept for reference but NOT used for validity
+      visa_document_validity_days: this.parseValidityToDays(
+        form.product?.validity || 'month',
+      ),
+
+      // Processing days with urgency and country-specific rules applied
+      processing_days: processingDays,
 
       // Translation fields (stored for optimization)
       product_country_flag: translations.countryFlag,
@@ -79,7 +101,7 @@ export class OrderTransformerService {
           }
         )?.date,
       ),
-      is_urgent: this.isUrgentOrder(form.urgency),
+      is_urgent: isUrgent,
       file_transfer_method: (form as unknown as Record<string, unknown>)
         .fileTransferMethod as string | undefined,
 
@@ -350,6 +372,116 @@ export class OrderTransformerService {
       'priority',
     ];
     return urgentValues.includes(urgency.toLowerCase().trim());
+  }
+
+  /**
+   * Calculate processing days based on urgency and country-specific rules
+   * Priority: Urgency > Webhook Value > Country-Specific > Default
+   *
+   * Rules (as per CLAUDE.md):
+   * - Urgent orders: 1 day (overrides everything)
+   * - Morocco: 5 days (if not urgent and no webhook value)
+   * - Vietnam: 7 days (if not urgent and no webhook value)
+   * - Default: 3 days (if not urgent, no webhook value, and not special country)
+   */
+  private calculateProcessingDays(
+    webhookWait: number | undefined,
+    country: string,
+    isUrgent: boolean,
+  ): number {
+    // Priority 1: Urgent orders always get 1 day processing
+    if (isUrgent) {
+      this.logger.debug(
+        `Order is urgent, setting processing days to 1 (was: ${webhookWait || 'not provided'})`,
+      );
+      return 1;
+    }
+
+    // Priority 2: Use webhook value if provided (product.wait from Vizi)
+    if (webhookWait && webhookWait > 0) {
+      this.logger.debug(
+        `Using processing days from webhook: ${webhookWait} for country: ${country}`,
+      );
+      return webhookWait;
+    }
+
+    // Priority 3: Country-specific defaults
+    const normalizedCountry = country.toLowerCase().trim();
+
+    // Morocco: 5 days
+    if (normalizedCountry === 'morocco' || normalizedCountry === 'ma') {
+      this.logger.debug(`Morocco visa - using 5 days processing time`);
+      return 5;
+    }
+
+    // Vietnam: 7 days
+    if (normalizedCountry === 'vietnam' || normalizedCountry === 'vn') {
+      this.logger.debug(`Vietnam visa - using 7 days processing time`);
+      return 7;
+    }
+
+    // Priority 4: Default to 3 days
+    this.logger.debug(
+      `No specific rules for country ${country}, using default 3 days`,
+    );
+    return 3;
+  }
+
+  /**
+   * Parse validity string to days
+   * Converts formats like "6_months", "2_years" to days (180, 730)
+   *
+   * @param validity - Validity string from product.validity
+   * @returns Number of days, or undefined if invalid
+   */
+  private parseValidityToDays(
+    validity: string | undefined,
+  ): number | undefined {
+    if (!validity) {
+      return undefined;
+    }
+
+    // Normalize: lowercase, trim, remove all underscores
+    const normalized = validity.toLowerCase().trim().replace(/_/g, '');
+
+    // Map validity strings to days
+    switch (normalized) {
+      // Weeks
+      case '2weeks':
+      case '15days':
+        return 14;
+
+      // Months
+      case 'month':
+      case '1month':
+        return 30;
+      case '2months':
+        return 60;
+      case '3months':
+        return 90;
+      case '6months':
+        return 180;
+
+      // Years
+      case 'year':
+      case '1year':
+        return 365;
+      case '2years':
+        return 730;
+      case '3years':
+        return 1095;
+      case '5years':
+        return 1825;
+      case '10years':
+        return 3650;
+
+      default:
+        // Log unrecognized format for monitoring
+        this.logger.warn(
+          `Unrecognized validity format: "${validity}" (normalized: "${normalized}") - returning undefined`,
+        );
+        return undefined;
+    }
   }
 
   /**

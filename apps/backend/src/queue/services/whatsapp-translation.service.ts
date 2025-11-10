@@ -257,7 +257,8 @@ export class WhatsAppTranslationService {
     }
 
     // Handle validity strings (normalize underscores to no-underscores)
-    const normalizedValidity = validity?.toLowerCase().trim().replace('_', '');
+    // Use global flag to replace ALL underscores, not just the first one
+    const normalizedValidity = validity?.toLowerCase().trim().replace(/_/g, '');
     switch (normalizedValidity) {
       case 'month':
       case '1month':
