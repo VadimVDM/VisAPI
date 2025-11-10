@@ -1010,7 +1010,7 @@ export type Database = {
     }
     Functions: {
       backfill_orders_from_logs: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           error_count: number
           inserted_count: number

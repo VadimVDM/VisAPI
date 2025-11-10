@@ -4,21 +4,11 @@ const { composePlugins, withNx } = require('@nx/next');
 const path = require('path');
 
 /**
- * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
+ * @type {import('next').NextConfig}
  **/
 const nextConfig = {
-  // Nx-specific options
-  nx: {
-    svgr: false,
-  },
-
   // Enable React Strict Mode for better development experience
   reactStrictMode: true,
-
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 
   // Output file tracing for monorepo support
   outputFileTracingRoot: path.join(__dirname, '../../'),
@@ -36,12 +26,40 @@ const nextConfig = {
     ],
   },
 
-  // Experimental features for Next.js 15
+  // Experimental features
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
 
-  // Webpack configuration for SVGR
+  // Turbopack configuration (Next.js 16 default bundler)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: [
+          {
+            loader: '@svgr/webpack',
+            options: {
+              svgoConfig: {
+                plugins: [
+                  {
+                    name: 'preset-default',
+                    params: {
+                      overrides: {
+                        removeViewBox: false,
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        as: '*.js',
+      },
+    },
+  },
+
+  // Webpack configuration for SVGR (fallback if using --webpack flag)
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,
