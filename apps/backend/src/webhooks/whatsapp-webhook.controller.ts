@@ -480,6 +480,34 @@ export class WhatsAppWebhookController {
     status: EnhancedMessageStatus,
   ): Promise<void> {
     try {
+      // Status hierarchy to prevent backwards updates
+      const STATUS_PRIORITY: Record<string, number> = {
+        sent: 1,
+        delivered: 2,
+        read: 3,
+        failed: 4, // Failed is terminal
+      };
+
+      // First, check current message status to prevent backwards updates
+      const { data: currentMessage } = await this.supabaseService.serviceClient
+        .from('whatsapp_messages')
+        .select('status, order_id, message_id')
+        .or(`message_id.eq.${status.id},meta_message_id.eq.${status.id}`)
+        .single();
+
+      if (currentMessage) {
+        const currentPriority = STATUS_PRIORITY[currentMessage.status] || 0;
+        const newPriority = STATUS_PRIORITY[status.status] || 0;
+
+        // Prevent backwards status updates (e.g., delivered -> sent)
+        if (currentPriority > newPriority) {
+          this.logger.warn(
+            `Ignoring backwards status update: ${currentMessage.status} (priority ${currentPriority}) -> ${status.status} (priority ${newPriority}) for message ${status.id}`,
+          );
+          return;
+        }
+      }
+
       const updates: Partial<DbWhatsappMessages> = {
         status: status.status,
         updated_at: new Date().toISOString(),
