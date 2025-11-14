@@ -34,7 +34,7 @@ export class ViziVisaResendService {
     dto: VisaResendDto,
     correlationId: string,
   ): Promise<VisaResendResultDto> {
-    const { orderId, phone: rawPhone } = dto;
+    const { orderId, phone: rawPhone, applicationIds } = dto;
 
     if (!orderId) {
       throw new BadRequestException('Order ID is required');
@@ -43,9 +43,16 @@ export class ViziVisaResendService {
     // Normalize phone: remove + prefix if present (CBB uses phone without + as contact ID)
     const phone = rawPhone?.replace(/^\+/, '');
 
-    this.logger.log(
-      `[${correlationId}] Starting visa approval resend for order ${orderId}${phone ? ` with override phone ${phone}` : ''}`,
-    );
+    // Log filtering mode
+    if (applicationIds && applicationIds.length > 0) {
+      this.logger.log(
+        `[${correlationId}] Starting visa approval resend for order ${orderId} with filtering to ${applicationIds.length} specific application(s): ${applicationIds.join(', ')}${phone ? ` | override phone: ${phone}` : ''}`,
+      );
+    } else {
+      this.logger.log(
+        `[${correlationId}] Starting visa approval resend for order ${orderId} (no filtering - will resend ALL applications)${phone ? ` with override phone ${phone}` : ''}`,
+      );
+    }
 
     try {
       // Step 1: Lookup order in Airtable with expansion
@@ -69,8 +76,10 @@ export class ViziVisaResendService {
       }
 
       // Check if we have expanded application data
-      const applications = airtableResult.applications;
-      if (!applications || applications.length === 0) {
+      // Cast to ExpandedApplication[] to work with typed fields
+      const applications = (airtableResult.applications ||
+        []) as unknown as ExpandedApplication[];
+      if (applications.length === 0) {
         this.logger.warn(
           `[${correlationId}] No applications found for order ${orderId}`,
         );
@@ -88,8 +97,82 @@ export class ViziVisaResendService {
       }
 
       this.logger.log(
-        `[${correlationId}] Found ${applications.length} applications for order ${orderId}`,
+        `[${correlationId}] Found ${applications.length} total applications for order ${orderId}`,
       );
+
+      // Filter applications if applicationIds provided
+      let filteredApplications = applications;
+      let skippedApplicationIds: string[] = [];
+
+      if (applicationIds && applicationIds.length > 0) {
+        const originalCount = applications.length;
+
+        // Extract Application IDs from the applications
+        const availableAppIds = applications.map(
+          (app) => app.fields.ID || app.fields['Application ID'] || '',
+        );
+
+        // Validate that all requested Application IDs exist
+        const invalidIds = applicationIds.filter(
+          (id) => !availableAppIds.includes(id),
+        );
+
+        if (invalidIds.length > 0) {
+          this.logger.warn(
+            `[${correlationId}] Invalid Application IDs requested: ${invalidIds.join(', ')}`,
+          );
+          throw new BadRequestException(
+            `Application ID(s) not found in order ${orderId}: ${invalidIds.join(', ')}. Available IDs: ${availableAppIds.join(', ')}`,
+          );
+        }
+
+        // Filter to only requested applications
+        filteredApplications = applications.filter((app) => {
+          const appId = app.fields.ID || app.fields['Application ID'] || '';
+          return applicationIds.includes(appId);
+        });
+
+        // Track skipped applications
+        skippedApplicationIds = applications
+          .filter((app) => {
+            const appId = app.fields.ID || app.fields['Application ID'] || '';
+            return !applicationIds.includes(appId);
+          })
+          .map(
+            (app) => app.fields.ID || app.fields['Application ID'] || 'unknown',
+          );
+
+        this.logger.log(
+          `[${correlationId}] Filtered ${originalCount} applications down to ${filteredApplications.length} matching requested IDs`,
+        );
+
+        if (skippedApplicationIds.length > 0) {
+          this.logger.debug(
+            `[${correlationId}] Skipped ${skippedApplicationIds.length} applications: ${skippedApplicationIds.join(', ')}`,
+          );
+        }
+
+        // Validate we have at least one application after filtering
+        if (filteredApplications.length === 0) {
+          this.logger.warn(
+            `[${correlationId}] No applications matched the provided Application IDs`,
+          );
+          return {
+            success: false,
+            orderId,
+            message: 'No applications matched the provided Application IDs',
+            details: {
+              applicationsFound: originalCount,
+              applicationsFiltered: 0,
+              messagesSent: 0,
+              filteredApplicationIds: [],
+              skippedApplicationIds,
+              visaNotificationReset: false,
+              expandedData: true,
+            },
+          };
+        }
+      }
 
       // Step 2: Reset visa_notification_sent flag in our database
       const { error: resetError } = await this.supabase.serviceClient
@@ -116,7 +199,7 @@ export class ViziVisaResendService {
       );
 
       // Step 3: Build the completed record format that the processor expects
-      // Applications from Airtable already have the correct structure: { id, fields }
+      // Use FILTERED applications (or all applications if no filtering)
       const completedRecord: CompletedRecord = {
         id: airtableResult.record.id,
         fields: {
@@ -126,8 +209,7 @@ export class ViziVisaResendService {
         createdTime:
           airtableResult.record.createdTime || new Date().toISOString(),
         expanded: {
-          Applications_expanded:
-            applications as unknown as ExpandedApplication[], // Applications from Airtable have correct structure
+          Applications_expanded: filteredApplications, // Use filtered applications
         },
       };
 
@@ -145,16 +227,31 @@ export class ViziVisaResendService {
       );
 
       this.logger.log(
-        `[${correlationId}] Successfully triggered visa resend for order ${orderId}`,
+        `[${correlationId}] Successfully triggered visa resend for order ${orderId} (${filteredApplications.length} application(s))`,
       );
 
       return {
         success: true,
         orderId,
-        message: `Successfully triggered visa approval resend for order ${orderId}`,
+        message: applicationIds
+          ? `Successfully triggered visa approval resend for ${filteredApplications.length} selected application(s) in order ${orderId}`
+          : `Successfully triggered visa approval resend for order ${orderId}`,
         details: {
           applicationsFound: applications.length,
-          messagesSent: Math.min(applications.length, 10), // Max 10 messages as per processor
+          applicationsFiltered: applicationIds
+            ? filteredApplications.length
+            : undefined,
+          messagesSent: Math.min(filteredApplications.length, 10), // Max 10 messages as per processor
+          filteredApplicationIds: applicationIds
+            ? filteredApplications.map(
+                (app) =>
+                  app.fields.ID || app.fields['Application ID'] || 'unknown',
+              )
+            : undefined,
+          skippedApplicationIds:
+            skippedApplicationIds.length > 0
+              ? skippedApplicationIds
+              : undefined,
           visaNotificationReset: true,
           expandedData: true,
         },
