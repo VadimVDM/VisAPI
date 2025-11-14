@@ -78,7 +78,7 @@ POST /api/v1/webhooks/vizi/orders     # Vizi webhook
 POST /api/v1/webhooks/vizi/retrigger  # Admin: Retrigger order creation
 POST /api/v1/webhooks/vizi/resync-cbb # Admin: Resync CBB contact
 POST /api/v1/webhooks/vizi/retrigger-whatsapp # Admin: Retrigger WhatsApp notification
-POST /api/v1/webhooks/vizi/resend-visa # Admin: Resend visa approval notifications
+POST /api/v1/webhooks/vizi/resend-visa # Admin: Resend visa approvals (all or selective applications)
 GET  /api/v1/webhooks/whatsapp        # WhatsApp webhook verification
 POST /api/v1/webhooks/whatsapp        # WhatsApp events from Meta
 POST /api/v1/whatsapp/templates/sync  # Manual template sync
@@ -254,6 +254,64 @@ See `.env.example` for complete template. Configure via Railway dashboard or loc
 11. **Phone numbers**: Leading zeros removed after country codes
 
 ## Recent Updates
+
+### Selective Visa Application Resend (November 14, 2025) 🎯
+
+**Feature:** Optional filtering for `/api/v1/webhooks/vizi/resend-visa` endpoint to support resending specific visa applications instead of all applications in an order.
+
+**What Was Added:**
+
+✅ **Optional Application Filtering**:
+
+- New `applicationIds` parameter accepts array of Application IDs (e.g., `["ISR-25-008315-04"]`)
+- If omitted, resends ALL applications (100% backward compatible)
+- Validates requested IDs exist in order
+- Returns helpful error messages with available IDs if invalid
+- Tracks which applications were sent vs skipped in response
+
+✅ **Enhanced Logging**:
+
+- Logs filtering mode (all vs selective)
+- Logs application counts (total found, filtered, sent)
+- Logs skipped application IDs for audit trail
+- Correlation IDs for full request tracing
+
+✅ **Enhanced Response Details**:
+
+- `applicationsFiltered` - Number of apps after filtering
+- `filteredApplicationIds` - Which applications were sent
+- `skippedApplicationIds` - Which applications were skipped
+- Backward compatible (new fields only present when filtering)
+
+**Use Cases:**
+
+1. **Resend single visa** - When one visa needs correction/resend
+2. **Resend subset** - When only some visas need to be resent
+3. **Testing** - Test specific application without affecting others
+4. **Debugging** - Isolate issues to specific applications
+
+**Example Usage:**
+
+```bash
+# Resend all (default - unchanged behavior)
+{"orderId": "IL251008MA26"}
+
+# Resend only 3rd application
+{"orderId": "IL251008MA26", "applicationIds": ["ISR-25-008315-04"]}
+
+# Resend specific apps to alternate phone
+{"orderId": "IL251008MA26", "phone": "972545379663", "applicationIds": ["ISR-25-008315-04"]}
+```
+
+**Quality Assurance:**
+
+- ✅ TypeScript compilation successful
+- ✅ ESLint all files pass
+- ✅ Pre-commit hooks passed
+- ✅ 100% backward compatible
+- ✅ No breaking changes
+
+---
 
 ### CBB API Verification & Field Registry Enhancement (November 10, 2025) 🔍
 

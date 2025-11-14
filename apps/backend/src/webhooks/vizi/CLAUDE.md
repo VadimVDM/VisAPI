@@ -43,32 +43,52 @@ Handles incoming webhooks from Vizi application and provides admin operations fo
     ```json
     {
       "orderId": "IL250928IN7", // Required: Order ID to resend
-      "phone": "+13473726179" // Optional: Override recipient phone
+      "phone": "+13473726179", // Optional: Override recipient phone
+      "applicationIds": ["ISR-25-008315-04"] // Optional: Specific applications to resend
     }
     ```
+  - **Selective Application Resend** (NEW):
+    - If `applicationIds` provided, resends only specified applications
+    - If `applicationIds` omitted, resends ALL applications (default behavior)
+    - Application IDs from Airtable Applications table (e.g., "ISR-25-008315-04")
+    - Validates requested IDs exist in order
+    - Returns helpful error messages with available IDs if invalid
+    - Tracks which applications were sent vs skipped
+    - 100% backward compatible with existing integrations
   - **Phone Override Feature**:
     - If `phone` provided, sends to that number instead of order's phone
     - Automatically removes `+` prefix (e.g., `+13473726179` → `13473726179`)
     - CBB handles contact resolution automatically
     - Useful for testing or sending to alternate recipients
+    - Works seamlessly with application filtering
   - Fetches fresh order data from Airtable with application expansion
   - Resets visa_notification_sent flag to allow unlimited resends
   - Processes up to 10 visa applications per order
   - Uses existing VisaApprovalProcessorService for WhatsApp notifications
   - Sends first visa with visa_approval_file_phone template
   - Sends visas 2-10 with visa_approval_file_multi_he template (5 sec delay)
-  - **Example**:
+  - **Examples**:
 
     ```bash
-    # Normal resend to order's phone
+    # Resend all applications (default behavior)
     curl -X POST https://api.visanet.app/api/v1/webhooks/vizi/resend-visa \
       -H "X-API-Key: vizi_admin_..." \
       -d '{"orderId":"IL250928IN7"}'
 
-    # Resend to different phone (US number)
+    # Resend specific application only
     curl -X POST https://api.visanet.app/api/v1/webhooks/vizi/resend-visa \
       -H "X-API-Key: vizi_admin_..." \
-      -d '{"orderId":"IL250928IN7","phone":"+13473726179"}'
+      -d '{"orderId":"IL251008MA26","applicationIds":["ISR-25-008315-04"]}'
+
+    # Resend multiple applications
+    curl -X POST https://api.visanet.app/api/v1/webhooks/vizi/resend-visa \
+      -H "X-API-Key: vizi_admin_..." \
+      -d '{"orderId":"IL251008MA26","applicationIds":["ISR-25-008315-01","ISR-25-008315-04"]}'
+
+    # Combine phone override + application filtering
+    curl -X POST https://api.visanet.app/api/v1/webhooks/vizi/resend-visa \
+      -H "X-API-Key: vizi_admin_..." \
+      -d '{"orderId":"IL251008MA26","phone":"972545379663","applicationIds":["ISR-25-008315-04"]}'
     ```
 
 ## Security
@@ -92,4 +112,4 @@ All endpoints require API key authentication with appropriate scopes:
 - Full audit logging with correlation IDs
 - Idempotency support via headers
 
-**Last Updated**: September 30, 2025
+**Last Updated**: November 14, 2025
