@@ -369,10 +369,10 @@ export class VisaApprovalProcessorService {
       } else {
         // Subsequent messages use the multi template
         // NOTE: Template must be approved in WhatsApp Business
-        // Format: "קובץ הויזה של {{1}} מצורף בחלקה העליון של הודעה זו 📎"
+        // Format: "{{1}} קובץ הויזה של {{2}} מצורף בחלקה העליון של הודעה זו 📎"
         templateName = 'visa_approval_file_multi_he';
         templateParams = [
-          // this.getNumberEmoji(i + 1), // Application number emoji (1-based) - commented out for now
+          this.getNumberEmoji(i + 1), // Application number emoji (1-based)
           application.applicantName || `Applicant ${i + 1}`,
         ];
       }

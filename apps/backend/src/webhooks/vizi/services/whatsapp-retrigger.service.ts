@@ -214,9 +214,10 @@ export class ViziWhatsAppRetriggerService {
               application.country || order.product_country || 'המדינה המבוקשת';
             templateParams = [nameHebrew, country];
           } else {
-            // Subsequent messages use the multi template with just the applicant name
+            // Subsequent messages use the multi template with number emoji and applicant name
             templateName = 'visa_approval_file_multi_he';
             templateParams = [
+              this.getNumberEmoji(i + 1), // Application number emoji (1-based)
               application.applicantName || `Applicant ${i + 1}`,
             ];
           }
@@ -404,5 +405,24 @@ export class ViziWhatsAppRetriggerService {
     }
 
     return undefined;
+  }
+
+  /**
+   * Get number emoji for application index
+   */
+  private getNumberEmoji(num: number): string {
+    const numberEmojis = [
+      '1️⃣',
+      '2️⃣',
+      '3️⃣',
+      '4️⃣',
+      '5️⃣',
+      '6️⃣',
+      '7️⃣',
+      '8️⃣',
+      '9️⃣',
+      '🔟',
+    ];
+    return numberEmojis[num - 1] || `${num}.`;
   }
 }
